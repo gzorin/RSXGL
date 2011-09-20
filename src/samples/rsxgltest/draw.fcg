@@ -1,0 +1,15 @@
+// -*-C-*-
+
+struct pixel_out {
+       float4 color : COLOR;
+};
+
+pixel_out
+main(float2 texcoord: TEXCOORD0)
+{
+	pixel_out OUT;
+	//OUT.color = float4(1,1,1,1);
+	OUT.color = float4(texcoord.x,texcoord.y,1,1);
+
+	return OUT;
+}

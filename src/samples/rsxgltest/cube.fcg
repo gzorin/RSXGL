@@ -1,0 +1,17 @@
+// -*-C-*-
+
+struct pixel_out {
+  float4 color : COLOR;
+  //float depth : DEPTH;
+};
+
+pixel_out
+main(float3 vertexcolor: COLOR0)
+{
+	pixel_out OUT;
+	OUT.color = float4(vertexcolor,1);
+	//OUT.depth = 0.5f;
+	//OUT.color = float4(1,1,1,1);
+
+	return OUT;
+}

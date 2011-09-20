@@ -1,0 +1,4 @@
+repo: 8a21fd850624c931e448cbcfb38168cb2717c790
+node: 599fc4f7c736859f0fe97263cfa8686bbc2f4ad4
+branch: 3.0
+tag: 3.0.1

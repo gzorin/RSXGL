@@ -1,0 +1,13 @@
+// -*-C-*-
+
+struct pixel_out {
+  float4 color : COLOR;
+};
+
+pixel_out
+main(float3 vertexcolor: COLOR0)
+{
+	pixel_out OUT;
+	OUT.color = float4(vertexcolor,1);
+	return OUT;
+}

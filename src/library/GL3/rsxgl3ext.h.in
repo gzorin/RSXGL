@@ -1,0 +1,55 @@
+/* RSXGL's "extensions" to OpenGL 3. */
+
+#ifndef rsxgl3ext_H
+#define rsxgl3ext_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#if ! @RSXGL_CONFIG_RSX_compatibility@
+#define GL_RSX_compatibility 0
+#endif
+
+#ifndef GL_RSX_memory_arena
+#define GL_MAIN_MEMORY_ARENA_RSX 0
+#define GL_GPU_MEMORY_ARENA_RSX 1
+
+#define GL_BUFFER_ARENA_RSX 0
+#define GL_TEXTURE_ARENA_RSX 1
+#define GL_RENDERBUFFER_ARENA_RSX 2
+
+#define GL_ARENA_SIZE_RSX 0
+#define GL_ARENA_LOCATION_RSX 1
+#define GL_ARENA_POINTER_RSX 2
+#endif
+
+#ifndef GL_RSX_compatibility
+#define GL_QUADS_RSX                            0x0007
+#define GL_QUAD_STRIP_RSX                       0x0008
+#define GL_POLYGON_RSX                          0x0009
+#endif
+
+#ifndef GL_RSX_memory_arena
+#define GL_RSX_memory_arena 1
+GLAPI GLuint APIENTRY glCreateMemoryArenaRSX(GLenum location,GLsizei align,GLsizei size);
+GLAPI void APIENTRY glDeleteMemoryArenaRSX(GLuint arena);
+GLAPI void APIENTRY glUseMemoryArenaRSX(GLenum target,GLuint arena);
+GLAPI void APIENTRY glGetMemoryArenaParameteriv(GLenum target,GLenum pname,GLint * params);
+GLAPI void APIENTRY glGetMemoryArenaPointerv(GLenum target,GLenum pname,GLvoid ** params);
+#endif
+
+#ifndef GL_RSX_debug
+#define GL_RSX_debug 1
+ GLAPI void APIENTRY glInitDebug(GLsizei,void (*)(GLsizei,const GLchar *));
+#endif
+
+#ifndef GL_RSX_compatibility
+#define GL_RSX_compatibility 1
+#endif
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif

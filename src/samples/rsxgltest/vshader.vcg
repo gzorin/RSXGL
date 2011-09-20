@@ -1,0 +1,29 @@
+//-*-C-*-
+
+struct InputVertex
+{
+  float4 vertex : POSITION;
+  float2 texcoord: TEXCOORD0;
+};
+
+struct OutputVertex
+{
+  float4 vertex : POSITION;
+  float2 texcoord: TEXCOORD0;
+};
+
+uniform float4x4 ProjMatrix;
+uniform float4x4 TransMatrix;
+
+OutputVertex main (InputVertex inputvertex)
+{
+    OutputVertex outputvertex;
+    
+    //outputvertex.vertex = inputvertex.vertex;
+
+    float4 v = mul(inputvertex.vertex,TransMatrix);
+    outputvertex.vertex = mul(v,ProjMatrix);
+    outputvertex.texcoord = inputvertex.texcoord;
+
+    return outputvertex;
+}

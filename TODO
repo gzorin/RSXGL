@@ -1,0 +1,52 @@
+- Instanced rendering
+
+- Framebuffer objects
+
+x glMapBuffer* should block if an operation on the buffer is still pending.
+
+- Better-performing glMapBuffer.
+
+- Less conservative approach to buffer mapping & GPU cache invalidation.
+
+- (Finish) object "orphaning"
+  - Programs orphanable
+  - Disposal of orphaned objects
+
+x Handle timestamp overflow
+
+- Integer vertex specification.
+
+Textures:
+- format conversion (take this from mesa).
+- test mipmapping
+- cube maps
+- rectangular textures
+x implement glTexStorage*()
+- implement glCopyTexImage*() and glCopyTexSubImage*()
+- proxy textures
+- implement the effects of glPixelStore
+
+- Support for GLES2-style client vertex data.
+
+- Support for GLES2-style application object namespaces.
+
+- Implement glGet*() functions.
+
+- More GLSL support.
+
+- Make it possible to work with non-EGL configured display.
+
+- Move object storage from globals to context.
+
+- Support multiple contexts with shared objects.
+
+- __restrict keyword where appropriate.
+
+x Add libstdc++.a to libGL.a, so that client code doesn't need to use g++ to
+  link.
+
+- oglsamples
+
+- Flushing and orphan cleanup policy
+
+- Vertex program textures

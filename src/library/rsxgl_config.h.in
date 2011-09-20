@@ -1,0 +1,18 @@
+//-*-C-*-
+// RSXGL - Graphics library for the PS3 GPU.
+//
+// Copyright (c) 2011 Alexander Betts (alex.betts@gmail.com)
+//
+// rsxgl_config.h - Compile-time configuration settings.
+
+#ifndef rsxgl_config_H
+#define rsxgl_config_H
+
+#define RSXGL_CONFIG_default_gcm_buffer_size (1024 * 1024 * 4)
+#define RSXGL_CONFIG_default_command_buffer_length (0x80000)
+
+#define RSXGL_CONFIG_migrate_buffer_size (4 * 1024 * 1024)
+
+#define RSXGL_CONFIG_RSX_compatibility @RSXGL_CONFIG_RSX_compatibility@
+
+#endif

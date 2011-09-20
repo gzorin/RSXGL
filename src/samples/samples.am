@@ -1,0 +1,82 @@
+PS3DEV = @PS3DEV@
+PSL1GHT = @PSL1GHT@
+
+AS		=	$(PS3DEV)/ppu/bin/ppu-as
+STRIP		=	$(PS3DEV)/ppu/bin/ppu-strip
+#RAW2H		:=	$(PS3DEV)/bin/raw2h
+
+define bin2o
+	$(PS3DEV)/bin/bin2s -a 64 $< | $(AS) -o $(@)
+	echo "extern const uint8_t" `(echo $(<F) | sed -e 's/^\([0-9]\)/_\1/' | tr . _)`"_end[];" > `(echo $(<F) | tr . _)`.h
+	echo "extern const uint8_t" `(echo $(<F) | sed -e 's/^\([0-9]\)/_\1/' | tr . _)`"[];" >> `(echo $(<F) | tr . _)`.h
+	echo "extern const uint32_t" `(echo $(<F) | sed -e 's/^\([0-9]\)/_\1/' | tr . _)`_size";" >> `(echo $(<F) | tr . _)`.h
+endef
+
+PSL1GHT_BIN	:= $(PS3DEV)/bin
+FSELF		:= $(PSL1GHT_BIN)/fself.py
+SELF		:= $(FSELF)
+SELF_NPDRM	:= $(PSL1GHT_BIN)/make_self_npdrm
+SFO			:= $(PSL1GHT_BIN)/sfo.py
+PKG			:= $(PSL1GHT_BIN)/pkg.py
+SPRX		:= $(PSL1GHT_BIN)/sprxlinker
+CGCOMP          ?= $(PSL1GHT_BIN)/cgcomp
+CGC		:= @CGC@
+
+SFOXML		:= $(PSL1GHT_BIN)/sfo.xml
+ICON0		:= $(PSL1GHT_BIN)/ICON0.PNG
+
+SUFFIXES = .bin _bin.o _bin.h .vcg .fcg .vert .frag _vpo.o _fpo.o _vpo.h _fpo.h .vpo .fpo
+
+%.vpo: %.vcg
+	@echo "[Compiling Cg vertex program] $(notdir $<)"
+	@$(CGC) -profile vp40 $^ | $(NV40ASM) -v > $@
+
+%.fpo: %.fcg
+	@echo "[Compiling Cg fragment program] $(notdir $<)"
+	@$(CGC) -profile fp40 $^ | $(NV40ASM) -f > $@
+
+%.vpo: %.vert
+	@echo "[Compiling GLSL vertex program] $(notdir $<)"
+	@$(CGC) -oglsl -profile vp40 $^ | $(NV40ASM) -v > $@
+
+%.fpo: %.frag
+	@echo "[Compiling GLSL fragment program] $(notdir $<)"
+	@$(CGC) -oglsl -profile fp40 $^ | $(NV40ASM) -f > $@
+
+%.self: %.elf
+	@echo "[SELF] $@"
+	@$(STRIP) $< 
+	@$(SPRX) $<
+	@$(SELF) $< $@
+
+%.pkg: %.self
+	@echo "[PKG] $(notdir $@)"
+	@rm -rf $(builddir)/pkg
+	@mkdir -p $(builddir)/pkg
+	@mkdir -p $(builddir)/pkg/USRDIR
+	@cp $(ICON0) $(builddir)/pkg/ICON0.PNG
+	@$(SELF_NPDRM) $(basename $(notdir $<)).elf $(builddir)/pkg/USRDIR/EBOOT.BIN $(CONTENTID) >> /dev/null
+	@$(SFO) --title "$(TITLE)" --appid "$(APPID)" -f $(SFOXML) $(builddir)/pkg/PARAM.SFO
+	@if test -n $(PKGFILES) -a -d $(PKGFILES); then cp -rf $(PKGFILES)/* $(builddir)/pkg/; fi
+	@$(PKG) --contentid $(CONTENTID) $(builddir)/pkg/ $@ >> /dev/null
+
+%_bin.o: %.bin
+	@echo "[bin2o]: $<"
+	@$(bin2o)
+
+%_bin.h: %_bin.o
+	@echo "$<"
+
+%_vpo.o: %.vpo
+	@echo "$(notdir $<)"
+	@$(bin2o)
+
+%_vpo.h: %_vpo.o
+	@echo "$<"
+
+%_fpo.o: %.fpo
+	@echo "$(notdir $<)"
+	@$(bin2o)
+
+%_fpo.h: %_fpo.o
+	@echo "$<"

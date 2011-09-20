@@ -1,0 +1,28 @@
+/* Header for programs that use RSXGL's RSX_compatibility extension. Define legacy OpenGL
+ * symbols and functions in terms of RSXGL's.
+ */
+
+#ifndef rsxgl3ext_H
+#define rsxgl3ext_H
+
+#include <GL3/rsxgl3ext.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#if @RSXGL_CONFIG_RSX_compatibility@
+
+#define GL_QUADS GL_QUADS_RSX
+#define GL_QUAD_STRIP GL_QUAD_STRIP_RSX
+#define GL_POLYGON GL_POLYGON_RSX
+
+#else
+#error "This program attempts to include the rsxgl_compatibility.h header; however RSXGL itself was not configured to support this extension."
+#endif
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif

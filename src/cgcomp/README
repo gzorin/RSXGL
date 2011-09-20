@@ -1,0 +1,41 @@
+This is a slightly modified version of the cgcomp program distributed
+with the PSL1GHT project. Many thanks to that project for the work
+done to create an assembler for RSX programs.
+
+The modifications to the program were made to support linking between
+"varying" program variables in vertex and fragment programs; there was
+another modification that relates to vertex program constants. Further
+modifications may be made as well (for example, to support texture
+instructions in vertex programs).
+
+The build process here now creates a program called nv40asm. This
+program does /not/ invoke the NVIDIA cgc compiler on its own; rather,
+it accepts the assembly language output of cgc through its standard
+input. This is meant to give program build systems the ability to
+invoke the full range of options available to cgc itself, particularly
+the options that tell it to compile GLSL programs, without duplicating
+these options in nv40asm itself.
+
+nv40asm does not itself write to a file, either, but sends its
+(binary) output to stdout. nv40 still accepts a -v and -f options to
+tell it to assemble a vertex or fragment program, respectively.
+
+This program is therefore intended to be used in simple UNIX
+pipelines, such as the following:
+
+# Compile a Cg vertex program:
+cgc -profile vp40 program.vcg | nv40asm -v > program.vpo
+
+a Cg fragment program:
+cgc -profile fp40 program.fcg | nv40asm -f > program.fpo
+
+# Compile a GLSL vertex program:
+cgc -oglsl -profile vp40 program.vert | nv40asm -v > program.vpo
+
+# Compile a GLSL fragment program:
+cgc -oglsl -profile fp40 program.frag | nv40asm -f > program.fpo
+
+The Makefile also builds a small library called libnv40.a. There are a
+couple of headers that go with it, which declare the data structures
+output by nv40asm. These headers are shared by both nv40asm and
+libGL.a

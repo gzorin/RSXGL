@@ -1,0 +1,11 @@
+Behaviors that can be configured at compile-time:
+
+- "Unsafe mode" - command stream functions don't check for space in buffer
+- OpenGL errors - disable OpenGL error checking
+- Immediate command stream - send commands immediately upon OpenGL function calls;
+  cache as little state as possible; disables many glGet* functions.
+- Optimize glTexImage calls:
+  - expect level 0 to be specified first, always allocate full mipmap space, avoid making a copy of texture data
+
+Extensions:
+- Some way to get 
