@@ -323,6 +323,8 @@ program_t::~program_t()
 
   if(uniform_values != 0) free(uniform_values);
   if(program_offsets != 0) free(program_offsets);
+
+  // TODO - delete microcode storage also
 }
 
 GLAPI GLuint APIENTRY
