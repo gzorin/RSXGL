@@ -1,13 +1,11 @@
-RSXGL uses the GNU autotools for its build system, but currently it's
-distributed without a complete configure script. So first generate
-this script from RSXGL's top-level source-directory:
+RSXGL uses the GNU autotools for its build system and is distributed
+with a configure script. It requires the following projects:
 
-        autoreconf --install --force
+* [ps3toolchain](http://github.com/ps3dev/ps3toolchain)
+* [PSL1GHT](http://github.com/ps3dev/PSL1GHT
 
-This has been tested successfully with version 2.68 of autoconf and
-version 1.11 of automake; prior versions could cause problems
-(autoconf and automake can be ornery). Future versions of RSXGL will
-be distributed with a configure script.
+NVIDIA's cgc shader compiler, from the Cg toolkit, is also required to
+use vertex and fragment GPU programs.
 
 The RSXGL library depends upon a toolchain that can generate binaries for the
 PS3's PPU, and also upon parts of the PSL1GHT SDK. The sample programs also
@@ -34,7 +32,16 @@ commands should build RSXGL and its samples:
 remain in their build locations; they don't get moved anywhere
 relative to RSXGL's install path).
 
-The locations of these dependencies can be specified on the configure
+By default, configure will create non-debug builds with low
+optimization settings (-O1). Other options are:
+
+         # Debug build, including assertions:
+	 ./configure --enable-debug
+
+	 # Optimized build (-O3):
+	 ./configure --enable-ppu-optimize
+
+The locations of the library's dependencies can be specified on the configure
 command-line, too:
 
 	./configure \
@@ -62,3 +69,20 @@ influence how headers and libraries are located:
 	PSL1GHT_PPU_LDFLAGS
 	PORTLIBS_PPU_CPPFLAGS
 	PORTLIBS_PPU_LDFLAGS
+
+Currently two sample programs are built:
+
+* src/samples/rsxgltest - A very simple test program whose contents and
+behavior will vary. This program is mainly used to try out various
+features of the library as they are developed.
+
+* src/samples/rsxglgears - A port of an old chestnut, the "glgears"
+program that uses OpenGL to render some spinning gears. This port is
+based upon a version included in the Mesa library, which was itself a
+port to OpenGL ES 2 after being handed down throughout the ages.
+
+The sample can print debugging information over TCP, in the manner of
+PSL1GHT's network/debugtest sample. src/samples/rsxgltest/main.c has
+symbols called TEST_IP and TESTPORT which specify the IP address and
+port number to try to connect to, and you can use "nc -l portnum" to
+receive messages.
