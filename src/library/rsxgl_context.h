@@ -46,6 +46,9 @@ struct rsxgl_context_t {
   // Used by glFinish():
   uint32_t ref;
 
+  // Back (0) or front (1)
+  uint8_t buffer;
+
   uint8_t timestamp_sync;
 
   // Next timestamp to be given out when draw functions are initiated.
@@ -56,9 +59,7 @@ struct rsxgl_context_t {
   // Should be initialized to 0:
   uint32_t cached_timestamp;
 
-  rsxgl_context_t()
-  : active_texture(0), ref(0), timestamp_sync(0), next_timestamp(1), last_timestamp(0), cached_timestamp(0) {
-  }
+  rsxgl_context_t(const struct rsxegl_config_t *,gcmContextData *);
 
   inline
   gcmContextData * gcm_context() {
