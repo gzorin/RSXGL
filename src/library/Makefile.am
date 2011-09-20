@@ -8,7 +8,7 @@ CXXFLAGS = -O1 @PPU_CXXFLAGS@
 CPPFLAGS = @PPU_CPPFLAGS@
 
 lib_LIBRARIES = libEGL.a libGL.a
-include_HEADERS = GL3/gl3ext.h GL3/rsxgl3ext.h GL3/rsxgl_compatibility.h
+include_HEADERS = GL3/rsxgl.h GL3/gl3ext.h GL3/rsxgl3ext.h GL3/rsxgl_compatibility.h
 
 dlmalloc_CPPFLAGS = -DMSPACES -DONLY_MSPACES -DHAVE_MMAP=0 -Dmalloc_getpagesize=4096
 

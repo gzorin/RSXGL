@@ -214,7 +214,7 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AR = @PPU_AR@
 lib_LIBRARIES = libEGL.a libGL.a
-include_HEADERS = GL3/gl3ext.h GL3/rsxgl3ext.h GL3/rsxgl_compatibility.h
+include_HEADERS = GL3/rsxgl.h GL3/gl3ext.h GL3/rsxgl3ext.h GL3/rsxgl_compatibility.h
 dlmalloc_CPPFLAGS = -DMSPACES -DONLY_MSPACES -DHAVE_MMAP=0 -Dmalloc_getpagesize=4096
 libEGL_a_SOURCES = egl.c mem.c malloc.c
 libEGL_a_CFLAGS = -std=gnu99 -fgnu89-inline
