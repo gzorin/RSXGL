@@ -20,7 +20,7 @@ libGL_a_DEPENDENCIES = ../cgcomp/libnv40.a
 libGL_a_SOURCES = rsxgl_context.cc gl_fifo.c					\
 	error.cc get.cc state.cc enable.cc arena.cc buffer.cc clear.cc draw.cc	\
 	sync.cc									\
-	program.cc attribs.cc uniforms.cc textures.cc framebuffer.cc		\
+	program.cc attribs.cc uniforms.cc textures.cc framebuffer.cc query.cc	\
 	ringbuffer_migrate.cc dumb_migrate.cc debug.c
 libGL_a_CPPFLAGS = -D__RSX__ -I\$(top_srcdir)/include $(PS3DEV_PPU_CPPFLAGS) $(PSL1GHT_PPU_CPPFLAGS) -I$(top_srcdir)/src/cgcomp/include
 libGL_a_CFLAGS = -std=gnu99 -fgnu89-inline

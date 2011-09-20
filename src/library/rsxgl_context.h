@@ -14,7 +14,7 @@
 #include "textures.h"
 #include "program.h"
 #include "framebuffer.h"
-//#include "query.h"
+#include "query.h"
 
 #include "bit_set.h"
 
@@ -39,7 +39,7 @@ struct rsxgl_context_t {
   renderbuffer_t::binding_type renderbuffer_binding;
   framebuffer_t::binding_type framebuffer_binding;
 
-  //query_t::binding_type query_binding;
+  query_t::binding_type query_binding;
   
   program_t::binding_type program_binding;
 
