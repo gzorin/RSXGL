@@ -78,6 +78,38 @@ area. Additionally, the PS3 itself makes two equally-sized memory
 areas available to the RSX, with different transfer speeds in each
 direction.
 
+* COMMAND BUFFER FLUSHING
+
+RSXGL performs the equivalent of a glFlush() when the framebuffer is
+flipped, and when the application needs to wait for the GPU to finish
+with a buffer before modifying its contents (in addition to the
+occasions when flushing is explicitly called for by a GL function
+call).
+
+I've noticed that whan a large-ish number of glDraw*() commands (on
+the order of several thousand) are submitted per frame without any
+additional flushing that performance degrades considerably. This
+particularly is the case if program uniform variables (such as an
+object's transformation matrix) are modified prior to each draw
+call. Therefore it's currently a good idea for the application to call
+glFlush() frequently.
+
+Obviously this needs to be handled more transparently by the library
+itself, but I'm undecided as to a flushing policy - should it happen
+every draw call, or per a certain number of draw calls, or should it
+happen based upon the number of vertices being drawn, or the current
+size of the command buffer? (You can be assured that this will be an
+application-tunable setting :). I'm unclear as to how expensive an
+operation glFlush() is - it involves a small write by the PPU to the
+RSX's control register, allegedly a fast operation (reading from RSX
+memory by the PPU is not fast), but beyond that I don't know.
+
+I haven't either tried to observe what happens when the command
+buffer's capacity is exceeded before the framebuffer is flipped (the
+libEGL implementation creates a command buffer with the capcity for
+524288 commands, which is set in rsxgl_config.h and can be overriden
+at runtime by calling rsxeglInit() before initializing EGL).
+
 * CLIENT VERTEX ARRAYS
 
 The OpenGL ES 2 profile, as well as OpenGL profiles prior to version
@@ -99,6 +131,11 @@ it'd be good to support this in RSXGL (even if it's not
 super-efficient at first). Since supporting this older capability can
 potentially bloat RSXGL's data structures, this will likely be an
 option specified when the library is configured.
+
+Since client memory can be mapped into the RSX's address space, there
+will also be capability, implemented in the style of an OpenGL
+extension, for the application to promise that the client pointers
+submitted via glVertexArrayPointer are so mapped, eliminating a memcpy.
 
 * APPLICATION NAMESPACES
 
