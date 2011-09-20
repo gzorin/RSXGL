@@ -4,11 +4,11 @@ yet (the RSX is capable of supporting most of them):
 * Full GLSL support. Currently, GLSL and Cg shaders can be compiled offline and
   used with a OpenGL ES 2 style API.
 * Instanced draw commands.
-* Framebuffer objects.
+* Framebuffer objects and multiple render targets.
 * A variety of capabilities related to texture maps (rectangular and
   cube textures, the behavior of glPixelStore, copying from the
-  framebuffer, and texture formats that require conversion and/or
-  swizzling).
+  framebuffer, mipmap generation, and texture formats, including
+  compressed formats, that require conversion and/or swizzling).
 * Client-side vertex array data. OpenGL 3.1's core profile
   specifically omits this, but it is specified by OpenGL ES 2 (as well
   as the OpenGL 3 compatibility profile), and is likely still widely
@@ -16,3 +16,106 @@ yet (the RSX is capable of supporting most of them):
 * Application object namespaces (another feature omitted by OpenGL
   3.1, but used by earlier specs).
 * Most glGet*() functions haven't been implemented.
+
+Further details follow:
+
+-------------------------------------------------------------------------------
+20 September 2011
+
+* FULL GLSL SUPPORT
+
+This is admittedly a large area of missing capability. Currently you
+can compile GLSL (and Cg) programs offline using NVIDIA's cgc
+compiler, and use them in an OpenGL program via an API that resembles
+the OpenGL ES 2 API - glShaderBinary() is used to load shader objects,
+and exactly two such shader objects (a vertex program and a fragment
+program) can be linked together by glLinkProgram().
+
+This project certainly hopes to extend its implementation of GLSL further.
+
+Intel contributed a standalone GLSL compiler to Mesa which can emit
+two intermediate representations that maybe could be translated to the
+NVIDIA microcode used by the RSX (maybe this compiler does this
+already; I haven't looked in a few months). Perhaps this compiler
+could be made to run from within a PS3 program.
+
+Another longer avenue would be to explore writing an NVIDIA microcode
+backend for the LLVM compiler (my own brief investigation of this
+suggests that this might be hard, as LLVM possibly requires that its
+targets model some sort of heap, which the NVIDIA cards don't do).
+
+There are opportunities to creatively implement other, recent OpenGL
+features. Uniform buffer objects could be supported, since both the
+vertex and fragment stages of the RSX can fetch from floating point
+textures. Transform feedback might be implemented by having the GLSL
+compiler factor out the program paths that compute vertices and
+generate a separate "fragment" program that renders to a buffer. Newer
+pipeline stages, like tesselation and geometry programs, could
+possibly be executed on the PS3's SPU's.
+
+* TEXTURE FORMATS
+
+The RSX can directly read from a handful of texture formats, but the
+OpenGL spec calls for many more besides. RSXGL currently implements
+only those formats whereby image data can simply be copied to the
+RSX's memory; other formats will require pixel-by-pixel type
+conversion and swizzling. The Mesa library appears to be able to
+perform many of these conversions.
+
+* STREAMING AND SYNCHRONIZATION
+
+Right now, RSXGL takes a conservative approach to handling data that
+streams to the GPU - if an application wants to write to an area of
+memory that the GPU is using, then the application will wait for the
+GPU to finish.
+
+This library will implement other strategies. OpenGL specifies a few
+ways for an application to request synchronization behavior, but
+affords implementations a wide latitude for interpreting such
+requests. Data stores might be partially or fully double-buffered,
+temporarily or for the entire lifetime of the memory
+area. Additionally, the PS3 itself makes two equally-sized memory
+areas available to the RSX, with different transfer speeds in each
+direction.
+
+* CLIENT VERTEX ARRAYS
+
+The OpenGL ES 2 profile, as well as OpenGL profiles prior to version
+3.1, allow an application to specify vertex data from the system's
+main memory, without specifically asking the library to create a
+buffer of some predetermined size. This usually requires the library
+to implement some strategies to migrate client-side memory to the GPU,
+and there are likely many ways to try to perform this efficiently.
+
+OpenGL 3.1 requires applications to create buffer objects for any
+vertex data (though not for index buffers; these can still be migrated
+from client memory). This makes life easier for the library
+implementor, and is one reason why RSXGL implements GL 3.1 and not GL
+ES 2 (it also helps keep the data structures that the library
+allocates small).
+
+Nonetheless, many existing programs depend upon the older spec, so
+it'd be good to support this in RSXGL (even if it's not
+super-efficient at first). Since supporting this older capability can
+potentially bloat RSXGL's data structures, this will likely be an
+option specified when the library is configured.
+
+* APPLICATION NAMESPACES
+
+OpenGL 3.1 requires that applications call glGen*() functions to
+create the names for objects that get created. ES 2 and previous GL
+versions made this optional, allowing the application to come up with
+any unsigned integers it wanted to name objects with. This change was
+another reason to implement OpenGL 3.1, because it allows for a faster
+pool-style allocation of object data structures instead of potentially
+requiring a costly data structure like an associative map.
+
+The older behavior will be supported as a configure option, too, for
+compatibility with existing programs.
+
+* EXAMPLES
+
+I'm interested in porting the [OpenGL Samples
+Pack](http://www.g-truc.net/project-0026.html). They are small
+demonstration programs that are helpfully organized by the OpenGL
+profiles that they support.
