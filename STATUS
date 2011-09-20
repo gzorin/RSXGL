@@ -1,0 +1,18 @@
+Briefly, the following OpenGL 3.1 features haven't been implemented
+yet (the RSX is capable of supporting most of them):
+
+* Full GLSL support. Currently, GLSL and Cg shaders can be compiled offline and
+  used with a OpenGL ES 2 style API.
+* Instanced draw commands.
+* Framebuffer objects.
+* A variety of capabilities related to texture maps (rectangular and
+  cube textures, the behavior of glPixelStore, copying from the
+  framebuffer, and texture formats that require conversion and/or
+  swizzling).
+* Client-side vertex array data. OpenGL 3.1's core profile
+  specifically omits this, but it is specified by OpenGL ES 2 (as well
+  as the OpenGL 3 compatibility profile), and is likely still widely
+  used, particularly by smaller demonstration programs.
+* Application object namespaces (another feature omitted by OpenGL
+  3.1, but used by earlier specs).
+* Most glGet*() functions haven't been implemented.
