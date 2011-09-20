@@ -155,7 +155,6 @@ public:
   size_type m_num_names, m_num_objects;
 #endif
 
-  // Orphan list grows linearly - so leave this in.
   orphan_size_type m_num_orphans;
 
   //
@@ -199,7 +198,6 @@ public:
   {
     
     name_bitfield().construct(1,0);
-    //name_queue().construct(std::max((name_type)1,initial_size),0);
     contents().allocate(std::max((name_type)1,initial_size));
     orphans().allocate(std::max((typename contents_type::size_type)1,initial_size));
 
@@ -217,7 +215,6 @@ public:
 
   ~striped_gl_object_storage() {
     name_bitfield().destruct();
-    //name_queue().destruct();
 
     created_predicate p(name_bitfield());
     contents().destruct(p);
@@ -228,7 +225,7 @@ public:
     name_type name = 0;
 
     // No names to reclaim, create a new one:
-    if(m_name_queue.empty() /*m_name_queue_head == m_name_queue_tail*/) {
+    if(m_name_queue.empty()) {
       assert(name_bitfield().size > 0);
 
       const size_t name_bitfield_index = name_bitfield().size - 1;
@@ -248,8 +245,6 @@ public:
     }
     // Reclaim the name from the queue:
     else {
-      //name = name_queue()[m_name_queue_head];
-      //m_name_queue_head = (m_name_queue_head + 1) % name_queue().size;
       name = m_name_queue.front();
       m_name_queue.pop_front();
     }
@@ -289,9 +284,6 @@ private:
 
     // Destroy the name:
     if((name_bitfield()[name_bitfield_index] & (name_bitfield_named_mask << name_bitfield_position2)) != 0) {
-      // reclaim the name:
-      // name_queue()[m_name_queue_tail] = name;
-
       if(m_name_queue.full()) {
 	const name_type name_queue_grow = std::max((name_type)(m_name_queue.size() / 2),(name_type)1);
 	const name_type name_queue_size = m_name_queue.size() + name_queue_grow;
@@ -332,9 +324,9 @@ public:
   // and is_constructed() will still return true).
   //
   // orphan() - This is for use in the case that a client wants to destroy an object that holds
-  // resources that may still be used by a future GPU operation. The contents of the object are
-  // moved to another location, the orphan list. Its destructor is /not/ called at this time,
-  // but the object's name and previous storage area are reclaimed (is_object(), is_name(),
+  // resources that may still be used by a scheduled but still-pending GPU operation. The contents
+  // of the object are moved to another location, the orphan list. Its destructor is /not/ called
+  // at this time, but the object's name and previous storage area are reclaimed (is_object(), is_name(),
   // and is_constructed() all return false). The object may only be accessed through the orphan_at()
   // functions.
 
@@ -379,11 +371,15 @@ public:
     boost::tie(name_bitfield_index,name_bitfield_position2) = name_bitfield_location(name);
 
     if(name_bitfield_index < name_bitfield().size) {
+
+#if !defined(NDEBUG)
+      if((name_bitfield()[name_bitfield_index] & (name_bitfield_init_mask << name_bitfield_position2)) != 0) {
+	--m_num_objects;
+      }
+#endif
+
       // Clear the name bit, leave the init bit intact:
       name_bitfield()[name_bitfield_index] &= ~(name_bitfield_type)(name_bitfield_named_mask << name_bitfield_position2);
-#if !defined(NDEBUG)
-      --m_num_objects;
-#endif
     }
   }
 
@@ -394,31 +390,49 @@ public:
     detach(name);
   }
 
-#if 0
   // Orphan the object - make a copy of the object in the orphans list. Client code
   // will later destroy any GPU resources, like memory, that the orphan still occupies.
   orphan_size_type orphan(const name_type name) {
     assert(name < current_potential_size());
+    assert(name != 0);
 
     size_t name_bitfield_index, name_bitfield_position2;
     boost::tie(name_bitfield_index,name_bitfield_position2) = name_bitfield_location(name);
 
-    assert((name_bitfield_index < name_bitfield().size) && (name_bitfield()[name_bitfield_index] & (name_bitfield_init_mask << name_bitfield_position2)));
+    if(name_bitfield_index < name_bitfield().size) {
+      if((name_bitfield()[name_bitfield_index] & (name_bitfield_init_mask << name_bitfield_position2)) != 0) {
+	// Make room for another orphan:
+	if(m_num_orphans >= orphans().size) {
+	  orphans().resize(m_num_orphans + m_orphans_grow);
+	}
 
-    // Make room for another orphan:
-    if(m_num_orphans >= orphans().size) {
-      orphans().resize(m_num_orphans + m_orphans_grow);
+	contents_type::move_item(orphans(),m_num_orphans,contents(),name);
+
+#if !defined(NDEBUG)
+	--m_num_objects;
+#endif
+
+	destroy_name(name,name_bitfield_index,name_bitfield_position2);
+
+	// Clear name and init bit:
+	name_bitfield()[name_bitfield_index] &= ~(name_bitfield_type)(name_bitfield_mask << name_bitfield_position2);
+
+	return m_num_orphans++;
+      }
     }
+    return ~0;
+  }
 
-    orphans().construct_item(m_num_orphans);
-
-    return m_num_orphans++;
+  template< int Named, int Constructed >
+  void checked_orphan(const name_type name) {
+    assert((Named) ? (is_name(name)) : 1);
+    assert((Constructed) ? (is_constructed(name)) : 1);
+    orphan(name);
   }
 
   // Destroy accumulated orphans:
   void destroy_orphans() {
     for(size_t i = 0,n = m_num_orphans;i < n;++i) {
-      boost::fusion::for_each(orphans().values,destroy_item_fn(i));
       orphans().destruct_item(i);
     }
     m_num_orphans = 0;
@@ -429,7 +443,6 @@ public:
     orphans().destruct_item(i);
     --m_num_orphans;
   }
-#endif
 
   void create_object(const name_type name) {
     assert(is_name(name) && !is_constructed(name));
@@ -516,7 +529,6 @@ public:
     return contents().template at< I >(i);
   }
 
-#if 0
   orphan_size_type num_orphans() const {
     return m_num_orphans;
   }
@@ -536,7 +548,6 @@ public:
     assert(i < m_num_orphans);
     return orphans().template at< I >(i);
   }
-#endif
 };
 
 template< typename ObjectT,
@@ -563,6 +574,14 @@ public:
 
   const ObjectT & at(const typename base_type::name_type i) const {
     return base_type::template at<0>(i);
+  }
+
+  ObjectT & orphan_at(const typename base_type::name_type i) {
+    return base_type::template orphan_at<0>(i);
+  }
+
+  const ObjectT & orphan_at(const typename base_type::name_type i) const {
+    return base_type::template orphan_at<0>(i);
   }
 };
 

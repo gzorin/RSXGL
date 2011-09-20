@@ -289,9 +289,12 @@ void basic_tests()
       const size_t m = 5;
       typename Object::name_type objects[m];
       for(size_t i = 0;i < m;++i) {
-	objects[m] = names[rand() % n];
-	Object::storage().create_object(objects[m]);
-	++num_created_objects;
+	typename Object::name_type name = names[rand() % n];
+	if(!Object::storage().is_object(name)) {
+	  objects[m] = name;
+	  Object::storage().create_object(objects[m]);
+	  ++num_created_objects;
+	}
       }
     }
 
@@ -400,6 +403,8 @@ void basic_tests()
 
     {
       // Delete the first actually created objects:
+      std::cout << "Delete the first actually created objects:" << std::endl;
+
       const size_t m = (Object::storage().m_num_objects < 20) ? Object::storage().m_num_objects : 20;
 
       std::cout << "try to delete the first " << m << " actual objects" << std::endl;
@@ -428,6 +433,7 @@ void basic_tests()
 
     // create yet more objects, via create_name_and_object - this should re-use some names:
     {
+      std::cout << "create yet more objects, via create_name_and_object - this should re-use some names:" << std::endl;
       const size_t m = 64;
       typename Object::name_type new_objects[m];
 
@@ -440,6 +446,38 @@ void basic_tests()
 
     summarize< Object >();
     access< Object >();
+
+    // try orphaning some objects, indiscrimantly:
+    {
+      const size_t m = 30;
+      size_t num_orphans = 0;
+      for(size_t i = 0;i < m;++i) {
+	//typename Object::name_type name = (rand() % Object::storage().current_potential_size() - 1) + 1;
+	typename Object::name_type name = i + 1;
+	typename Object::storage_type::orphan_size_type j = Object::storage().orphan(name);
+	if(j != (typename Object::storage_type::orphan_size_type)~0U) {
+	  std::cout << "orphaned: " << name << " ";
+	  Object::storage().orphan_at(j).access(std::cout);
+	  std::cout << std::endl;
+	  ++num_orphans;
+	}
+      }
+
+      std::cout << "orphaned " << num_orphans << " objects" << std::endl;
+    }
+
+    // create more objects - should see some re-used names:
+    {
+      std::cout << "create yet more objects, via create_name_and_object - this should re-use some names:" << std::endl;
+      const size_t m = 64;
+      typename Object::name_type new_objects[m];
+
+      for(size_t i = 0;i < m;++i) {
+	new_objects[i] = Object::storage().create_name_and_object();
+	++num_created_objects;
+	std::cout << i << ":" << new_objects[i] << std::endl;
+      }
+    }
 
     // delete all possible object objects - we should see that destructors are called, but storage arrays are not free'd
     {
@@ -462,6 +500,11 @@ void basic_tests()
 
     summarize< Object >();
     access< Object >();
+
+    {
+      std::cout << "Destroy orphans" << std::endl;
+      Object::storage().destroy_orphans();
+    }
 
     {
       // Start over:
@@ -547,6 +590,7 @@ main(int argc, char ** argv)
     std::cout << "normal_object done" << std::endl;
   }
 
+#if 0
   {
     default_object::storage();
     basic_tests< default_object >();
@@ -557,6 +601,7 @@ main(int argc, char ** argv)
     refcount_tests< normal_object >();
     std::cout << "refcount tests done" << std::endl;
   }
+#endif
 
   return 0;
 }
