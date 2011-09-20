@@ -24,8 +24,6 @@
 #endif
 #define GLAPI extern "C"
 
-extern gcmContextData * rsx_gcm_context;
-
 buffer_t::storage_type & buffer_t::storage()
 {
   static buffer_t::storage_type _storage;

@@ -21,8 +21,6 @@
 #endif
 #define GLAPI extern "C"
 
-extern gcmContextData * rsx_gcm_context;
-
 extern "C" mspace rsx_mspace();
 
 static void
