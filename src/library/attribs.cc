@@ -140,7 +140,7 @@ glDeleteVertexArrays (GLsizei n, const GLuint *arrays)
   struct rsxgl_context_t * ctx = current_ctx();
 
   for(GLsizei i = 0;i < n;++i,++arrays) {
-    GLuint attribs_name = *arrays;
+    const GLuint attribs_name = *arrays;
 
     if(attribs_name == 0) continue;
 
@@ -149,18 +149,11 @@ glDeleteVertexArrays (GLsizei n, const GLuint *arrays)
       const attribs_t & attribs = attribs_t::storage().at(attribs_name);
       
       // If this attribs_name is bound to any attribs_name targets, unbind it from them:
-      const attribs_t::binding_bitfield_type binding = attribs.binding_bitfield;
-      if(binding.any()) {
-	for(size_t rsx_target = 0;rsx_target < RSXGL_MAX_VERTEX_ARRAY_TARGETS;++rsx_target) {
-	  if(binding[rsx_target]) {
-	    ctx -> attribs_binding.bind(rsx_target,0);
-	  }
-	}
-      }
+      ctx -> attribs_binding.unbind_from_all(attribs_name);
 
       attribs_t::storage().destroy(attribs_name);
     }
-    else {
+    else if(attribs_t::storage().is_name(attribs_name)) {
       attribs_t::storage().destroy(attribs_name);
     }
   }

@@ -112,7 +112,7 @@ glDeleteShader (GLuint shader_name)
   if(!shader_t::storage().is_object(shader_name)) {
     RSXGL_ERROR_(GL_INVALID_VALUE);
   }
-
+  
   shader_t::gl_object_type::maybe_delete(shader_name);
 
   RSXGL_NOERROR_();
@@ -223,7 +223,6 @@ glShaderSource (GLuint shader_name, GLsizei count, const GLchar** string, const 
   if(count < 0) {
     RSXGL_ERROR_(GL_INVALID_VALUE);
   }
-
 
   if(!shader_t::storage().is_object(shader_name)) {
     RSXGL_ERROR_(GL_INVALID_VALUE);
