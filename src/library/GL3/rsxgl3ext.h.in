@@ -35,8 +35,8 @@ extern "C" {
 GLAPI GLuint APIENTRY glCreateMemoryArenaRSX(GLenum location,GLsizei align,GLsizei size);
 GLAPI void APIENTRY glDeleteMemoryArenaRSX(GLuint arena);
 GLAPI void APIENTRY glUseMemoryArenaRSX(GLenum target,GLuint arena);
-GLAPI void APIENTRY glGetMemoryArenaParameteriv(GLenum target,GLenum pname,GLint * params);
-GLAPI void APIENTRY glGetMemoryArenaPointerv(GLenum target,GLenum pname,GLvoid ** params);
+GLAPI void APIENTRY glGetMemoryArenaParameterivRSX(GLenum target,GLenum pname,GLint * params);
+GLAPI void APIENTRY glGetMemoryArenaPointervRSX(GLenum target,GLenum pname,GLvoid ** params);
 #endif
 
 #ifndef GL_RSX_debug

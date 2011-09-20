@@ -176,7 +176,7 @@ glUseMemoryArenaRSX(GLenum target,GLuint name)
 }
 
 GLAPI void APIENTRY
-glGetMemoryArenaParameteriv(GLenum target,GLenum pname,GLint * params)
+glGetMemoryArenaParameterivRSX(GLenum target,GLenum pname,GLint * params)
 {
   const size_t rsx_target = rsxgl_arena_target(target);
   if(rsx_target == ~0U) {
@@ -209,7 +209,7 @@ glGetMemoryArenaParameteriv(GLenum target,GLenum pname,GLint * params)
 }
 
 GLAPI void APIENTRY
-glGetMemoryArenaPointerv(GLenum target,GLenum pname,GLvoid ** params)
+glGetMemoryArenaPointervRSX(GLenum target,GLenum pname,GLvoid ** params)
 {
   const size_t rsx_target = rsxgl_arena_target(target);
   if(rsx_target == ~0U) {
