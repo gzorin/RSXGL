@@ -667,8 +667,11 @@ glCopyBufferSubData (GLenum readTarget, GLenum writeTarget, GLintptr readOffset,
 
   rsxgl_timestamp_post(ctx,timestamp);
 
-  buffer_t::gl_object_type::timestamp(ctx -> buffer_binding.names[iread],timestamp);
-  buffer_t::gl_object_type::timestamp(ctx -> buffer_binding.names[iwrite],timestamp);
+  rsxgl_assert(timestamp >= ctx -> buffer_binding[iread].timestamp);
+  rsxgl_assert(timestamp >= ctx -> buffer_binding[iwrite].timestamp);
+
+  ctx -> buffer_binding[iread].timestamp = timestamp;
+  ctx -> buffer_binding[iwrite].timestamp = timestamp;
 
   RSXGL_NOERROR_();
 }

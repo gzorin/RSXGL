@@ -46,16 +46,17 @@ struct gl_object {
     object_type & object = object_type::storage().at(name);
     assert(!object.deleted);
 
+    object.deleted = true;
+
     if(object.ref_count == 0) {
       object_type::storage().destroy(name);
     }
     else {
       object_type::storage().detach(name);
-      object.deleted = true;
     }
   }
 
-  static size_t unref_and_maybe_delete(const name_type name) {
+  static void unref_and_maybe_delete(const name_type name) {
     assert(name != 0);
     object_type & object = object_type::storage().at(name);
 
@@ -64,39 +65,72 @@ struct gl_object {
     if(ref_count == 0 && object.deleted) {
       object_type::storage().destroy(name);
     }
-
-    return ref_count;
   }
 
-  // Provision for storing a use timestamp. This is meant to determine if an object is still
-  // in use by the GPU; if it is, then some operations (like object deletion) can be deferred
-  // until later (the next frame flip), and other operations (like buffer mapping) will cause
-  // the CPU to block until the timestamp is reached.
-  static void timestamp(const name_type name,const uint32_t ts) {
-    // Timestamps need to increase - if they don't, then this indicates that the library's
-    // timestamp has overflowed; if overflows aren't handled properly, then it's an error
-    // in another part of the library.
-    assert(ts > object_type::storage().at(name).timestamp);
-    object_type::storage().at(name).timestamp = ts;
-  }
+  // Delete, detach, or orphan an object. in_use is a parameter that tells the function if
+  // the object is in use by the GPU or not. It's a parameter so that this header doesn't
+  // need to concern itself with checking timestamps. Return code indicates what was actually
+  // done with the object - 0 == deleted, 1 == detached, 2 == orphaned
+  static const size_t was_destroyed = 0, was_detached = 1, was_orphaned = 2, was_unrefed = 3;
 
-#if 0
-  static void delete_or_orphan(const name_type name) {
+  static size_t maybe_delete_or_orphan(const bool in_use, const name_type name) {
     assert(name != 0);
-    
+    object_type & object = object_type::storage().at(name);
+    assert(!object.deleted);
+
+    object.deleted = true;
+
+    // still in use by the GPU:
+    if(in_use) {
+      // nobody holds onto it - it gets orphaned:
+      if(object.ref_count == 0) {
+	object_type::storage().orphan(name);
+	return was_orphaned;
+      }
+      // name is still valid - it is detached:
+      else {
+	object_type::storage().detach(name);
+	return was_detached;
+      }
+    }
+    // no longer used:
+    else {
+      // nobody holds onto it - it gets deleted:
+      if(object.ref_count == 0) {
+	object_type::storage().destroy(name);
+	return was_destroyed;
+      }
+      // name is still valid - it is detached:
+      else {
+	object_type::storage().detach(name);
+	return was_detached;
+      }
+    }
+  }
+
+  static size_t unref_and_maybe_delete_or_orphan(const bool in_use,const name_type name) {
+    assert(name != 0);
     object_type & object = object_type::storage().at(name);
 
-    if(object.ref_count == 0) {
-      rsxgl_debug_printf("%s: destroying\n",__PRETTY_FUNCTION__);
-      object_type::storage().destroy(name);
+    assert(object.ref_count > 0);
+    const size_t ref_count = --object.ref_count;
+
+    if(ref_count == 0 && object.deleted) {
+      // it is in use - orphan it:
+      if(in_use) {
+	object_type::storage().orphan(name);
+	return was_orphaned;
+      }
+      // it is not in use - it can be deleted:
+      else {
+	object_type::storage().destroy(name);
+	return was_destroyed;
+      }
     }
     else {
-      rsxgl_debug_printf("%s: orphaning\n",__PRETTY_FUNCTION__);
-      object_type::storage().orphan(name);
-      object.deleted = true;
+      return was_unrefed;
     }
   }
-#endif
 };
 
 template< typename ObjectType, size_t Targets >
