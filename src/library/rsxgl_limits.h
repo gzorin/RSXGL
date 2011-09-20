@@ -36,11 +36,13 @@
 #define RSXGL_MAX_RENDERBUFFERS 65536
 #define RSXGL_MAX_FRAMEBUFFERS 65536
 
+#define RSXGL_MAX_QUERIES 65536
+
 // For glFinish, number of iterations to wait before giving up on the GPU.
 #define RSXGL_FINISH_SLEEP_ITERATIONS 100000
 
 // Time interval, in microseconds, to sleep while waiting to sync with the RSX
-#define RSXGL_SYNC_SLEEP_INTERVAL 10
+#define RSXGL_SYNC_SLEEP_INTERVAL 30
 
 #define RSXGL_MIGRATE_BUFFER_ALIGN 16
 #define RSXGL_MIGRATE_BUFFER_LOCATION 0

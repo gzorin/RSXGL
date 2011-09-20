@@ -105,7 +105,7 @@ rsxgl_timestamp_create(rsxgl_context_t * ctx)
   
   if(next_timestamp & ~max_timestamp || next_timestamp == 0) {
     // Block until the last timestamp has been reached:
-    rsxgl_timestamp_wait(ctx -> cached_timestamp,ctx -> timestamp_sync,ctx -> last_timestamp,10);
+    rsxgl_timestamp_wait(ctx -> cached_timestamp,ctx -> timestamp_sync,ctx -> last_timestamp,RSXGL_SYNC_SLEEP_INTERVAL);
     
     // Reset the timestamps of all timestamp-able objects:
     //
@@ -147,7 +147,7 @@ rsxgl_timestamp_wait(rsxgl_context_t * ctx,const uint32_t timestamp)
   rsxgl_assert(ctx -> timestamp_sync != 0);
 
   rsxgl_gcm_flush(ctx -> gcm_context());
-  rsxgl_timestamp_wait(ctx -> cached_timestamp,ctx -> timestamp_sync,timestamp,10);
+  rsxgl_timestamp_wait(ctx -> cached_timestamp,ctx -> timestamp_sync,timestamp,RSXGL_SYNC_SLEEP_INTERVAL);
 }
 
 void

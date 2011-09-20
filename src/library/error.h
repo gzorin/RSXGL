@@ -42,11 +42,13 @@ rsxeglSetError(GLenum e)
   {rsxeglSetError((ERROR));			\
     return ;}
 
+#define RSXGL_IS_ERROR() (rsxgl_error != GL_NO_ERROR)
+
 #define RSXGL_FORWARD_ERROR(RETURN)			\
-  {if(rsxgl_error != GL_NO_ERROR) return (RETURN); }
+  {if(RSXGL_IS_ERROR()) return (RETURN); }
 
 #define RSXGL_FORWARD_ERROR_()			\
-  {if(rsxgl_error != GL_NO_ERROR) return; }
+  {if(RSXGL_IS_ERROR()) return; }
 
 #ifdef __cplusplus
 }
