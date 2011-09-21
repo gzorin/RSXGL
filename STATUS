@@ -5,6 +5,8 @@ yet (the RSX is capable of supporting most of them):
   used with a OpenGL ES 2 style API.
 * Instanced draw commands.
 * Framebuffer objects and multiple render targets.
+* glQuery*() objects.
+* Point sprites.
 * A variety of capabilities related to texture maps (rectangular and
   cube textures, the behavior of glPixelStore, copying from the
   framebuffer, mipmap generation, and texture formats, including
@@ -15,7 +17,8 @@ yet (the RSX is capable of supporting most of them):
   used, particularly by smaller demonstration programs.
 * Application object namespaces (another feature omitted by OpenGL
   3.1, but used by earlier specs).
-* Most glGet*() functions haven't been implemented.
+* Most glGet*() functions haven't been implemented. Some specified
+  behavior of glEnable()/glDisable() likely needs to be implemented as well.
 
 Further details follow:
 
@@ -62,7 +65,7 @@ RSX's memory; other formats will require pixel-by-pixel type
 conversion and swizzling. The Mesa library appears to be able to
 perform many of these conversions.
 
-* STREAMING AND SYNCHRONIZATION
+* STREAMING, SYNCHRONIZATION, CACHING
 
 Right now, RSXGL takes a conservative approach to handling data that
 streams to the GPU - if an application wants to write to an area of
@@ -77,6 +80,12 @@ temporarily or for the entire lifetime of the memory
 area. Additionally, the PS3 itself makes two equally-sized memory
 areas available to the RSX, with different transfer speeds in each
 direction.
+
+RSXGL takes a similarly greedy approach the flushing the GPU's vertex
+and texture caches - it does this every time a new glDraw*() command
+is sent by the application. The library will instead use the
+information it has available to it to determine if these caches really
+ought to be flushed or not before drawing.
 
 * COMMAND BUFFER FLUSHING
 
