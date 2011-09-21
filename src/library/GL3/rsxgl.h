@@ -23,6 +23,7 @@ struct rsxgl_init_parameters_t {
   khronos_usize_t command_buffer_length;
   uint32_t max_swap_wait_iterations;
   useconds_t swap_wait_interval;
+  uint32_t rsx_mspace_offset, rsx_mspace_size;
 };
 
 /*! \brief Customize the resources that RSXGL allocates upon initialization. Call this, optionally, before
@@ -30,11 +31,13 @@ struct rsxgl_init_parameters_t {
 
   \param parameters Pointer to a parameters specification data strucuts. Its contents are copied by the function.
 */
-void rsxglInit(struct rsxgl_init_parameters_t const * parameters);
+void rsxglConfigure(struct rsxgl_init_parameters_t const * parameters);
 
+#if 0
 /* The following functions are for compatibility with librsx - where librsx is
-   used to do the setup that
-   EGL usually performs.
+   used to do the setup that EGL usually performs.
+
+   Don't use them yet - they aren't finished.
 */
   
 /*! \brief Create a new RSXGL context. Returns 0 on failure.
@@ -71,6 +74,7 @@ void rsxglPostSwap();
    \param context The RSXGL context to make current
 */
 void rsglDestroyContext(void * context);
+#endif
 
 #ifdef __cplusplus
 }

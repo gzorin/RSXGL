@@ -88,17 +88,20 @@ eglGetDisplay(EGLNativeDisplayType display_id)
 
 // RSX-specific initialization parameters: size of the shared memory buffer, and length of the command buffer:
 
-static struct rsxgl_init_parameters_t rsxgl_init_parameters = {
+// Also read by mem.c:
+struct rsxgl_init_parameters_t rsxgl_init_parameters = {
   .gcm_buffer_size = RSXGL_CONFIG_default_gcm_buffer_size,
   .command_buffer_length = RSXGL_CONFIG_default_command_buffer_length,
   .max_swap_wait_iterations = 100000,
-  .swap_wait_interval = RSXGL_SYNC_SLEEP_INTERVAL
+  .swap_wait_interval = RSXGL_SYNC_SLEEP_INTERVAL,
+  .rsx_mspace_offset = 0,
+  .rsx_mspace_size = 0
 };
 
 static void * rsx_shared_memory = 0;
 
 EGLAPI void EGLAPIENTRY
-rsxglInit(struct rsxgl_init_parameters_t const * parameters)
+rsxglConfigure(struct rsxgl_init_parameters_t const * parameters)
 {
   // RSX shared memory buffer must be 1MB at least:
   if(parameters -> gcm_buffer_size < 1024*1024) {
@@ -572,9 +575,9 @@ eglCreateWindowSurface(EGLDisplay _dpy,EGLConfig _config,EGLNativeWindowType win
       depth_buffer_size = surface -> depth_pitch * surface -> height;
 
     rsx_ptr_t buffers[] = {
-      rsx_memalign(64,color_buffer_size),
-      rsx_memalign(64,color_buffer_size),
-      rsx_memalign(64,depth_buffer_size)
+      rsxgl_rsx_memalign(64,color_buffer_size),
+      rsxgl_rsx_memalign(64,color_buffer_size),
+      rsxgl_rsx_memalign(64,depth_buffer_size)
     };
 
     if(buffers[0] == 0) {

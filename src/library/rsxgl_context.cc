@@ -152,8 +152,6 @@ rsxgl_timestamp_create(rsxgl_context_t * ctx)
 void
 rsxgl_timestamp_wait(rsxgl_context_t * ctx,const uint32_t timestamp)
 {
-  //rsxgl_debug_printf("waiting on timestamp: %u\n",timestamp);
-
   rsxgl_assert(ctx -> timestamp_sync != 0);
 
   rsxgl_gcm_flush(ctx -> gcm_context());
@@ -167,10 +165,9 @@ rsxgl_timestamp_post(rsxgl_context_t * ctx,const uint32_t timestamp)
 
   rsxgl_emit_sync_gpu_signal_read(ctx -> base.gcm_context,ctx -> timestamp_sync,timestamp);
   ctx -> last_timestamp = timestamp;
-
-  //rsxgl_debug_printf("posted timestamp: %u\n",timestamp);
 }
 
+#if 0
 // librsx compatibility functions:
 extern "C" void *
 rsxglCreateContext(void * gcm_context)
@@ -218,3 +215,4 @@ rsxglDestroyContext(void * gcm_context)
     delete (rsxgl_context_t *)gcm_context;
   }
 }
+#endif

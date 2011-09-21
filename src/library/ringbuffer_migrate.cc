@@ -34,7 +34,7 @@ rsx_ptr_t rsxgl_migrate_buffer()
   if(_rsxgl_migrate_buffer == 0) {
     //
 #if (RSXGL_MIGRATE_BUFFER_LOCATION == RSXGL_MEMORY_LOCATION_LOCAL)
-    _rsxgl_migrate_buffer = rsx_memalign(rsxgl_migrate_align,rsxgl_migrate_size);
+    _rsxgl_migrate_buffer = rsxgl_rsx_memalign(rsxgl_migrate_align,rsxgl_migrate_size);
     rsxgl_assert(_rsxgl_migrate_buffer != 0);
 #elif (RSXGL_MIGRATE_BUFFER_LOCATION == RSXGL_MEMORY_LOCATION_MAIN)
     rsxgl_assert(0);

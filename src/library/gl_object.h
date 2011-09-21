@@ -179,6 +179,11 @@ struct object_binding_type {
     return false;
   }
 
+  bool is_anything_bound(const size_type target) const {
+    assert(target < Targets);
+    return names[target] != 0;
+  }
+
   void unbind_from_all(const name_type name) {
     assert(name != 0);
 
@@ -251,6 +256,11 @@ struct object_container_type {
       if(names[i] == name) return true;
     }
     return false;
+  }
+
+  bool is_anything_bound(const size_type target) const {
+    assert(target < Targets);
+    return names[target] != 0;
   }
 
   void unbind_from_all(const name_type name) {

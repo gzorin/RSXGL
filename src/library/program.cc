@@ -592,7 +592,7 @@ rsxgl_rsx_ucode_mspace()
   static mspace space = 0;
 
   if(space == 0) {
-    rsx_ucode_address = rsx_memalign(RSXGL_CACHE_LINE_SIZE,size);
+    rsx_ucode_address = rsxgl_rsx_memalign(RSXGL_CACHE_LINE_SIZE,size);
     rsxgl_assert(rsx_ucode_address != 0);
 
     gcmAddressToOffset(rsx_ucode_address,&rsx_ucode_offset);

@@ -21,7 +21,7 @@
 #endif
 #define GLAPI extern "C"
 
-extern "C" mspace rsx_mspace();
+extern "C" mspace rsxgl_rsx_mspace();
 
 static void
 rsxgl_init_default_arena(void * ptr)
@@ -36,7 +36,7 @@ rsxgl_init_default_arena(void * ptr)
   memory_arena_t & arena = storage -> at(0);
   
   arena.address = config.localAddress;
-  arena.space = rsx_mspace();
+  arena.space = rsxgl_rsx_mspace();
   arena.memory.location = RSXGL_MEMORY_LOCATION_LOCAL;
   arena.memory.offset = offset;
   arena.size = config.localSize;
@@ -97,7 +97,7 @@ glCreateMemoryArenaRSX(GLenum location,GLsizei align,GLsizei size)
   uint32_t offset = 0;
 
   if(rsx_location == RSXGL_MEMORY_LOCATION_LOCAL) {
-    arena.address = rsx_memalign(align,size);
+    arena.address = rsxgl_rsx_memalign(align,size);
     if(arena.address == 0) RSXGL_ERROR(GL_OUT_OF_MEMORY,0);
 
     gcmAddressToOffset(arena.address,&offset);
@@ -123,7 +123,7 @@ memory_arena_t::destroy()
   destroy_mspace(space);
 
   if(memory.location == RSXGL_MEMORY_LOCATION_LOCAL) {
-    rsx_free(address);
+    rsxgl_rsx_free(address);
   }
   else if(memory.location == RSXGL_MEMORY_LOCATION_MAIN) {
     free(address);
