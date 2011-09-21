@@ -46,7 +46,7 @@ glEnable (GLenum cap)
     RSXGL_ERROR_(GL_INVALID_ENUM);
   };
 
-  ctx -> state.invalid.parts.framebuffer = 1;
+  ctx -> state.invalid.parts.the_rest = 1;
 
   RSXGL_NOERROR_();
 }
@@ -82,7 +82,7 @@ glDisable (GLenum cap)
     RSXGL_ERROR_(GL_INVALID_ENUM);
   };
 
-  ctx -> state.invalid.parts.framebuffer = 1;
+  ctx -> state.invalid.parts.the_rest = 1;
 
   RSXGL_NOERROR_();
 }
