@@ -1,4 +1,5 @@
 #include <EGL/egl.h>
+#include "GL3/rsxgl.h"
 
 #include <stdlib.h>
 #include <malloc.h>
@@ -10,9 +11,9 @@
 #include "mem.h"
 #include "nv40.h"
 
-#include "rsxegl.h"
 #include "egl_types.h"
 #include "rsxgl_config.h"
+#include "rsxgl_limits.h"
 
 static EGLint rsxegl_error = EGL_SUCCESS;
 static int rsxegl_initialized = 0;
@@ -86,12 +87,21 @@ eglGetDisplay(EGLNativeDisplayType display_id)
   }
 
 // RSX-specific initialization parameters: size of the shared memory buffer, and length of the command buffer:
-static uint32_t rsx_gcm_buffer_size = RSXGL_CONFIG_default_gcm_buffer_size;
-static uint32_t rsx_command_buffer_size = RSXGL_CONFIG_default_command_buffer_length * sizeof(uint32_t);
+
+// Also read by mem.c:
+struct rsxgl_init_parameters_t rsxgl_init_parameters = {
+  .gcm_buffer_size = RSXGL_CONFIG_default_gcm_buffer_size,
+  .command_buffer_length = RSXGL_CONFIG_default_command_buffer_length,
+  .max_swap_wait_iterations = 100000,
+  .swap_wait_interval = RSXGL_SYNC_SLEEP_INTERVAL,
+  .rsx_mspace_offset = 0,
+  .rsx_mspace_size = 0
+};
+
 static void * rsx_shared_memory = 0;
 
 EGLAPI void EGLAPIENTRY
-rsxeglInit(struct rsxegl_init_parameters_t const * parameters)
+rsxglConfigure(struct rsxgl_init_parameters_t const * parameters)
 {
   // RSX shared memory buffer must be 1MB at least:
   if(parameters -> gcm_buffer_size < 1024*1024) {
@@ -105,8 +115,7 @@ rsxeglInit(struct rsxegl_init_parameters_t const * parameters)
     RSXEGL_ERROR_(EGL_BAD_PARAMETER);
   }
 
-  rsx_gcm_buffer_size = parameters -> gcm_buffer_size;
-  rsx_command_buffer_size = _rsx_command_buffer_size;
+  rsxgl_init_parameters = *parameters;
 }
 
 gcmContextData * rsx_gcm_context = 0;
@@ -119,14 +128,14 @@ eglInitialize(EGLDisplay dpy,EGLint * major,EGLint * minor)
   // Have we done this before?
   if(rsxegl_initialized == 0) {
     // Allocate memory that will be shared with the RSX:
-    rsx_shared_memory = memalign(1024*1024,rsx_gcm_buffer_size);
+    rsx_shared_memory = memalign(1024*1024,rsxgl_init_parameters.gcm_buffer_size);
     if(rsx_shared_memory == 0) {
       RSXEGL_ERROR(EGL_BAD_ALLOC,EGL_FALSE);
     }
 
     // Initialize RSX:
     gcmContextData * _rsx_gcm_context ATTRIBUTE_PRXPTR;
-    int r = gcmInitBody(&_rsx_gcm_context,rsx_command_buffer_size,rsx_gcm_buffer_size,rsx_shared_memory);
+    int r = gcmInitBody(&_rsx_gcm_context,rsxgl_init_parameters.command_buffer_length * sizeof(uint32_t),rsxgl_init_parameters.gcm_buffer_size,rsx_shared_memory);
     if(r != 0) {
       RSXEGL_ERROR(EGL_BAD_ALLOC,EGL_FALSE);
     }
@@ -566,9 +575,9 @@ eglCreateWindowSurface(EGLDisplay _dpy,EGLConfig _config,EGLNativeWindowType win
       depth_buffer_size = surface -> depth_pitch * surface -> height;
 
     rsx_ptr_t buffers[] = {
-      rsx_memalign(64,color_buffer_size),
-      rsx_memalign(64,color_buffer_size),
-      rsx_memalign(64,depth_buffer_size)
+      rsxgl_rsx_memalign(64,color_buffer_size),
+      rsxgl_rsx_memalign(64,color_buffer_size),
+      rsxgl_rsx_memalign(64,depth_buffer_size)
     };
 
     if(buffers[0] == 0) {
@@ -709,9 +718,7 @@ eglQueryAPI()
   RSXEGL_NOERROR(rsxegl_api);
 }
 
-extern struct rsxegl_context_t * rsxgl_context_create(const struct rsxegl_config_t *);
-//extern void rsxgl_context_destroy(struct rsxegl_context_t *);
-//extern void rsxgl_context_make_current(struct rsxegl_context_t *);
+extern struct rsxegl_context_t * rsxgl_context_create(const struct rsxegl_config_t *,gcmContextData *);
 
 static struct rsxegl_context_t * current_rsxgl_ctx = 0;
 
@@ -725,7 +732,7 @@ eglCreateContext(EGLDisplay dpy,EGLConfig config,EGLContext share_context,const 
 
   switch(rsxegl_api) {
   case EGL_OPENGL_API:
-    ctx = rsxgl_context_create(config);
+    ctx = rsxgl_context_create(config,rsx_gcm_context);
     assert(ctx -> callback != 0);
     RSXEGL_NOERROR(ctx);
   default:
@@ -764,7 +771,6 @@ eglMakeCurrent(EGLDisplay dpy,EGLSurface draw,EGLSurface read,EGLContext _ctx)
 
   if(rsxegl_api == EGL_OPENGL_API) {
     if(current_rsxgl_ctx != 0) {
-      current_rsxgl_ctx -> gcm_context = 0;
       current_rsxgl_ctx -> draw = 0;
       current_rsxgl_ctx -> read = 0;
 
@@ -783,7 +789,6 @@ eglMakeCurrent(EGLDisplay dpy,EGLSurface draw,EGLSurface read,EGLContext _ctx)
 
     current_rsxgl_ctx = ctx;
 
-    current_rsxgl_ctx -> gcm_context = rsx_gcm_context;
     current_rsxgl_ctx -> draw = draw;
     current_rsxgl_ctx -> read = read;
 
@@ -933,63 +938,24 @@ EGLAPI EGLBoolean eglSwapBuffers(EGLDisplay dpy,EGLSurface _surface)
     assert(rsx_gcm_context != 0);
     int r = gcmSetFlip(rsx_gcm_context, surface -> buffer);
     assert(r == 0);
+
+    // flush the command buffer:
     rsx_flush(rsx_gcm_context);
     gcmSetWaitFlip(rsx_gcm_context); // Prevent the RSX from continuing until the flip has finished.
     surface -> buffer = !surface -> buffer;
     (*current_rsxgl_ctx -> callback)(current_rsxgl_ctx,RSXEGL_POST_CPU_SWAP);
-    RSXEGL_NOERROR(EGL_TRUE);
+
+    // wait for the GPU to finish:
+    uint32_t iter = 0;
+    while(((rsxgl_init_parameters.max_swap_wait_iterations == 0) || (iter < rsxgl_init_parameters.max_swap_wait_iterations)) &&
+	  gcmGetFlipStatus()) {
+      usleep(rsxgl_init_parameters.swap_wait_interval);
+      ++iter;
+    }
+
+    RSXEGL_NOERROR(((rsxgl_init_parameters.max_swap_wait_iterations == 0) || (iter < rsxgl_init_parameters.max_swap_wait_iterations)) ? EGL_TRUE : EGL_FALSE);
   }
   else {
     RSXEGL_NOERROR(EGL_FALSE);
   }
-}
-
-/* Convenience macros for operations on timevals.
-   NOTE: `timercmp' does not work for >= or <=.  */
-#define	timerisset(tvp)		((tvp)->tv_sec || (tvp)->tv_usec)
-#define	timerclear(tvp)		((tvp)->tv_sec = (tvp)->tv_usec = 0)
-#define	timercmp(a, b, CMP) 						      \
-  (((a)->tv_sec == (b)->tv_sec) ? 					      \
-   ((a)->tv_usec CMP (b)->tv_usec) : 					      \
-   ((a)->tv_sec CMP (b)->tv_sec))
-#define	timeradd(a, b, result)						      \
-  do {									      \
-    (result)->tv_sec = (a)->tv_sec + (b)->tv_sec;			      \
-    (result)->tv_usec = (a)->tv_usec + (b)->tv_usec;			      \
-    if ((result)->tv_usec >= 1000000)					      \
-      {									      \
-	++(result)->tv_sec;						      \
-	(result)->tv_usec -= 1000000;					      \
-      }									      \
-  } while (0)
-#define	timersub(a, b, result)						      \
-  do {									      \
-    (result)->tv_sec = (a)->tv_sec - (b)->tv_sec;			      \
-    (result)->tv_usec = (a)->tv_usec - (b)->tv_usec;			      \
-    if ((result)->tv_usec < 0) {					      \
-      --(result)->tv_sec;						      \
-      (result)->tv_usec += 1000000;					      \
-    }									      \
-  } while (0)
-
-EGLAPI void EGLAPIENTRY
-rsxeglSwapSync(useconds_t sleep_time,struct timeval * _timeout_time)
-{
-  struct timeval timeout_time = *_timeout_time,
-    start_time, current_time, elapsed_time;
-
-  gettimeofday(&start_time,0);
-
-  while(gcmGetFlipStatus() != 0) {
-    usleep(sleep_time);
-    gettimeofday(&current_time,0);
-    timersub(&current_time,&start_time,&elapsed_time);
-    if(timercmp(&elapsed_time,&timeout_time,>)) {
-      rsxeglSetError(0x300F);
-      return;
-    }
-  }
-  rsxeglSetError(EGL_SUCCESS);
-  gcmResetFlipStatus();
-  (*current_rsxgl_ctx -> callback)(current_rsxgl_ctx,RSXEGL_POST_GPU_SWAP);
 }

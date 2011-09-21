@@ -1,3 +1,5 @@
+#include <EGL/egl.h>
+#include "GL3/rsxgl.h"
 #include "debug.h"
 #include "mem.h"
 
@@ -13,8 +15,12 @@
 
 #include <assert.h>
 
+//uint32_t rsxgl_rsx_mspace_offset = 0, rsxgl_rsx_mspace_size = 0;
+
+extern struct rsxgl_init_parameters_t rsxgl_init_parameters;
+
 mspace
-rsx_mspace()
+rsxgl_rsx_mspace()
 {
   static mspace _rsx_mspace = 0;
 
@@ -22,9 +28,15 @@ rsx_mspace()
     gcmConfiguration config;
     gcmGetConfiguration(&config);
 
-    //rsxgl_debug_printf("%s: %lu %lu, %lu %lu\n",__PRETTY_FUNCTION__,config.localAddress,(unsigned long)config.localSize,config.ioAddress,(unsigned long)config.ioSize);
+    const uint32_t offset = rsxgl_init_parameters.rsx_mspace_offset;
+    const uint32_t available = config.localSize - offset;
+    const uint32_t size = (rsxgl_init_parameters.rsx_mspace_size == 0 || rsxgl_init_parameters.rsx_mspace_size > available) ? available : rsxgl_init_parameters.rsx_mspace_size;
 
-    _rsx_mspace = create_mspace_with_base(config.localAddress,config.localSize,0);
+    rsxgl_debug_printf("%s: want %u bytes (of available %u) starting at offset %u (%lu)\n",
+		       __PRETTY_FUNCTION__,
+		       size,available,offset,(uint64_t)config.localAddress + offset);
+
+    _rsx_mspace = create_mspace_with_base((uint8_t *)config.localAddress + offset,size,0);
   }
 
   assert(_rsx_mspace != 0);
@@ -33,25 +45,25 @@ rsx_mspace()
 }
 
 rsx_ptr_t
-rsx_malloc(rsx_size_t size)
+rsxgl_rsx_malloc(rsx_size_t size)
 {  
-  return mspace_malloc(rsx_mspace(),size);
+  return mspace_malloc(rsxgl_rsx_mspace(),size);
 }
 
 rsx_ptr_t
-rsx_memalign(rsx_size_t alignment,rsx_size_t size)
+rsxgl_rsx_memalign(rsx_size_t alignment,rsx_size_t size)
 {
-  return mspace_memalign(rsx_mspace(),alignment,size);
+  return mspace_memalign(rsxgl_rsx_mspace(),alignment,size);
 }
 
 rsx_ptr_t
-rsx_realloc(rsx_ptr_t mem,rsx_size_t size)
+rsxgl_rsx_realloc(rsx_ptr_t mem,rsx_size_t size)
 {
-  return mspace_realloc(rsx_mspace(),mem,size);
+  return mspace_realloc(rsxgl_rsx_mspace(),mem,size);
 }
 
 void
-rsx_free(rsx_ptr_t mem)
+rsxgl_rsx_free(rsx_ptr_t mem)
 {
-  mspace_free(rsx_mspace(),mem);
+  mspace_free(rsxgl_rsx_mspace(),mem);
 }

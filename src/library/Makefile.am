@@ -8,7 +8,7 @@ CXXFLAGS = -O1 @PPU_CXXFLAGS@
 CPPFLAGS = @PPU_CPPFLAGS@
 
 lib_LIBRARIES = libEGL.a libGL.a
-include_HEADERS = GL3/gl3ext.h GL3/rsxgl3ext.h GL3/rsxgl_compatibility.h
+include_HEADERS = GL3/rsxgl.h GL3/gl3ext.h GL3/rsxgl3ext.h GL3/rsxgl_compatibility.h
 
 dlmalloc_CPPFLAGS = -DMSPACES -DONLY_MSPACES -DHAVE_MMAP=0 -Dmalloc_getpagesize=4096
 
@@ -19,7 +19,7 @@ libEGL_a_CPPFLAGS = -D__RSX__ -I\$(top_srcdir)/include ${CPPFLAGS} -Wall $(dlmal
 libGL_a_DEPENDENCIES = ../cgcomp/libnv40.a
 libGL_a_SOURCES = rsxgl_context.cc gl_fifo.c					\
 	error.cc get.cc state.cc enable.cc arena.cc buffer.cc clear.cc draw.cc	\
-	sync.cc									\
+	sync.cc query.cc							\
 	program.cc attribs.cc uniforms.cc textures.cc framebuffer.cc		\
 	ringbuffer_migrate.cc dumb_migrate.cc debug.c
 libGL_a_CPPFLAGS = -D__RSX__ -I\$(top_srcdir)/include $(PS3DEV_PPU_CPPFLAGS) $(PSL1GHT_PPU_CPPFLAGS) -I$(top_srcdir)/src/cgcomp/include

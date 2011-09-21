@@ -7,6 +7,7 @@
 #include "timestamp.h"
 #include "rsxgl_limits.h"
 #include "cxxutil.h"
+#include "GL3/rsxgl.h"
 
 #include <malloc.h>
 #include <stdint.h>
@@ -16,24 +17,37 @@ rsxgl_context_t * rsxgl_ctx = 0;
 
 extern "C"
 void *
-rsxgl_context_create(const struct rsxegl_config_t * config)
+rsxgl_context_create(const struct rsxegl_config_t * config,gcmContextData * gcm_context)
 {
-  rsxgl_context_t * ctx = new rsxgl_context_t();
+  return new rsxgl_context_t(config,gcm_context);
+}
 
-  ctx -> base.api = EGL_OPENGL_API;
-  ctx -> base.config = config;
-  ctx -> base.gcm_context = 0;
-  ctx -> base.draw = 0;
-  ctx -> base.read = 0;
-  ctx -> base.valid = 1;
-  ctx -> base.callback = rsxgl_context_t::egl_callback;
+rsxgl_context_t::rsxgl_context_t(const struct rsxegl_config_t * config,gcmContextData * gcm_context)
+  : active_texture(0), ref(0), buffer(0), timestamp_sync(0), next_timestamp(1), last_timestamp(0), cached_timestamp(0)
+{
+  base.api = EGL_OPENGL_API;
+  base.config = config;
+  base.gcm_context = gcm_context;
+  base.draw = 0;
+  base.read = 0;
+  base.valid = 1;
+  base.callback = rsxgl_context_t::egl_callback;
+
+  timestamp_sync = rsxgl_sync_object_allocate();
+  rsxgl_assert(timestamp_sync != 0);
+  rsxgl_sync_cpu_signal(timestamp_sync,0);
+}
+
+static inline void
+rsxgl_make_context_current(rsxgl_context_t * ctx)
+{
+  ctx -> state.invalid.all = ~0;
   
-  ctx -> timestamp_sync = rsxgl_sync_object_allocate();
-  rsxgl_assert(ctx -> timestamp_sync != 0);
-  rsxgl_sync_cpu_signal(ctx -> timestamp_sync,0);
-  ctx -> cached_timestamp = 0;
+  ctx -> invalid_attribs.set();
+  ctx -> invalid_textures.set();
+  ctx -> invalid_samplers.set();
 
-  return ctx;
+  rsxgl_ctx = ctx;
 }
 
 void
@@ -66,26 +80,23 @@ rsxgl_context_t::egl_callback(struct rsxegl_context_t * egl_ctx,const uint8_t op
       ctx -> state.viewport.depthRange[1] = 1.0f;
     }
     
-    // ctx -> next_timestamp = 1;
-    // ctx -> cached_timestamp = 0;
-    
     //
     rsxgl_surface_emit(ctx -> base.gcm_context,&ctx -> state.colorSurface);
     rsxgl_surface_emit(ctx -> base.gcm_context,&ctx -> state.depthSurface);
     rsxgl_format_emit(ctx -> base.gcm_context,&ctx -> state.format);
-    
+
+    rsxgl_make_context_current(ctx);
+  }
+  else if(op == RSXEGL_POST_GPU_SWAP) {
+    rsxgl_migrate_reset(ctx -> base.gcm_context);
+#if 0
+    //
     ctx -> state.invalid.all = ~0;
     
     ctx -> invalid_attribs.set();
     ctx -> invalid_textures.set();
     ctx -> invalid_samplers.set();
-    
-    rsxgl_state_validate(ctx);
-    
-    rsxgl_ctx = ctx;
-  }
-  else if(op == RSXEGL_POST_GPU_SWAP) {
-    rsxgl_migrate_reset(ctx -> base.gcm_context);
+#endif
   }
   else if(op == RSXEGL_DESTROY_CONTEXT) {
     ctx -> base.valid = 0;
@@ -142,8 +153,6 @@ rsxgl_timestamp_create(rsxgl_context_t * ctx)
 void
 rsxgl_timestamp_wait(rsxgl_context_t * ctx,const uint32_t timestamp)
 {
-  //rsxgl_debug_printf("waiting on timestamp: %u\n",timestamp);
-
   rsxgl_assert(ctx -> timestamp_sync != 0);
 
   rsxgl_gcm_flush(ctx -> gcm_context());
@@ -157,6 +166,54 @@ rsxgl_timestamp_post(rsxgl_context_t * ctx,const uint32_t timestamp)
 
   rsxgl_emit_sync_gpu_signal_read(ctx -> base.gcm_context,ctx -> timestamp_sync,timestamp);
   ctx -> last_timestamp = timestamp;
-
-  //rsxgl_debug_printf("posted timestamp: %u\n",timestamp);
 }
+
+#if 0
+// librsx compatibility functions:
+extern "C" void *
+rsxglCreateContext(void * gcm_context)
+{
+  if(gcm_context != 0) {
+    return rsxgl_context_create(0,(gcmContextData *)gcm_context);
+  }
+  else {
+    return 0;
+  }
+}
+
+extern "C" void
+rsxglSetSurface(void * context,void * surface,uint8_t buffer)
+{
+}
+
+extern "C" void
+rsxglMakeCurrent(void * context)
+{
+  rsxgl_make_context_current((rsxgl_context_t *)context);
+}
+
+extern "C" void
+rsxglPreSwap()
+{
+  if(rsxgl_ctx != 0) {
+    rsxgl_context_t::egl_callback((rsxegl_context_t *)rsxgl_ctx,(uint8_t)RSXEGL_POST_CPU_SWAP);
+  }
+}
+
+extern "C" void
+rsxglPostSwap()
+{
+  if(rsxgl_ctx != 0) {
+    rsxgl_context_t::egl_callback((rsxegl_context_t *)rsxgl_ctx,(uint8_t)RSXEGL_POST_GPU_SWAP);
+  }
+}
+
+extern "C" void
+rsxglDestroyContext(void * gcm_context)
+{
+  if(gcm_context != 0) {
+    rsxgl_context_t::egl_callback((rsxegl_context_t *)rsxgl_ctx,(uint8_t)RSXEGL_DESTROY_CONTEXT);
+    delete (rsxgl_context_t *)gcm_context;
+  }
+}
+#endif

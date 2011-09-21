@@ -189,25 +189,32 @@ struct striped_object_array {
     }
   };
 
-  struct copy_item_fn {
+  // Actually moves an object in the same manner as arrays are resized.
+  struct move_item_fn {
     size_type lhs_i, rhs_i;
 
-    copy_item_fn(const size_type _lhs_i,const size_type _rhs_i)
+    move_item_fn(const size_type _lhs_i,const size_type _rhs_i)
       : lhs_i(_lhs_i), rhs_i(_rhs_i) {
+    }
+
+    template< typename Type >
+    static void move_it(Type & lhs,Type const & rhs) {
+      memcpy(&lhs,&rhs,sizeof(Type));
     }
 
     template< typename ArraysPair >
     void operator()(ArraysPair p) const {
-      boost::fusion::at_c< 0 >(p)[lhs_i] = boost::fusion::at_c< 1 >(p)[rhs_i];
+      //boost::fusion::at_c< 0 >(p)[lhs_i] = boost::fusion::at_c< 1 >(p)[rhs_i];
+      move_it(boost::fusion::at_c< 0 >(p)[lhs_i],boost::fusion::at_c< 1 >(p)[rhs_i]);
     }
   };
 
-  static void copy_item(type lhs,size_type lhs_i,
-			const_type rhs,size_type rhs_i) {
+  static void move_item(type lhs,const size_type lhs_i,
+			type rhs,const size_type rhs_i) {
     assert(lhs_i < lhs.size);
     assert(rhs_i < rhs.size);
 
-    boost::fusion::for_each(boost::fusion::zip(lhs.values,rhs.values),copy_item_fn(lhs_i,rhs_i));
+    boost::fusion::for_each(boost::fusion::zip(lhs.values,rhs.values),move_item_fn(lhs_i,rhs_i));
   }
 };
 

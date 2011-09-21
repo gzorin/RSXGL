@@ -209,8 +209,6 @@ extern "C"
 void
 rsxgltest_exit()
 {
-  tcp_printf("%s\n",__PRETTY_FUNCTION__);
-
   glDeleteShader(shaders[0]);
   glDeleteProgram(program);
   glDeleteShader(shaders[1]);

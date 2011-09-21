@@ -320,8 +320,6 @@ extern "C"
 void
 rsxgltest_exit()
 {
-  tcp_printf("%s\n",__PRETTY_FUNCTION__);
-
   glBindBuffer(GL_ARRAY_BUFFER,0);
 
   glVertexAttribPointer(vertex_location,3,GL_FLOAT,GL_FALSE,0,0);

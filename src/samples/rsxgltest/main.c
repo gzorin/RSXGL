@@ -7,7 +7,7 @@
 #include <EGL/egl.h>
 #define GL3_PROTOTYPES
 #include <GL3/gl3.h>
-#include <rsxegl.h>
+#include <GL3/rsxgl.h>
 #include <GL3/rsxgl3ext.h>
 
 #include <net/net.h>
@@ -397,11 +397,9 @@ main(int argc, const char ** argv)
 	      
 	      result = eglSwapBuffers(dpy,surface);
 
-	      rsxeglSwapSync(200,&timeout_time);
-
 	      EGLint e = eglGetError();
-	      if(e != EGL_SUCCESS) {
-		tcp_printf("Swap sync timed-out: %x %u\n",e,(unsigned int)result);
+	      if(!result) {
+		tcp_printf("Swap sync timed-out: %x\n",e);
 		break;
 	      }
 	      else {

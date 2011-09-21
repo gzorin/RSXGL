@@ -540,7 +540,7 @@ glDrawElements (GLenum mode, GLsizei count, GLenum type, const GLvoid* indices)
     memcpy(migrate_buffer,indices,migrate_buffer_size);
     uint32_t migrate_buffer_offset = 0;
     int32_t s = gcmAddressToOffset(migrate_buffer,&migrate_buffer_offset);
-    rsxgl_assert(s != 0);
+    rsxgl_assert(s == 0);
     
     //
     uint32_t * buffer = gcm_reserve(context,3);

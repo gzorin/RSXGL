@@ -14,7 +14,7 @@
 #include "textures.h"
 #include "program.h"
 #include "framebuffer.h"
-//#include "query.h"
+#include "query.h"
 
 #include "bit_set.h"
 
@@ -39,12 +39,15 @@ struct rsxgl_context_t {
   renderbuffer_t::binding_type renderbuffer_binding;
   framebuffer_t::binding_type framebuffer_binding;
 
-  //query_t::binding_type query_binding;
+  query_t::binding_type query_binding;
   
   program_t::binding_type program_binding;
 
   // Used by glFinish():
   uint32_t ref;
+
+  // Back (0) or front (1)
+  uint8_t buffer;
 
   uint8_t timestamp_sync;
 
@@ -56,9 +59,7 @@ struct rsxgl_context_t {
   // Should be initialized to 0:
   uint32_t cached_timestamp;
 
-  rsxgl_context_t()
-  : active_texture(0), ref(0), timestamp_sync(0), next_timestamp(1), last_timestamp(0), cached_timestamp(0) {
-  }
+  rsxgl_context_t(const struct rsxegl_config_t *,gcmContextData *);
 
   inline
   gcmContextData * gcm_context() {

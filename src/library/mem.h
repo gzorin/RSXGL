@@ -17,10 +17,10 @@
 extern "C" {
 #endif
 
-rsx_ptr_t rsx_malloc(rsx_size_t);
-rsx_ptr_t rsx_memalign(rsx_size_t,rsx_size_t);
-rsx_ptr_t rsx_realloc(rsx_ptr_t,rsx_size_t);
-void rsx_free(rsx_ptr_t);
+rsx_ptr_t rsxgl_rsx_malloc(rsx_size_t);
+rsx_ptr_t rsxgl_rsx_memalign(rsx_size_t,rsx_size_t);
+rsx_ptr_t rsxgl_rsx_realloc(rsx_ptr_t,rsx_size_t);
+void rsxgl_rsx_free(rsx_ptr_t);
 
 #ifdef __cplusplus
 }
