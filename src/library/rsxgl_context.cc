@@ -34,19 +34,19 @@ rsxgl_context_t::rsxgl_context_t(const struct rsxegl_config_t * config,gcmContex
   base.callback = rsxgl_context_t::egl_callback;
 
   timestamp_sync = rsxgl_sync_object_allocate();
-  rsxgl_assert(ctx -> timestamp_sync != 0);
+  rsxgl_assert(timestamp_sync != 0);
   rsxgl_sync_cpu_signal(timestamp_sync,0);
-
-  state.invalid.all = ~0;
-  
-  invalid_attribs.set();
-  invalid_textures.set();
-  invalid_samplers.set();
 }
 
 static inline void
 rsxgl_make_context_current(rsxgl_context_t * ctx)
 {
+  ctx -> state.invalid.all = ~0;
+  
+  ctx -> invalid_attribs.set();
+  ctx -> invalid_textures.set();
+  ctx -> invalid_samplers.set();
+
   rsxgl_ctx = ctx;
 }
 
@@ -89,13 +89,14 @@ rsxgl_context_t::egl_callback(struct rsxegl_context_t * egl_ctx,const uint8_t op
   }
   else if(op == RSXEGL_POST_GPU_SWAP) {
     rsxgl_migrate_reset(ctx -> base.gcm_context);
-
+#if 0
     //
     ctx -> state.invalid.all = ~0;
     
     ctx -> invalid_attribs.set();
     ctx -> invalid_textures.set();
     ctx -> invalid_samplers.set();
+#endif
   }
   else if(op == RSXEGL_DESTROY_CONTEXT) {
     ctx -> base.valid = 0;

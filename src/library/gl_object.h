@@ -259,7 +259,7 @@ struct object_container_type {
   }
 
   bool is_anything_bound(const size_type target) const {
-    assert(target < Targets);
+    assert(target < Size);
     return names[target] != 0;
   }
 
