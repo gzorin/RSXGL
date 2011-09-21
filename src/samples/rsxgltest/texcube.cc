@@ -57,6 +57,7 @@ struct sine_wave_t xyz_waves[3] = {
   }
 };
 
+GLuint vao = 0;
 GLuint buffers[2] = { 0,0 };
 GLuint shaders[2] = { 0,0 };
 

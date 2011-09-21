@@ -2355,7 +2355,7 @@ am__tar='${AMTAR} chof - "$$tardir"'; am__untar='${AMTAR} xf -'
 
 
 
-ac_config_files="$ac_config_files include/config.h Makefile include/Makefile src/cgcomp/Makefile src/library/Makefile src/library/rsxgl_config.h src/library/GL3/rsxgl3ext.h src/library/GL3/rsxgl_compatibility.h src/samples/Makefile src/samples/rsxgltest/Makefile src/samples/rsxglgears/Makefile"
+ac_config_files="$ac_config_files include/config.h Makefile include/Makefile src/cgcomp/Makefile src/library/Makefile src/library/rsxgl_config.h src/library/GL3/rsxgl3ext.h src/library/GL3/rsxgl_compatibility.h src/samples/Makefile src/samples/rsxgltest/Makefile src/samples/rsxglgears/Makefile src/samples/wfobjs/Makefile"
 
 
 ac_ext=c
@@ -4777,6 +4777,7 @@ do
     "src/samples/Makefile") CONFIG_FILES="$CONFIG_FILES src/samples/Makefile" ;;
     "src/samples/rsxgltest/Makefile") CONFIG_FILES="$CONFIG_FILES src/samples/rsxgltest/Makefile" ;;
     "src/samples/rsxglgears/Makefile") CONFIG_FILES="$CONFIG_FILES src/samples/rsxglgears/Makefile" ;;
+    "src/samples/wfobjs/Makefile") CONFIG_FILES="$CONFIG_FILES src/samples/wfobjs/Makefile" ;;
     "depfiles") CONFIG_COMMANDS="$CONFIG_COMMANDS depfiles" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;

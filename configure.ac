@@ -15,6 +15,7 @@ AC_CONFIG_FILES(
 	src/samples/Makefile
 	src/samples/rsxgltest/Makefile
 	src/samples/rsxglgears/Makefile
+	src/samples/wfobjs/Makefile
 	)
 
 AC_PROG_CC
