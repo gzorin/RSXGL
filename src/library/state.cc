@@ -13,6 +13,7 @@
 #include "rsxgl_assert.h"
 #include "error.h"
 #include "state.h"
+#include "cxxutil.h"
 
 #if defined(GLAPI)
 #undef GLAPI
@@ -75,9 +76,13 @@ state_t::state_t()
 
   polygon.cullEnable = 0;
   polygon.cullFace = RSXGL_CULL_BACK;
-  polygon.frontFace = RSXGL_CULL_FRONT_FACE_CCW;
+  polygon.frontFace = RSXGL_FACE_CCW;
+  polygon.mode = RSXGL_POLYGON_MODE_FILL;
+  polygon.offsetFactor = 0;
+  polygon.offsetUnits = 0;
 
-  lineWidth = 1;
+  lineWidth = 1.0f;
+  pointSize = 1.0f;
 
   pixel_store.pack_swap_bytes = 0;
   pixel_store.pack_lsb_first = 0;
@@ -292,8 +297,9 @@ rsxgl_state_validate(rsxgl_context_t * ctx)
     s -> invalid.parts.depth_write_mask = 0;
   }
 
+  // TODO - Finer-grained lazy evaluation of all of the following state:
   //
-  if(s -> invalid.parts.framebuffer == 0) return;
+  if(s -> invalid.parts.the_rest == 0) return;
 
   // clear color:
   buffer = gcm_reserve(context,2);
@@ -397,7 +403,7 @@ rsxgl_state_validate(rsxgl_context_t * ctx)
 
   // polygon culling:
   if(s -> polygon.cullEnable) {
-    buffer = gcm_reserve(context,6);
+    buffer = gcm_reserve(context,4);
 
     gcm_emit_method(&buffer,NV30_3D_CULL_FACE_ENABLE,1);
     gcm_emit(&buffer,1);
@@ -417,9 +423,6 @@ rsxgl_state_validate(rsxgl_context_t * ctx)
       gcm_emit(&buffer,0);
       break;
     };
-
-    gcm_emit_method(&buffer,NV30_3D_FRONT_FACE,1);
-    gcm_emit(&buffer,s -> polygon.frontFace == RSXGL_CULL_FRONT_FACE_CW ? NV30_3D_FRONT_FACE_CW : NV30_3D_FRONT_FACE_CCW);
   }
   else {
     buffer = gcm_reserve(context,2);
@@ -429,6 +432,45 @@ rsxgl_state_validate(rsxgl_context_t * ctx)
   }
 
   gcm_finish_commands(context,&buffer);
+
+  // other polygon attributes:
+  //
+  // polygon winding mode:
+  {
+    buffer = gcm_reserve(context,2);
+
+    gcm_emit_method_at(buffer,0,NV30_3D_FRONT_FACE,1);
+    gcm_emit_at(buffer,1,s -> polygon.frontFace == RSXGL_FACE_CW ? NV30_3D_FRONT_FACE_CW : NV30_3D_FRONT_FACE_CCW);
+
+    gcm_finish_commands(context,&buffer);
+  }
+
+  // polygon fill mode:
+  {
+    buffer = gcm_reserve(context,4);
+
+    const uint32_t mode = s -> polygon.mode;
+    const uint32_t nv40_mode = (mode == RSXGL_POLYGON_MODE_POINT) ? NV30_3D_POLYGON_MODE_FRONT_POINT : ((mode == RSXGL_POLYGON_MODE_LINE) ? NV30_3D_POLYGON_MODE_FRONT_LINE : NV30_3D_POLYGON_MODE_FRONT_FILL);
+
+    gcm_emit_method_at(buffer,0,NV30_3D_POLYGON_MODE_FRONT,1);
+    gcm_emit_at(buffer,1,nv40_mode);
+
+    gcm_emit_method_at(buffer,2,NV30_3D_POLYGON_MODE_BACK,1);
+    gcm_emit_at(buffer,3,nv40_mode);
+
+    gcm_finish_n_commands(context,4);
+  }
+
+  // polygon offset:
+  {
+    buffer = gcm_reserve(context,3);
+
+    gcm_emit_method_at(buffer,0,NV30_3D_POLYGON_OFFSET_FACTOR,2);
+    gcm_emit_at(buffer,1,_ieee32_t(s -> polygon.offsetFactor).u);
+    gcm_emit_at(buffer,2,_ieee32_t(s -> polygon.offsetUnits).u);
+
+    gcm_finish_n_commands(context,3);
+  }
 
   // primitive restart:
   {
@@ -453,15 +495,28 @@ rsxgl_state_validate(rsxgl_context_t * ctx)
 
   // line width
   {
-    buffer = gcm_reserve(context,1);
+    buffer = gcm_reserve(context,2);
 
-    gcm_emit_method(&buffer,NV30_3D_LINE_WIDTH,1);
-    gcm_emit(&buffer,s -> lineWidth);
+    // fixed-point:
+    const uint32_t lineWidth = (uint32_t)(s -> lineWidth * (1 << 3)) & ((1 << 9) - 1);
+
+    gcm_emit_method_at(buffer,0,NV30_3D_LINE_WIDTH,1);
+    gcm_emit_at(buffer,1,lineWidth);
     
-    gcm_finish_commands(context,&buffer);
+    gcm_finish_n_commands(context,2);
   }
 
-  s -> invalid.parts.framebuffer = 0;
+  // point size
+  {
+    buffer = gcm_reserve(context,2);
+
+    gcm_emit_method_at(buffer,0,NV30_3D_POINT_SIZE,1);
+    gcm_emit_at(buffer,1,_ieee32_t(s -> pointSize).u);
+    
+    gcm_finish_n_commands(context,2);
+  }
+
+  s -> invalid.parts.the_rest = 0;
 }
 
 //
@@ -583,7 +638,7 @@ glDepthFunc (GLenum func)
     RSXGL_ERROR_(GL_INVALID_ENUM);
   };
   
-  ctx -> state.invalid.parts.framebuffer = 1;
+  ctx -> state.invalid.parts.the_rest = 1;
 
   RSXGL_NOERROR_();
 }
@@ -599,7 +654,7 @@ glBlendColor (GLclampf green, GLclampf blue, GLclampf alpha, GLclampf red)
     (uint32_t)(blue * 255.0f) << NV30_3D_BLEND_COLOR_B__SHIFT |
     (uint32_t)(alpha * 255.0f) << NV30_3D_BLEND_COLOR_A__SHIFT;
 
-  ctx -> state.invalid.parts.framebuffer = 1;
+  ctx -> state.invalid.parts.the_rest = 1;
 
   RSXGL_NOERROR_();
 }
@@ -634,7 +689,7 @@ glBlendEquation ( GLenum mode )
     RSXGL_ERROR_(GL_INVALID_ENUM);
   };
 
-  ctx -> state.invalid.parts.framebuffer = 1;
+  ctx -> state.invalid.parts.the_rest = 1;
 
   RSXGL_NOERROR_();
 }
@@ -684,7 +739,7 @@ glBlendEquationSeparate (GLenum modeRGB, GLenum modeAlpha)
     RSXGL_ERROR_(GL_INVALID_ENUM);
   };
 
-  ctx -> state.invalid.parts.framebuffer = 1;
+  ctx -> state.invalid.parts.the_rest = 1;
 
   RSXGL_NOERROR_();
 }
@@ -829,7 +884,7 @@ glBlendFunc (GLenum _sfactor, GLenum _dfactor)
     RSXGL_ERROR_(GL_INVALID_ENUM);
   };
 
-  ctx -> state.invalid.parts.framebuffer = 1;
+  ctx -> state.invalid.parts.the_rest = 1;
 
   RSXGL_NOERROR_();
 }
@@ -1052,7 +1107,7 @@ glBlendFuncSeparate (GLenum srcRGB, GLenum dstRGB, GLenum srcAlpha, GLenum dstAl
     RSXGL_ERROR_(GL_INVALID_ENUM);
   };
 
-  ctx -> state.invalid.parts.framebuffer = 1;
+  ctx -> state.invalid.parts.the_rest = 1;
 
   RSXGL_NOERROR_();
 }
@@ -1115,7 +1170,7 @@ glStencilFuncSeparate (GLenum face, GLenum func, GLint ref, GLuint mask)
     ctx -> state.stencil.face[1].mask = mask;
   }
 
-  ctx -> state.invalid.parts.framebuffer = 1;
+  ctx -> state.invalid.parts.the_rest = 1;
 
   RSXGL_NOERROR_();
 }
@@ -1144,7 +1199,7 @@ glStencilMaskSeparate (GLenum face, GLuint mask)
     ctx -> state.stencil.face[1].writemask = mask;
   }
 
-  ctx -> state.invalid.parts.framebuffer = 1;
+  ctx -> state.invalid.parts.the_rest = 1;
 
   RSXGL_NOERROR_();
 }
@@ -1199,7 +1254,7 @@ glStencilOpSeparate (GLenum face, GLenum fail, GLenum zfail, GLenum zpass)
     RSXGL_ERROR_(GL_INVALID_ENUM);
   }
 
-  ctx -> state.invalid.parts.framebuffer = 1;
+  ctx -> state.invalid.parts.the_rest = 1;
 
   RSXGL_NOERROR_();
 }
@@ -1209,6 +1264,101 @@ glStencilOp (GLenum fail, GLenum zfail, GLenum zpass)
 {
   glStencilOpSeparate(GL_FRONT_AND_BACK,fail,zfail,zpass);
 }
+
+GLAPI void APIENTRY
+glCullFace (GLenum mode)
+{
+  struct rsxgl_context_t * ctx = current_ctx();
+
+  switch(mode) {
+  case GL_FRONT:
+    ctx -> state.polygon.cullFace = RSXGL_CULL_FRONT;
+    break;
+  case GL_BACK:
+    ctx -> state.polygon.cullFace = RSXGL_CULL_BACK;
+    break;
+  case GL_FRONT_AND_BACK:
+    ctx -> state.polygon.cullFace = RSXGL_CULL_FRONT_AND_BACK;
+    break;
+  default:
+    RSXGL_ERROR_(GL_INVALID_ENUM);
+  };
+
+  ctx -> state.invalid.parts.the_rest = 1;
+}
+
+GLAPI void APIENTRY
+glFrontFace (GLenum mode)
+{
+  struct rsxgl_context_t * ctx = current_ctx();
+
+  switch(mode) {
+  case GL_CW:
+    ctx -> state.polygon.frontFace = RSXGL_FACE_CW;
+    break;
+  case GL_CCW:
+    ctx -> state.polygon.frontFace = RSXGL_FACE_CCW;
+    break;
+  default:
+    RSXGL_ERROR_(GL_INVALID_ENUM);
+  };
+
+  ctx -> state.invalid.parts.the_rest = 1;
+}
+
+GLAPI void APIENTRY
+glLineWidth (GLfloat width)
+{
+  struct rsxgl_context_t * ctx = current_ctx();
+  ctx -> state.lineWidth = width;
+  ctx -> state.invalid.parts.the_rest = 1;
+}
+
+GLAPI void APIENTRY
+glPointSize (GLfloat size)
+{
+  struct rsxgl_context_t * ctx = current_ctx();
+  ctx -> state.pointSize = size;
+  ctx -> state.invalid.parts.the_rest = 1;
+}
+
+GLAPI void APIENTRY
+glPolygonMode (GLenum face, GLenum mode)
+{
+  struct rsxgl_context_t * ctx = current_ctx();
+
+  if(face != GL_FRONT_AND_BACK) {
+    RSXGL_ERROR_(GL_INVALID_ENUM);
+  }
+
+  switch(mode) {
+  case GL_POINT:
+    ctx -> state.polygon.mode = RSXGL_POLYGON_MODE_POINT;
+    break;
+  case GL_LINE:
+    ctx -> state.polygon.mode = RSXGL_POLYGON_MODE_LINE;
+    break;
+  case GL_FILL:
+    ctx -> state.polygon.mode = RSXGL_POLYGON_MODE_FILL;
+    break;
+  default:
+    RSXGL_ERROR_(GL_INVALID_ENUM);
+  };
+
+  ctx -> state.invalid.parts.the_rest = 1;
+}
+
+GLAPI void APIENTRY
+glPolygonOffset (GLfloat factor, GLfloat units)
+{
+  struct rsxgl_context_t * ctx = current_ctx();
+
+  ctx -> state.polygon.offsetFactor = factor;
+  ctx -> state.polygon.offsetUnits = units;
+
+  ctx -> state.invalid.parts.the_rest = 1;
+}
+
 
 static inline void
 rsxgl_pixel_store(rsxgl_context_t * ctx,GLenum pname,uint32_t param)

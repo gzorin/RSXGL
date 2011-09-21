@@ -12,6 +12,7 @@
 #include "program.h"
 #include "attribs.h"
 #include "uniforms.h"
+#include "sync.h"
 #include "timestamp.h"
 
 #include <GL3/gl3.h>

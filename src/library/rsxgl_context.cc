@@ -164,7 +164,7 @@ rsxgl_timestamp_post(rsxgl_context_t * ctx,const uint32_t timestamp)
 {
   rsxgl_assert(ctx -> timestamp_sync != 0);
 
-  rsxgl_emit_sync_gpu_signal_read(ctx -> base.gcm_context,ctx -> timestamp_sync,timestamp);
+  rsxgl_emit_sync_gpu_signal_write(ctx -> base.gcm_context,ctx -> timestamp_sync,timestamp);
   ctx -> last_timestamp = timestamp;
 }
 

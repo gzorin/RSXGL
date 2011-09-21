@@ -65,13 +65,21 @@ enum stencil_ops {
   RSXGL_DECR_WRAP = 7
 };
 
+enum polygon_mode {
+  RSXGL_POLYGON_MODE_POINT = 0,
+  RSXGL_POLYGON_MODE_LINE = 1,
+  RSXGL_POLYGON_MODE_FILL = 2
+};
+
 enum cull_face {
   RSXGL_CULL_FRONT = 0,
   RSXGL_CULL_BACK = 1,
-  RSXGL_CULL_FRONT_AND_BACK = 2,
+  RSXGL_CULL_FRONT_AND_BACK = 2
+};
 
-  RSXGL_CULL_FRONT_FACE_CW = 0,
-  RSXGL_CULL_FRONT_FACE_CCW = 1
+enum face {
+  RSXGL_FACE_CW = 0,
+  RSXGL_FACE_CCW = 1
 };
 
 enum pixel_store_alignment {
@@ -94,7 +102,7 @@ struct state_t {
 	color_write_mask:1,
 	depth_write_mask:1,
 	primitive_restart:1,
-	framebuffer:1,
+	the_rest:1,
 	program:1;
     } parts;
   } invalid;
@@ -142,8 +150,9 @@ struct state_t {
   } stencil;
 
   struct {
-    uint32_t cullEnable:1, cullFace:2, frontFace:1;
-    float offsetFactor, offsetUnits;
+    uint32_t cullEnable:1, cullFace:2, frontFace:1, mode: 2
+      ;
+    float offsetFactor, offsetUnits;    
   } polygon;
 
   struct {
@@ -152,7 +161,8 @@ struct state_t {
     uint32_t unpack_row_length, unpack_image_height, unpack_skip_pixels, unpack_skip_rows;
   } pixel_store;
 
-  uint16_t lineWidth;
+  float lineWidth;
+  float pointSize;
   uint32_t primitiveRestartIndex;
 
   state_t();

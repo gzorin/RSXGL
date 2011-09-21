@@ -22,31 +22,6 @@
 // Should not return 0, because this is reserved for indicating that an object is not waiting
 // on a GPU operation.
 
-// Returns a tuple: the result, the next timestamp value, and a boolean if the 
-#if 0
-static inline uint32_t
-rsxgl_timestamp_create(uint32_t & _next_timestamp,void (*overflow_callback)(void *),void * overflow_data)
-{
-  const uint32_t max_timestamp = RSXGL_MAX_TIMESTAMP;
-  rsxgl_assert(is_pot(timestamp + 1));
-
-  const uint32_t result = _next_timestamp;
-  rsxgl_assert(result > 0);
-
-  const uint32_t next_timestamp = _next_timestamp + 1;
-  
-  if(next_timestamp & ~max_timestamp || next_timestamp == 0) {
-    if(overflow_callback) (*overflow_callback)(overflow_data);
-    _next_timestamp = 1;
-  }
-  else {
-    _next_timestamp = next_timestamp;
-  }
-
-  return result;
-}
-#endif
-
 // Add the previously allocated timestamp to the command stream.
 // See if a timestamp has been passed by the GPU:
 static inline bool
