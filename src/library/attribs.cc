@@ -478,27 +478,31 @@ glVertexAttrib3sv (GLuint index, const GLshort *v)
 GLAPI void APIENTRY
 glVertexAttrib4Nbv (GLuint index, const GLbyte *v)
 {
-  
+  rsxgl_vertex_attrib< GLbyte, 4 >(current_ctx(),RSXGL_VERTEX_S16_NR,index,v[0],v[1],v[2]);
 }
 
 GLAPI void APIENTRY
 glVertexAttrib4Niv (GLuint index, const GLint *v)
 {
+  rsxgl_vertex_attrib< GLint, 4 >(current_ctx(),RSXGL_VERTEX_F32,index,v[0],v[1],v[2]);
 }
 
 GLAPI void APIENTRY
 glVertexAttrib4Nsv (GLuint index, const GLshort *v)
 {
+  rsxgl_vertex_attrib< GLshort, 4 >(current_ctx(),RSXGL_VERTEX_F32,index,v[0],v[1],v[2]);
 }
 
 GLAPI void APIENTRY
 glVertexAttrib4Nub (GLuint index, GLubyte x, GLubyte y, GLubyte z, GLubyte w)
 {
+  rsxgl_vertex_attrib< GLubyte, 4 >(current_ctx(),RSXGL_VERTEX_F32,index,x,y,z,w);
 }
 
 GLAPI void APIENTRY
 glVertexAttrib4Nubv (GLuint index, const GLubyte *v)
 {
+  rsxgl_vertex_attrib< GLubyte, 4 >(current_ctx(),RSXGL_VERTEX_F32,index,v[0],v[1],v[2]);
 }
 
 GLAPI void APIENTRY
