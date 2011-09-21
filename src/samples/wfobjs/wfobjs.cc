@@ -105,10 +105,10 @@ struct wfobj_model {
 const size_t nmodels = 1, imodel = 0;
 
 wfobj_model_spec model_specs[nmodels] = {
-  { cornell_box_obj_bin, cornell_box_obj_bin_size, 1.0 / 200.0 }
-
-  // This model blows up RSXGL, too many polygons:
-  //{ crab_obj_bin, crab_obj_bin_size, 0.5 }
+  { cornell_box_obj_bin, cornell_box_obj_bin_size, 1.0 / 200.0 },
+  
+  // The OBJ reader has problems parsing this, and hangs the program:
+  // { crab_obj_bin, crab_obj_bin_size, 0.5 }
 };
 
 wfobj_model models[nmodels];
@@ -132,6 +132,8 @@ wfobj_to_gl(wfobj_model_spec const & model_spec)
 
     ntris += (face -> vertex_count == 4) ? 2 : (face -> vertex_count == 3) ? 1 : 0;
   }
+
+  tcp_printf("model has %u triangles\n",ntris);
 
   // size of a single vertex - vec3, vec3, vec2
   struct vertex {
@@ -186,6 +188,8 @@ wfobj_to_gl(wfobj_model_spec const & model_spec)
   glGenBuffers(1,&result.vbo);
 
   glBindBuffer(GL_ARRAY_BUFFER,result.vbo);
+
+  tcp_printf(" building buffer object: want %u bytes\n",(uint32_t)(sizeof(vertex) * ntris * 3));
   glBufferData(GL_ARRAY_BUFFER,sizeof(vertex) * ntris * 3,0,GL_STATIC_DRAW);
   
   vertex * _vbo = (vertex *)glMapBuffer(GL_ARRAY_BUFFER,GL_WRITE_ONLY);
@@ -230,6 +234,8 @@ wfobj_to_gl(wfobj_model_spec const & model_spec)
   result.ntris = ntris;
 
   result.scale = model_spec.scale;
+
+  tcp_printf(" finished processing model");
 
   return result;
 }
@@ -299,6 +305,8 @@ extern "C"
 int
 rsxgltest_draw()
 {
+  tcp_printf("%s\n",__PRETTY_FUNCTION__);
+
   float rgb[3] = {
     compute_sine_wave(rgb_waves,rsxgltest_elapsed_time),
     compute_sine_wave(rgb_waves + 1,rsxgltest_elapsed_time),

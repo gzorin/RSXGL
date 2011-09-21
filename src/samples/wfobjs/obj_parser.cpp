@@ -7,6 +7,8 @@
 
 #define WHITESPACE " \t\n\r"
 
+extern "C" void tcp_printf(const char * fmt,...);
+
 void obj_free_half_list(list *listo)
 {
 	list_delete_all(listo);
@@ -324,8 +326,10 @@ int obj_parse_inline_obj_file(obj_growable_scene_data *growable_data, char const
 	char * next_line = current_line;
 
 	//while( fgets(current_line, OBJ_LINE_SIZE, obj_file_stream) )
-	while( current_line = strsep(&next_line,"\n\r") )
+	while( current_line = strsep(&next_line," \t\n\r") )
 	{
+	  tcp_printf("%u: %s\n",(unsigned int)line_number,current_line);
+
 		current_token = strtok( current_line, " \t\n\r");
 		line_number++;
 

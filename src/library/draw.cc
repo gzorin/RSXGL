@@ -263,7 +263,7 @@ rsxgl_draw_arrays(gcmContextData * context,const uint32_t first,const uint32_t c
     inline void
     begin(gcmContextData * context,const uint32_t ninvoc,const uint32_t ninvocremainder,const uint32_t nbatchremainder) const {
       const uint32_t n =
-	// method + 2047 arguments:
+	// method + 3 arguments:
 	((RSXGL_VERTEX_BATCH_MAX_FIFO_METHOD_ARGS + 1) * ninvoc) +
 
 	((ninvocremainder > 0 && nbatchremainder > 0 && (ninvocremainder + 1) < RSXGL_VERTEX_BATCH_MAX_FIFO_METHOD_ARGS) ?
