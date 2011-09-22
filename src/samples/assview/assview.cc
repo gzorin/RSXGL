@@ -1,5 +1,5 @@
 /*
- * wfobjs - render Wavefront .OBJ's
+ * assview - render models loaded with the assimp asset importer.
  */
 
 #define GL3_PROTOTYPES
@@ -10,22 +10,23 @@
 #include "sine_wave.h"
 
 #include <stddef.h>
-#include "wfobjs_vpo.h"
-#include "wfobjs_fpo.h"
+#include "assview_vpo.h"
+#include "assview_fpo.h"
 
 #include <io/pad.h>
 
 #include <math.h>
 #include <Eigen/Geometry>
 
-#include "obj_parser.h"
+#include <assimp.h>
+#include <aiScene.h>
 
 #include "cornell_box_obj_bin.h"
 #include "cornell_box_mtl_bin.h"
 
 #include "crab_obj_bin.h"
 
-const char * rsxgltest_name = "wfobjs";
+const char * rsxgltest_name = "assview";
 
 struct sine_wave_t rgb_waves[3] = {
   { 0.5f,
@@ -85,50 +86,67 @@ Eigen::Affine3f ViewMatrixInv =
 		   )
 		  ).inverse();
 
-struct wfobj_model_spec {
+struct asset_model_spec {
   uint8_t const * data;
   const size_t size;
 
   float scale;
 };
 
-struct wfobj_model {
+struct asset_model {
   GLuint vbo, vao;
   GLuint ntris;
   float scale;
 
-  wfobj_model()
+  asset_model()
     : vbo(0), vao(0), ntris(0), scale(1.0f) {
   }
 };
 
 const size_t nmodels = 1, imodel = 0;
 
-wfobj_model_spec model_specs[nmodels] = {
+asset_model_spec model_specs[nmodels] = {
   { cornell_box_obj_bin, cornell_box_obj_bin_size, 1.0 / 200.0 },
   
   // The OBJ reader has problems parsing this, and hangs the program:
   // { crab_obj_bin, crab_obj_bin_size, 0.5 }
 };
 
-wfobj_model models[nmodels];
+asset_model models[nmodels];
 
+asset_model
+asset_to_gl(asset_model_spec const & model_spec)
+{
+  asset_model result;
+  
+  const aiScene * scene = aiImportFileFromMemory((char const *)model_spec.data,model_spec.size,0,"OBJ");
+  if(scene != 0) {
+    tcp_printf("read scene; it has %u meshes\n",(uint32_t)scene -> mNumMeshes);
+  }
+  else {
+    tcp_printf("Failed to read scene");
+  }
+
+  return result;
+}
+
+#if 0
 // Turn a obj_scene_data into an OpenGL vertex array object. This function performs no checking on the component indices
 //  to determine if they're valid.
-wfobj_model
-wfobj_to_gl(wfobj_model_spec const & model_spec)
+asset_model
+asset_to_gl(asset_model_spec const & model_spec)
 {
-  wfobj_model result;
+  asset_model result;
 
-  obj_scene_data wfobj;
-  int r = parse_inline_obj_scene(&wfobj,(char const *)model_spec.data,model_spec.size);
+  obj_scene_data asset;
+  int r = parse_inline_obj_scene(&asset,(char const *)model_spec.data,model_spec.size);
   if(!r) return result;
 
   // count number of triangles:
   uint32_t ntris = 0;
   
-  for(size_t i = 0,n = wfobj.face_count;i < n;++i) {
-    obj_face const * face = wfobj.face_list[i];
+  for(size_t i = 0,n = asset.face_count;i < n;++i) {
+    obj_face const * face = asset.face_list[i];
 
     ntris += (face -> vertex_count == 4) ? 2 : (face -> vertex_count == 3) ? 1 : 0;
   }
@@ -195,23 +213,23 @@ wfobj_to_gl(wfobj_model_spec const & model_spec)
   vertex * _vbo = (vertex *)glMapBuffer(GL_ARRAY_BUFFER,GL_WRITE_ONLY);
   vertex * pvbo = _vbo;
 
-  obj_face ** pface = wfobj.face_list;
-  for(size_t i = 0,n = wfobj.face_count;i < n;++i,++pface) {
+  obj_face ** pface = asset.face_list;
+  for(size_t i = 0,n = asset.face_count;i < n;++i,++pface) {
     obj_face const * face = *pface;
 
     if(face -> vertex_count == 3) {
-      *pvbo++ = vertex::create(wfobj,face,0);
-      *pvbo++ = vertex::create(wfobj,face,1);
-      *pvbo++ = vertex::create(wfobj,face,2);
+      *pvbo++ = vertex::create(asset,face,0);
+      *pvbo++ = vertex::create(asset,face,1);
+      *pvbo++ = vertex::create(asset,face,2);
     }
     else if(face -> vertex_count == 4) {
-      *pvbo++ = vertex::create(wfobj,face,0);
-      *pvbo++ = vertex::create(wfobj,face,1);
-      *pvbo++ = vertex::create(wfobj,face,2);
+      *pvbo++ = vertex::create(asset,face,0);
+      *pvbo++ = vertex::create(asset,face,1);
+      *pvbo++ = vertex::create(asset,face,2);
 
-      *pvbo++ = vertex::create(wfobj,face,2);
-      *pvbo++ = vertex::create(wfobj,face,3);
-      *pvbo++ = vertex::create(wfobj,face,0);
+      *pvbo++ = vertex::create(asset,face,2);
+      *pvbo++ = vertex::create(asset,face,3);
+      *pvbo++ = vertex::create(asset,face,0);
     }
   }
 
@@ -239,6 +257,7 @@ wfobj_to_gl(wfobj_model_spec const & model_spec)
 
   return result;
 }
+#endif
 
 extern "C"
 void
@@ -271,14 +290,14 @@ rsxgltest_init(int argc,const char ** argv)
   glAttachShader(program,shaders[1]);
 
   // Supply shader binaries:
-  glShaderBinary(1,shaders,0,wfobjs_vpo,wfobjs_vpo_size);
-  glShaderBinary(1,shaders + 1,0,wfobjs_fpo,wfobjs_fpo_size);
+  glShaderBinary(1,shaders,0,assview_vpo,assview_vpo_size);
+  glShaderBinary(1,shaders + 1,0,assview_fpo,assview_fpo_size);
 
   // Link the program for real:
   glLinkProgram(program);
   glValidateProgram(program);
   
-  summarize_program("wfobjs",program);
+  summarize_program("assview",program);
 
   vertex_location = glGetAttribLocation(program,"vertex");
   normal_location = glGetAttribLocation(program,"normal");
@@ -293,7 +312,7 @@ rsxgltest_init(int argc,const char ** argv)
 
   // Load the models:
   for(size_t i = 0;i < nmodels;++i) {
-    models[i] = wfobj_to_gl(model_specs[i]);
+    models[i] = asset_to_gl(model_specs[i]);
   }
 
   // Draw wireframe models for now:

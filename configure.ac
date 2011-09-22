@@ -15,8 +15,16 @@ AC_CONFIG_FILES(
 	src/samples/Makefile
 	src/samples/rsxgltest/Makefile
 	src/samples/rsxglgears/Makefile
-	src/samples/wfobjs/Makefile
 	)
+
+# Which subdirectories get built:
+RSXGL_SUBDIRS="include src/cgcomp src/library src/samples"
+
+# Determine which samples get built:
+RSXGL_SAMPLES="rsxgltest rsxglgears"
+
+AC_SUBST([RSXGL_SUBDIRS])
+AC_SUBST([RSXGL_SAMPLES])
 
 AC_PROG_CC
 AC_PROG_CXX
@@ -130,5 +138,19 @@ AC_MSG_NOTICE([PORTLIBS is set to ${PORTLIBS}])
 AC_SUBST([PORTLIBS])
 AC_SUBST([PORTLIBS_PPU_CPPFLAGS])
 AC_SUBST([PORTLIBS_PPU_LDFLAGS])
+
+# Setup "extsrc" - "contributed" sources:
+AC_EXTSRC_INIT()
+
+# Look for the Open Asset Import library:
+AC_EXTSRC([assimp],[the Open Asset Import library])
+AC_EXTSRC_CHECK([assimp],[include/assimp.h])
+
+AM_COND_IF([assimp_SOURCE_FOUND],[AC_CONFIG_FILES([src/assimp/Makefile src/samples/assview/Makefile])])
+
+if test "${assimp_source_found}" == "yes"; then
+   RSXGL_SUBDIRS="${RSXGL_SUBDIRS} src/assimp";
+   RSXGL_SAMPLES="${RSXGL_SAMPLES} assview";
+fi;
 
 AC_OUTPUT
