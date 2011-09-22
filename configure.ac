@@ -18,7 +18,7 @@ AC_CONFIG_FILES(
 	)
 
 # Which subdirectories get built:
-RSXGL_SUBDIRS="include src/cgcomp src/library src/samples"
+RSXGL_SUBDIRS="include src/cgcomp src/library"
 
 # Determine which samples get built:
 RSXGL_SAMPLES="rsxgltest rsxglgears"
@@ -152,5 +152,7 @@ if test "${assimp_source_found}" == "yes"; then
    RSXGL_SUBDIRS="${RSXGL_SUBDIRS} src/assimp";
    RSXGL_SAMPLES="${RSXGL_SAMPLES} assview";
 fi;
+
+RSXGL_SUBDIRS="${RSXGL_SUBDIRS} src/samples"
 
 AC_OUTPUT
