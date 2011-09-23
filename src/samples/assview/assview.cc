@@ -18,8 +18,9 @@
 #include <math.h>
 #include <Eigen/Geometry>
 
-#include <assimp.h>
+#include <assimp.hpp>
 #include <aiScene.h>
+#include <aiPostProcess.h>
 
 #include "cornell_box_obj_bin.h"
 #include "cornell_box_mtl_bin.h"
@@ -118,8 +119,10 @@ asset_model
 asset_to_gl(asset_model_spec const & model_spec)
 {
   asset_model result;
-  
-  const aiScene * scene = aiImportFileFromMemory((char const *)model_spec.data,model_spec.size,0,"OBJ");
+ 
+  Assimp::Importer importer;
+  const aiScene * scene = importer.ReadFileFromMemory((char const *)model_spec.data,model_spec.size,aiProcess_PreTransformVertices,"obj");
+
   if(scene != 0) {
     tcp_printf("read scene; it has %u meshes\n",(uint32_t)scene -> mNumMeshes);
   }

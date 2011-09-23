@@ -6,9 +6,12 @@ CXX = @PPU_CXX@
 AR = @PPU_AR@
 ARFLAGS = cru
 
-libassimp_a_name = libassimp.a
+libassimp_TARGET = libassimp.a
+libassimp_obj_TARGET = libassimp_obj.a
 
-all: $(libassimp_a_name)
+TARGETS = $(libassimp_TARGET)
+
+all: $(TARGETS)
 
 srcdir = @srcdir@
 builddir = @builddir@
@@ -483,7 +486,46 @@ unzip_SRCS = 					\
 
 PSL1GHT_port_SRCS = realpath.c symlinks.c
 
-SOURCES = $(Core_SRCS)				\
+importer_flags = 				\
+	ASSIMP_BUILD_NO_X_IMPORTER		\
+	ASSIMP_BUILD_NO_3DS_IMPORTER		\
+	ASSIMP_BUILD_NO_MD3_IMPORTER		\
+	ASSIMP_BUILD_NO_MDL_IMPORTER		\
+	ASSIMP_BUILD_NO_MD2_IMPORTER		\
+	ASSIMP_BUILD_NO_PLY_IMPORTER		\
+	ASSIMP_BUILD_NO_ASE_IMPORTER		\
+	ASSIMP_BUILD_NO_OBJ_IMPORTER		\
+	ASSIMP_BUILD_NO_HMP_IMPORTER		\
+	ASSIMP_BUILD_NO_SMD_IMPORTER		\
+	ASSIMP_BUILD_NO_MDC_IMPORTER		\
+	ASSIMP_BUILD_NO_MD5_IMPORTER		\
+	ASSIMP_BUILD_NO_STL_IMPORTER		\
+	ASSIMP_BUILD_NO_LWO_IMPORTER		\
+	ASSIMP_BUILD_NO_DXF_IMPORTER		\
+	ASSIMP_BUILD_NO_NFF_IMPORTER		\
+	ASSIMP_BUILD_NO_RAW_IMPORTER		\
+	ASSIMP_BUILD_NO_OFF_IMPORTER		\
+	ASSIMP_BUILD_NO_AC_IMPORTER		\
+	ASSIMP_BUILD_NO_BVH_IMPORTER		\
+	ASSIMP_BUILD_NO_IRRMESH_IMPORTER	\
+	ASSIMP_BUILD_NO_IRR_IMPORTER		\
+	ASSIMP_BUILD_NO_Q3D_IMPORTER		\
+	ASSIMP_BUILD_NO_B3D_IMPORTER		\
+	ASSIMP_BUILD_NO_COLLADA_IMPORTER	\
+	ASSIMP_BUILD_NO_TERRAGEN_IMPORTER	\
+	ASSIMP_BUILD_NO_CSM_IMPORTER		\
+	ASSIMP_BUILD_NO_3D_IMPORTER		\
+	ASSIMP_BUILD_NO_LWS_IMPORTER		\
+	ASSIMP_BUILD_NO_OGRE_IMPORTER		\
+	ASSIMP_BUILD_NO_MS3D_IMPORTER		\
+	ASSIMP_BUILD_NO_COB_IMPORTER		\
+	ASSIMP_BUILD_NO_BLEND_IMPORTER		\
+	ASSIMP_BUILD_NO_Q3BSP_IMPORTER		\
+	ASSIMP_BUILD_NO_NDO_IMPORTER		\
+	ASSIMP_BUILD_NO_IFC_IMPORTER
+
+
+all_libassimp_SOURCES = $(Core_SRCS)				\
 	$(Common_SRCS)				\
 	$(Logging_SRCS)				\
 	$(Exporter_SRCS)			\
@@ -532,16 +574,77 @@ SOURCES = $(Core_SRCS)				\
 	$(COMPILER_HEADERS)			\
 	$(PSL1GHT_port_SRCS)
 
+# I suspect the static initialization order fiasco is happening - disabling importers that have static variables.
+libassimp_SOURCES = $(Core_SRCS)				\
+	$(Common_SRCS)				\
+	$(Logging_SRCS)				\
+	$(PostProcessing_SRCS)			\
+	$(3DS_SRCS)				\
+	$(AC_SRCS)				\
+	$(ASE_SRCS)				\
+	$(B3D_SRCS)				\
+	$(BVH_SRCS)				\
+	$(Collada_SRCS)				\
+	$(DXF_SRCS)				\
+	$(CSM_SRCS)				\
+	$(Irr_SRCS)				\
+	$(LWO_SRCS)				\
+	$(LWS_SRCS)				\
+	$(MD2_SRCS)				\
+	$(MD3_SRCS)				\
+	$(MD5_SRCS)				\
+	$(MDC_SRCS)				\
+	$(MaterialSystem_SRCS)			\
+	$(NFF_SRCS)				\
+	$(OFFFormat_SRCS)			\
+	$(Obj_SRCS)				\
+	$(Ogre_SRCS)				\
+	$(Ply_SRCS)				\
+	$(Raw_SRCS)				\
+	$(SMD_SRCS)				\
+	$(STL_SRCS)				\
+	$(Unreal_SRCS)				\
+	$(Extra_SRCS)				\
+	$(MS3D_SRCS)				\
+	$(COB_SRCS)				\
+	$(NDO_SRCS)				\
+	$(IrrXML_SRCS)				\
+	$(ConvertUTF_SRCS)			\
+	$(unzip_SRCS)				\
+	$(PUBLIC_HEADERS)			\
+	$(COMPILER_HEADERS)			\
+	$(PSL1GHT_port_SRCS)
+
+libassimp_disable_importers = "-DASSIMP_BUILD_NO_EXPORT -DASSIMP_BUILD_NO_COB_IMPORTER=1 -D ASSIMP_BUILD_NO_MD3_IMPORTER -DASSIMP_BUILD_NO_MDL_IMPORTER=1 -DASSIMP_BUILD_NO_Q3D_IMPORTER=1 -DASSIMP_BUILD_NO_Q3BSP_IMPORTER=1 -DASSIMP_BUILD_NO_IFC_IMPORTER=1 -DASSIMP_BUILD_NO_X_IMPORTER=1 -DASSIMP_BUILD_NO_HMP_IMPORTER=1"
+
+# Only OBJ:
+libassimp_obj_SOURCES = $(Core_SRCS)				\
+	$(Common_SRCS)				\
+	$(Logging_SRCS)				\
+	$(PostProcessing_SRCS)			\
+	$(MaterialSystem_SRCS)			\
+	$(Obj_SRCS)				\
+	$(Extra_SRCS)				\
+	$(ConvertUTF_SRCS)			\
+	$(unzip_SRCS)				\
+	$(PUBLIC_HEADERS)			\
+	$(COMPILER_HEADERS)			\
+	$(PSL1GHT_port_SRCS)
+
 C_SOURCES = $(filter %.c,$(notdir $(SOURCES)))
 CXX_SOURCES = $(filter %.cpp,$(notdir $(SOURCES)))
 HEADERS = $(filter %.h %.hpp,$(SOURCES))
 
 DEPFILES = $(addprefix $(DEPDIR)/,$(SOURCES:.c=.Po)) $(addprefix $(DEPDIR)/,$(SOURCES:.cpp=.Po))
-OBJS = $(C_SOURCES:.c=.o) $(CXX_SOURCES:.cpp=.o)
+libassimp_OBJS = $(C_SOURCES:.c=.o) $(CXX_SOURCES:.cpp=.o)
 
-CPPFLAGS = @PPU_CPPFLAGS@ -I@srcdir@ -I$(assimp_code_SOURCE_LOCATION) -I$(assimp_code_SOURCE_LOCATION)/BoostWorkaround -D__ppc__ -include @srcdir@/realpath.h
+obj_C_SOURCES = $(filter %.c,$(notdir $(obj_C_SOURCES)))
+obj_CXX_SOURCES = $(filter %.cpp,$(notdir $(obj_CXX_SOURCES)))
+obj_OBJS = $(obj_C_SOURCES:.c=.o) $(obj_CXX_SOURCES:.cpp=.o)
+
+CPPFLAGS = @PPU_CPPFLAGS@ -I@srcdir@ -I$(assimp_code_SOURCE_LOCATION) -I$(assimp_code_SOURCE_LOCATION)/BoostWorkaround -D__ppc__ -include @srcdir@/realpath.h -include strings.h -include disable_importers.h
 CFLAGS = @PPU_CFLAGS@ -std=gnu99
-CXXFLAGS = @PPU_CXXFLAGS@ -include memory
+CXXFLAGS = @PPU_CXXFLAGS@ -include memory 
 
 define cc
 	echo Compiling $<
@@ -552,10 +655,20 @@ endef
 
 define cxx
 	echo Compiling $<
-	echo $(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ -c $<
 	mkdir -p @builddir@/deps
+	echo $(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ -c $<
 	source=$< object=$@ depmode=gcc DEPDIR=$(DEPDIR) $(DEPCOMP) $(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ -c $<
 endef
+
+c_sources = $(filter %.c,$(notdir $(1)))
+
+cxx_sources = $(filter %.cpp,$(notdir $(1)))
+
+c_objs = $(1:.c=.o)
+
+cxx_objs = $(1:.cpp=.o)
+
+c_cxx_objs = $(call c_objs,$(call c_sources,$(1))) $(call cxx_objs,$(call cxx_sources,$(1)))
 
 %.o : $(srcdir)/%.c
 	@$(cc)
@@ -575,16 +688,24 @@ endef
 %.o : $(assimp_code_SOURCE_LOCATION)/%.cpp
 	@$(cxx)
 
-$(libassimp_a_name): $(OBJS)
+libassimp_OBJS = $(call c_cxx_objs,$(libassimp_SOURCES))
+libassimp_obj_OBJS = $(call c_cxx_objs,$(libassimp_obj_SOURCES))
+
+dumb:
+	@echo $(libassimp_OBJS)
+	@echo $(libassimp_obj_OBJS)
+
+$(libassimp_TARGET): $(libassimp_OBJS)
 	@rm -rf $@
 	$(AR) $(ARFLAGS) $@ $^
 
-test:
-	@echo Objects: $(OBJS)
+$(libassimp_obj_TARGET): $(libassimp_obj_OBJS)
+	@rm -rf $@
+	$(AR) $(ARFLAGS) $@ $^
 
 clean:
 	@echo Cleaning...
-	@rm -rf $(libassimp_a_name) $(OBJS) $(DEPDIR)
+	@rm -rf $(libassimp_TARGET) $(libassimp_OBJS) $(libassimp_obj_TARGET) $(libassimp_obj_OBJS) $(DEPDIR)
 
 .PHONY: all clean test
 
