@@ -22,10 +22,7 @@
 #include <aiScene.h>
 #include <aiPostProcess.h>
 
-#include "cornell_box_obj_bin.h"
-#include "cornell_box_mtl_bin.h"
-
-#include "crab_obj_bin.h"
+#include "teapot_obj.h"
 
 const char * rsxgltest_name = "assview";
 
@@ -115,10 +112,7 @@ struct asset_model {
 const size_t nmodels = 1, imodel = 0;
 
 asset_model_spec model_specs[nmodels] = {
-  { cornell_box_obj_bin, cornell_box_obj_bin_size, 1.0 / 200.0 },
-  
-  // The OBJ reader has problems parsing this, and hangs the program:
-  // { crab_obj_bin, crab_obj_bin_size, 0.5 }
+  { teapot_obj, teapot_obj_size, 1.0 / 200.0 },
 };
 
 asset_model models[nmodels];

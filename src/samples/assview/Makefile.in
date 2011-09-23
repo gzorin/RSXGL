@@ -45,11 +45,15 @@ mkinstalldirs = $(install_sh) -d
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 PROGRAMS = $(noinst_PROGRAMS)
-am__objects_1 = assview_elf-assview.$(OBJEXT)
+am__objects_1 =
+am__objects_2 = assview_elf-assview.$(OBJEXT) $(am__objects_1)
 am_assview_elf_OBJECTS = assview_elf-main.$(OBJEXT) \
 	assview_elf-math3d.$(OBJEXT) assview_elf-sine_wave.$(OBJEXT) \
-	$(am__objects_1)
+	$(am__objects_2)
 assview_elf_OBJECTS = $(am_assview_elf_OBJECTS)
+am__DEPENDENCIES_1 = cornell_box_obj.o teapot_obj.o
+am__DEPENDENCIES_2 = $(am__DEPENDENCIES_1)
+am__DEPENDENCIES_3 = assview_vpo.o assview_fpo.o $(am__DEPENDENCIES_2)
 assview_elf_LINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) \
 	$(assview_elf_LDFLAGS) $(LDFLAGS) -o $@
 DEFAULT_INCLUDES = -I.@am__isrc@
@@ -200,19 +204,22 @@ PKG := $(PSL1GHT_BIN)/pkg.py
 SPRX := $(PSL1GHT_BIN)/sprxlinker
 SFOXML := $(PSL1GHT_BIN)/sfo.xml
 ICON0 := $(PSL1GHT_BIN)/ICON0.PNG
-SUFFIXES = .bin _bin.o _bin.h .vcg .fcg .vert .frag _vpo.o _fpo.o _vpo.h _fpo.h .vpo .fpo
+SUFFIXES = .bin _bin.o _bin.h .vcg .fcg .vert .frag _vpo.o _fpo.o \
+	_vpo.h _fpo.h .vpo .fpo .obj _obj.o _obj.h
+objs = cornell_box.obj teapot.obj
+objs_H = $(objs:.obj=_obj.h)
+objs_OBJS = $(objs:.obj=_obj.o)
 BUILT_SOURCES = assview_vpo.h assview_fpo.h \
-	cornell_box_obj_bin.h cornell_box_mtl_bin.h \
-	crab_obj_bin.h
+	$(objs_H)
 
-CLEANFILES = assview_vpo.h assview_fpo.h assview_vpo.o assview_fpo.o
+CLEANFILES = assview_vpo.h assview_fpo.h assview_vpo.o assview_fpo.o \
+	$(objs_OBJS)
+
 sources = assview.cc \
-	cornell_box_obj.bin cornell_box_mtl.bin \
-	crab_obj.bin
+	$(objs)
 
 objects = assview_vpo.o assview_fpo.o \
-	cornell_box_obj_bin.o cornell_box_mtl_bin.o \
-	crab_obj_bin.o
+	$(objs_OBJS)
 
 assview_elf_DEPENDENCIES = $(top_builddir)/src/library/libEGL.a $(top_builddir)/src/library/libGL.a	\
 	$(objects)											\
@@ -234,7 +241,7 @@ all: $(BUILT_SOURCES)
 	$(MAKE) $(AM_MAKEFLAGS) all-am
 
 .SUFFIXES:
-.SUFFIXES: .bin _bin.o _bin.h .vcg .fcg .vert .frag _vpo.o _fpo.o _vpo.h _fpo.h .vpo .fpo .c .cc .o .obj
+.SUFFIXES: .bin _bin.o _bin.h .vcg .fcg .vert .frag _vpo.o _fpo.o _vpo.h _fpo.h .vpo .fpo .obj _obj.o _obj.h .c .cc .o
 $(srcdir)/Makefile.in:  $(srcdir)/Makefile.am $(srcdir)/../samples.am $(am__configure_deps)
 	@for dep in $?; do \
 	  case '$(am__configure_deps)' in \
@@ -629,6 +636,13 @@ CGCOMP          ?= $(PSL1GHT_BIN)/cgcomp
 	@$(bin2o)
 
 %_fpo.h: %_fpo.o
+	@echo "$<"
+
+%_obj.o: %.obj
+	@echo "[bin2o]: $<"
+	@$(bin2o)
+
+%_obj.h: %_obj.o
 	@echo "$<"
 override ICON0		:=	$(srcdir)/../brewcrab.png
 

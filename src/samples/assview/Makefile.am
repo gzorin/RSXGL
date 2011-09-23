@@ -13,17 +13,28 @@ include $(srcdir)/../samples.am
 
 noinst_PROGRAMS = assview.elf
 
+objs = cornell_box.obj teapot.obj
+objs_H = $(objs:.obj=_obj.h)
+objs_OBJS = $(objs:.obj=_obj.o)
+
+SUFFIXES += .obj _obj.o _obj.h
+
+%_obj.o: %.obj
+	@echo "[bin2o]: $<"
+	@$(bin2o)
+
+%_obj.h: %_obj.o
+	@echo "$<"
+
 BUILT_SOURCES = assview_vpo.h assview_fpo.h \
-	cornell_box_obj_bin.h cornell_box_mtl_bin.h \
-	crab_obj_bin.h
-CLEANFILES = assview_vpo.h assview_fpo.h assview_vpo.o assview_fpo.o
+	$(objs_H)
+CLEANFILES = assview_vpo.h assview_fpo.h assview_vpo.o assview_fpo.o \
+	$(objs_OBJS)
 
 sources = assview.cc \
-	cornell_box_obj.bin cornell_box_mtl.bin \
-	crab_obj.bin
+	$(objs)
 objects = assview_vpo.o assview_fpo.o \
-	cornell_box_obj_bin.o cornell_box_mtl_bin.o \
-	crab_obj_bin.o
+	$(objs_OBJS)
 
 assview_elf_DEPENDENCIES = $(top_builddir)/src/library/libEGL.a $(top_builddir)/src/library/libGL.a	\
 	$(objects)											\
