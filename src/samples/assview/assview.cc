@@ -29,6 +29,14 @@
 
 const char * rsxgltest_name = "assview";
 
+#if defined(assert)
+#undef assert
+#endif
+
+#define assert(__e) ((__e) ? (void)0 : tcp_printf("assertion \"%s\" failed: file \"%s\", line %d%s%s\n", \
+						  (__e), __FILE__, __LINE__, \
+						  __PRETTY_FUNCTION__ ? ", function: " : "", __PRETTY_FUNCTION__ ? __PRETTY_FUNCTION__ : ""))
+
 struct sine_wave_t rgb_waves[3] = {
   { 0.5f,
     0.5f,
@@ -115,21 +123,195 @@ asset_model_spec model_specs[nmodels] = {
 
 asset_model models[nmodels];
 
+struct triangulated_aiMesh_to_vertex_array {
+  GLvoid * positions, * normals, * uvs, * colors;
+  GLsizei position_size, normal_size, uv_size, color_size;
+  GLenum position_type, normal_type, uv_type, color_type;
+  GLsizei position_stride, normal_stride, uv_stride, color_stride;
+
+  struct output {
+    GLsizei nPositions, nNormals, nUVs, nColors;
+    GLvoid * positions, * normals, * uvs, * colors;
+
+    output()
+      : nPositions(0), nNormals(0), nUVs(0), nColors(0),
+	positions(0), normals(0), uvs(0), colors(0) {
+    }
+  };
+
+  triangulated_aiMesh_to_vertex_array()
+    : positions(0), normals(0), uvs(0), colors(0), position_size(0), normal_size(0), uv_size(0), color_size(0), position_type(0), normal_type(0), uv_type(0), color_type(0), position_stride(0), normal_stride(0), uv_stride(0), color_stride(0) {
+  }
+
+  output fill(aiMesh const * mesh) {
+    output result;
+
+    if(!mesh -> HasFaces() || !mesh -> HasPositions()) return result;
+
+    // Not doing any type conversion now:
+    if(position_type != GL_FLOAT) return result;
+    if(positions == 0) return result;
+    if(position_size == 0) return result;
+
+    const bool bNormals = (normal_type == GL_FLOAT && normals != 0 && normal_size > 0 && mesh -> HasNormals()),
+      bUVs = (uv_type == GL_FLOAT && uvs != 0 && uv_size > 0 && mesh -> HasTextureCoords(0)),
+      bColors = (color_type == GL_FLOAT && colors != 0 && color_size > 0 && mesh -> HasVertexColors(0));
+
+    uint8_t * position = (uint8_t *)positions;
+    uint8_t * normal = (uint8_t *)normals;
+    uint8_t * uv = (uint8_t *)uvs;
+    uint8_t * color = (uint8_t *)colors;
+
+    struct copy_vector {
+      void operator()(uint8_t * _array,aiVector3D const & v,const GLsizei size,const float w) const {
+	GLfloat * array = (GLfloat *)_array;
+
+	if(size > 0) array[0] = v.x;
+	if(size > 1) array[1] = v.y;
+	if(size > 2) array[2] = v.z;
+	if(size > 3) array[3] = w;
+      }
+
+      void operator()(uint8_t * _array,aiColor4D const & c,const GLsizei size) const {
+	GLfloat * array = (GLfloat *)_array;
+
+	if(size > 0) array[0] = c.r;
+	if(size > 1) array[1] = c.g;
+	if(size > 2) array[2] = c.b;
+	if(size > 3) array[3] = c.a;
+      }
+    };
+
+    aiFace const * face = mesh -> mFaces;
+    copy_vector op;
+
+    for(unsigned int i = 0,n = mesh -> mNumFaces;i < n;++i,++face) {
+      //assert(face -> mNumIndices == 3);
+      unsigned int const * indices = face -> mIndices;
+      for(unsigned int j = 0,m = face -> mNumIndices;j < m;++j,++indices) {
+
+	const unsigned int index = *indices;
+
+	{
+	  op(position,mesh -> mVertices[index],position_size,1.0f);
+	  position += position_stride;
+	  ++result.nPositions;
+	}
+
+	if(bNormals) {
+	  op(normal,mesh -> mNormals[index],normal_size,0.0f);
+	  normal += normal_stride;
+	  ++result.nNormals;
+	}
+
+	if(bUVs) {
+	  op(uv,mesh -> mTextureCoords[0][index],(uv_size < mesh -> mNumUVComponents[0]) ? uv_size : mesh -> mNumUVComponents[0],0.0f);
+	  uv += uv_stride;
+	  ++result.nUVs;
+	}
+
+	if(bColors) {
+	  op(uv,mesh -> mColors[0][index],uv_size);
+	  color += color_stride;
+	  ++result.nColors;
+	}
+      }
+    }
+
+    result.positions = position;
+    result.normals = normal;
+    result.uvs = uv;
+    result.colors = color;
+
+    return result;
+  }
+
+};
+
 asset_model
 asset_to_gl(asset_model_spec const & model_spec)
 {
   asset_model result;
  
   Assimp::Importer importer;
-  const aiScene * scene = importer.ReadFileFromMemory((char const *)model_spec.data,model_spec.size,aiProcess_PreTransformVertices,"obj");
+  const aiScene * scene = importer.ReadFileFromMemory((char const *)model_spec.data,model_spec.size,aiProcess_PreTransformVertices | aiProcess_Triangulate,"obj");
 
-  if(scene != 0) {
-    tcp_printf("read scene; it has %u meshes\n",(uint32_t)scene -> mNumMeshes);
-  }
-  else {
-    tcp_printf("Failed to read scene");
+  if(scene != 0 && scene -> mNumMeshes > 0) {
+    aiMesh const * mesh = scene -> mMeshes[0];
+    if(mesh != 0 && mesh -> mNumFaces > 0 && mesh -> mNumVertices > 0) {
+      result.ntris = mesh -> mNumFaces;
+      const GLsizei nverts = result.ntris * 3;
+
+      triangulated_aiMesh_to_vertex_array op;
+
+      op.position_size = 3;
+      op.position_type = GL_FLOAT;
+
+      op.normal_size = (mesh -> HasNormals()) ? 3 : 0;
+      op.normal_type = GL_FLOAT;
+
+      op.uv_size = (mesh -> HasTextureCoords(0)) ? 2 : 0;
+      op.uv_type = GL_FLOAT;
+
+      op.color_size = (mesh -> HasVertexColors(0)) ? 4 : 0;
+      op.color_type = GL_FLOAT;
+
+      const GLsizei position_offset = 0;
+      const GLsizei normal_offset = position_offset + op.position_size;
+      const GLsizei uv_offset = normal_offset + op.normal_size;
+      const GLsizei color_offset = uv_offset + op.uv_size;
+
+      const GLuint vertex_size = (op.position_size + op.normal_size + op.uv_size + op.color_size) * sizeof(GLfloat);
+      
+      op.position_stride = vertex_size;
+      op.normal_stride = vertex_size;
+      op.uv_stride = vertex_size;
+      op.color_stride = vertex_size;
+
+      glGenBuffers(1,&result.vbo);
+      glBindBuffer(GL_ARRAY_BUFFER,result.vbo);
+
+      tcp_printf("building buffer object: %i triangles, %i vertices, %u bytes\n",result.ntris,nverts,(GLuint)(vertex_size * nverts));
+      glBufferData(GL_ARRAY_BUFFER,vertex_size * nverts,0,GL_STATIC_DRAW);
+
+      tcp_printf("\tabout to map\n");
+      uint8_t * buffer = (uint8_t *)glMapBuffer(GL_ARRAY_BUFFER,GL_WRITE_ONLY);
+      op.positions = buffer + position_offset;
+      op.normals = buffer + normal_offset;
+      op.uvs = buffer + uv_offset;
+      op.colors = buffer + color_offset;
+
+      tcp_printf("\tabout to fill\n");
+      const triangulated_aiMesh_to_vertex_array::output op_out = op.fill(mesh);
+
+      tcp_printf("filled-in: %u positions, %u normals, %u uvs, %u colors\n",
+		 op_out.nPositions,op_out.nNormals,op_out.nUVs,op_out.nColors);
+
+      glUnmapBuffer(GL_ARRAY_BUFFER);
+
+      glGenVertexArrays(1,&result.vao);
+      glBindVertexArray(result.vao);
+      glEnableVertexAttribArray(vertex_location);
+      glVertexAttribPointer(vertex_location,3,GL_FLOAT,GL_FALSE,op.position_stride,(const GLfloat *)position_offset);
+
+      if(normal_location > 0 && op.normal_size > 0) {
+	glEnableVertexAttribArray(normal_location);
+	glVertexAttribPointer(normal_location,3,GL_FLOAT,GL_FALSE,op.normal_stride,(const GLfloat *)normal_offset);
+      }
+      if(uv_location > 0 && op.uv_size > 0) {
+	glEnableVertexAttribArray(uv_location);
+	glVertexAttribPointer(uv_location,2,GL_FLOAT,GL_FALSE,op.uv_stride,(const GLfloat *)uv_offset);
+      }
+      
+      glBindBuffer(GL_ARRAY_BUFFER,0);
+      glBindVertexArray(0);
+
+      tcp_printf("read scene; it has %u meshes\n",(uint32_t)scene -> mNumMeshes);
+      return result;
+    }
   }
 
+  tcp_printf("Failed to read scene");
   return result;
 }
 
@@ -278,8 +460,6 @@ extern "C"
 void
 rsxgltest_init(int argc,const char ** argv)
 {
-  tcp_printf("%s\n",__PRETTY_FUNCTION__);
-
   glEnable(GL_DEPTH_TEST);
   glDepthFunc(GL_LEQUAL);
 
@@ -327,8 +507,6 @@ extern "C"
 int
 rsxgltest_draw()
 {
-  tcp_printf("%s\n",__PRETTY_FUNCTION__);
-
   float rgb[3] = {
     compute_sine_wave(rgb_waves,rsxgltest_elapsed_time),
     compute_sine_wave(rgb_waves + 1,rsxgltest_elapsed_time),
