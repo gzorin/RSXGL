@@ -269,9 +269,9 @@ void rsxgl_process_batch(gcmContextData * context,const uint32_t n,const Operati
 
 // You are supposed to be able to pass up to 2047 bundles of 256 batches of
 // vertices to each NV30_3D_VB_VERTEX_BATCH method. Testing revealed that this number
-// is apparently the much lower number of 3; anything greater causes the RSX to hang,
-// even if there's plenty of room left in the FIFO. Maybe flushing the FIFO after every
-// method would help.
+// is apparently the much lower number of 3, and for a decent-sized mesh, it really
+// ought to be one so that cache invalidation instructions can be submitted for each
+// batch.
 // TODO - Investigate this further.
 #define RSXGL_VERTEX_BATCH_MAX_FIFO_METHOD_ARGS 1
 //#define RSXGL_VERTEX_BATCH_MAX_FIFO_METHOD_ARGS 3
@@ -287,7 +287,7 @@ rsxgl_draw_arrays(gcmContextData * context,const uint32_t rsx_primitive_type,con
     const uint32_t count, rsx_primitive_type;
 
     operations(const uint32_t _rsx_primitive_type,const uint32_t first,const uint32_t _count)
-      : buffer(0), buffer_begin(0), current(first), lastgroupn(0), count(_count), rsx_primitive_type(_rsx_primitive_type) {
+      : buffer(0), buffer_begin(0), current(first), groupcurrent(0), count(_count), rsx_primitive_type(_rsx_primitive_type) {
     }
 
     // ninvoc - number of full draw method invocations (2047 * 256 vertices)
@@ -301,51 +301,29 @@ rsxgl_draw_arrays(gcmContextData * context,const uint32_t rsx_primitive_type,con
       const uint32_t nargs = (ninvoc * RSXGL_VERTEX_BATCH_MAX_FIFO_METHOD_ARGS) + ninvocremainder + (nbatchremainder ? 1 : 0);
       const uint32_t nwords = (nmethods * (5 + 8)) + nargs;
 
-#if 0
-      rsxgl_debug_printf("start: %u count: %u ninvoc: %u ninvocremainder: %u nbatchremainder: %u\n\tnmethods: %u nargs: %u nwords: %u\n",
-			 current,count,ninvoc,ninvocremainder,nbatchremainder,nmethods,nargs,nwords);
-#endif
-
-#if 0
-      const uint32_t n =
-	// method + 3 arguments:
-	((RSXGL_VERTEX_BATCH_MAX_FIFO_METHOD_ARGS + 1) * ninvoc) +
-
-	((ninvocremainder > 0 && nbatchremainder > 0 && (ninvocremainder + 1) < RSXGL_VERTEX_BATCH_MAX_FIFO_METHOD_ARGS) ?
-	 (1 + ninvocremainder + 1) :
-	 (((ninvocremainder > 0) ? (ninvocremainder + 1) : 0) +
-	  ((nbatchremainder > 0) ? 2 : 0)));
-#endif
-
       buffer = gcm_reserve(context,nwords);
       buffer_begin = buffer;
-
-      actual_ngroup = 0;
-      actual_nbatch = 0;
     }
 
     // n is number of arguments to this method:
     inline void
     begin_group(const uint32_t n) const {
       // perform rsxgl_draw_begin
-      // how often is it necessary to perform this cache invalidation?
-      gcm_emit_method_at(buffer,0,0x1710,1);
+      // how often is it necessary to perform this cache invalidation? here it's done for every batch of 256 vertices
+      gcm_emit_method_at(buffer,0,NV40_3D_VTX_CACHE_INVALIDATE,1);
       gcm_emit_at(buffer,1,0);
-
+      
       gcm_emit_method_at(buffer,2,NV40_3D_VTX_CACHE_INVALIDATE,1);
       gcm_emit_at(buffer,3,0);
       
       gcm_emit_method_at(buffer,4,NV40_3D_VTX_CACHE_INVALIDATE,1);
       gcm_emit_at(buffer,5,0);
-      
-      gcm_emit_method_at(buffer,6,NV40_3D_VTX_CACHE_INVALIDATE,1);
-      gcm_emit_at(buffer,7,0);
 
-      gcm_emit_method_at(buffer,8,NV30_3D_VERTEX_BEGIN_END,1);
-      gcm_emit_at(buffer,9,rsx_primitive_type);
-      gcm_emit_method_at(buffer,10,NV30_3D_VB_VERTEX_BATCH,n);
+      gcm_emit_method_at(buffer,6,NV30_3D_VERTEX_BEGIN_END,1);
+      gcm_emit_at(buffer,7,rsx_primitive_type);
+      gcm_emit_method_at(buffer,8,NV30_3D_VB_VERTEX_BATCH,n);
 
-      buffer += 11;
+      buffer += 9;
 
       groupcurrent = 0;
     }
@@ -374,52 +352,52 @@ rsxgl_draw_arrays(gcmContextData * context,const uint32_t rsx_primitive_type,con
 
     inline void
     end() const {
-#if 0
-      rsxgl_debug_printf("wrote %u words, %u groups %u batches\n",(uint32_t)(buffer - buffer_begin),actual_ngroup,actual_nbatch);
-#endif
     }
   };
 
   operations op(rsx_primitive_type,first,count);
   rsxgl_process_batch< RSXGL_MAX_DRAW_BATCH_SIZE, RSXGL_VERTEX_BATCH_MAX_FIFO_METHOD_ARGS > (context,count,op);
+
+  // this is the equivalent of gcm_finish_commands():
   context -> current = op.buffer;
 }
 
 static inline void
-rsxgl_draw_array_elements(gcmContextData * context,uint32_t count)
+rsxgl_draw_array_elements(gcmContextData * context,const uint32_t rsx_primitive_type,const uint32_t count)
 {
   // Operations performed by rsxgl_process_batch (a local class passed as a template argument is a C++0x feature):
   struct operations {
     mutable uint32_t * buffer;
-    mutable uint32_t current, lastgroupn;
+    mutable uint32_t current;
+    const uint32_t count, rsx_primitive_type;
 
-    operations()
-      : buffer(0), current(0), lastgroupn(0) {
+    operations(const uint32_t _rsx_primitive_type,const uint32_t _count)
+      : buffer(0), current(0), count(_count), rsx_primitive_type(_rsx_primitive_type) {
     }
 
     inline void
     begin(gcmContextData * context,const uint32_t ninvoc,const uint32_t ninvocremainder,const uint32_t nbatchremainder) const {
-      const uint32_t n =
-	// method + 2047 arguments:
-	((RSXGL_VERTEX_BATCH_MAX_FIFO_METHOD_ARGS + 1) * ninvoc) +
+      // count the total number of words that will be added to the command stream:
+      const bool combine_invocremainder_and_batchremainder = (ninvocremainder > 0) && (ninvocremainder < RSXGL_VERTEX_BATCH_MAX_FIFO_METHOD_ARGS);
+      const uint32_t nmethods = ninvoc + (ninvocremainder ? 1 : 0) + ((nbatchremainder && !combine_invocremainder_and_batchremainder) ? 1 : 0);
+      const uint32_t nargs = (ninvoc * RSXGL_VERTEX_BATCH_MAX_FIFO_METHOD_ARGS) + ninvocremainder + (nbatchremainder ? 1 : 0);
+      const uint32_t nwords = (nmethods * (5)) + nargs;
 
-	((ninvocremainder > 0 && nbatchremainder > 0 && (ninvocremainder + 1) < RSXGL_VERTEX_BATCH_MAX_FIFO_METHOD_ARGS) ?
-	 (1 + ninvocremainder + 1) :
-	 (((ninvocremainder > 0) ? (ninvocremainder + 1) : 0) +
-	  ((nbatchremainder > 0) ? 2 : 0)));
-
-      buffer = gcm_reserve(context,n);
-      lastgroupn = 0;
+      buffer = gcm_reserve(context,nwords);
     }
 
     // n is number of arguments to this method:
     inline void
     begin_group(const uint32_t n) const {
-      buffer += lastgroupn;
-      lastgroupn = n;
+      // Interestingly, draw_array_elements does /not/ require invalidating the vertex cache, even if indices stored in the
+      // elements performs the equivalent to glDrawArrays() (i.e., the indices increase, monotonically, by a value of 1).
+      // TODO - Make compile time option to turn glDrawArrays() into a specialization of glDrawArrays()???
 
-      gcm_emit_method_at(buffer,0,NV30_3D_VB_INDEX_BATCH,n);
-      ++buffer;
+      gcm_emit_method_at(buffer,0,NV30_3D_VERTEX_BEGIN_END,1);
+      gcm_emit_at(buffer,1,rsx_primitive_type);
+      gcm_emit_method_at(buffer,2,NV30_3D_VB_INDEX_BATCH,n);
+
+      buffer += 3;
     }
 
     // n is the size of this batch:
@@ -430,17 +408,21 @@ rsxgl_draw_array_elements(gcmContextData * context,uint32_t count)
     }
 
     inline void
-    end() const {
-      buffer += lastgroupn;
+    end_group(const uint32_t n) const {
+      buffer += n;
+      
+      gcm_emit_method_at(buffer,0,NV30_3D_VERTEX_BEGIN_END,1);
+      gcm_emit_at(buffer,1,NV30_3D_VERTEX_BEGIN_END_STOP);
+
+      buffer += 2;
     }
 
     inline void
-    end_group(const uint32_t n) const {
-      
+    end() const {
     }
   };
 
-  operations op;
+  operations op(rsx_primitive_type,count);
   rsxgl_process_batch< RSXGL_MAX_DRAW_BATCH_SIZE, RSXGL_VERTEX_BATCH_MAX_FIFO_METHOD_ARGS > (context,count,op);
   context -> current = op.buffer;
 }
@@ -677,7 +659,7 @@ glDrawElements (GLenum mode, GLsizei count, GLenum type, const GLvoid* indices)
   }
 #endif
 
-  rsxgl_draw_array_elements(context,count);
+  rsxgl_draw_array_elements(context,rsx_primitive_type,count);
 
   if(client_indices) {
     rsxgl_assert(migrate_buffer != 0);
@@ -795,7 +777,7 @@ glDrawRangeElements (GLenum mode, GLuint start, GLuint end, GLsizei count, GLenu
   const uint32_t timestamp = rsxgl_draw_elements_init(ctx,mode,type,start,end - start);
 
   rsxgl_draw_begin(context,rsx_primitive_type);
-  rsxgl_draw_array_elements(context,count);
+  rsxgl_draw_array_elements(context,rsx_primitive_type,count);
   rsxgl_draw_end(context);
 
   rsxgl_draw_exit(ctx,timestamp);
@@ -865,7 +847,7 @@ glMultiDrawElements (GLenum mode, const GLsizei *count, GLenum type, const GLvoi
     gcm_finish_n_commands(context,3);
     
     rsxgl_draw_begin(context,rsx_primitive_type);
-    rsxgl_draw_array_elements(context,*count);
+    rsxgl_draw_array_elements(context,rsx_primitive_type,*count);
     rsxgl_draw_end(context);
   }
 
