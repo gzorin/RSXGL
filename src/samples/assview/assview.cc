@@ -100,12 +100,12 @@ struct asset_model_spec {
 };
 
 struct asset_model {
-  GLuint vbo, vao;
+  GLuint vbo, ibo, vao;
   GLuint ntris;
   float scale;
 
   asset_model()
-    : vbo(0), vao(0), ntris(0), scale(1.0f) {
+    : vbo(0), ibo(0), vao(0), ntris(0), scale(1.0f) {
   }
 };
 
@@ -137,7 +137,40 @@ struct triangulated_aiMesh_to_vertex_array {
     : positions(0), normals(0), uvs(0), colors(0), position_size(0), normal_size(0), uv_size(0), color_size(0), position_type(0), normal_type(0), uv_type(0), color_type(0), position_stride(0), normal_stride(0), uv_stride(0), color_stride(0) {
   }
 
-  output fill(aiMesh const * mesh) {
+  unsigned int num_triangles(aiMesh const * mesh) const {
+    if(!mesh -> HasFaces()) {
+      return 0;
+    }
+    else {
+      unsigned int nLessThanThree = 0, nThree = 0, nQuad = 0, nNSided = 0;
+      unsigned int nTriangles = 0;
+      aiFace const * face = mesh -> mFaces;
+      for(unsigned int i = 0,n = mesh -> mNumFaces;i < n;++i,++face) {
+	switch(face -> mNumIndices) {
+	case 0:
+	case 1:
+	case 2:
+	  ++nLessThanThree;
+	  break;
+	case 3:
+	  ++nThree;
+	  ++nTriangles;
+	  break;
+	case 4:
+	  ++nQuad;
+	  nTriangles += 2;
+	  break;
+	default:
+	  ++nNSided;
+	  break;
+	}
+      }
+
+      return nTriangles;
+    }
+  }
+
+  output fill(aiMesh const * mesh,const bool bWantNormals,const bool bWantUVs,const bool bWantColors) {
     output result;
 
     if(!mesh -> HasFaces() || !mesh -> HasPositions()) return result;
@@ -147,9 +180,9 @@ struct triangulated_aiMesh_to_vertex_array {
     if(positions == 0) return result;
     if(position_size == 0) return result;
 
-    const bool bNormals = (normal_type == GL_FLOAT && normals != 0 && normal_size > 0 && mesh -> HasNormals()),
-      bUVs = (uv_type == GL_FLOAT && uvs != 0 && uv_size > 0 && mesh -> HasTextureCoords(0)),
-      bColors = (color_type == GL_FLOAT && colors != 0 && color_size > 0 && mesh -> HasVertexColors(0));
+    const bool bNormals = bWantNormals && (normal_type == GL_FLOAT && normals != 0 && normal_size > 0 && mesh -> HasNormals()),
+      bUVs = bWantUVs && (uv_type == GL_FLOAT && uvs != 0 && uv_size > 0 && mesh -> HasTextureCoords(0)),
+      bColors = bWantColors && (color_type == GL_FLOAT && colors != 0 && color_size > 0 && mesh -> HasVertexColors(0));
 
     uint8_t * position = (uint8_t *)positions;
     uint8_t * normal = (uint8_t *)normals;
@@ -180,12 +213,10 @@ struct triangulated_aiMesh_to_vertex_array {
     copy_vector op;
 
     for(unsigned int i = 0,n = mesh -> mNumFaces;i < n;++i,++face) {
-      //assert(face -> mNumIndices == 3);
       unsigned int const * indices = face -> mIndices;
       for(unsigned int j = 0,m = face -> mNumIndices;j < m;++j,++indices) {
 
 	const unsigned int index = *indices;
-
 	{
 	  op(position,mesh -> mVertices[index],position_size,1.0f);
 	  position += position_stride;
@@ -205,7 +236,7 @@ struct triangulated_aiMesh_to_vertex_array {
 	}
 
 	if(bColors) {
-	  op(uv,mesh -> mColors[0][index],uv_size);
+	  op(color,mesh -> mColors[0][index],color_size);
 	  color += color_stride;
 	  ++result.nColors;
 	}
@@ -251,38 +282,68 @@ asset_to_gl(asset_model_spec const & model_spec)
       op.color_type = GL_FLOAT;
 
       const GLsizei position_offset = 0;
-      const GLsizei normal_offset = position_offset + op.position_size;
-      const GLsizei uv_offset = normal_offset + op.normal_size;
-      const GLsizei color_offset = uv_offset + op.uv_size;
+      const GLsizei normal_offset = position_offset + op.position_size * sizeof(GLfloat);
+      const GLsizei uv_offset = normal_offset + op.normal_size * sizeof(GLfloat);
+      const GLsizei color_offset = uv_offset + op.uv_size * sizeof(GLfloat);
+      const GLuint vertex_size = color_offset + op.color_size * sizeof(GLfloat);
 
-      const GLuint vertex_size = (op.position_size + op.normal_size + op.uv_size + op.color_size) * sizeof(GLfloat);
+      tcp_printf("offsets: %u %u %u %u vertex_size: %u\n",
+		 position_offset,normal_offset,uv_offset,color_offset,vertex_size);
       
       op.position_stride = vertex_size;
       op.normal_stride = vertex_size;
       op.uv_stride = vertex_size;
       op.color_stride = vertex_size;
 
+      const GLuint ntris = op.num_triangles(mesh);
+
       glGenBuffers(1,&result.vbo);
       glBindBuffer(GL_ARRAY_BUFFER,result.vbo);
 
       tcp_printf("building buffer object: %i triangles, %i vertices, %u bytes\n",result.ntris,nverts,(GLuint)(vertex_size * nverts));
       glBufferData(GL_ARRAY_BUFFER,vertex_size * nverts,0,GL_STATIC_DRAW);
+      {const GLenum e = glGetError();
+      if(e != GL_NO_ERROR) {
+	tcp_printf("error: %x\n",e);
+      }}
 
       tcp_printf("\tabout to map\n");
       uint8_t * buffer = (uint8_t *)glMapBuffer(GL_ARRAY_BUFFER,GL_WRITE_ONLY);
+      {const GLenum e = glGetError();
+      if(e != GL_NO_ERROR) {
+	tcp_printf("error: %x\n",e);
+      }}
+      tcp_printf("\t\tbuffer: %u\n",(uint32_t)((uint64_t)buffer));
+
       op.positions = buffer + position_offset;
       op.normals = buffer + normal_offset;
       op.uvs = buffer + uv_offset;
       op.colors = buffer + color_offset;
 
       tcp_printf("\tabout to fill\n");
-      const triangulated_aiMesh_to_vertex_array::output op_out = op.fill(mesh);
+      const triangulated_aiMesh_to_vertex_array::output op_out = op.fill(mesh,false,false,false);
 
       tcp_printf("filled-in: %u positions, %u normals, %u uvs, %u colors\n",
 		 op_out.nPositions,op_out.nNormals,op_out.nUVs,op_out.nColors);
 
       glUnmapBuffer(GL_ARRAY_BUFFER);
 
+      //
+      glGenBuffers(1,&result.ibo);
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,result.ibo);
+      glBufferData(GL_ELEMENT_ARRAY_BUFFER,sizeof(uint32_t) * nverts,0,GL_STATIC_DRAW);
+
+      uint32_t * indices = (uint32_t *)glMapBuffer(GL_ELEMENT_ARRAY_BUFFER,GL_WRITE_ONLY);
+      
+      for(uint32_t i = 0;i < nverts;++i,++indices) {
+	*indices = i;
+      }
+
+      glUnmapBuffer(GL_ELEMENT_ARRAY_BUFFER);
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,0);
+
+
+      //
       glGenVertexArrays(1,&result.vao);
       glBindVertexArray(result.vao);
       glEnableVertexAttribArray(vertex_location);
@@ -494,7 +555,7 @@ rsxgltest_init(int argc,const char ** argv)
 
   // Draw wireframe models for now:
   glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
-  glLineWidth(3.0);
+  glLineWidth(1.0);
 }
 
 extern "C"
@@ -507,7 +568,7 @@ rsxgltest_draw()
     compute_sine_wave(rgb_waves + 2,rsxgltest_elapsed_time)
   };
 
-  glClearColor(rgb[0],rgb[1],rgb[2],1.0);
+  glClearColor(rgb[0] * 0.1,rgb[1] * 0.1,rgb[2] * 0.1,1.0);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
   float xyz[3] = {
@@ -522,19 +583,40 @@ rsxgltest_draw()
     Eigen::AngleAxisf(DTOR(xyz[1]) * 360.0f,Eigen::Vector3f::UnitY()) *
     Eigen::AngleAxisf(DTOR(xyz[0]) * 360.0f,Eigen::Vector3f::UnitX());
 
-  glBindVertexArray(models[imodel].vao);
+  
 
   if(models[imodel].ntris > 0 &&
      models[imodel].vbo != 0 &&
+     models[imodel].ibo != 0 &&
      models[imodel].vao != 0) {
+    glBindVertexArray(models[imodel].vao);
+
     Eigen::Affine3f modelview = ViewMatrixInv * (Eigen::Affine3f::Identity() * rotmat * Eigen::UniformScaling< float >(models[imodel].scale));
     glUniformMatrix4fv(TransMatrix_location,1,GL_FALSE,modelview.data());
 
-    glDrawArrays(GL_TRIANGLES,0,models[imodel].ntris * 3);
-    glFlush();
-  }
+    size_t itri = 0;
+    const size_t ntris = models[imodel].ntris;
+    const size_t maxbatch = 50;
 
-  glBindVertexArray(0);
+    while(itri < ntris) {
+      const size_t nbatch = std::min(ntris - itri,maxbatch);
+      glDrawArrays(GL_TRIANGLES,itri * 3,nbatch * 3);
+      itri += nbatch;
+    }
+
+    glDrawArrays(GL_POINTS,0,models[imodel].ntris * 3);
+
+#if 0
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,models[imodel].ibo);
+    glDrawElements(GL_POINTS,models[imodel].ntris * 3,GL_UNSIGNED_INT,0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,0);
+#endif
+
+    glFlush();
+
+    glBindVertexArray(0);
+  }
+  
 
   return 1;
 }

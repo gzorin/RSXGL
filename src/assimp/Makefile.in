@@ -17,6 +17,7 @@ srcdir = @srcdir@
 builddir = @builddir@
 DEPDIR = $(builddir)/deps
 DEPCOMP = @top_srcdir@/config/depcomp
+PPU_CFLAGS = @PPU_CFLAGS@
 PPU_CPPFLAGS = @PPU_CPPFLAGS@
 PPU_CXXFLAGS = @PPU_CXXFLAGS@
 
@@ -615,8 +616,6 @@ libassimp_SOURCES = $(Core_SRCS)				\
 	$(COMPILER_HEADERS)			\
 	$(PSL1GHT_port_SRCS)
 
-libassimp_disable_importers = "-DASSIMP_BUILD_NO_EXPORT -DASSIMP_BUILD_NO_COB_IMPORTER=1 -D ASSIMP_BUILD_NO_MD3_IMPORTER -DASSIMP_BUILD_NO_MDL_IMPORTER=1 -DASSIMP_BUILD_NO_Q3D_IMPORTER=1 -DASSIMP_BUILD_NO_Q3BSP_IMPORTER=1 -DASSIMP_BUILD_NO_IFC_IMPORTER=1 -DASSIMP_BUILD_NO_X_IMPORTER=1 -DASSIMP_BUILD_NO_HMP_IMPORTER=1"
-
 # Only OBJ:
 libassimp_obj_SOURCES = $(Core_SRCS)				\
 	$(Common_SRCS)				\
@@ -642,9 +641,9 @@ obj_C_SOURCES = $(filter %.c,$(notdir $(obj_C_SOURCES)))
 obj_CXX_SOURCES = $(filter %.cpp,$(notdir $(obj_CXX_SOURCES)))
 obj_OBJS = $(obj_C_SOURCES:.c=.o) $(obj_CXX_SOURCES:.cpp=.o)
 
-CPPFLAGS = @PPU_CPPFLAGS@ -I@srcdir@ -I$(assimp_code_SOURCE_LOCATION) -I$(assimp_code_SOURCE_LOCATION)/BoostWorkaround -D__ppc__ -include @srcdir@/realpath.h -include strings.h -include disable_importers.h
-CFLAGS = @PPU_CFLAGS@ -std=gnu99
-CXXFLAGS = @PPU_CXXFLAGS@ -include memory 
+CPPFLAGS = $(PPU_CPPFLAGS) -I@srcdir@ -I$(assimp_code_SOURCE_LOCATION) -I$(assimp_code_SOURCE_LOCATION)/BoostWorkaround -include @srcdir@/realpath.h -include strings.h -include disable_importers.h
+CFLAGS = $(PPU_CFLAGS) -std=gnu99
+CXXFLAGS = $(PPU_CXXFLAGS) -include memory 
 
 define cc
 	echo Compiling $<

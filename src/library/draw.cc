@@ -179,12 +179,34 @@ rsxgl_draw_exit(struct rsxgl_context_t * ctx,const uint32_t timestamp)
 static inline void
 rsxgl_draw_begin(gcmContextData * context,uint32_t rsx_mode)
 {
-  uint32_t * buffer = gcm_reserve(context,2);
+#if 0
+  {
+    uint32_t * buffer = gcm_reserve(context,8);
 
-  gcm_emit_method_at(buffer,0,NV30_3D_VERTEX_BEGIN_END,1);
-  gcm_emit_at(buffer,1,rsx_mode);
-  
-  gcm_finish_n_commands(context,2);
+    gcm_emit_method_at(buffer,0,0x1710,1);
+    gcm_emit_at(buffer,1,0);
+
+    gcm_emit_method_at(buffer,2,NV40_3D_VTX_CACHE_INVALIDATE,1);
+    gcm_emit_at(buffer,3,0);
+
+    gcm_emit_method_at(buffer,4,NV40_3D_VTX_CACHE_INVALIDATE,1);
+    gcm_emit_at(buffer,5,0);
+
+    gcm_emit_method_at(buffer,6,NV40_3D_VTX_CACHE_INVALIDATE,1);
+    gcm_emit_at(buffer,7,0);
+
+    gcm_finish_n_commands(context,8);
+  }
+#endif
+
+  {
+    uint32_t * buffer = gcm_reserve(context,2);
+    
+    gcm_emit_method_at(buffer,0,NV30_3D_VERTEX_BEGIN_END,1);
+    gcm_emit_at(buffer,1,rsx_mode);
+    
+    gcm_finish_n_commands(context,2);
+  }
 }
 
 // This function is designed to split an iteration into groups (RSX method invocations) & batches
@@ -239,7 +261,7 @@ void rsxgl_process_batch(gcmContextData * context,const uint32_t n,const Operati
   operations.end();
 }
 
-// You are apparently supposed to be able to pass up to 2047 bundles of 256 batches of
+// You are supposed to be able to pass up to 2047 bundles of 256 batches of
 // vertices to each NV30_3D_VB_VERTEX_BATCH method. Testing revealed that this number
 // is apparently the much lower number of 3; anything greater causes the RSX to hang,
 // even if there's plenty of room left in the FIFO. Maybe flushing the FIFO after every
@@ -247,6 +269,8 @@ void rsxgl_process_batch(gcmContextData * context,const uint32_t n,const Operati
 // TODO - Investigate this further.
 #define RSXGL_VERTEX_BATCH_MAX_FIFO_METHOD_ARGS 3
 //#define RSXGL_VERTEX_BATCH_MAX_FIFO_METHOD_ARGS 2047
+
+// Teapot testing says that pre-vertex cache should be invalidated every 100 triangles == 300 vertices
 
 static inline void
 rsxgl_draw_arrays(gcmContextData * context,const uint32_t first,const uint32_t count)
@@ -280,13 +304,19 @@ rsxgl_draw_arrays(gcmContextData * context,const uint32_t first,const uint32_t c
     inline void
     begin_group(const uint32_t n) const {
       buffer += lastgroupn;
+
+      // nouveau says: perform rsxgl_draw_end if lastgroupn > 0
+
       lastgroupn = n;
+
+      // nouveau says: perform rsxgl_draw_begin
+      // nouveau also writes 32 0's to register 0x1dac, but it's not clear this is necessary for the RSX (nvfx architecture)
 
       gcm_emit_method_at(buffer,0,NV30_3D_VB_VERTEX_BATCH,n);
       ++buffer;
     }
 
-    // n is the size of this batch:
+    // n is the size of this batch (the number of vertices in this batch):
     inline void
     begin_batch(const uint32_t igroup,const uint32_t n) const {
       gcm_emit_at(buffer,igroup,((n - 1) << NV30_3D_VB_VERTEX_BATCH_COUNT__SHIFT) | current);
