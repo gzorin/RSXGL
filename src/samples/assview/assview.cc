@@ -583,8 +583,6 @@ rsxgltest_draw()
     Eigen::AngleAxisf(DTOR(xyz[1]) * 360.0f,Eigen::Vector3f::UnitY()) *
     Eigen::AngleAxisf(DTOR(xyz[0]) * 360.0f,Eigen::Vector3f::UnitX());
 
-  
-
   if(models[imodel].ntris > 0 &&
      models[imodel].vbo != 0 &&
      models[imodel].ibo != 0 &&
@@ -594,17 +592,19 @@ rsxgltest_draw()
     Eigen::Affine3f modelview = ViewMatrixInv * (Eigen::Affine3f::Identity() * rotmat * Eigen::UniformScaling< float >(models[imodel].scale));
     glUniformMatrix4fv(TransMatrix_location,1,GL_FALSE,modelview.data());
 
+#if 0
     size_t itri = 0;
     const size_t ntris = models[imodel].ntris;
-    const size_t maxbatch = 50;
+    const size_t maxbatch = 256 / 3;
 
     while(itri < ntris) {
       const size_t nbatch = std::min(ntris - itri,maxbatch);
       glDrawArrays(GL_TRIANGLES,itri * 3,nbatch * 3);
       itri += nbatch;
     }
+#endif
 
-    glDrawArrays(GL_POINTS,0,models[imodel].ntris * 3);
+    glDrawArrays(GL_TRIANGLES,0,models[imodel].ntris * 3);
 
 #if 0
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,models[imodel].ibo);
