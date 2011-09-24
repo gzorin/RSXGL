@@ -98,7 +98,7 @@ rsxgl_check_unmapped_arrays(struct rsxgl_context_t * ctx,const bit_set< RSXGL_MA
 static inline uint32_t
 rsxgl_check_draw_arrays(struct rsxgl_context_t * ctx,GLenum mode)
 {
-  const uint32_t rsx_mode = rsxgl_draw_mode(mode);
+  const uint32_t rsx_primitive_type = rsxgl_draw_mode(mode);
   RSXGL_FORWARD_ERROR(~0);
 
   // OpenGL 3.1 manpages don't say if a GL error should be given without an active program.
@@ -111,7 +111,7 @@ rsxgl_check_draw_arrays(struct rsxgl_context_t * ctx,GLenum mode)
   rsxgl_check_unmapped_arrays(ctx,ctx -> program_binding[RSXGL_ACTIVE_PROGRAM].attribs_enabled);
   RSXGL_FORWARD_ERROR(~0);
 
-  return rsx_mode;
+  return rsx_primitive_type;
 }
 
 static inline uint32_t
@@ -132,7 +132,7 @@ rsxgl_draw_arrays_init(struct rsxgl_context_t * ctx,GLenum mode,const uint32_t s
 static inline std::pair< uint32_t, uint32_t >
 rsxgl_check_draw_elements(struct rsxgl_context_t * ctx,GLenum mode,GLenum type)
 {
-  const uint32_t rsx_mode = rsxgl_draw_mode(mode);
+  const uint32_t rsx_primitive_type = rsxgl_draw_mode(mode);
   RSXGL_FORWARD_ERROR(std::make_pair(~0U, ~0U));
 
   const uint32_t rsx_type = rsxgl_draw_elements_type(type);
@@ -150,7 +150,7 @@ rsxgl_check_draw_elements(struct rsxgl_context_t * ctx,GLenum mode,GLenum type)
   rsxgl_check_unmapped_arrays(ctx,ctx -> program_binding[RSXGL_ACTIVE_PROGRAM].attribs_enabled);
   RSXGL_FORWARD_ERROR(std::make_pair(~0U, ~0U));
 
-  return std::make_pair(rsx_mode,rsx_type);
+  return std::make_pair(rsx_primitive_type,rsx_type);
 }
 
 static inline uint32_t
@@ -177,7 +177,7 @@ rsxgl_draw_exit(struct rsxgl_context_t * ctx,const uint32_t timestamp)
 }
 
 static inline void
-rsxgl_draw_begin(gcmContextData * context,uint32_t rsx_mode)
+rsxgl_draw_begin(gcmContextData * context,uint32_t rsx_primitive_type)
 {
 #if 0
   {
@@ -203,7 +203,7 @@ rsxgl_draw_begin(gcmContextData * context,uint32_t rsx_mode)
     uint32_t * buffer = gcm_reserve(context,2);
     
     gcm_emit_method_at(buffer,0,NV30_3D_VERTEX_BEGIN_END,1);
-    gcm_emit_at(buffer,1,rsx_mode);
+    gcm_emit_at(buffer,1,rsx_primitive_type);
     
     gcm_finish_n_commands(context,2);
   }
@@ -235,7 +235,7 @@ void rsxgl_process_batch(gcmContextData * context,const uint32_t n,const Operati
   }
 
   // last group and last batch both together:
-  if(ninvocremainder > 0 && nbatchremainder > 0 && (ninvocremainder + 1) < max_method_args) {
+  if((ninvocremainder > 0) && (nbatchremainder > 0) && (ninvocremainder < max_method_args)) {
     operations.begin_group(ninvocremainder + 1);
     for(size_t i = 0;i < ninvocremainder;++i) {
       operations.begin_batch(i,batch_size);
@@ -270,22 +270,36 @@ void rsxgl_process_batch(gcmContextData * context,const uint32_t n,const Operati
 #define RSXGL_VERTEX_BATCH_MAX_FIFO_METHOD_ARGS 3
 //#define RSXGL_VERTEX_BATCH_MAX_FIFO_METHOD_ARGS 2047
 
-// Teapot testing says that pre-vertex cache should be invalidated every 100 triangles == 300 vertices
-
 static inline void
-rsxgl_draw_arrays(gcmContextData * context,const uint32_t first,const uint32_t count)
+rsxgl_draw_arrays(gcmContextData * context,const uint32_t rsx_primitive_type,const uint32_t first,const uint32_t count)
 {
   // Operations performed by rsxgl_process_batch (a local class passed as a template argument is a C++0x feature):
   struct operations {
     mutable uint32_t * buffer, * buffer_begin;
     mutable uint32_t current, lastgroupn;
+    const uint32_t count, rsx_primitive_type;
 
-    operations(const uint32_t first)
-      : buffer(0), current(first), lastgroupn(0) {
+    mutable uint32_t actual_ngroup, actual_nbatch;
+
+    operations(const uint32_t _rsx_primitive_type,const uint32_t first,const uint32_t _count)
+      : buffer(0), buffer_begin(0), current(first), lastgroupn(0), count(_count), rsx_primitive_type(_rsx_primitive_type) {
     }
 
+    // ninvoc - number of full draw method invocations (2047 * 256 vertices)
+    // ninvocremainder - number of vertex batches for an additional draw method invocation (ninvocremainder * 256 vertices)
+    // nbatchremainder - size of one additional vertex batch (nbatchremainder vertices)
     inline void
     begin(gcmContextData * context,const uint32_t ninvoc,const uint32_t ninvocremainder,const uint32_t nbatchremainder) const {
+      // count the total number of words that will be added to the command stream:
+      const bool combine_invocremainder_and_batchremainder = (ninvocremainder > 0) && (ninvocremainder < RSXGL_VERTEX_BATCH_MAX_FIFO_METHOD_ARGS);
+      const uint32_t nmethods = ninvoc + (ninvocremainder ? 1 : 0) + ((nbatchremainder && !combine_invocremainder_and_batchremainder) ? 1 : 0);
+      const uint32_t nargs = (ninvoc * RSXGL_VERTEX_BATCH_MAX_FIFO_METHOD_ARGS) + ninvocremainder + (nbatchremainder ? 1 : 0);
+      const uint32_t nwords = (nmethods * 5) + nargs;
+
+      rsxgl_debug_printf("start: %u count: %u ninvoc: %u ninvocremainder: %u nbatchremainder: %u\n\tnmethods: %u nargs: %u nwords: %u\n",
+			 current,count,ninvoc,ninvocremainder,nbatchremainder,nmethods,nargs,nwords);
+
+#if 0
       const uint32_t n =
 	// method + 3 arguments:
 	((RSXGL_VERTEX_BATCH_MAX_FIFO_METHOD_ARGS + 1) * ninvoc) +
@@ -294,26 +308,41 @@ rsxgl_draw_arrays(gcmContextData * context,const uint32_t first,const uint32_t c
 	 (1 + ninvocremainder + 1) :
 	 (((ninvocremainder > 0) ? (ninvocremainder + 1) : 0) +
 	  ((nbatchremainder > 0) ? 2 : 0)));
+#endif
 
-      buffer = gcm_reserve(context,n);
+      buffer = gcm_reserve(context,nwords);
       buffer_begin = buffer;
       lastgroupn = 0;
+
+      actual_ngroup = 0;
+      actual_nbatch = 0;
     }
 
     // n is number of arguments to this method:
     inline void
     begin_group(const uint32_t n) const {
-      buffer += lastgroupn;
+      // perform rsxgl_draw_end if lastgroupn > 0:
+      if(lastgroupn > 0) {
+	buffer += lastgroupn;
 
-      // nouveau says: perform rsxgl_draw_end if lastgroupn > 0
+	gcm_emit_method_at(buffer,0,NV30_3D_VERTEX_BEGIN_END,1);
+	gcm_emit_at(buffer,1,NV30_3D_VERTEX_BEGIN_END_STOP);
+
+	buffer += 2;
+      }
 
       lastgroupn = n;
 
-      // nouveau says: perform rsxgl_draw_begin
-      // nouveau also writes 32 0's to register 0x1dac, but it's not clear this is necessary for the RSX (nvfx architecture)
+      // perform rsxgl_draw_begin
+      // nouveau also writes 32 0's to register 0x1dac, but, from their comments, it's not clear that this is necessary for the RSX (nvfx architecture)
 
-      gcm_emit_method_at(buffer,0,NV30_3D_VB_VERTEX_BATCH,n);
-      ++buffer;
+      gcm_emit_method_at(buffer,0,NV30_3D_VERTEX_BEGIN_END,1);
+      gcm_emit_at(buffer,1,rsx_primitive_type);
+      gcm_emit_method_at(buffer,2,NV30_3D_VB_VERTEX_BATCH,n);
+
+      buffer += 3;
+
+      ++actual_ngroup;
     }
 
     // n is the size of this batch (the number of vertices in this batch):
@@ -321,15 +350,26 @@ rsxgl_draw_arrays(gcmContextData * context,const uint32_t first,const uint32_t c
     begin_batch(const uint32_t igroup,const uint32_t n) const {
       gcm_emit_at(buffer,igroup,((n - 1) << NV30_3D_VB_VERTEX_BATCH_COUNT__SHIFT) | current);
       current += n;
+
+      ++actual_nbatch;
     }
 
     inline void
     end() const {
-      buffer += lastgroupn;
+      if(lastgroupn > 0) {
+	buffer += lastgroupn;
+
+	gcm_emit_method_at(buffer,0,NV30_3D_VERTEX_BEGIN_END,1);
+	gcm_emit_at(buffer,1,NV30_3D_VERTEX_BEGIN_END_STOP);
+
+	buffer += 2;
+      }
+
+      rsxgl_debug_printf("wrote %u words, %u groups %u batches\n",(uint32_t)(buffer - buffer_begin),actual_ngroup,actual_nbatch);
     }
   };
 
-  operations op(first);
+  operations op(rsx_primitive_type,first,count);
   rsxgl_process_batch< RSXGL_MAX_DRAW_BATCH_SIZE, RSXGL_VERTEX_BATCH_MAX_FIFO_METHOD_ARGS > (context,count,op);
   context -> current = op.buffer;
 }
@@ -470,7 +510,7 @@ glDrawArrays (GLenum mode, GLint first, GLsizei count)
   struct rsxgl_context_t * ctx = current_ctx();
   gcmContextData * context = ctx -> base.gcm_context;
 
-  const uint32_t rsx_mode = rsxgl_check_draw_arrays(ctx,mode);
+  const uint32_t rsx_primitive_type = rsxgl_check_draw_arrays(ctx,mode);
   RSXGL_FORWARD_ERROR_();
 
   if(count < 0) {
@@ -480,8 +520,8 @@ glDrawArrays (GLenum mode, GLint first, GLsizei count)
   const uint32_t timestamp = rsxgl_draw_arrays_init(ctx,mode,first,count);
 
   // draw!
-  rsxgl_draw_begin(context,rsx_mode);
-  rsxgl_draw_arrays(context,first,count);
+  rsxgl_draw_begin(context,rsx_primitive_type);
+  rsxgl_draw_arrays(context,rsx_primitive_type,first,count);
   rsxgl_draw_end(context);
 
   rsxgl_draw_exit(ctx,timestamp);
@@ -495,7 +535,7 @@ glDrawArraysInstanced (GLenum mode, GLint first, GLsizei count, GLsizei primcoun
   struct rsxgl_context_t * ctx = current_ctx();
   gcmContextData * context = ctx -> base.gcm_context;
 
-  const uint32_t rsx_mode = rsxgl_check_draw_arrays(ctx,mode);
+  const uint32_t rsx_primitive_type = rsxgl_check_draw_arrays(ctx,mode);
   RSXGL_FORWARD_ERROR_();
 
   if(count < 0) {
@@ -515,7 +555,7 @@ glMultiDrawArrays (GLenum mode, const GLint *first, const GLsizei *count, GLsize
   struct rsxgl_context_t * ctx = current_ctx();
   gcmContextData * context = ctx -> base.gcm_context;
 
-  const uint32_t rsx_mode = rsxgl_check_draw_arrays(ctx,mode);
+  const uint32_t rsx_primitive_type = rsxgl_check_draw_arrays(ctx,mode);
   RSXGL_FORWARD_ERROR_();
 
   if(primcount < 0) {
@@ -525,9 +565,9 @@ glMultiDrawArrays (GLenum mode, const GLint *first, const GLsizei *count, GLsize
   // draw!
   const uint32_t timestamp = rsxgl_draw_arrays_init(ctx,mode,0,0);
 
-  rsxgl_draw_begin(context,rsx_mode);
+  rsxgl_draw_begin(context,rsx_primitive_type);
   for(;primcount > 0;--primcount,++first,++count) {
-    rsxgl_draw_arrays(context,*first,*count);
+    rsxgl_draw_arrays(context,rsx_primitive_type,*first,*count);
   }
   rsxgl_draw_end(context);
 
@@ -540,8 +580,8 @@ glDrawElements (GLenum mode, GLsizei count, GLenum type, const GLvoid* indices)
 { 
   struct rsxgl_context_t * ctx = current_ctx();
 
-  uint32_t rsx_mode = 0, rsx_type = 0;
-  std::tie(rsx_mode,rsx_type) = rsxgl_check_draw_elements(ctx,mode,type);
+  uint32_t rsx_primitive_type = 0, rsx_type = 0;
+  std::tie(rsx_primitive_type,rsx_type) = rsxgl_check_draw_elements(ctx,mode,type);
   RSXGL_FORWARD_ERROR_();
 
   if(!(type == GL_UNSIGNED_BYTE || type == GL_UNSIGNED_SHORT || type == GL_UNSIGNED_INT)) {
@@ -600,7 +640,7 @@ glDrawElements (GLenum mode, GLsizei count, GLenum type, const GLvoid* indices)
   //
   const uint32_t timestamp = rsxgl_draw_elements_init(ctx,mode,type,0,0);
 
-  rsxgl_draw_begin(context,rsx_mode);
+  rsxgl_draw_begin(context,rsx_primitive_type);
 
 #if 0
   // This (passing indices over the FIFO) doesn't work:
@@ -639,8 +679,8 @@ glDrawElementsInstanced (GLenum mode, GLsizei count, GLenum type, const GLvoid *
 {
   struct rsxgl_context_t * ctx = current_ctx();
 
-  uint32_t rsx_mode = 0, rsx_type = 0;
-  std::tie(rsx_mode,rsx_type) = rsxgl_check_draw_elements(ctx,mode,type);
+  uint32_t rsx_primitive_type = 0, rsx_type = 0;
+  std::tie(rsx_primitive_type,rsx_type) = rsxgl_check_draw_elements(ctx,mode,type);
   RSXGL_FORWARD_ERROR_();
 
   if(count < 0) {
@@ -662,8 +702,8 @@ glDrawElementsBaseVertex (GLenum mode, GLsizei count, GLenum type, const GLvoid 
 {
   struct rsxgl_context_t * ctx = current_ctx();
 
-  uint32_t rsx_mode = 0, rsx_type = 0;
-  std::tie(rsx_mode,rsx_type) = rsxgl_check_draw_elements(ctx,mode,type);
+  uint32_t rsx_primitive_type = 0, rsx_type = 0;
+  std::tie(rsx_primitive_type,rsx_type) = rsxgl_check_draw_elements(ctx,mode,type);
   RSXGL_FORWARD_ERROR_();
 
   if(count < 0) {
@@ -681,8 +721,8 @@ glDrawElementsInstancedBaseVertex (GLenum mode, GLsizei count, GLenum type, cons
 {
   struct rsxgl_context_t * ctx = current_ctx();
 
-  uint32_t rsx_mode = 0, rsx_type = 0;
-  std::tie(rsx_mode,rsx_type) = rsxgl_check_draw_elements(ctx,mode,type);
+  uint32_t rsx_primitive_type = 0, rsx_type = 0;
+  std::tie(rsx_primitive_type,rsx_type) = rsxgl_check_draw_elements(ctx,mode,type);
   RSXGL_FORWARD_ERROR_();
 
   if(count < 0) {
@@ -700,8 +740,8 @@ glDrawRangeElements (GLenum mode, GLuint start, GLuint end, GLsizei count, GLenu
 {
   struct rsxgl_context_t * ctx = current_ctx();
 
-  uint32_t rsx_mode = 0, rsx_type = 0;
-  std::tie(rsx_mode,rsx_type) = rsxgl_check_draw_elements(ctx,mode,type);
+  uint32_t rsx_primitive_type = 0, rsx_type = 0;
+  std::tie(rsx_primitive_type,rsx_type) = rsxgl_check_draw_elements(ctx,mode,type);
   RSXGL_FORWARD_ERROR_();
 
   if(count < 0) {
@@ -736,7 +776,7 @@ glDrawRangeElements (GLenum mode, GLuint start, GLuint end, GLsizei count, GLenu
   //
   const uint32_t timestamp = rsxgl_draw_elements_init(ctx,mode,type,start,end - start);
 
-  rsxgl_draw_begin(context,rsx_mode);
+  rsxgl_draw_begin(context,rsx_primitive_type);
   rsxgl_draw_array_elements(context,count);
   rsxgl_draw_end(context);
 
@@ -750,8 +790,8 @@ glDrawRangeElementsBaseVertex (GLenum mode, GLuint start, GLuint end, GLsizei co
 {
   struct rsxgl_context_t * ctx = current_ctx();
 
-  uint32_t rsx_mode = 0, rsx_type = 0;
-  std::tie(rsx_mode,rsx_type) = rsxgl_check_draw_elements(ctx,mode,type);
+  uint32_t rsx_primitive_type = 0, rsx_type = 0;
+  std::tie(rsx_primitive_type,rsx_type) = rsxgl_check_draw_elements(ctx,mode,type);
   RSXGL_FORWARD_ERROR_();
 
   if(count < 0) {
@@ -773,8 +813,8 @@ glMultiDrawElements (GLenum mode, const GLsizei *count, GLenum type, const GLvoi
 {
   struct rsxgl_context_t * ctx = current_ctx();
 
-  uint32_t rsx_mode = 0, rsx_type = 0;
-  std::tie(rsx_mode,rsx_type) = rsxgl_check_draw_elements(ctx,mode,type);
+  uint32_t rsx_primitive_type = 0, rsx_type = 0;
+  std::tie(rsx_primitive_type,rsx_type) = rsxgl_check_draw_elements(ctx,mode,type);
   RSXGL_FORWARD_ERROR_();
 
   if(primcount < 0) {
@@ -806,7 +846,7 @@ glMultiDrawElements (GLenum mode, const GLsizei *count, GLenum type, const GLvoi
     
     gcm_finish_n_commands(context,3);
     
-    rsxgl_draw_begin(context,rsx_mode);
+    rsxgl_draw_begin(context,rsx_primitive_type);
     rsxgl_draw_array_elements(context,*count);
     rsxgl_draw_end(context);
   }
@@ -821,8 +861,8 @@ glMultiDrawElementsBaseVertex (GLenum mode, const GLsizei *count, GLenum type, c
 {
   struct rsxgl_context_t * ctx = current_ctx();
 
-  uint32_t rsx_mode = 0, rsx_type = 0;
-  std::tie(rsx_mode,rsx_type) = rsxgl_check_draw_elements(ctx,mode,type);
+  uint32_t rsx_primitive_type = 0, rsx_type = 0;
+  std::tie(rsx_primitive_type,rsx_type) = rsxgl_check_draw_elements(ctx,mode,type);
   RSXGL_FORWARD_ERROR_();
 
   if(primcount < 0) {
