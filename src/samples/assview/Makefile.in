@@ -213,7 +213,7 @@ BUILT_SOURCES = assview_vpo.h assview_fpo.h \
 	$(objs_H)
 
 CLEANFILES = assview_vpo.h assview_fpo.h assview_vpo.o assview_fpo.o \
-	$(objs_OBJS)
+	$(objs_H) $(objs_OBJS)
 
 sources = assview.cc \
 	$(objs)
@@ -644,6 +644,11 @@ CGCOMP          ?= $(PSL1GHT_BIN)/cgcomp
 
 %_obj.h: %_obj.o
 	@echo "$<"
+
+dumb:
+	@echo $(objs)
+	@echo $(objs_H)
+	@echo $(objs_OBJS)
 override ICON0		:=	$(srcdir)/../brewcrab.png
 
 pkg: assview.pkg

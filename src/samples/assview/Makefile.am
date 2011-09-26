@@ -26,10 +26,15 @@ SUFFIXES += .obj _obj.o _obj.h
 %_obj.h: %_obj.o
 	@echo "$<"
 
+dumb:
+	@echo $(objs)
+	@echo $(objs_H)
+	@echo $(objs_OBJS)
+
 BUILT_SOURCES = assview_vpo.h assview_fpo.h \
 	$(objs_H)
 CLEANFILES = assview_vpo.h assview_fpo.h assview_vpo.o assview_fpo.o \
-	$(objs_OBJS)
+	$(objs_H) $(objs_OBJS)
 
 sources = assview.cc \
 	$(objs)
