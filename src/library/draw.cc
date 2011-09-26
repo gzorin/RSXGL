@@ -256,6 +256,13 @@ struct rsxgl_draw_points {
     static const uint32_t rsx_primitive_type = NV30_3D_VERTEX_BEGIN_END_POINTS;
     static const uint32_t batch_size = max_batch_size;
 
+    // Will have these also:
+    // - repeat_nudge is the amount to subtract from the start vertex index for each batch, due to 
+    //   a primitive being split across the batch_size boundary (line strip, line loop, triangle strip, triangle fan, quad strip, maybe polygon, need this, potentially)
+    // - repeat_first says that each batch iteration will begin by repeating the first vertex in the primitive (triangle fan, polygon need this)
+    // - close_first says that the first vertex of the primitive will be repeated at the end of the entire iteration (line_loop needs this)
+    // static const uint32_t repeat_nudge, repeat_first, close_first;
+
     // returns batch size, number of batches, plus remainder vertices:
     static boost::tuple< uint32_t, uint32_t, uint32_t > work_info(const uint32_t count) {
       return boost::make_tuple(batch_size,count >> batch_size_bits,count & (batch_size - 1));
@@ -269,7 +276,7 @@ struct rsxgl_draw_lines {
   
   struct traits {
     static const uint32_t rsx_primitive_type = NV30_3D_VERTEX_BEGIN_END_LINES;
-    static const uint32_t batch_size = max_batch_size;
+    static const uint32_t batch_size = max_batch_size & ~1;
 
     // returns batch size, number of batches, plus remainder vertices:
     static boost::tuple< uint32_t, uint32_t, uint32_t > work_info(const uint32_t count) {
@@ -306,12 +313,12 @@ template< uint32_t max_batch_size >
 struct rsxgl_draw_triangles {
   struct traits {
     static const uint32_t rsx_primitive_type = NV30_3D_VERTEX_BEGIN_END_TRIANGLES;
-    static const uint32_t batch_size = (max_batch_size / 3) * 3;
+    static const uint32_t batch_size = max_batch_size - (max_batch_size % 3);
 
     // returns batch size, number of batches, plus remainder vertices:
     static boost::tuple< uint32_t, uint32_t, uint32_t > work_info(const uint32_t count) {
-      const uint32_t triangle_count = (count / 3) * 3;
-      return boost::make_tuple(batch_size,triangle_count / batch_size,triangle_count % batch_size);
+      const uint32_t count_for_triangles = count - (count % 3);
+      return boost::make_tuple(batch_size,count_for_triangles / batch_size,count_for_triangles % batch_size);
     }
   };
 };
@@ -352,7 +359,8 @@ struct rsxgl_draw_array_operations {
   inline void
   begin_group(const uint32_t n) const {
     // perform rsxgl_draw_begin
-    // how often is it necessary to perform this cache invalidation? here it's done for every batch of 256 vertices
+    // how often is it necessary to perform this cache invalidation? here it's done for every batch of 256 vertices, necessary to get the
+    // teapot to rendering correctly.
     gcm_emit_method_at(buffer,0,NV40_3D_VTX_CACHE_INVALIDATE,1);
     gcm_emit_at(buffer,1,0);
     
