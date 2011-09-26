@@ -287,10 +287,9 @@ struct rsxgl_draw_array_operations {
   
   mutable uint32_t * buffer;
   mutable uint32_t current;
-  //const uint32_t rsx_primitive_type;
   
-  rsxgl_draw_array_operations(const uint32_t _rsx_primitive_type,const uint32_t first,const uint32_t _count)
-    : buffer(0), current(first) /* count((_count / 3) * 3) rsx_primitive_type(_rsx_primitive_type) */ {
+  rsxgl_draw_array_operations(const uint32_t first)
+    : buffer(0), current(first) {
   }
 
   boost::tuple< uint32_t, uint32_t, uint32_t > work_info(const uint32_t count) const {
@@ -359,12 +358,12 @@ static inline void
 rsxgl_draw_arrays(gcmContextData * context,const uint32_t rsx_primitive_type,const uint32_t first,const uint32_t count)
 {
   if(rsx_primitive_type == NV30_3D_VERTEX_BEGIN_END_POINTS) {
-    rsxgl_draw_array_operations< RSXGL_MAX_DRAW_BATCH_SIZE, rsxgl_draw_points > op(rsx_primitive_type,first,count);
+    rsxgl_draw_array_operations< RSXGL_MAX_DRAW_BATCH_SIZE, rsxgl_draw_points > op(first);
     rsxgl_process_batch< RSXGL_VERTEX_BATCH_MAX_FIFO_METHOD_ARGS > (context,count,op);
     context -> current = op.buffer;
   }
   else if(rsx_primitive_type == NV30_3D_VERTEX_BEGIN_END_TRIANGLES) {
-    rsxgl_draw_array_operations< RSXGL_MAX_DRAW_BATCH_SIZE, rsxgl_draw_triangles > op(rsx_primitive_type,first,count);
+    rsxgl_draw_array_operations< RSXGL_MAX_DRAW_BATCH_SIZE, rsxgl_draw_triangles > op(first);
     rsxgl_process_batch< RSXGL_VERTEX_BATCH_MAX_FIFO_METHOD_ARGS > (context,count,op);
     context -> current = op.buffer;
   }
@@ -373,16 +372,22 @@ rsxgl_draw_arrays(gcmContextData * context,const uint32_t rsx_primitive_type,con
 #define RSXGL_INDEX_BATCH_MAX_FIFO_METHOD_ARGS 1
 
 // Operations performed by rsxgl_process_batch (a local class passed as a template argument is a C++0x feature):
+template< uint32_t batch_size, template< uint32_t > class primitive_traits >
 struct rsxgl_draw_array_elements_operations {
-  static const uint32_t batch_size = RSXGL_MAX_DRAW_BATCH_SIZE;
   static const uint32_t batch_size_bits = boost::static_log2< batch_size >::value;
+
+  typedef typename primitive_traits< batch_size >::traits primitive_traits_type;
+  static const uint32_t rsx_primitive_type = primitive_traits_type::rsx_primitive_type;
   
   mutable uint32_t * buffer;
   mutable uint32_t current;
-  const uint32_t count, rsx_primitive_type;
   
-  rsxgl_draw_array_elements_operations(const uint32_t _rsx_primitive_type,const uint32_t _count)
-    : buffer(0), current(0), count(_count), rsx_primitive_type(_rsx_primitive_type) {
+  rsxgl_draw_array_elements_operations()
+    : buffer(0), current(0) {
+  }
+
+  boost::tuple< uint32_t, uint32_t, uint32_t > work_info(const uint32_t count) const {
+    return primitive_traits_type::work_info(count);
   }
   
   inline void
@@ -435,11 +440,16 @@ struct rsxgl_draw_array_elements_operations {
 static inline void
 rsxgl_draw_array_elements(gcmContextData * context,const uint32_t rsx_primitive_type,const uint32_t count)
 {
-#if 0
-  rsxgl_draw_array_elements_operations op(rsx_primitive_type,count);
-  rsxgl_process_batch< RSXGL_INDEX_BATCH_MAX_FIFO_METHOD_ARGS > (context,count,op);
-  context -> current = op.buffer;
-#endif
+  if(rsx_primitive_type == NV30_3D_VERTEX_BEGIN_END_POINTS) {
+    rsxgl_draw_array_elements_operations< RSXGL_MAX_DRAW_BATCH_SIZE, rsxgl_draw_points > op;
+    rsxgl_process_batch< RSXGL_INDEX_BATCH_MAX_FIFO_METHOD_ARGS > (context,count,op);
+    context -> current = op.buffer;
+  }
+  else if(rsx_primitive_type == NV30_3D_VERTEX_BEGIN_END_TRIANGLES) {
+    rsxgl_draw_array_elements_operations< RSXGL_MAX_DRAW_BATCH_SIZE, rsxgl_draw_triangles > op;
+    rsxgl_process_batch< RSXGL_INDEX_BATCH_MAX_FIFO_METHOD_ARGS > (context,count,op);
+    context -> current = op.buffer;
+  }
 }
 
 //
