@@ -362,6 +362,8 @@ rsxgl_draw_arrays(gcmContextData * context,const uint32_t rsx_primitive_type,con
   context -> current = op.buffer;
 }
 
+#define RSXGL_INDEX_BATCH_MAX_FIFO_METHOD_ARGS 1
+
 static inline void
 rsxgl_draw_array_elements(gcmContextData * context,const uint32_t rsx_primitive_type,const uint32_t count)
 {
@@ -378,9 +380,9 @@ rsxgl_draw_array_elements(gcmContextData * context,const uint32_t rsx_primitive_
     inline void
     begin(gcmContextData * context,const uint32_t ninvoc,const uint32_t ninvocremainder,const uint32_t nbatchremainder) const {
       // count the total number of words that will be added to the command stream:
-      const bool combine_invocremainder_and_batchremainder = (ninvocremainder > 0) && (ninvocremainder < RSXGL_VERTEX_BATCH_MAX_FIFO_METHOD_ARGS);
+      const bool combine_invocremainder_and_batchremainder = (ninvocremainder > 0) && (ninvocremainder < RSXGL_INDEX_BATCH_MAX_FIFO_METHOD_ARGS);
       const uint32_t nmethods = ninvoc + (ninvocremainder ? 1 : 0) + ((nbatchremainder && !combine_invocremainder_and_batchremainder) ? 1 : 0);
-      const uint32_t nargs = (ninvoc * RSXGL_VERTEX_BATCH_MAX_FIFO_METHOD_ARGS) + ninvocremainder + (nbatchremainder ? 1 : 0);
+      const uint32_t nargs = (ninvoc * RSXGL_INDEX_BATCH_MAX_FIFO_METHOD_ARGS) + ninvocremainder + (nbatchremainder ? 1 : 0);
       const uint32_t nwords = (nmethods * (5)) + nargs;
 
       buffer = gcm_reserve(context,nwords);
@@ -423,7 +425,7 @@ rsxgl_draw_array_elements(gcmContextData * context,const uint32_t rsx_primitive_
   };
 
   operations op(rsx_primitive_type,count);
-  rsxgl_process_batch< RSXGL_MAX_DRAW_BATCH_SIZE, RSXGL_VERTEX_BATCH_MAX_FIFO_METHOD_ARGS > (context,count,op);
+  rsxgl_process_batch< RSXGL_MAX_DRAW_BATCH_SIZE, RSXGL_INDEX_BATCH_MAX_FIFO_METHOD_ARGS > (context,count,op);
   context -> current = op.buffer;
 }
 
