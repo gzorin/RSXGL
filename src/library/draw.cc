@@ -249,13 +249,17 @@ void rsxgl_process_batch(gcmContextData * context,const uint32_t n,const Operati
 //#define RSXGL_VERTEX_BATCH_MAX_FIFO_METHOD_ARGS 2047
 
 template< uint32_t batch_size >
-struct rsxgl_draw_points_traits {
+struct rsxgl_draw_points {
   static const uint32_t batch_size_bits = boost::static_log2< batch_size >::value;
 
   // returns batch size, number of batches, plus remainder vertices:
-  static boost::tuple< uint32_t, uint32_t, uint32_t > work_info(const uint32_t count) {
-    return boost::make_tuple(batch_size,count >> batch_size_bits,count & (batch_size - 1));
-  }
+  struct traits {
+    static const uint32_t rsx_primitive_type = NV30_3D_VERTEX_BEGIN_END_POINTS;
+
+    static boost::tuple< uint32_t, uint32_t, uint32_t > work_info(const uint32_t count) {
+      return boost::make_tuple(batch_size,count >> batch_size_bits,count & (batch_size - 1));
+    }
+  };
 };
 
 template< uint32_t batch_size >
@@ -264,6 +268,8 @@ struct rsxgl_draw_triangles {
 
   // returns batch size, number of batches, plus remainder vertices:
   struct traits {
+    static const uint32_t rsx_primitive_type = NV30_3D_VERTEX_BEGIN_END_TRIANGLES;
+
     static boost::tuple< uint32_t, uint32_t, uint32_t > work_info(const uint32_t count) {
       static const uint32_t triangle_batch_size = (batch_size / 3) * 3;
       const uint32_t triangle_count = (count / 3) * 3;
@@ -274,17 +280,17 @@ struct rsxgl_draw_triangles {
 
 template< uint32_t batch_size, template< uint32_t > class primitive_traits >
 struct rsxgl_draw_array_operations {
-  //static const uint32_t batch_size = RSXGL_MAX_DRAW_BATCH_SIZE;
   static const uint32_t batch_size_bits = boost::static_log2< batch_size >::value;
 
   typedef typename primitive_traits< batch_size >::traits primitive_traits_type;
+  static const uint32_t rsx_primitive_type = primitive_traits_type::rsx_primitive_type;
   
-  mutable uint32_t * buffer, * buffer_begin;
+  mutable uint32_t * buffer;
   mutable uint32_t current;
-  const uint32_t rsx_primitive_type;
+  //const uint32_t rsx_primitive_type;
   
   rsxgl_draw_array_operations(const uint32_t _rsx_primitive_type,const uint32_t first,const uint32_t _count)
-    : buffer(0), buffer_begin(0), current(first), /*count((_count / 3) * 3),*/ rsx_primitive_type(_rsx_primitive_type) {
+    : buffer(0), current(first) /* count((_count / 3) * 3) rsx_primitive_type(_rsx_primitive_type) */ {
   }
 
   boost::tuple< uint32_t, uint32_t, uint32_t > work_info(const uint32_t count) const {
@@ -303,7 +309,6 @@ struct rsxgl_draw_array_operations {
     const uint32_t nwords = (nmethods * (5 + 8)) + nargs;
     
     buffer = gcm_reserve(context,nwords);
-    buffer_begin = buffer;
   }
   
   // n is number of arguments to this method:
@@ -330,11 +335,8 @@ struct rsxgl_draw_array_operations {
   // n is the size of this batch (the number of vertices in this batch):
   inline void
   begin_batch(const uint32_t igroup,const uint32_t n) const {
-    // for triangles only:
-    const uint32_t actual_n = n /*- (n % 3)*/ ;
-    
+    const uint32_t actual_n = n;
     gcm_emit_at(buffer,igroup,((actual_n - 1) << NV30_3D_VB_VERTEX_BATCH_COUNT__SHIFT) | current);
-    
     current += actual_n;
   }
   
@@ -356,7 +358,12 @@ struct rsxgl_draw_array_operations {
 static inline void
 rsxgl_draw_arrays(gcmContextData * context,const uint32_t rsx_primitive_type,const uint32_t first,const uint32_t count)
 {
-  if(rsx_primitive_type == NV30_3D_VERTEX_BEGIN_END_TRIANGLES) {
+  if(rsx_primitive_type == NV30_3D_VERTEX_BEGIN_END_POINTS) {
+    rsxgl_draw_array_operations< RSXGL_MAX_DRAW_BATCH_SIZE, rsxgl_draw_points > op(rsx_primitive_type,first,count);
+    rsxgl_process_batch< RSXGL_VERTEX_BATCH_MAX_FIFO_METHOD_ARGS > (context,count,op);
+    context -> current = op.buffer;
+  }
+  else if(rsx_primitive_type == NV30_3D_VERTEX_BEGIN_END_TRIANGLES) {
     rsxgl_draw_array_operations< RSXGL_MAX_DRAW_BATCH_SIZE, rsxgl_draw_triangles > op(rsx_primitive_type,first,count);
     rsxgl_process_batch< RSXGL_VERTEX_BATCH_MAX_FIFO_METHOD_ARGS > (context,count,op);
     context -> current = op.buffer;

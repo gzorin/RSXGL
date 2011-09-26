@@ -599,12 +599,12 @@ rsxgltest_draw()
 
     while(itri < ntris) {
       const size_t nbatch = std::min(ntris - itri,maxbatch);
-      glDrawArrays(GL_TRIANGLES,itri * 3,nbatch * 3);
+      glDrawArrays(GL_POINTS,itri * 3,nbatch * 3);
       itri += nbatch;
     }
 #endif
 
-    glDrawArrays(GL_TRIANGLES,0,models[imodel].ntris * 3);
+    glDrawArrays(GL_POINTS,0,models[imodel].ntris * 3);
 
 #if 0
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,models[imodel].ibo);
