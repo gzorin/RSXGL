@@ -248,48 +248,85 @@ void rsxgl_process_batch(gcmContextData * context,const uint32_t n,const Operati
 //#define RSXGL_VERTEX_BATCH_MAX_FIFO_METHOD_ARGS 3
 //#define RSXGL_VERTEX_BATCH_MAX_FIFO_METHOD_ARGS 2047
 
-template< uint32_t batch_size >
+template< uint32_t max_batch_size >
 struct rsxgl_draw_points {
-  static const uint32_t batch_size_bits = boost::static_log2< batch_size >::value;
-
-  // returns batch size, number of batches, plus remainder vertices:
+  static const uint32_t batch_size_bits = boost::static_log2< max_batch_size >::value;
+  
   struct traits {
     static const uint32_t rsx_primitive_type = NV30_3D_VERTEX_BEGIN_END_POINTS;
+    static const uint32_t batch_size = max_batch_size;
 
+    // returns batch size, number of batches, plus remainder vertices:
     static boost::tuple< uint32_t, uint32_t, uint32_t > work_info(const uint32_t count) {
       return boost::make_tuple(batch_size,count >> batch_size_bits,count & (batch_size - 1));
     }
   };
 };
 
-template< uint32_t batch_size >
-struct rsxgl_draw_triangles {
-  static const uint32_t triangle_batch_size = (batch_size / 3) * 3;
-
-  // returns batch size, number of batches, plus remainder vertices:
+template< uint32_t max_batch_size >
+struct rsxgl_draw_lines {
+  static const uint32_t batch_size_bits = boost::static_log2< max_batch_size >::value;
+  
   struct traits {
-    static const uint32_t rsx_primitive_type = NV30_3D_VERTEX_BEGIN_END_TRIANGLES;
+    static const uint32_t rsx_primitive_type = NV30_3D_VERTEX_BEGIN_END_LINES;
+    static const uint32_t batch_size = max_batch_size;
 
+    // returns batch size, number of batches, plus remainder vertices:
     static boost::tuple< uint32_t, uint32_t, uint32_t > work_info(const uint32_t count) {
-      static const uint32_t triangle_batch_size = (batch_size / 3) * 3;
-      const uint32_t triangle_count = (count / 3) * 3;
-      return boost::make_tuple(triangle_batch_size,triangle_count / triangle_batch_size,triangle_count % triangle_batch_size);
+      const uint32_t _count = (count >> 1) << 1;
+      return boost::make_tuple(batch_size,_count >> batch_size_bits,_count & (batch_size - 1));
     }
   };
 };
 
-template< uint32_t batch_size, template< uint32_t > class primitive_traits >
-struct rsxgl_draw_array_operations {
+#if 0
+template< uint32_t batch_size >
+struct rsxgl_draw_line_strip {
   static const uint32_t batch_size_bits = boost::static_log2< batch_size >::value;
 
-  typedef typename primitive_traits< batch_size >::traits primitive_traits_type;
+  struct traits {
+    static const uint32_t rsx_primitive_type = NV30_3D_VERTEX_BEGIN_END_LINE_STRIP;
+
+    // returns actual batch size, number of batches, plus remainder vertices:
+    static boost::tuple< uint32_t, uint32_t, uint32_t > work_info(const uint32_t count) {
+      // Compute the total number of vertices that get sent. This includes repeats due to the
+      // primitive being split over batch_size boundary.
+      const uint32_t nbatch = count >> batch_size_bits, nremain = count & (batch_size - 1);
+      const uint32_t nrepeat = ((nbatch > 1) || (nbatch > 0 && nremain > 0)) ? ( ((nbatch > 1) ? (nbatch - 1) : 1) + ((nremain > 0) ? 1 : 0)) : 0;
+      const uint32_t ;
+
+      const uint32_t _count = (count >> 1) << 1;
+      return boost::make_tuple(batch_size,_count >> batch_size_bits,_count & (batch_size - 1));
+    }
+  };
+};
+#endif
+
+template< uint32_t max_batch_size >
+struct rsxgl_draw_triangles {
+  struct traits {
+    static const uint32_t rsx_primitive_type = NV30_3D_VERTEX_BEGIN_END_TRIANGLES;
+    static const uint32_t batch_size = (max_batch_size / 3) * 3;
+
+    // returns batch size, number of batches, plus remainder vertices:
+    static boost::tuple< uint32_t, uint32_t, uint32_t > work_info(const uint32_t count) {
+      const uint32_t triangle_count = (count / 3) * 3;
+      return boost::make_tuple(batch_size,triangle_count / batch_size,triangle_count % batch_size);
+    }
+  };
+};
+
+template< uint32_t max_batch_size, template< uint32_t > class primitive_traits >
+struct rsxgl_draw_array_operations {
+  typedef typename primitive_traits< max_batch_size >::traits primitive_traits_type;
   static const uint32_t rsx_primitive_type = primitive_traits_type::rsx_primitive_type;
+  static const uint32_t batch_size = primitive_traits_type::batch_size;
   
   mutable uint32_t * buffer;
-  mutable uint32_t current;
+  mutable uint32_t first, current;
   
   rsxgl_draw_array_operations(const uint32_t first)
-    : buffer(0), current(first) {
+    : buffer(0), first(first), current(0) {
   }
 
   boost::tuple< uint32_t, uint32_t, uint32_t > work_info(const uint32_t count) const {
@@ -308,6 +345,7 @@ struct rsxgl_draw_array_operations {
     const uint32_t nwords = (nmethods * (5 + 8)) + nargs;
     
     buffer = gcm_reserve(context,nwords);
+    current = 0;
   }
   
   // n is number of arguments to this method:
@@ -335,7 +373,7 @@ struct rsxgl_draw_array_operations {
   inline void
   begin_batch(const uint32_t igroup,const uint32_t n) const {
     const uint32_t actual_n = n;
-    gcm_emit_at(buffer,igroup,((actual_n - 1) << NV30_3D_VB_VERTEX_BATCH_COUNT__SHIFT) | current);
+    gcm_emit_at(buffer,igroup,((actual_n - 1) << NV30_3D_VB_VERTEX_BATCH_COUNT__SHIFT) | first + current);
     current += actual_n;
   }
   
@@ -372,12 +410,11 @@ rsxgl_draw_arrays(gcmContextData * context,const uint32_t rsx_primitive_type,con
 #define RSXGL_INDEX_BATCH_MAX_FIFO_METHOD_ARGS 1
 
 // Operations performed by rsxgl_process_batch (a local class passed as a template argument is a C++0x feature):
-template< uint32_t batch_size, template< uint32_t > class primitive_traits >
+template< uint32_t max_batch_size, template< uint32_t > class primitive_traits >
 struct rsxgl_draw_array_elements_operations {
-  static const uint32_t batch_size_bits = boost::static_log2< batch_size >::value;
-
-  typedef typename primitive_traits< batch_size >::traits primitive_traits_type;
+  typedef typename primitive_traits< max_batch_size >::traits primitive_traits_type;
   static const uint32_t rsx_primitive_type = primitive_traits_type::rsx_primitive_type;
+  static const uint32_t batch_size = primitive_traits_type::batch_size;
   
   mutable uint32_t * buffer;
   mutable uint32_t current;
