@@ -185,13 +185,9 @@ rsxgl_draw_exit(struct rsxgl_context_t * ctx,const uint32_t timestamp)
 template< uint32_t max_method_args, typename Operations >
 void rsxgl_process_batch(gcmContextData * context,const uint32_t n,const Operations & operations)
 {
-  //static const uint32_t batch_size = Operations::batch_size;
-  //static const uint32_t batch_size_bits = boost::static_log2< batch_size >::value;
-  //const uint32_t nbatch = n >> batch_size_bits;
-  //const uint32_t nbatchremainder = n & (batch_size - 1);
-
   const boost::tuple< uint32_t, uint32_t, uint32_t > tmp = operations.work_info(n);
-  const uint32_t batch_size = tmp.get<0>();
+  const uint32_t batch_size = Operations::batch_size;
+  const uint32_t actual_n = tmp.get<0>();
   const uint32_t nbatch = tmp.get<1>();
   const uint32_t nbatchremainder = tmp.get<2>();
 
@@ -200,6 +196,27 @@ void rsxgl_process_batch(gcmContextData * context,const uint32_t n,const Operati
 
   operations.begin(context,ninvoc,ninvocremainder,nbatchremainder);
 
+  operations.begin_group(1);
+  operations.begin_batch(0,nbatchremainder);
+  operations.end_group(1);
+
+  for(;ninvoc > 0;--ninvoc) {
+    operations.begin_group(max_method_args);
+    for(size_t i = 0;i < max_method_args;++i) {
+      operations.begin_batch(i,batch_size);
+    }
+    operations.end_group(max_method_args);
+  }
+
+  if(ninvocremainder > 0) {
+    operations.begin_group(ninvocremainder);
+    for(size_t i = 0;i < ninvocremainder;++i) {
+      operations.begin_batch(i,batch_size);
+    }
+    operations.end_group(ninvocremainder);
+  }
+
+#if 0
   for(;ninvoc > 0;--ninvoc) {
     operations.begin_group(max_method_args);
     for(size_t i = 0;i < max_method_args;++i) {
@@ -234,6 +251,7 @@ void rsxgl_process_batch(gcmContextData * context,const uint32_t n,const Operati
       operations.end_group(1);
     }
   }
+#endif
 
   operations.end();
 }
@@ -263,9 +281,8 @@ struct rsxgl_draw_points {
     // - close_first says that the first vertex of the primitive will be repeated at the end of the entire iteration (line_loop needs this)
     // static const uint32_t repeat_nudge, repeat_first, close_first;
 
-    // returns batch size, number of batches, plus remainder vertices:
     static boost::tuple< uint32_t, uint32_t, uint32_t > work_info(const uint32_t count) {
-      return boost::make_tuple(batch_size,count >> batch_size_bits,count & (batch_size - 1));
+      return boost::make_tuple(count,count >> batch_size_bits,count & (batch_size - 1));
     }
   };
 };
@@ -278,10 +295,9 @@ struct rsxgl_draw_lines {
     static const uint32_t rsx_primitive_type = NV30_3D_VERTEX_BEGIN_END_LINES;
     static const uint32_t batch_size = max_batch_size & ~1;
 
-    // returns batch size, number of batches, plus remainder vertices:
     static boost::tuple< uint32_t, uint32_t, uint32_t > work_info(const uint32_t count) {
       const uint32_t _count = (count >> 1) << 1;
-      return boost::make_tuple(batch_size,_count >> batch_size_bits,_count & (batch_size - 1));
+      return boost::make_tuple(_count,_count >> batch_size_bits,_count & (batch_size - 1));
     }
   };
 };
@@ -315,10 +331,9 @@ struct rsxgl_draw_triangles {
     static const uint32_t rsx_primitive_type = NV30_3D_VERTEX_BEGIN_END_TRIANGLES;
     static const uint32_t batch_size = max_batch_size - (max_batch_size % 3);
 
-    // returns batch size, number of batches, plus remainder vertices:
     static boost::tuple< uint32_t, uint32_t, uint32_t > work_info(const uint32_t count) {
       const uint32_t count_for_triangles = count - (count % 3);
-      return boost::make_tuple(batch_size,count_for_triangles / batch_size,count_for_triangles % batch_size);
+      return boost::make_tuple(count_for_triangles,count_for_triangles / batch_size,count_for_triangles % batch_size);
     }
   };
 };
@@ -345,19 +360,40 @@ struct rsxgl_draw_array_operations {
   // nbatchremainder - size of one additional vertex batch (nbatchremainder vertices)
   inline void
   begin(gcmContextData * context,const uint32_t ninvoc,const uint32_t ninvocremainder,const uint32_t nbatchremainder) const {
+#if 0
     // count the total number of words that will be added to the command stream:
     const bool combine_invocremainder_and_batchremainder = (ninvocremainder > 0) && (ninvocremainder < RSXGL_VERTEX_BATCH_MAX_FIFO_METHOD_ARGS);
     const uint32_t nmethods = ninvoc + (ninvocremainder ? 1 : 0) + ((nbatchremainder && !combine_invocremainder_and_batchremainder) ? 1 : 0);
     const uint32_t nargs = (ninvoc * RSXGL_VERTEX_BATCH_MAX_FIFO_METHOD_ARGS) + ninvocremainder + (nbatchremainder ? 1 : 0);
     const uint32_t nwords = (nmethods * (5 + 8)) + nargs;
+#endif
+
+    const uint32_t nmethods = 1 + ninvoc + (ninvocremainder ? 1 : 0);
+    const uint32_t nargs = 1 + (ninvoc * RSXGL_VERTEX_BATCH_MAX_FIFO_METHOD_ARGS) + ninvocremainder;
+    const uint32_t nwords = nmethods + nargs + 5 + 6;
     
     buffer = gcm_reserve(context,nwords);
     current = 0;
+
+    gcm_emit_method_at(buffer,0,NV40_3D_VTX_CACHE_INVALIDATE,1);
+    gcm_emit_at(buffer,1,0);
+    
+    gcm_emit_method_at(buffer,2,NV40_3D_VTX_CACHE_INVALIDATE,1);
+    gcm_emit_at(buffer,3,0);
+    
+    gcm_emit_method_at(buffer,4,NV40_3D_VTX_CACHE_INVALIDATE,1);
+    gcm_emit_at(buffer,5,0);
+    
+    gcm_emit_method_at(buffer,6,NV30_3D_VERTEX_BEGIN_END,1);
+    gcm_emit_at(buffer,7,rsx_primitive_type);
+
+    buffer += 8;
   }
   
   // n is number of arguments to this method:
   inline void
   begin_group(const uint32_t n) const {
+#if 0
     // perform rsxgl_draw_begin
     // how often is it necessary to perform this cache invalidation? here it's done for every batch of 256 vertices, necessary to get the
     // teapot to rendering correctly.
@@ -375,6 +411,10 @@ struct rsxgl_draw_array_operations {
     gcm_emit_method_at(buffer,8,NV30_3D_VB_VERTEX_BATCH,n);
     
     buffer += 9;
+#endif
+
+    gcm_emit_method_at(buffer,0,NV30_3D_VB_VERTEX_BATCH,n);
+    ++buffer;
   }
   
   // n is the size of this batch (the number of vertices in this batch):
@@ -388,15 +428,21 @@ struct rsxgl_draw_array_operations {
   inline void
   end_group(const uint32_t n) const {
     buffer += n;
-    
+
+#if 0    
     gcm_emit_method_at(buffer,0,NV30_3D_VERTEX_BEGIN_END,1);
     gcm_emit_at(buffer,1,NV30_3D_VERTEX_BEGIN_END_STOP);
     
     buffer += 2;
+#endif
   }
   
   inline void
   end() const {
+    gcm_emit_method_at(buffer,0,NV30_3D_VERTEX_BEGIN_END,1);
+    gcm_emit_at(buffer,1,NV30_3D_VERTEX_BEGIN_END_STOP);
+    
+    buffer += 2;
   }
 };
 
