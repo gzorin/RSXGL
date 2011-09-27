@@ -4152,13 +4152,13 @@ fi
 
 
 if  test "${assimp_source_found}" == "yes" ; then
-  ac_config_files="$ac_config_files src/assimp/Makefile src/samples/assview/Makefile"
+  ac_config_files="$ac_config_files src/assimp/Makefile src/samples/glassview/Makefile"
 
 fi
 
 if test "${assimp_source_found}" == "yes"; then
    RSXGL_SUBDIRS="${RSXGL_SUBDIRS} src/assimp";
-   RSXGL_SAMPLES="${RSXGL_SAMPLES} assview";
+   RSXGL_SAMPLES="${RSXGL_SAMPLES} glassview";
 fi;
 
 RSXGL_SUBDIRS="${RSXGL_SUBDIRS} src/samples"
@@ -4929,7 +4929,7 @@ do
     "src/samples/rsxglgears/Makefile") CONFIG_FILES="$CONFIG_FILES src/samples/rsxglgears/Makefile" ;;
     "depfiles") CONFIG_COMMANDS="$CONFIG_COMMANDS depfiles" ;;
     "src/assimp/Makefile") CONFIG_FILES="$CONFIG_FILES src/assimp/Makefile" ;;
-    "src/samples/assview/Makefile") CONFIG_FILES="$CONFIG_FILES src/samples/assview/Makefile" ;;
+    "src/samples/glassview/Makefile") CONFIG_FILES="$CONFIG_FILES src/samples/glassview/Makefile" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
   esac

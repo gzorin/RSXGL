@@ -1,5 +1,5 @@
 /*
- * assview - render models loaded with the assimp asset importer.
+ * glassview - render models loaded with the assimp asset importer.
  */
 
 #define GL3_PROTOTYPES
@@ -10,8 +10,8 @@
 #include "sine_wave.h"
 
 #include <stddef.h>
-#include "assview_vpo.h"
-#include "assview_fpo.h"
+#include "glassview_vpo.h"
+#include "glassview_fpo.h"
 
 #include <io/pad.h>
 
@@ -24,7 +24,7 @@
 
 #include "teapot_obj.h"
 
-const char * rsxgltest_name = "assview";
+const char * rsxgltest_name = "glassview";
 
 #if defined(assert)
 #undef assert
@@ -528,14 +528,14 @@ rsxgltest_init(int argc,const char ** argv)
   glAttachShader(program,shaders[1]);
 
   // Supply shader binaries:
-  glShaderBinary(1,shaders,0,assview_vpo,assview_vpo_size);
-  glShaderBinary(1,shaders + 1,0,assview_fpo,assview_fpo_size);
+  glShaderBinary(1,shaders,0,glassview_vpo,glassview_vpo_size);
+  glShaderBinary(1,shaders + 1,0,glassview_fpo,glassview_fpo_size);
 
   // Link the program for real:
   glLinkProgram(program);
   glValidateProgram(program);
   
-  summarize_program("assview",program);
+  summarize_program("glassview",program);
 
   vertex_location = glGetAttribLocation(program,"vertex");
   normal_location = glGetAttribLocation(program,"normal");

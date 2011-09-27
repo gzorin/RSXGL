@@ -146,11 +146,11 @@ AC_EXTSRC_INIT()
 AC_EXTSRC([assimp],[the Open Asset Import library])
 AC_EXTSRC_CHECK([assimp],[include/assimp.h])
 
-AM_COND_IF([assimp_SOURCE_FOUND],[AC_CONFIG_FILES([src/assimp/Makefile src/samples/assview/Makefile])])
+AM_COND_IF([assimp_SOURCE_FOUND],[AC_CONFIG_FILES([src/assimp/Makefile src/samples/glassview/Makefile])])
 
 if test "${assimp_source_found}" == "yes"; then
    RSXGL_SUBDIRS="${RSXGL_SUBDIRS} src/assimp";
-   RSXGL_SAMPLES="${RSXGL_SAMPLES} assview";
+   RSXGL_SAMPLES="${RSXGL_SAMPLES} glassview";
 fi;
 
 RSXGL_SUBDIRS="${RSXGL_SUBDIRS} src/samples"

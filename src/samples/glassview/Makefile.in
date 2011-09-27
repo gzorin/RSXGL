@@ -34,8 +34,8 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 DIST_COMMON = $(srcdir)/../samples.am $(srcdir)/Makefile.am \
 	$(srcdir)/Makefile.in
-noinst_PROGRAMS = assview.elf$(EXEEXT)
-subdir = src/samples/assview
+noinst_PROGRAMS = glassview.elf$(EXEEXT)
+subdir = src/samples/glassview
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/extsrc.m4 \
 	$(top_srcdir)/configure.ac
@@ -46,16 +46,17 @@ CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 PROGRAMS = $(noinst_PROGRAMS)
 am__objects_1 =
-am__objects_2 = assview_elf-assview.$(OBJEXT) $(am__objects_1)
-am_assview_elf_OBJECTS = assview_elf-main.$(OBJEXT) \
-	assview_elf-math3d.$(OBJEXT) assview_elf-sine_wave.$(OBJEXT) \
-	$(am__objects_2)
-assview_elf_OBJECTS = $(am_assview_elf_OBJECTS)
+am__objects_2 = glassview_elf-glassview.$(OBJEXT) $(am__objects_1)
+am_glassview_elf_OBJECTS = glassview_elf-main.$(OBJEXT) \
+	glassview_elf-math3d.$(OBJEXT) \
+	glassview_elf-sine_wave.$(OBJEXT) $(am__objects_2)
+glassview_elf_OBJECTS = $(am_glassview_elf_OBJECTS)
 am__DEPENDENCIES_1 = cornell_box_obj.o teapot_obj.o
 am__DEPENDENCIES_2 = $(am__DEPENDENCIES_1)
-am__DEPENDENCIES_3 = assview_vpo.o assview_fpo.o $(am__DEPENDENCIES_2)
-assview_elf_LINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) \
-	$(assview_elf_LDFLAGS) $(LDFLAGS) -o $@
+am__DEPENDENCIES_3 = glassview_vpo.o glassview_fpo.o \
+	$(am__DEPENDENCIES_2)
+glassview_elf_LINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) \
+	$(glassview_elf_LDFLAGS) $(LDFLAGS) -o $@
 DEFAULT_INCLUDES = -I.@am__isrc@
 depcomp = $(SHELL) $(top_srcdir)/config/depcomp
 am__depfiles_maybe = depfiles
@@ -69,8 +70,8 @@ CXXCOMPILE = $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
 CXXLD = $(CXX)
 CXXLINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) $(LDFLAGS) \
 	-o $@
-SOURCES = $(assview_elf_SOURCES)
-DIST_SOURCES = $(assview_elf_SOURCES)
+SOURCES = $(glassview_elf_SOURCES)
+DIST_SOURCES = $(glassview_elf_SOURCES)
 ETAGS = etags
 CTAGS = ctags
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
@@ -209,31 +210,31 @@ SUFFIXES = .bin _bin.o _bin.h .vcg .fcg .vert .frag _vpo.o _fpo.o \
 objs = cornell_box.obj teapot.obj
 objs_H = $(objs:.obj=_obj.h)
 objs_OBJS = $(objs:.obj=_obj.o)
-BUILT_SOURCES = assview_vpo.h assview_fpo.h \
+BUILT_SOURCES = glassview_vpo.h glassview_fpo.h \
 	$(objs_H)
 
-CLEANFILES = assview_vpo.h assview_fpo.h assview_vpo.o assview_fpo.o \
+CLEANFILES = glassview_vpo.h glassview_fpo.h glassview_vpo.o glassview_fpo.o \
 	$(objs_H) $(objs_OBJS)
 
-sources = assview.cc \
+sources = glassview.cc \
 	$(objs)
 
-objects = assview_vpo.o assview_fpo.o \
+objects = glassview_vpo.o glassview_fpo.o \
 	$(objs_OBJS)
 
-assview_elf_DEPENDENCIES = $(top_builddir)/src/library/libEGL.a $(top_builddir)/src/library/libGL.a	\
+glassview_elf_DEPENDENCIES = $(top_builddir)/src/library/libEGL.a $(top_builddir)/src/library/libGL.a	\
 	$(objects)											\
 	$(top_builddir)/src/assimp/libassimp.a
 
-assview_elf_SOURCES = ../rsxgltest/main.c		\
+glassview_elf_SOURCES = ../rsxgltest/main.c		\
 	../rsxgltest/math3d.cc ../rsxgltest/sine_wave.c	\
 	$(sources)
 
-assview_elf_CPPFLAGS = -D__RSX__ -I\$(top_srcdir)/include $(eigen_CPPFLAGS) $(PS3DEV_PPU_CPPFLAGS) $(PSL1GHT_PPU_CPPFLAGS) $(PORTLIBS_PPU_CPPFLAGS) -I$(top_srcdir)/include -I$(top_srcdir)/src/library -I$(top_builddir)/src/library -I$(top_srcdir)/src/samples/rsxgltest -I$(top_srcdir)/extsrc/boost  -I@assimp_SOURCE_LOCATION@/code -I@assimp_SOURCE_LOCATION@/include -I@top_srcdir@/src/assimp -D__ppc__ -DASSIMP_BUILD_NO_COB_IMPORTER -DASSIMP_BUILD_NO_MD3_IMPORTER -DASSIMP_BUILD_NO_MDL_IMPORTER -DASSIMP_BUILD_NO_Q3D_IMPORTER -DASSIMP_BUILD_NO_Q3BSP_IMPORTER -DASSIMP_BUILD_NO_IFC_IMPORTER -DASSIMP_BUILD_NO_X_IMPORTER -DASSIMP_BUILD_NO_HMP_IMPORTER
-assview_elf_CFLAGS = -std=gnu99 -fgnu89-inline -O3
-assview_elf_LDFLAGS = $(PS3DEV_PPU_LDFLAGS) $(PSL1GHT_PPU_LDFLAGS) $(PORTLIBS_PPU_LDFLAGS) -L$(top_builddir)/src/library -L$(top_builddir)/src/assimp
-assview_elf_LDADD = $(objects) -lassimp -lEGL -lGL -lrsx -lgcm_sys -lnet -lio -lsysutil -lsysmodule -lpng -lz -lstdc++ -lm -lrt -llv2
-TITLE := ASSVIEW
+glassview_elf_CPPFLAGS = -D__RSX__ -I\$(top_srcdir)/include $(eigen_CPPFLAGS) $(PS3DEV_PPU_CPPFLAGS) $(PSL1GHT_PPU_CPPFLAGS) $(PORTLIBS_PPU_CPPFLAGS) -I$(top_srcdir)/include -I$(top_srcdir)/src/library -I$(top_builddir)/src/library -I$(top_srcdir)/src/samples/rsxgltest -I$(top_srcdir)/extsrc/boost  -I@assimp_SOURCE_LOCATION@/code -I@assimp_SOURCE_LOCATION@/include -I@top_srcdir@/src/assimp -D__ppc__ -DASSIMP_BUILD_NO_COB_IMPORTER -DASSIMP_BUILD_NO_MD3_IMPORTER -DASSIMP_BUILD_NO_MDL_IMPORTER -DASSIMP_BUILD_NO_Q3D_IMPORTER -DASSIMP_BUILD_NO_Q3BSP_IMPORTER -DASSIMP_BUILD_NO_IFC_IMPORTER -DASSIMP_BUILD_NO_X_IMPORTER -DASSIMP_BUILD_NO_HMP_IMPORTER
+glassview_elf_CFLAGS = -std=gnu99 -fgnu89-inline -O3
+glassview_elf_LDFLAGS = $(PS3DEV_PPU_LDFLAGS) $(PSL1GHT_PPU_LDFLAGS) $(PORTLIBS_PPU_LDFLAGS) -L$(top_builddir)/src/library -L$(top_builddir)/src/assimp
+glassview_elf_LDADD = $(objects) -lassimp -lEGL -lGL -lrsx -lgcm_sys -lnet -lio -lsysutil -lsysmodule -lpng -lz -lstdc++ -lm -lrt -llv2
+TITLE := GLASSVIEW
 APPID := TSTRSXGL2
 CONTENTID := UP0001-$(APPID)_00-0000000000000000
 PKGFILES := release
@@ -251,9 +252,9 @@ $(srcdir)/Makefile.in:  $(srcdir)/Makefile.am $(srcdir)/../samples.am $(am__conf
 	      exit 1;; \
 	  esac; \
 	done; \
-	echo ' cd $(top_srcdir) && $(AUTOMAKE) --foreign src/samples/assview/Makefile'; \
+	echo ' cd $(top_srcdir) && $(AUTOMAKE) --foreign src/samples/glassview/Makefile'; \
 	$(am__cd) $(top_srcdir) && \
-	  $(AUTOMAKE) --foreign src/samples/assview/Makefile
+	  $(AUTOMAKE) --foreign src/samples/glassview/Makefile
 .PRECIOUS: Makefile
 Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 	@case '$?' in \
@@ -275,9 +276,9 @@ $(am__aclocal_m4_deps):
 
 clean-noinstPROGRAMS:
 	-test -z "$(noinst_PROGRAMS)" || rm -f $(noinst_PROGRAMS)
-assview.elf$(EXEEXT): $(assview_elf_OBJECTS) $(assview_elf_DEPENDENCIES) 
-	@rm -f assview.elf$(EXEEXT)
-	$(assview_elf_LINK) $(assview_elf_OBJECTS) $(assview_elf_LDADD) $(LIBS)
+glassview.elf$(EXEEXT): $(glassview_elf_OBJECTS) $(glassview_elf_DEPENDENCIES) 
+	@rm -f glassview.elf$(EXEEXT)
+	$(glassview_elf_LINK) $(glassview_elf_OBJECTS) $(glassview_elf_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -285,10 +286,10 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/assview_elf-assview.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/assview_elf-main.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/assview_elf-math3d.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/assview_elf-sine_wave.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/glassview_elf-glassview.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/glassview_elf-main.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/glassview_elf-math3d.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/glassview_elf-sine_wave.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
@@ -304,33 +305,33 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(COMPILE) -c `$(CYGPATH_W) '$<'`
 
-assview_elf-main.o: ../rsxgltest/main.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(assview_elf_CPPFLAGS) $(CPPFLAGS) $(assview_elf_CFLAGS) $(CFLAGS) -MT assview_elf-main.o -MD -MP -MF $(DEPDIR)/assview_elf-main.Tpo -c -o assview_elf-main.o `test -f '../rsxgltest/main.c' || echo '$(srcdir)/'`../rsxgltest/main.c
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/assview_elf-main.Tpo $(DEPDIR)/assview_elf-main.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='../rsxgltest/main.c' object='assview_elf-main.o' libtool=no @AMDEPBACKSLASH@
+glassview_elf-main.o: ../rsxgltest/main.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(glassview_elf_CPPFLAGS) $(CPPFLAGS) $(glassview_elf_CFLAGS) $(CFLAGS) -MT glassview_elf-main.o -MD -MP -MF $(DEPDIR)/glassview_elf-main.Tpo -c -o glassview_elf-main.o `test -f '../rsxgltest/main.c' || echo '$(srcdir)/'`../rsxgltest/main.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/glassview_elf-main.Tpo $(DEPDIR)/glassview_elf-main.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='../rsxgltest/main.c' object='glassview_elf-main.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(assview_elf_CPPFLAGS) $(CPPFLAGS) $(assview_elf_CFLAGS) $(CFLAGS) -c -o assview_elf-main.o `test -f '../rsxgltest/main.c' || echo '$(srcdir)/'`../rsxgltest/main.c
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(glassview_elf_CPPFLAGS) $(CPPFLAGS) $(glassview_elf_CFLAGS) $(CFLAGS) -c -o glassview_elf-main.o `test -f '../rsxgltest/main.c' || echo '$(srcdir)/'`../rsxgltest/main.c
 
-assview_elf-main.obj: ../rsxgltest/main.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(assview_elf_CPPFLAGS) $(CPPFLAGS) $(assview_elf_CFLAGS) $(CFLAGS) -MT assview_elf-main.obj -MD -MP -MF $(DEPDIR)/assview_elf-main.Tpo -c -o assview_elf-main.obj `if test -f '../rsxgltest/main.c'; then $(CYGPATH_W) '../rsxgltest/main.c'; else $(CYGPATH_W) '$(srcdir)/../rsxgltest/main.c'; fi`
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/assview_elf-main.Tpo $(DEPDIR)/assview_elf-main.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='../rsxgltest/main.c' object='assview_elf-main.obj' libtool=no @AMDEPBACKSLASH@
+glassview_elf-main.obj: ../rsxgltest/main.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(glassview_elf_CPPFLAGS) $(CPPFLAGS) $(glassview_elf_CFLAGS) $(CFLAGS) -MT glassview_elf-main.obj -MD -MP -MF $(DEPDIR)/glassview_elf-main.Tpo -c -o glassview_elf-main.obj `if test -f '../rsxgltest/main.c'; then $(CYGPATH_W) '../rsxgltest/main.c'; else $(CYGPATH_W) '$(srcdir)/../rsxgltest/main.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/glassview_elf-main.Tpo $(DEPDIR)/glassview_elf-main.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='../rsxgltest/main.c' object='glassview_elf-main.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(assview_elf_CPPFLAGS) $(CPPFLAGS) $(assview_elf_CFLAGS) $(CFLAGS) -c -o assview_elf-main.obj `if test -f '../rsxgltest/main.c'; then $(CYGPATH_W) '../rsxgltest/main.c'; else $(CYGPATH_W) '$(srcdir)/../rsxgltest/main.c'; fi`
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(glassview_elf_CPPFLAGS) $(CPPFLAGS) $(glassview_elf_CFLAGS) $(CFLAGS) -c -o glassview_elf-main.obj `if test -f '../rsxgltest/main.c'; then $(CYGPATH_W) '../rsxgltest/main.c'; else $(CYGPATH_W) '$(srcdir)/../rsxgltest/main.c'; fi`
 
-assview_elf-sine_wave.o: ../rsxgltest/sine_wave.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(assview_elf_CPPFLAGS) $(CPPFLAGS) $(assview_elf_CFLAGS) $(CFLAGS) -MT assview_elf-sine_wave.o -MD -MP -MF $(DEPDIR)/assview_elf-sine_wave.Tpo -c -o assview_elf-sine_wave.o `test -f '../rsxgltest/sine_wave.c' || echo '$(srcdir)/'`../rsxgltest/sine_wave.c
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/assview_elf-sine_wave.Tpo $(DEPDIR)/assview_elf-sine_wave.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='../rsxgltest/sine_wave.c' object='assview_elf-sine_wave.o' libtool=no @AMDEPBACKSLASH@
+glassview_elf-sine_wave.o: ../rsxgltest/sine_wave.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(glassview_elf_CPPFLAGS) $(CPPFLAGS) $(glassview_elf_CFLAGS) $(CFLAGS) -MT glassview_elf-sine_wave.o -MD -MP -MF $(DEPDIR)/glassview_elf-sine_wave.Tpo -c -o glassview_elf-sine_wave.o `test -f '../rsxgltest/sine_wave.c' || echo '$(srcdir)/'`../rsxgltest/sine_wave.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/glassview_elf-sine_wave.Tpo $(DEPDIR)/glassview_elf-sine_wave.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='../rsxgltest/sine_wave.c' object='glassview_elf-sine_wave.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(assview_elf_CPPFLAGS) $(CPPFLAGS) $(assview_elf_CFLAGS) $(CFLAGS) -c -o assview_elf-sine_wave.o `test -f '../rsxgltest/sine_wave.c' || echo '$(srcdir)/'`../rsxgltest/sine_wave.c
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(glassview_elf_CPPFLAGS) $(CPPFLAGS) $(glassview_elf_CFLAGS) $(CFLAGS) -c -o glassview_elf-sine_wave.o `test -f '../rsxgltest/sine_wave.c' || echo '$(srcdir)/'`../rsxgltest/sine_wave.c
 
-assview_elf-sine_wave.obj: ../rsxgltest/sine_wave.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(assview_elf_CPPFLAGS) $(CPPFLAGS) $(assview_elf_CFLAGS) $(CFLAGS) -MT assview_elf-sine_wave.obj -MD -MP -MF $(DEPDIR)/assview_elf-sine_wave.Tpo -c -o assview_elf-sine_wave.obj `if test -f '../rsxgltest/sine_wave.c'; then $(CYGPATH_W) '../rsxgltest/sine_wave.c'; else $(CYGPATH_W) '$(srcdir)/../rsxgltest/sine_wave.c'; fi`
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/assview_elf-sine_wave.Tpo $(DEPDIR)/assview_elf-sine_wave.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='../rsxgltest/sine_wave.c' object='assview_elf-sine_wave.obj' libtool=no @AMDEPBACKSLASH@
+glassview_elf-sine_wave.obj: ../rsxgltest/sine_wave.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(glassview_elf_CPPFLAGS) $(CPPFLAGS) $(glassview_elf_CFLAGS) $(CFLAGS) -MT glassview_elf-sine_wave.obj -MD -MP -MF $(DEPDIR)/glassview_elf-sine_wave.Tpo -c -o glassview_elf-sine_wave.obj `if test -f '../rsxgltest/sine_wave.c'; then $(CYGPATH_W) '../rsxgltest/sine_wave.c'; else $(CYGPATH_W) '$(srcdir)/../rsxgltest/sine_wave.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/glassview_elf-sine_wave.Tpo $(DEPDIR)/glassview_elf-sine_wave.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='../rsxgltest/sine_wave.c' object='glassview_elf-sine_wave.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(assview_elf_CPPFLAGS) $(CPPFLAGS) $(assview_elf_CFLAGS) $(CFLAGS) -c -o assview_elf-sine_wave.obj `if test -f '../rsxgltest/sine_wave.c'; then $(CYGPATH_W) '../rsxgltest/sine_wave.c'; else $(CYGPATH_W) '$(srcdir)/../rsxgltest/sine_wave.c'; fi`
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(glassview_elf_CPPFLAGS) $(CPPFLAGS) $(glassview_elf_CFLAGS) $(CFLAGS) -c -o glassview_elf-sine_wave.obj `if test -f '../rsxgltest/sine_wave.c'; then $(CYGPATH_W) '../rsxgltest/sine_wave.c'; else $(CYGPATH_W) '$(srcdir)/../rsxgltest/sine_wave.c'; fi`
 
 .cc.o:
 @am__fastdepCXX_TRUE@	$(CXXCOMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
@@ -346,33 +347,33 @@ assview_elf-sine_wave.obj: ../rsxgltest/sine_wave.c
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(CXXCOMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
 
-assview_elf-math3d.o: ../rsxgltest/math3d.cc
-@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(assview_elf_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT assview_elf-math3d.o -MD -MP -MF $(DEPDIR)/assview_elf-math3d.Tpo -c -o assview_elf-math3d.o `test -f '../rsxgltest/math3d.cc' || echo '$(srcdir)/'`../rsxgltest/math3d.cc
-@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/assview_elf-math3d.Tpo $(DEPDIR)/assview_elf-math3d.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='../rsxgltest/math3d.cc' object='assview_elf-math3d.o' libtool=no @AMDEPBACKSLASH@
+glassview_elf-math3d.o: ../rsxgltest/math3d.cc
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(glassview_elf_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT glassview_elf-math3d.o -MD -MP -MF $(DEPDIR)/glassview_elf-math3d.Tpo -c -o glassview_elf-math3d.o `test -f '../rsxgltest/math3d.cc' || echo '$(srcdir)/'`../rsxgltest/math3d.cc
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/glassview_elf-math3d.Tpo $(DEPDIR)/glassview_elf-math3d.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='../rsxgltest/math3d.cc' object='glassview_elf-math3d.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(assview_elf_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o assview_elf-math3d.o `test -f '../rsxgltest/math3d.cc' || echo '$(srcdir)/'`../rsxgltest/math3d.cc
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(glassview_elf_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o glassview_elf-math3d.o `test -f '../rsxgltest/math3d.cc' || echo '$(srcdir)/'`../rsxgltest/math3d.cc
 
-assview_elf-math3d.obj: ../rsxgltest/math3d.cc
-@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(assview_elf_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT assview_elf-math3d.obj -MD -MP -MF $(DEPDIR)/assview_elf-math3d.Tpo -c -o assview_elf-math3d.obj `if test -f '../rsxgltest/math3d.cc'; then $(CYGPATH_W) '../rsxgltest/math3d.cc'; else $(CYGPATH_W) '$(srcdir)/../rsxgltest/math3d.cc'; fi`
-@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/assview_elf-math3d.Tpo $(DEPDIR)/assview_elf-math3d.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='../rsxgltest/math3d.cc' object='assview_elf-math3d.obj' libtool=no @AMDEPBACKSLASH@
+glassview_elf-math3d.obj: ../rsxgltest/math3d.cc
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(glassview_elf_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT glassview_elf-math3d.obj -MD -MP -MF $(DEPDIR)/glassview_elf-math3d.Tpo -c -o glassview_elf-math3d.obj `if test -f '../rsxgltest/math3d.cc'; then $(CYGPATH_W) '../rsxgltest/math3d.cc'; else $(CYGPATH_W) '$(srcdir)/../rsxgltest/math3d.cc'; fi`
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/glassview_elf-math3d.Tpo $(DEPDIR)/glassview_elf-math3d.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='../rsxgltest/math3d.cc' object='glassview_elf-math3d.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(assview_elf_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o assview_elf-math3d.obj `if test -f '../rsxgltest/math3d.cc'; then $(CYGPATH_W) '../rsxgltest/math3d.cc'; else $(CYGPATH_W) '$(srcdir)/../rsxgltest/math3d.cc'; fi`
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(glassview_elf_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o glassview_elf-math3d.obj `if test -f '../rsxgltest/math3d.cc'; then $(CYGPATH_W) '../rsxgltest/math3d.cc'; else $(CYGPATH_W) '$(srcdir)/../rsxgltest/math3d.cc'; fi`
 
-assview_elf-assview.o: assview.cc
-@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(assview_elf_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT assview_elf-assview.o -MD -MP -MF $(DEPDIR)/assview_elf-assview.Tpo -c -o assview_elf-assview.o `test -f 'assview.cc' || echo '$(srcdir)/'`assview.cc
-@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/assview_elf-assview.Tpo $(DEPDIR)/assview_elf-assview.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='assview.cc' object='assview_elf-assview.o' libtool=no @AMDEPBACKSLASH@
+glassview_elf-glassview.o: glassview.cc
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(glassview_elf_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT glassview_elf-glassview.o -MD -MP -MF $(DEPDIR)/glassview_elf-glassview.Tpo -c -o glassview_elf-glassview.o `test -f 'glassview.cc' || echo '$(srcdir)/'`glassview.cc
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/glassview_elf-glassview.Tpo $(DEPDIR)/glassview_elf-glassview.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='glassview.cc' object='glassview_elf-glassview.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(assview_elf_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o assview_elf-assview.o `test -f 'assview.cc' || echo '$(srcdir)/'`assview.cc
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(glassview_elf_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o glassview_elf-glassview.o `test -f 'glassview.cc' || echo '$(srcdir)/'`glassview.cc
 
-assview_elf-assview.obj: assview.cc
-@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(assview_elf_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT assview_elf-assview.obj -MD -MP -MF $(DEPDIR)/assview_elf-assview.Tpo -c -o assview_elf-assview.obj `if test -f 'assview.cc'; then $(CYGPATH_W) 'assview.cc'; else $(CYGPATH_W) '$(srcdir)/assview.cc'; fi`
-@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/assview_elf-assview.Tpo $(DEPDIR)/assview_elf-assview.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='assview.cc' object='assview_elf-assview.obj' libtool=no @AMDEPBACKSLASH@
+glassview_elf-glassview.obj: glassview.cc
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(glassview_elf_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT glassview_elf-glassview.obj -MD -MP -MF $(DEPDIR)/glassview_elf-glassview.Tpo -c -o glassview_elf-glassview.obj `if test -f 'glassview.cc'; then $(CYGPATH_W) 'glassview.cc'; else $(CYGPATH_W) '$(srcdir)/glassview.cc'; fi`
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/glassview_elf-glassview.Tpo $(DEPDIR)/glassview_elf-glassview.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='glassview.cc' object='glassview_elf-glassview.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(assview_elf_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o assview_elf-assview.obj `if test -f 'assview.cc'; then $(CYGPATH_W) 'assview.cc'; else $(CYGPATH_W) '$(srcdir)/assview.cc'; fi`
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(glassview_elf_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o glassview_elf-glassview.obj `if test -f 'glassview.cc'; then $(CYGPATH_W) 'glassview.cc'; else $(CYGPATH_W) '$(srcdir)/glassview.cc'; fi`
 
 ID: $(HEADERS) $(SOURCES) $(LISP) $(TAGS_FILES)
 	list='$(SOURCES) $(HEADERS) $(LISP) $(TAGS_FILES)'; \
@@ -651,12 +652,12 @@ dumb:
 	@echo $(objs_OBJS)
 override ICON0		:=	$(srcdir)/../brewcrab.png
 
-pkg: assview.pkg
+pkg: glassview.pkg
 
 all-local: pkg
 
 clean-local:
-	rm -rf pkg assview.self assview.pkg 
+	rm -rf pkg glassview.self glassview.pkg 
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
