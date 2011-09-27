@@ -216,43 +216,6 @@ void rsxgl_process_batch(gcmContextData * context,const uint32_t n,const Operati
     operations.end_group(ninvocremainder);
   }
 
-#if 0
-  for(;ninvoc > 0;--ninvoc) {
-    operations.begin_group(max_method_args);
-    for(size_t i = 0;i < max_method_args;++i) {
-      operations.begin_batch(i,batch_size);
-    }
-    operations.end_group(max_method_args);
-  }
-
-  // last group and last batch both together:
-  if((ninvocremainder > 0) && (nbatchremainder > 0) && (ninvocremainder < max_method_args)) {
-    operations.begin_group(ninvocremainder + 1);
-    for(size_t i = 0;i < ninvocremainder;++i) {
-      operations.begin_batch(i,batch_size);
-    }
-    operations.begin_batch(ninvocremainder,nbatchremainder);
-    operations.end_group(ninvocremainder + 1);
-  }
-  else {
-    // last group
-    if(ninvocremainder > 0) {
-      operations.begin_group(ninvocremainder);
-      for(size_t i = 0;i < ninvocremainder;++i) {
-	operations.begin_batch(i,batch_size);
-      }
-      operations.end_group(ninvocremainder);
-    }
-    
-    // last batch
-    if(nbatchremainder > 0) {
-      operations.begin_group(1);
-      operations.begin_batch(0,nbatchremainder);
-      operations.end_group(1);
-    }
-  }
-#endif
-
   operations.end();
 }
 
@@ -448,14 +411,6 @@ struct rsxgl_draw_array_elements_operations {
   
   inline void
   begin(gcmContextData * context,const uint32_t ninvoc,const uint32_t ninvocremainder,const uint32_t nbatchremainder) const {
-#if 0
-    // count the total number of words that will be added to the command stream:
-    const bool combine_invocremainder_and_batchremainder = (ninvocremainder > 0) && (ninvocremainder < RSXGL_INDEX_BATCH_MAX_FIFO_METHOD_ARGS);
-    const uint32_t nmethods = ninvoc + (ninvocremainder ? 1 : 0) + ((nbatchremainder && !combine_invocremainder_and_batchremainder) ? 1 : 0);
-    const uint32_t nargs = (ninvoc * RSXGL_INDEX_BATCH_MAX_FIFO_METHOD_ARGS) + ninvocremainder + (nbatchremainder ? 1 : 0);
-    const uint32_t nwords = (nmethods * (5)) + nargs;
-#endif
-
     const uint32_t nmethods = 1 + ninvoc + (ninvocremainder ? 1 : 0);
     const uint32_t nargs = 1 + (ninvoc * RSXGL_INDEX_BATCH_MAX_FIFO_METHOD_ARGS) + ninvocremainder;
     const uint32_t nwords = nmethods + nargs + 4;
