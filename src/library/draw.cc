@@ -360,17 +360,9 @@ struct rsxgl_draw_array_operations {
   // nbatchremainder - size of one additional vertex batch (nbatchremainder vertices)
   inline void
   begin(gcmContextData * context,const uint32_t ninvoc,const uint32_t ninvocremainder,const uint32_t nbatchremainder) const {
-#if 0
-    // count the total number of words that will be added to the command stream:
-    const bool combine_invocremainder_and_batchremainder = (ninvocremainder > 0) && (ninvocremainder < RSXGL_VERTEX_BATCH_MAX_FIFO_METHOD_ARGS);
-    const uint32_t nmethods = ninvoc + (ninvocremainder ? 1 : 0) + ((nbatchremainder && !combine_invocremainder_and_batchremainder) ? 1 : 0);
-    const uint32_t nargs = (ninvoc * RSXGL_VERTEX_BATCH_MAX_FIFO_METHOD_ARGS) + ninvocremainder + (nbatchremainder ? 1 : 0);
-    const uint32_t nwords = (nmethods * (5 + 8)) + nargs;
-#endif
-
     const uint32_t nmethods = 1 + ninvoc + (ninvocremainder ? 1 : 0);
     const uint32_t nargs = 1 + (ninvoc * RSXGL_VERTEX_BATCH_MAX_FIFO_METHOD_ARGS) + ninvocremainder;
-    const uint32_t nwords = nmethods + nargs + 5 + 6;
+    const uint32_t nwords = nmethods + nargs + 4 + 6;
     
     buffer = gcm_reserve(context,nwords);
     current = 0;
@@ -393,26 +385,6 @@ struct rsxgl_draw_array_operations {
   // n is number of arguments to this method:
   inline void
   begin_group(const uint32_t n) const {
-#if 0
-    // perform rsxgl_draw_begin
-    // how often is it necessary to perform this cache invalidation? here it's done for every batch of 256 vertices, necessary to get the
-    // teapot to rendering correctly.
-    gcm_emit_method_at(buffer,0,NV40_3D_VTX_CACHE_INVALIDATE,1);
-    gcm_emit_at(buffer,1,0);
-    
-    gcm_emit_method_at(buffer,2,NV40_3D_VTX_CACHE_INVALIDATE,1);
-    gcm_emit_at(buffer,3,0);
-    
-    gcm_emit_method_at(buffer,4,NV40_3D_VTX_CACHE_INVALIDATE,1);
-    gcm_emit_at(buffer,5,0);
-    
-    gcm_emit_method_at(buffer,6,NV30_3D_VERTEX_BEGIN_END,1);
-    gcm_emit_at(buffer,7,rsx_primitive_type);
-    gcm_emit_method_at(buffer,8,NV30_3D_VB_VERTEX_BATCH,n);
-    
-    buffer += 9;
-#endif
-
     gcm_emit_method_at(buffer,0,NV30_3D_VB_VERTEX_BATCH,n);
     ++buffer;
   }
@@ -428,13 +400,6 @@ struct rsxgl_draw_array_operations {
   inline void
   end_group(const uint32_t n) const {
     buffer += n;
-
-#if 0    
-    gcm_emit_method_at(buffer,0,NV30_3D_VERTEX_BEGIN_END,1);
-    gcm_emit_at(buffer,1,NV30_3D_VERTEX_BEGIN_END_STOP);
-    
-    buffer += 2;
-#endif
   }
   
   inline void
@@ -483,27 +448,31 @@ struct rsxgl_draw_array_elements_operations {
   
   inline void
   begin(gcmContextData * context,const uint32_t ninvoc,const uint32_t ninvocremainder,const uint32_t nbatchremainder) const {
+#if 0
     // count the total number of words that will be added to the command stream:
     const bool combine_invocremainder_and_batchremainder = (ninvocremainder > 0) && (ninvocremainder < RSXGL_INDEX_BATCH_MAX_FIFO_METHOD_ARGS);
     const uint32_t nmethods = ninvoc + (ninvocremainder ? 1 : 0) + ((nbatchremainder && !combine_invocremainder_and_batchremainder) ? 1 : 0);
     const uint32_t nargs = (ninvoc * RSXGL_INDEX_BATCH_MAX_FIFO_METHOD_ARGS) + ninvocremainder + (nbatchremainder ? 1 : 0);
     const uint32_t nwords = (nmethods * (5)) + nargs;
+#endif
+
+    const uint32_t nmethods = 1 + ninvoc + (ninvocremainder ? 1 : 0);
+    const uint32_t nargs = 1 + (ninvoc * RSXGL_INDEX_BATCH_MAX_FIFO_METHOD_ARGS) + ninvocremainder;
+    const uint32_t nwords = nmethods + nargs + 4;
     
     buffer = gcm_reserve(context,nwords);
+
+    gcm_emit_method_at(buffer,0,NV30_3D_VERTEX_BEGIN_END,1);
+    gcm_emit_at(buffer,1,rsx_primitive_type);
+
+    buffer += 2;
   }
   
   // n is number of arguments to this method:
   inline void
   begin_group(const uint32_t n) const {
-    // Interestingly, draw_array_elements does /not/ require invalidating the vertex cache, even if indices stored in the
-    // elements performs the equivalent to glDrawArrays() (i.e., the indices increase, monotonically, by a value of 1).
-    // TODO - Make compile time option to turn glDrawArrays() into a specialization of glDrawArrays()???
-    
-    gcm_emit_method_at(buffer,0,NV30_3D_VERTEX_BEGIN_END,1);
-    gcm_emit_at(buffer,1,rsx_primitive_type);
-    gcm_emit_method_at(buffer,2,NV30_3D_VB_INDEX_BATCH,n);
-    
-    buffer += 3;
+    gcm_emit_method_at(buffer,0,NV30_3D_VB_INDEX_BATCH,n);
+    ++buffer;
   }
   
   // n is the size of this batch:
@@ -516,15 +485,14 @@ struct rsxgl_draw_array_elements_operations {
   inline void
   end_group(const uint32_t n) const {
     buffer += n;
-    
-    gcm_emit_method_at(buffer,0,NV30_3D_VERTEX_BEGIN_END,1);
-    gcm_emit_at(buffer,1,NV30_3D_VERTEX_BEGIN_END_STOP);
-    
-    buffer += 2;
   }
   
   inline void
   end() const {
+    gcm_emit_method_at(buffer,0,NV30_3D_VERTEX_BEGIN_END,1);
+    gcm_emit_at(buffer,1,NV30_3D_VERTEX_BEGIN_END_STOP);
+    
+    buffer += 2;
   }
 };
 
