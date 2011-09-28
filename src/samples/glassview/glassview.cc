@@ -51,23 +51,6 @@ struct sine_wave_t rgb_waves[3] = {
   }
 };
 
-struct sine_wave_t xyz_waves[3] = {
-  { 0.5f,
-    0.5f,
-    1.0f / 4.0f
-  },
-  {
-    0.5f,
-    0.5f,
-    1.5f / 4.0f
-  },
-  {
-    0.5f,
-    0.5f,
-    2.5f / 4.0f
-  }
-};
-
 GLuint shaders[2] = { 0,0 };
 
 GLuint program = 0;
@@ -78,7 +61,7 @@ GLint ProjMatrix_location = -1, TransMatrix_location = -1,
 GLfloat rotate_y = 0.0;
 
 // degrees per second:
-const GLfloat rotate_y_rate = 90.0f;
+const GLfloat rotate_y_rate = 40.0f;
 
 #define DTOR(X) ((X)*0.01745329f)
 #define RTOD(d) ((d)*57.295788f)
@@ -576,12 +559,6 @@ rsxgltest_draw()
   glClearColor(rgb[0] * 0.1,rgb[1] * 0.1,rgb[2] * 0.1,1.0);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-  float xyz[3] = {
-    compute_sine_wave(xyz_waves,rsxgltest_elapsed_time),
-    compute_sine_wave(xyz_waves + 1,rsxgltest_elapsed_time),
-    compute_sine_wave(xyz_waves + 2,rsxgltest_elapsed_time)
-  };
-
   Eigen::Affine3f rotmat = 
     Eigen::Affine3f::Identity() * 
     Eigen::AngleAxisf(DTOR(rotate_y),Eigen::Vector3f::UnitY());
@@ -594,18 +571,6 @@ rsxgltest_draw()
 
     Eigen::Affine3f modelview = ViewMatrixInv * (Eigen::Affine3f::Identity() * rotmat * Eigen::UniformScaling< float >(models[imodel].scale));
     glUniformMatrix4fv(TransMatrix_location,1,GL_FALSE,modelview.data());
-
-#if 0
-    size_t itri = 0;
-    const size_t ntris = models[imodel].ntris;
-    const size_t maxbatch = 256 / 3;
-
-    while(itri < ntris) {
-      const size_t nbatch = std::min(ntris - itri,maxbatch);
-      glDrawArrays(GL_POINTS,itri * 3,nbatch * 3);
-      itri += nbatch;
-    }
-#endif
 
     glDrawArrays(GL_TRIANGLES,0,models[imodel].ntris * 3);
 

@@ -580,6 +580,8 @@ PSL1GHT_PPU_LDFLAGS
 PSL1GHT_PPU_CPPFLAGS
 PSL1GHT
 CGC
+RSXGL_CONFIG_samples_host_port
+RSXGL_CONFIG_samples_host_ip
 RSXGL_CONFIG_RSX_compatibility
 PPU_CXXLIB
 PPU_LD
@@ -688,6 +690,8 @@ enable_ppu_optimize
 with_ps3dev
 with_ppu_cxxlib
 enable_RSX_compatibility
+with_samples_host_ip
+with_samples_host_port
 with_psl1ght
 with_portlibs
 with_extsrc
@@ -1336,6 +1340,9 @@ Optional Packages:
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
   --with-ps3dev           location of compiled PS3 development toolchain
   --with-ppu-cxxlib       full path to a static C++ standard library
+  --with-samples-host-ip  IP address of host for samples to send reporting to
+  --with-samples-host-port
+                          port number on host for samples to send reporting to
   --with-psl1ght          location of compiled PSL1GHT
   --with-portlibs         location of ported libraries
   --with-extsrc           set path to external package sources
@@ -3957,6 +3964,31 @@ fi
 
 
 
+# Samples can send debugging information back to the host used to build them; set its IP here,
+# or leave it unset & it won't try to phone home:
+
+# Check whether --with-samples-host-ip was given.
+if test "${with_samples_host_ip+set}" = set; then :
+  withval=$with_samples_host_ip; RSXGL_CONFIG_samples_host_ip="$withval"
+else
+  RSXGL_CONFIG_samples_host_ip="no"
+fi
+
+
+# Check whether --with-samples-host-port was given.
+if test "${with_samples_host_port+set}" = set; then :
+  withval=$with_samples_host_port; RSXGL_CONFIG_samples_host_port="$withval"
+else
+  RSXGL_CONFIG_samples_host_port=9000
+fi
+
+if test "$RSXGL_CONFIG_samples_host_ip" == "no" -o -z "$RSXGL_CONFIG_samples_host_ip"; then
+   RSXGL_CONFIG_samples_host_ip=""
+   RSXGL_CONFIG_samples_host_port=0
+fi;
+
+
+
 # Find the Cg compiler:
 # Extract the first word of "cgc", so it can be a program name with args.
 set dummy cgc; ac_word=$2
@@ -3996,7 +4028,6 @@ else
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
 fi
-
 
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: path to the cgc compiler is ${CGC}" >&5
