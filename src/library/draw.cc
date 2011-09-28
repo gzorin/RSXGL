@@ -182,6 +182,14 @@ rsxgl_draw_exit(struct rsxgl_context_t * ctx,const uint32_t timestamp)
 // the purpose that this function is put to. Drawing vertices & indices that have been loaded
 // into arrays on the GPU, for instance, are split into batches of 256 indices; sending indices
 // from client memory, over the fifo, would have a batch_size of 1.
+struct rsxgl_process_batch_work_t {
+  uint32_t nvertices, nbatch, nbatchremainder;
+
+  rsxgl_process_batch_work_t(const uint32_t _nvertices, const uint32_t _nbatch, const uint32_t _nbatchremainder)
+    : nvertices(_nvertices), nbatch(_nbatch), nbatchremainder(_nbatchremainder) {
+  }
+};
+
 template< uint32_t max_method_args, typename Operations >
 void rsxgl_process_batch(gcmContextData * context,const uint32_t n,const Operations & operations)
 {
@@ -197,13 +205,13 @@ void rsxgl_process_batch(gcmContextData * context,const uint32_t n,const Operati
   operations.begin(context,ninvoc,ninvocremainder,nbatchremainder);
 
   operations.begin_group(1);
-  operations.begin_batch(0,nbatchremainder);
+  operations.n_batch(0,nbatchremainder);
   operations.end_group(1);
 
   for(;ninvoc > 0;--ninvoc) {
     operations.begin_group(max_method_args);
     for(size_t i = 0;i < max_method_args;++i) {
-      operations.begin_batch(i,batch_size);
+      operations.full_batch(i);
     }
     operations.end_group(max_method_args);
   }
@@ -211,7 +219,7 @@ void rsxgl_process_batch(gcmContextData * context,const uint32_t n,const Operati
   if(ninvocremainder > 0) {
     operations.begin_group(ninvocremainder);
     for(size_t i = 0;i < ninvocremainder;++i) {
-      operations.begin_batch(i,batch_size);
+      operations.full_batch(i);
     }
     operations.end_group(ninvocremainder);
   }
@@ -385,10 +393,17 @@ struct rsxgl_draw_array_operations {
   
   // n is the size of this batch (the number of vertices in this batch):
   inline void
-  begin_batch(const uint32_t igroup,const uint32_t n) const {
-    const uint32_t actual_n = n;
-    gcm_emit_at(buffer,igroup,((actual_n - 1) << NV30_3D_VB_VERTEX_BATCH_COUNT__SHIFT) | first + current);
-    current += actual_n - repeat_offset;
+  n_batch(const uint32_t igroup,const uint32_t n) const {
+    gcm_emit_at(buffer,igroup,((n - 1) << NV30_3D_VB_VERTEX_BATCH_COUNT__SHIFT) | first + current);
+    current += n - repeat_offset;
+  }
+
+  // here the size of the batch is assumed to be primitive_traits::batch_size,
+  // which oughta be a constant:
+  inline void
+  full_batch(const uint32_t igroup) const {
+    gcm_emit_at(buffer,igroup,((batch_size - 1) << NV30_3D_VB_VERTEX_BATCH_COUNT__SHIFT) | first + current);
+    current += batch_size - repeat_offset;
   }
   
   inline void
@@ -433,6 +448,7 @@ struct rsxgl_draw_array_elements_operations {
   typedef typename primitive_traits< max_batch_size >::traits primitive_traits_type;
   static const uint32_t rsx_primitive_type = primitive_traits_type::rsx_primitive_type;
   static const uint32_t batch_size = primitive_traits_type::batch_size;
+  static const uint32_t repeat_offset = primitive_traits_type::repeat_offset;
   
   mutable uint32_t * buffer;
   mutable uint32_t current;
@@ -465,12 +481,20 @@ struct rsxgl_draw_array_elements_operations {
     gcm_emit_method_at(buffer,0,NV30_3D_VB_INDEX_BATCH,n);
     ++buffer;
   }
-  
+
   // n is the size of this batch:
   inline void
-  begin_batch(const uint32_t igroup,const uint32_t n) const {
+  n_batch(const uint32_t igroup,const uint32_t n) const {
     gcm_emit_at(buffer,igroup,((n - 1) << NV30_3D_VB_INDEX_BATCH_COUNT__SHIFT) | current);
-    current += n;
+    current += n - repeat_offset;
+  }
+  
+  // here the size of the batch is assumed to be primitive_traits::batch_size,
+  // which oughta be a constant:
+  inline void
+  full_batch(const uint32_t igroup) const {
+    gcm_emit_at(buffer,igroup,((batch_size - 1) << NV30_3D_VB_INDEX_BATCH_COUNT__SHIFT) | current);
+    current += batch_size - repeat_offset;
   }
   
   inline void

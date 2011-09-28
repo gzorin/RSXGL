@@ -42,7 +42,7 @@ extern void rsxgltest_exit();
 
 // Test program might want to use these:
 int rsxgltest_width = 0, rsxgltest_height = 0;
-float rsxgltest_elapsed_time = 0;
+float rsxgltest_elapsed_time = 0, rsxgltest_last_time = 0, rsxgltest_delta_time = 0;
 
 // Configure these (especially the IP) to your own setup.
 // Use netcat to receive the results on your PC:
@@ -383,6 +383,7 @@ main(int argc, const char ** argv)
 	    rsxgltest_init(argc,argv);
 
 	    gettimeofday(&start_time,0);
+	    rsxgltest_last_time = 0.0f;
    
 	    while(running) {
 	      gettimeofday(&current_time,0);
@@ -390,6 +391,9 @@ main(int argc, const char ** argv)
 	      struct timeval elapsed_time;
 	      timersub(&current_time,&start_time,&elapsed_time);
 	      rsxgltest_elapsed_time = ((float)(elapsed_time.tv_sec)) + ((float)(elapsed_time.tv_usec) / 1.0e6f);
+	      rsxgltest_delta_time = rsxgltest_elapsed_time - rsxgltest_last_time;
+
+	      rsxgltest_last_time = rsxgltest_elapsed_time;
 
 	      ioPadGetInfo(&padinfo);
 	      for(size_t i = 0;i < MAX_PADS;++i) {

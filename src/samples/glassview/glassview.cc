@@ -75,6 +75,11 @@ GLuint program = 0;
 GLint ProjMatrix_location = -1, TransMatrix_location = -1,
   vertex_location = -1, normal_location = -1, uv_location = -1;
 
+GLfloat rotate_y = 0.0;
+
+// degrees per second:
+const GLfloat rotate_y_rate = 90.0f;
+
 #define DTOR(X) ((X)*0.01745329f)
 #define RTOD(d) ((d)*57.295788f)
 
@@ -579,9 +584,7 @@ rsxgltest_draw()
 
   Eigen::Affine3f rotmat = 
     Eigen::Affine3f::Identity() * 
-    Eigen::AngleAxisf(DTOR(xyz[2]) * 360.0f,Eigen::Vector3f::UnitZ()) *
-    Eigen::AngleAxisf(DTOR(xyz[1]) * 360.0f,Eigen::Vector3f::UnitY()) *
-    Eigen::AngleAxisf(DTOR(xyz[0]) * 360.0f,Eigen::Vector3f::UnitX());
+    Eigen::AngleAxisf(DTOR(rotate_y),Eigen::Vector3f::UnitY());
 
   if(models[imodel].ntris > 0 &&
      models[imodel].vbo != 0 &&
@@ -616,7 +619,8 @@ rsxgltest_draw()
 
     glBindVertexArray(0);
   }
-  
+
+  rotate_y += rsxgltest_delta_time * rotate_y_rate;
 
   return 1;
 }
