@@ -271,9 +271,6 @@ asset_to_gl(asset_model_spec const & model_spec)
       const GLsizei color_offset = uv_offset + op.uv_size * sizeof(GLfloat);
       const GLuint vertex_size = color_offset + op.color_size * sizeof(GLfloat);
 
-      tcp_printf("offsets: %u %u %u %u vertex_size: %u\n",
-		 position_offset,normal_offset,uv_offset,color_offset,vertex_size);
-      
       op.position_stride = vertex_size;
       op.normal_stride = vertex_size;
       op.uv_stride = vertex_size;
@@ -284,31 +281,15 @@ asset_to_gl(asset_model_spec const & model_spec)
       glGenBuffers(1,&result.vbo);
       glBindBuffer(GL_ARRAY_BUFFER,result.vbo);
 
-      tcp_printf("building buffer object: %i triangles, %i vertices, %u bytes\n",result.ntris,nverts,(GLuint)(vertex_size * nverts));
       glBufferData(GL_ARRAY_BUFFER,vertex_size * nverts,0,GL_STATIC_DRAW);
-      {const GLenum e = glGetError();
-      if(e != GL_NO_ERROR) {
-	tcp_printf("error: %x\n",e);
-      }}
-
-      tcp_printf("\tabout to map\n");
       uint8_t * buffer = (uint8_t *)glMapBuffer(GL_ARRAY_BUFFER,GL_WRITE_ONLY);
-      {const GLenum e = glGetError();
-      if(e != GL_NO_ERROR) {
-	tcp_printf("error: %x\n",e);
-      }}
-      tcp_printf("\t\tbuffer: %u\n",(uint32_t)((uint64_t)buffer));
 
       op.positions = buffer + position_offset;
       op.normals = buffer + normal_offset;
       op.uvs = buffer + uv_offset;
       op.colors = buffer + color_offset;
 
-      tcp_printf("\tabout to fill\n");
       const triangulated_aiMesh_to_vertex_array::output op_out = op.fill(mesh,true,false,false);
-
-      tcp_printf("filled-in: %u positions, %u normals, %u uvs, %u colors\n",
-		 op_out.nPositions,op_out.nNormals,op_out.nUVs,op_out.nColors);
 
       glUnmapBuffer(GL_ARRAY_BUFFER);
 
@@ -334,7 +315,6 @@ asset_to_gl(asset_model_spec const & model_spec)
       glVertexAttribPointer(vertex_location,3,GL_FLOAT,GL_FALSE,op.position_stride,(const GLfloat *)position_offset);
 
       if(normal_location > 0 && op.normal_size > 0) {
-	tcp_printf("enabling normals\n");
 	glEnableVertexAttribArray(normal_location);
 	glVertexAttribPointer(normal_location,3,GL_FLOAT,GL_FALSE,op.normal_stride,(const GLfloat *)normal_offset);
       }
@@ -345,8 +325,6 @@ asset_to_gl(asset_model_spec const & model_spec)
       
       glBindBuffer(GL_ARRAY_BUFFER,0);
       glBindVertexArray(0);
-
-      tcp_printf("read scene; it has %u meshes\n",(uint32_t)scene -> mNumMeshes);
       return result;
     }
   }
@@ -455,17 +433,9 @@ rsxgltest_draw()
      models[imodel].vao != 0) {
     glBindVertexArray(models[imodel].vao);
 
-    //Transform3f transform = (Transform3f::Identity() * Eigen::AngleAxisf(DTOR(rotate_y),Eigen::Vector3f::UnitY())) * Eigen::UniformScaling< float >(models[imodel].scale);
     Transform3f transform = Transform3f::Identity() * Eigen::AngleAxisf(DTOR(rotate_y),Eigen::Vector3f::UnitY()) * Eigen::UniformScaling< float >(models[imodel].scale);
-    //Transform3f transform(Eigen::AngleAxisf(DTOR(rotate_y),Eigen::Vector3f::UnitY()));
 
-    //Eigen::Affine3f modelview = ViewMatrixInv * (Eigen::Affine3f::Identity() * rotmat * Eigen::UniformScaling< float >(models[imodel].scale));
-    //Eigen::Affine3f modelview = ViewMatrixInv * transform;
-    //Eigen::Affine3f normalmatrix = modelview.linear().inverse().transpose();
-
-    //Transform3f transform = Transform3f::Identity();
     Transform3f modelview = ViewTransformInv * transform;
-    //Eigen::Matrix3f normal = modelview.linear().inverse().transpose();
 
     Eigen::Affine3f normal = Eigen::Affine3f::Identity();
     normal.linear() = modelview.linear().inverse().transpose();
