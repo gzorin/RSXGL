@@ -13,7 +13,7 @@ include $(srcdir)/../samples.am
 
 noinst_PROGRAMS = glassview.elf
 
-objs = cornell_box.obj teapot.obj
+objs = teapot.obj teddy.obj crab.obj
 objs_H = $(objs:.obj=_obj.h)
 objs_OBJS = $(objs:.obj=_obj.o)
 
