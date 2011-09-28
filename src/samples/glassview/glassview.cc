@@ -64,17 +64,16 @@ GLint ProjMatrix_location = -1, TransMatrix_location = -1, NormalMatrix_location
   vertex_location = -1, normal_location = -1, uv_location = -1,
   light_location = -1;
 
-GLfloat rotate_y = 0.0;
+const GLfloat model_pitch_rate = 10.0, model_yaw_rate = 10.0, model_scale_rate = 0.05, model_scale_min = 0.1,model_scale_max = 5.0;
+GLfloat model_pitch = 0, model_yaw = 0.0, model_scale = 1.0;
 
 const GLfloat light[4] = { 10.0f, 10.0f, 10.0f, 1.0f };
 
 // degrees per second:
-const GLfloat rotate_y_rate = 40.0f;
-
 #define DTOR(X) ((X)*0.01745329f)
 #define RTOD(d) ((d)*57.295788f)
 
-Eigen::Projective3f ProjMatrix(perspective(DTOR(54.3),1920.0 / 1080.0,0.1,1000.0));
+Eigen::Projective3f ProjMatrix(perspective(DTOR(54.3 / 2.0),1920.0 / 1080.0,0.1,1000.0));
 
 Transform3f ViewTransform;
 
@@ -351,12 +350,46 @@ rsxgltest_pad(unsigned int,const padData * paddata)
       imodel = (imodel - 1) % nmodels;
     }
   }
-
-  if(paddata -> BTN_CIRCLE != circle) {
+  else if(paddata -> BTN_CIRCLE != circle) {
     circle = paddata -> BTN_CIRCLE;
     
     if(circle) {
       imodel = (imodel + 1) % nmodels;
+    }
+  }
+
+#if 0
+  tcp_printf("%u %u %u %u\n",
+	     (unsigned int)paddata -> ANA_L_H,
+	     (unsigned int)paddata -> ANA_L_V,
+	     (unsigned int)paddata -> ANA_R_H,
+	     (unsigned int)paddata -> ANA_R_V);
+#endif
+
+  // abs of values below this get ignored:
+  const float threshold = 0.05;
+
+  const float
+    left_stick_h = ((float)paddata -> ANA_L_H - 127.0f) / 127.0f,
+    left_stick_v = ((float)paddata -> ANA_L_V - 127.0f) / 127.0f,
+    right_stick_h = ((float)paddata -> ANA_R_H - 127.0f) / 127.0f,
+    right_stick_v = ((float)paddata -> ANA_R_V - 127.0f) / 127.0f;
+
+  if(fabs(left_stick_h) > threshold) {
+    model_yaw += left_stick_h * model_yaw_rate;
+  }
+
+  if(fabs(left_stick_v) > threshold) {
+    model_pitch += left_stick_v * model_pitch_rate;
+  }
+
+  if(fabs(right_stick_v) > threshold) {
+    model_scale += -right_stick_v * model_scale_rate;
+    if(model_scale < model_scale_min) {
+      model_scale = model_scale_min;
+    }
+    else if(model_scale > model_scale_max) {
+      model_scale = model_scale_max;
     }
   }
 }
@@ -428,6 +461,20 @@ rsxgltest_init(int argc,const char ** argv)
   
 }
 
+// Courtesy of Matt Hall:
+static
+Eigen::Quaternionf quaternion_from_euler(const float pitch,const float yaw,const float roll)
+{
+  float ys=sinf(yaw/2.0f), yc=cosf(yaw/2.0f);
+  float ps=sinf(pitch/2.0f), pc=cosf(pitch/2.0f);
+  float rs=sinf(roll/2.0f), rc=cosf(roll/2.0f);
+
+  return Eigen::Quaternionf(rs*ps*ys+rc*pc*yc,
+			    rc*ps*yc+rs*pc*ys,
+			    rc*pc*ys-rs*ps*yc,
+			    rs*pc*yc-rc*ps*ys);
+}
+
 extern "C"
 int
 rsxgltest_draw()
@@ -449,7 +496,15 @@ rsxgltest_draw()
      models[imodel].vao != 0) {
     glBindVertexArray(models[imodel].vao);
 
-    Transform3f transform = Transform3f::Identity() * Eigen::AngleAxisf(DTOR(rotate_y),Eigen::Vector3f::UnitY()) * Eigen::UniformScaling< float >(models[imodel].scale);
+    /*
+      ( Eigen::AngleAxisf(DTOR(model_yaw),Eigen::Vector3f::UnitY()) *
+      Eigen::AngleAxisf(DTOR(model_pitch),Eigen::Vector3f::UnitX()) )
+    */
+
+    Transform3f transform =
+      Transform3f::Identity() *
+      quaternion_from_euler(DTOR(model_pitch),DTOR(model_yaw),0.0f) *
+      Eigen::UniformScaling< float >(models[imodel].scale * model_scale);
 
     Transform3f modelview = ViewTransformInv * transform;
 
@@ -471,8 +526,6 @@ rsxgltest_draw()
 
     glBindVertexArray(0);
   }
-
-  rotate_y += rsxgltest_delta_time * rotate_y_rate;
 
   return 1;
 }
