@@ -57,6 +57,7 @@ struct sine_wave_t xyz_waves[3] = {
   }
 };
 
+GLuint vao = 0;
 GLuint buffers[2] = { 0,0 };
 GLuint shaders[2] = { 0,0 };
 
@@ -193,7 +194,7 @@ Eigen::Affine3f ViewMatrixInv =
 
 extern "C"
 void
-rsxgltest_pad(const padData * paddata)
+rsxgltest_pad(unsigned int,const padData * paddata)
 {
   if(paddata -> BTN_UP) {
     tcp_printf("up\n");

@@ -11,7 +11,7 @@ void tcp_printf(const char * fmt,...);
 void report_glerror(const char *);
 void summarize_program(const char *,GLuint);
 extern int rsxgltest_width, rsxgltest_height;
-extern float rsxgltest_elapsed_time;
+extern float rsxgltest_elapsed_time, rsxgltest_last_time, rsxgltest_delta_time;
 
 #if defined(__cplusplus)
 }

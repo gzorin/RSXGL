@@ -566,6 +566,13 @@ ac_subst_vars='am__EXEEXT_FALSE
 am__EXEEXT_TRUE
 LTLIBOBJS
 LIBOBJS
+assimp_SOURCE_FOUND_FALSE
+assimp_SOURCE_FOUND_TRUE
+assimp_source_found
+assimp_SOURCE_LOCATION
+extsrc_clean_commands
+extsrc_build_commands
+extsrcdir
 PORTLIBS_PPU_LDFLAGS
 PORTLIBS_PPU_CPPFLAGS
 PORTLIBS
@@ -573,6 +580,8 @@ PSL1GHT_PPU_LDFLAGS
 PSL1GHT_PPU_CPPFLAGS
 PSL1GHT
 CGC
+RSXGL_CONFIG_samples_host_port
+RSXGL_CONFIG_samples_host_ip
 RSXGL_CONFIG_RSX_compatibility
 PPU_CXXLIB
 PPU_LD
@@ -609,6 +618,8 @@ CPPFLAGS
 LDFLAGS
 CFLAGS
 CC
+RSXGL_SAMPLES
+RSXGL_SUBDIRS
 am__untar
 am__tar
 AMTAR
@@ -679,8 +690,12 @@ enable_ppu_optimize
 with_ps3dev
 with_ppu_cxxlib
 enable_RSX_compatibility
+with_samples_host_ip
+with_samples_host_port
 with_psl1ght
 with_portlibs
+with_extsrc
+with_assimp_source
 '
       ac_precious_vars='build_alias
 host_alias
@@ -692,9 +707,6 @@ LIBS
 CPPFLAGS
 CXX
 CXXFLAGS
-LDFLAGS
-LIBS
-CPPFLAGS
 CCC'
 
 
@@ -1325,8 +1337,14 @@ Optional Packages:
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
   --with-ps3dev           location of compiled PS3 development toolchain
   --with-ppu-cxxlib       full path to a static C++ standard library
+  --with-samples-host-ip  IP address of host for samples to send reporting to
+  --with-samples-host-port
+                          port number on host for samples to send reporting to
   --with-psl1ght          location of compiled PSL1GHT
   --with-portlibs         location of ported libraries
+  --with-extsrc           set path to external package sources
+  --with-assimp-source    set the path to the source for assimp, the Open
+                          Asset Import library
 
 Some influential environment variables:
   CC          C compiler command
@@ -2356,6 +2374,15 @@ am__tar='${AMTAR} chof - "$$tardir"'; am__untar='${AMTAR} xf -'
 
 
 ac_config_files="$ac_config_files include/config.h Makefile include/Makefile src/cgcomp/Makefile src/library/Makefile src/library/rsxgl_config.h src/library/GL3/rsxgl3ext.h src/library/GL3/rsxgl_compatibility.h src/samples/Makefile src/samples/rsxgltest/Makefile src/samples/rsxglgears/Makefile"
+
+
+# Which subdirectories get built:
+RSXGL_SUBDIRS="include src/cgcomp src/library"
+
+# Determine which samples get built:
+RSXGL_SAMPLES="rsxgltest rsxglgears"
+
+
 
 
 ac_ext=c
@@ -3934,6 +3961,31 @@ fi
 
 
 
+# Samples can send debugging information back to the host used to build them; set its IP here,
+# or leave it unset & it won't try to phone home:
+
+# Check whether --with-samples-host-ip was given.
+if test "${with_samples_host_ip+set}" = set; then :
+  withval=$with_samples_host_ip; RSXGL_CONFIG_samples_host_ip="$withval"
+else
+  RSXGL_CONFIG_samples_host_ip="no"
+fi
+
+
+# Check whether --with-samples-host-port was given.
+if test "${with_samples_host_port+set}" = set; then :
+  withval=$with_samples_host_port; RSXGL_CONFIG_samples_host_port="$withval"
+else
+  RSXGL_CONFIG_samples_host_port=9000
+fi
+
+if test "$RSXGL_CONFIG_samples_host_ip" == "no" -o -z "$RSXGL_CONFIG_samples_host_ip"; then
+   RSXGL_CONFIG_samples_host_ip=""
+   RSXGL_CONFIG_samples_host_port=0
+fi;
+
+
+
 # Find the Cg compiler:
 # Extract the first word of "cgc", so it can be a program name with args.
 set dummy cgc; ac_word=$2
@@ -3973,7 +4025,6 @@ else
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
 fi
-
 
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: path to the cgc compiler is ${CGC}" >&5
@@ -4016,6 +4067,129 @@ $as_echo "$as_me: PORTLIBS is set to ${PORTLIBS}" >&6;}
 
 
 
+
+# Setup "extsrc" - "contributed" sources:
+
+	_extsrcdir=
+	_abs_srcdir=$(cd "${srcdir}"; /bin/pwd)
+	default_extsrcdir=${_extsrcdir:-"${_abs_srcdir}/extsrc"}
+
+# Check whether --with-extsrc was given.
+if test "${with_extsrc+set}" = set; then :
+  withval=$with_extsrc; extsrcdir="$withval"
+else
+  extsrcdir="${default_extsrcdir}"
+fi
+
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: location of external package sources is ${extsrcdir}" >&5
+$as_echo "$as_me: location of external package sources is ${extsrcdir}" >&6;}
+
+	extsrc_build_commands=""
+	extsrc_clean_commands=""
+
+
+
+
+
+# Look for the Open Asset Import library:
+
+
+# Check whether --with-assimp-source was given.
+if test "${with_assimp_source+set}" = set; then :
+  withval=$with_assimp_source;
+fi
+
+
+	_name="assimp"
+	_help="the Open Asset Import library"
+	_source_location=""
+
+	default_source_LOCATION=${extsrcdir}/${_source_location:-"${_name}"}
+
+	if test "${with_assimp_source}" == "no"; then
+	assimp_SOURCE_LOCATION="no";
+	else
+	assimp_SOURCE_LOCATION=${with_assimp_source:-${default_source_LOCATION}}
+	fi
+
+
+
+
+
+	_name=assimp
+	_relative_test_pathname=include/assimp.h
+	_required=
+
+	_source_location_varname="${_name}_SOURCE_LOCATION"
+	_SOURCE_LOCATION=${!_source_location_varname}
+
+	# Maybe _SOURCE_LOCATION is set to "no"?
+	if test "${_required}" == "required" -a "${_SOURCE_LOCATION}" == "no"; then
+	as_fn_error $? "Source for assimp is required, but attempt was made to configure without it" "$LINENO" 5
+	fi;
+
+	# Look for the file:
+	_test_pathname="${_SOURCE_LOCATION}/${_relative_test_pathname}"
+	as_ac_File=`$as_echo "ac_cv_file_$_test_pathname" | $as_tr_sh`
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $_test_pathname" >&5
+$as_echo_n "checking for $_test_pathname... " >&6; }
+if eval \${$as_ac_File+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  test "$cross_compiling" = yes &&
+  as_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5
+if test -r "$_test_pathname"; then
+  eval "$as_ac_File=yes"
+else
+  eval "$as_ac_File=no"
+fi
+fi
+eval ac_res=\$$as_ac_File
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+if eval test \"x\$"$as_ac_File"\" = x"yes"; then :
+  assimp_source_found="yes"
+else
+  assimp_source_found="no"
+fi
+
+
+	# It was found:
+	if test "${assimp_source_found}" == yes; then
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: Source for assimp found in $_SOURCE_LOCATION" >&5
+$as_echo "$as_me: Source for assimp found in $_SOURCE_LOCATION" >&6;}
+	# It was not found, but is required:
+	elif test "${_required}" == "required"; then
+	as_fn_error $? "Source for assimp is required, but not found (checked in $_SOURCE_LOCATION)" "$LINENO" 5
+	# It was not found, but is not required:
+	else
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: Source for assimp was not found, but is not required (checked in $_SOURCE_LOCATION)" >&5
+$as_echo "$as_me: Source for assimp was not found, but is not required (checked in $_SOURCE_LOCATION)" >&6;}
+	fi
+
+
+	 if  test "${assimp_source_found}" == "yes" ; then
+  assimp_SOURCE_FOUND_TRUE=
+  assimp_SOURCE_FOUND_FALSE='#'
+else
+  assimp_SOURCE_FOUND_TRUE='#'
+  assimp_SOURCE_FOUND_FALSE=
+fi
+
+
+
+
+if  test "${assimp_source_found}" == "yes" ; then
+  ac_config_files="$ac_config_files src/assimp/Makefile src/samples/glassview/Makefile"
+
+fi
+
+if test "${assimp_source_found}" == "yes"; then
+   RSXGL_SUBDIRS="${RSXGL_SUBDIRS} src/assimp";
+   RSXGL_SAMPLES="${RSXGL_SAMPLES} glassview";
+fi;
+
+RSXGL_SUBDIRS="${RSXGL_SUBDIRS} src/samples"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -4180,6 +4354,10 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${am__fastdepCXX_TRUE}" && test -z "${am__fastdepCXX_FALSE}"; then
   as_fn_error $? "conditional \"am__fastdepCXX\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${assimp_SOURCE_FOUND_TRUE}" && test -z "${assimp_SOURCE_FOUND_FALSE}"; then
+  as_fn_error $? "conditional \"assimp_SOURCE_FOUND\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 
@@ -4778,6 +4956,8 @@ do
     "src/samples/rsxgltest/Makefile") CONFIG_FILES="$CONFIG_FILES src/samples/rsxgltest/Makefile" ;;
     "src/samples/rsxglgears/Makefile") CONFIG_FILES="$CONFIG_FILES src/samples/rsxglgears/Makefile" ;;
     "depfiles") CONFIG_COMMANDS="$CONFIG_COMMANDS depfiles" ;;
+    "src/assimp/Makefile") CONFIG_FILES="$CONFIG_FILES src/assimp/Makefile" ;;
+    "src/samples/glassview/Makefile") CONFIG_FILES="$CONFIG_FILES src/samples/glassview/Makefile" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
   esac

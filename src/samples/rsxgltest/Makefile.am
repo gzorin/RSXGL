@@ -45,8 +45,8 @@ manycubestream_sources = manycubestream.cc cube.vcg cube.fcg
 texcube_objects = texcube_vpo.o texcube_fpo.o nagel_bin.o
 texcube_sources = texcube.cc texture.c texcube.vcg texcube.fcg nagel.bin
 
-objects = $(texcube_objects)
-sources = $(texcube_sources)
+objects = $(manypoints_objects)
+sources = $(manypoints_sources)
 
 rsxgltest_elf_DEPENDENCIES = $(top_builddir)/src/library/libEGL.a $(top_builddir)/src/library/libGL.a	\
 	$(objects)

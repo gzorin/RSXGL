@@ -29,6 +29,7 @@
 
 #include <stdarg.h>
 
+#include "rsxgl_config.h"
 #include <rsx/commands.h>
 
 // Test program fills these in:
@@ -36,12 +37,12 @@ extern const char * rsxgltest_name;
 
 extern void rsxgltest_init(int, const char **);
 extern int rsxgltest_draw();
-extern void rsxgltest_pad(const padData *);
+extern void rsxgltest_pad(unsigned int,const padData *);
 extern void rsxgltest_exit();
 
 // Test program might want to use these:
 int rsxgltest_width = 0, rsxgltest_height = 0;
-float rsxgltest_elapsed_time = 0;
+float rsxgltest_elapsed_time = 0, rsxgltest_last_time = 0, rsxgltest_delta_time = 0;
 
 // Configure these (especially the IP) to your own setup.
 // Use netcat to receive the results on your PC:
@@ -49,12 +50,20 @@ float rsxgltest_elapsed_time = 0;
 // UDP: nc -u -l -p 4000
 // For some versions of netcat the -p option may need to be removed.
 //
-#define TESTIP		"192.168.1.7"
+//#define TESTIP		"192.168.1.7"
 //#define TESTIP          "192.168.1.115"
-#define TESTPORT	9000
+//#define TESTPORT	9000
 
 int sock = 0;
 
+#if (RSXGL_CONFIG_samples_host_port == 0)
+#warning "Samples host ip/port not specified, RSXGL samples will not phone home"
+void tcp_init() {}
+void tcp_exit() {}
+void tcp_printf(const char * fmt,...) {}
+void tcp_puts(GLsizei n,const GLchar * s) {}
+void tcp_log(const char * fmt,...) {}
+#else
 void tcp_init()
 {
 	printf("Beginning TCP socket test...\n");
@@ -70,8 +79,8 @@ void tcp_init()
 	memset(&server, 0, sizeof(server));
 	server.sin_len = sizeof(server);
 	server.sin_family = AF_INET;
-	inet_pton(AF_INET, TESTIP, &server.sin_addr);
-	server.sin_port = htons(TESTPORT);
+	inet_pton(AF_INET, RSXGL_CONFIG_samples_host_ip, &server.sin_addr);
+	server.sin_port = htons(RSXGL_CONFIG_samples_host_port);
 
 	int ret = connect(sock, (struct sockaddr*)&server, sizeof(server));
 	if (ret) {
@@ -125,6 +134,7 @@ void tcp_log(const char * fmt,...)
 
   write(sock,buffer,strlen(buffer));
 }
+#endif
 
 void report_glerror(const char * label)
 {
@@ -373,6 +383,7 @@ main(int argc, const char ** argv)
 	    rsxgltest_init(argc,argv);
 
 	    gettimeofday(&start_time,0);
+	    rsxgltest_last_time = 0.0f;
    
 	    while(running) {
 	      gettimeofday(&current_time,0);
@@ -380,17 +391,20 @@ main(int argc, const char ** argv)
 	      struct timeval elapsed_time;
 	      timersub(&current_time,&start_time,&elapsed_time);
 	      rsxgltest_elapsed_time = ((float)(elapsed_time.tv_sec)) + ((float)(elapsed_time.tv_usec) / 1.0e6f);
+	      rsxgltest_delta_time = rsxgltest_elapsed_time - rsxgltest_last_time;
+
+	      rsxgltest_last_time = rsxgltest_elapsed_time;
+
+	      result = eglMakeCurrent(dpy,surface,surface,ctx);
 
 	      ioPadGetInfo(&padinfo);
 	      for(size_t i = 0;i < MAX_PADS;++i) {
 		if(padinfo.status[i]) {
 		  ioPadGetData(i,&paddata);
-		  rsxgltest_pad(&paddata);
+		  rsxgltest_pad(i,&paddata);
 		  break;
 		}
 	      }
-	      
-	      result = eglMakeCurrent(dpy,surface,surface,ctx);
 	      
 	      result = rsxgltest_draw();
 	      if(!result) break;

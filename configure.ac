@@ -17,6 +17,15 @@ AC_CONFIG_FILES(
 	src/samples/rsxglgears/Makefile
 	)
 
+# Which subdirectories get built:
+RSXGL_SUBDIRS="include src/cgcomp src/library"
+
+# Determine which samples get built:
+RSXGL_SAMPLES="rsxgltest rsxglgears"
+
+AC_SUBST([RSXGL_SUBDIRS])
+AC_SUBST([RSXGL_SAMPLES])
+
 AC_PROG_CC
 AC_PROG_CXX
 AC_PROG_RANLIB
@@ -99,9 +108,19 @@ RSXGL_CONFIG_RSX_compatibility=0
 AC_ARG_ENABLE([RSX-compatibility],AS_HELP_STRING([--enable-RSX-compatibility],[configure the library to support (minimal) compatibility with older OpenGL profiles]),[if test "$enableval" == "yes"; then RSXGL_CONFIG_RSX_compatibility=1; fi],[])
 AC_SUBST([RSXGL_CONFIG_RSX_compatibility])
 
+# Samples can send debugging information back to the host used to build them; set its IP here,
+# or leave it unset & it won't try to phone home:
+AC_ARG_WITH([samples-host-ip],AS_HELP_STRING([--with-samples-host-ip],[IP address of host for samples to send reporting to]),[RSXGL_CONFIG_samples_host_ip="$withval"],[RSXGL_CONFIG_samples_host_ip="no"])
+AC_ARG_WITH([samples-host-port],AS_HELP_STRING([--with-samples-host-port],[port number on host for samples to send reporting to]),[RSXGL_CONFIG_samples_host_port="$withval"],[RSXGL_CONFIG_samples_host_port=9000])
+if test "$RSXGL_CONFIG_samples_host_ip" == "no" -o -z "$RSXGL_CONFIG_samples_host_ip"; then
+   RSXGL_CONFIG_samples_host_ip=""
+   RSXGL_CONFIG_samples_host_port=0
+fi;
+AC_SUBST([RSXGL_CONFIG_samples_host_ip])
+AC_SUBST([RSXGL_CONFIG_samples_host_port])
+
 # Find the Cg compiler:
 AC_PATH_PROG([CGC],[cgc])
-
 AC_MSG_NOTICE([path to the cgc compiler is ${CGC}])
 
 # Where is PSL1GHT?
@@ -129,5 +148,21 @@ AC_MSG_NOTICE([PORTLIBS is set to ${PORTLIBS}])
 AC_SUBST([PORTLIBS])
 AC_SUBST([PORTLIBS_PPU_CPPFLAGS])
 AC_SUBST([PORTLIBS_PPU_LDFLAGS])
+
+# Setup "extsrc" - "contributed" sources:
+AC_EXTSRC_INIT()
+
+# Look for the Open Asset Import library:
+AC_EXTSRC([assimp],[the Open Asset Import library])
+AC_EXTSRC_CHECK([assimp],[include/assimp.h])
+
+AM_COND_IF([assimp_SOURCE_FOUND],[AC_CONFIG_FILES([src/assimp/Makefile src/samples/glassview/Makefile])])
+
+if test "${assimp_source_found}" == "yes"; then
+   RSXGL_SUBDIRS="${RSXGL_SUBDIRS} src/assimp";
+   RSXGL_SAMPLES="${RSXGL_SAMPLES} glassview";
+fi;
+
+RSXGL_SUBDIRS="${RSXGL_SUBDIRS} src/samples"
 
 AC_OUTPUT

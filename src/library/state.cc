@@ -49,7 +49,7 @@ state_t::state_t()
   write_mask.depth = 1;
   enable.depth_test = 0;
   depth.clear = 0xffff;
-  depth.func = RSXGL_ALWAYS;
+  depth.func = RSXGL_LESS;
 
   enable.blend = 0;
   blend.color = 0;
@@ -77,7 +77,8 @@ state_t::state_t()
   polygon.cullEnable = 0;
   polygon.cullFace = RSXGL_CULL_BACK;
   polygon.frontFace = RSXGL_FACE_CCW;
-  polygon.mode = RSXGL_POLYGON_MODE_FILL;
+  polygon.frontMode = RSXGL_POLYGON_MODE_FILL;
+  polygon.backMode = RSXGL_POLYGON_MODE_FILL;
   polygon.offsetFactor = 0;
   polygon.offsetUnits = 0;
 
@@ -419,19 +420,18 @@ rsxgl_state_validate(rsxgl_context_t * ctx)
     case RSXGL_CULL_FRONT_AND_BACK:
       gcm_emit(&buffer,NV30_3D_CULL_FACE_FRONT_AND_BACK);
       break;
-    default:
-      gcm_emit(&buffer,0);
-      break;
     };
+
+    gcm_finish_commands(context,&buffer);
   }
   else {
     buffer = gcm_reserve(context,2);
 
     gcm_emit_method(&buffer,NV30_3D_CULL_FACE_ENABLE,1);
     gcm_emit(&buffer,0);
-  }
 
-  gcm_finish_commands(context,&buffer);
+    gcm_finish_commands(context,&buffer);
+  }
 
   // other polygon attributes:
   //
@@ -447,18 +447,35 @@ rsxgl_state_validate(rsxgl_context_t * ctx)
 
   // polygon fill mode:
   {
-    buffer = gcm_reserve(context,4);
+    buffer = gcm_reserve(context,3);
 
-    const uint32_t mode = s -> polygon.mode;
-    const uint32_t nv40_mode = (mode == RSXGL_POLYGON_MODE_POINT) ? NV30_3D_POLYGON_MODE_FRONT_POINT : ((mode == RSXGL_POLYGON_MODE_LINE) ? NV30_3D_POLYGON_MODE_FRONT_LINE : NV30_3D_POLYGON_MODE_FRONT_FILL);
+    gcm_emit_method_at(buffer,0,NV30_3D_POLYGON_MODE_FRONT,2);
 
-    gcm_emit_method_at(buffer,0,NV30_3D_POLYGON_MODE_FRONT,1);
-    gcm_emit_at(buffer,1,nv40_mode);
+    switch(s -> polygon.frontMode) {
+    case RSXGL_POLYGON_MODE_POINT:
+      gcm_emit_at(buffer,1,NV30_3D_POLYGON_MODE_FRONT_POINT);
+      break;
+    case RSXGL_POLYGON_MODE_LINE:
+      gcm_emit_at(buffer,1,NV30_3D_POLYGON_MODE_FRONT_LINE);
+      break;
+    case RSXGL_POLYGON_MODE_FILL:
+      gcm_emit_at(buffer,1,NV30_3D_POLYGON_MODE_FRONT_FILL);
+      break;
+    };
 
-    gcm_emit_method_at(buffer,2,NV30_3D_POLYGON_MODE_BACK,1);
-    gcm_emit_at(buffer,3,nv40_mode);
+    switch(s -> polygon.backMode) {
+    case RSXGL_POLYGON_MODE_POINT:
+      gcm_emit_at(buffer,2,NV30_3D_POLYGON_MODE_FRONT_POINT);
+      break;
+    case RSXGL_POLYGON_MODE_LINE:
+      gcm_emit_at(buffer,2,NV30_3D_POLYGON_MODE_FRONT_LINE);
+      break;
+    case RSXGL_POLYGON_MODE_FILL:
+      gcm_emit_at(buffer,2,NV30_3D_POLYGON_MODE_FRONT_FILL);
+      break;
+    };
 
-    gcm_finish_n_commands(context,4);
+    gcm_finish_n_commands(context,3);
   }
 
   // polygon offset:
@@ -1333,13 +1350,16 @@ glPolygonMode (GLenum face, GLenum mode)
 
   switch(mode) {
   case GL_POINT:
-    ctx -> state.polygon.mode = RSXGL_POLYGON_MODE_POINT;
+    ctx -> state.polygon.frontMode = RSXGL_POLYGON_MODE_POINT;
+    ctx -> state.polygon.backMode = RSXGL_POLYGON_MODE_POINT;
     break;
   case GL_LINE:
-    ctx -> state.polygon.mode = RSXGL_POLYGON_MODE_LINE;
+    ctx -> state.polygon.frontMode = RSXGL_POLYGON_MODE_LINE;
+    ctx -> state.polygon.backMode = RSXGL_POLYGON_MODE_LINE;
     break;
   case GL_FILL:
-    ctx -> state.polygon.mode = RSXGL_POLYGON_MODE_FILL;
+    ctx -> state.polygon.frontMode = RSXGL_POLYGON_MODE_FILL;
+    ctx -> state.polygon.backMode = RSXGL_POLYGON_MODE_FILL;
     break;
   default:
     RSXGL_ERROR_(GL_INVALID_ENUM);

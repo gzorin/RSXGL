@@ -1,0 +1,711 @@
+# This makefile builds a static library out of the assimp sources,
+# which should be located elsewhere.
+
+CC = @PPU_CC@
+CXX = @PPU_CXX@
+AR = @PPU_AR@
+ARFLAGS = cru
+
+libassimp_TARGET = libassimp.a
+libassimp_obj_TARGET = libassimp_obj.a
+
+TARGETS = $(libassimp_TARGET)
+
+all: $(TARGETS)
+
+srcdir = @srcdir@
+builddir = @builddir@
+DEPDIR = $(builddir)/deps
+DEPCOMP = @top_srcdir@/config/depcomp
+PPU_CFLAGS = @PPU_CFLAGS@
+PPU_CPPFLAGS = @PPU_CPPFLAGS@
+PPU_CXXFLAGS = @PPU_CXXFLAGS@
+
+#SUFFIXES += .Po
+
+#
+assimp_code_SOURCE_LOCATION = @assimp_SOURCE_LOCATION@/code
+
+# The list of sources, cribbed from assim's CMakeLists.txt:
+#
+# This is relative to assimp's code/ directory:
+HEADER_PATH = ../include
+
+COMPILER_HEADERS =				\
+	$(HEADER_PATH)/Compiler/pushpack1.h	\
+	$(HEADER_PATH)/Compiler/poppack1.h	\
+	pstdint.h
+
+PUBLIC_HEADERS =				\
+	$(HEADER_PATH)/aiAnim.h			\
+	$(HEADER_PATH)/aiAssert.h		\
+	$(HEADER_PATH)/aiCamera.h		\
+	$(HEADER_PATH)/aiColor4D.h		\
+	$(HEADER_PATH)/aiColor4D.inl		\
+	$(HEADER_PATH)/aiConfig.h		\
+	$(HEADER_PATH)/aiDefines.h		\
+	$(HEADER_PATH)/aiFileIO.h		\
+	$(HEADER_PATH)/aiLight.h		\
+	$(HEADER_PATH)/aiMaterial.h		\
+	$(HEADER_PATH)/aiMaterial.inl		\
+	$(HEADER_PATH)/aiMatrix3x3.h		\
+	$(HEADER_PATH)/aiMatrix3x3.inl		\
+	$(HEADER_PATH)/aiMatrix4x4.h		\
+	$(HEADER_PATH)/aiMatrix4x4.inl		\
+	$(HEADER_PATH)/aiMesh.h			\
+	$(HEADER_PATH)/aiPostProcess.h		\
+	$(HEADER_PATH)/aiQuaternion.h		\
+	$(HEADER_PATH)/aiScene.h		\
+	$(HEADER_PATH)/aiTexture.h		\
+	$(HEADER_PATH)/aiTypes.h		\
+	$(HEADER_PATH)/aiVector2D.h		\
+	$(HEADER_PATH)/aiVector3D.h		\
+	$(HEADER_PATH)/aiVector3D.inl		\
+	$(HEADER_PATH)/aiVersion.h		\
+	$(HEADER_PATH)/assimp.h			\
+	$(HEADER_PATH)/assimp.hpp		\
+	$(HEADER_PATH)/DefaultLogger.h		\
+	$(HEADER_PATH)/ProgressHandler.h	\
+	$(HEADER_PATH)/IOStream.h		\
+	$(HEADER_PATH)/IOSystem.h		\
+	$(HEADER_PATH)/Logger.h			\
+	$(HEADER_PATH)/LogStream.h		\
+	$(HEADER_PATH)/NullLogger.h		\
+	$(HEADER_PATH)/export.h			\
+	$(HEADER_PATH)/export.hpp
+
+Core_SRCS = Assimp.cpp				\
+	AssimpPCH.cpp				\
+	AssimpPCH.h
+
+Logging_SRCS =					\
+	$(HEADER_PATH)/DefaultLogger.h		\
+	$(HEADER_PATH)/IOStream.h		\
+	$(HEADER_PATH)/LogStream.h		\
+	$(HEADER_PATH)/Logger.h			\
+	$(HEADER_PATH)/NullLogger.h		\
+	Win32DebugLogStream.h			\
+	DefaultLogger.cpp			\
+	FileLogStream.h
+
+Common_SRCS = 					\
+	fast_atof.h				\
+	qnan.h					\
+	BaseImporter.cpp			\
+	BaseImporter.h				\
+	BaseProcess.cpp				\
+	BaseProcess.h				\
+	Importer.h				\
+	ScenePrivate.h				\
+	PostStepRegistry.cpp			\
+	ImporterRegistry.cpp			\
+	ByteSwap.h				\
+	DefaultProgressHandler.h		\
+	DefaultIOStream.cpp			\
+	DefaultIOStream.h			\
+	DefaultIOSystem.cpp			\
+	DefaultIOSystem.h			\
+	CInterfaceIOWrapper.h			\
+	Hash.h					\
+	Importer.cpp				\
+	IFF.h					\
+	ParsingUtils.h				\
+	StdOStreamLogStream.h			\
+	StreamReader.h				\
+	StringComparison.h			\
+	SGSpatialSort.cpp			\
+	SGSpatialSort.h				\
+	VertexTriangleAdjacency.cpp		\
+	VertexTriangleAdjacency.h		\
+	GenericProperty.h			\
+	SpatialSort.cpp				\
+	SpatialSort.h				\
+	SceneCombiner.cpp			\
+	SceneCombiner.h				\
+	ScenePreprocessor.cpp			\
+	ScenePreprocessor.h			\
+	SkeletonMeshBuilder.cpp			\
+	SkeletonMeshBuilder.h			\
+	SplitByBoneCountProcess.cpp		\
+	SplitByBoneCountProcess.h		\
+	SmoothingGroups.h			\
+	StandardShapes.cpp			\
+	StandardShapes.h			\
+	TargetAnimation.cpp			\
+	TargetAnimation.h			\
+	RemoveComments.cpp			\
+	RemoveComments.h			\
+	Subdivision.cpp				\
+	Subdivision.h				\
+	Vertex.h				\
+	LineSplitter.h				\
+	TinyFormatter.h				\
+	Profiler.h				\
+	LogAux.h
+
+
+3DS_SRCS = 					\
+	3DSConverter.cpp			\
+	3DSHelper.h				\
+	3DSLoader.cpp				\
+	3DSLoader.h
+
+
+AC_SRCS = 					\
+	ACLoader.cpp				\
+	ACLoader.h
+
+
+ASE_SRCS = 					\
+	ASELoader.cpp				\
+	ASELoader.h				\
+	ASEParser.cpp				\
+	ASEParser.h
+
+
+B3D_SRCS = 					\
+	B3DImporter.cpp				\
+	B3DImporter.h
+
+
+BVH_SRCS = 					\
+	BVHLoader.cpp				\
+	BVHLoader.h
+
+
+Collada_SRCS = 					\
+	ColladaHelper.h				\
+	ColladaLoader.cpp			\
+	ColladaLoader.h				\
+	ColladaParser.cpp			\
+	ColladaParser.h				\
+	ColladaExporter.h			\
+	ColladaExporter.cpp
+
+
+DXF_SRCS = 					\
+	DXFLoader.cpp				\
+	DXFLoader.h				\
+	DXFHelper.h
+
+
+CSM_SRCS = 					\
+	CSMLoader.cpp				\
+	CSMLoader.h
+
+
+HMP_SRCS = 					\
+	HMPFileData.h				\
+	HMPLoader.cpp				\
+	HMPLoader.h				\
+	HalfLifeFileData.h
+
+
+Irr_SRCS = 					\
+	IRRLoader.cpp				\
+	IRRLoader.h				\
+	IRRMeshLoader.cpp			\
+	IRRMeshLoader.h				\
+	IRRShared.cpp				\
+	IRRShared.h
+
+
+LWO_SRCS = 					\
+	LWOAnimation.cpp			\
+	LWOAnimation.h				\
+	LWOBLoader.cpp				\
+	LWOFileData.h				\
+	LWOLoader.cpp				\
+	LWOLoader.h				\
+	LWOMaterial.cpp
+
+
+LWS_SRCS = 					\
+	LWSLoader.cpp				\
+	LWSLoader.h
+
+
+M3_SRCS	=					\
+	M3Importer.cpp				\
+	M3Importer.h
+
+MD2_SRCS = 					\
+	MD2FileData.h				\
+	MD2Loader.cpp				\
+	MD2Loader.h				\
+	MD2NormalTable.h
+
+
+MD3_SRCS = 					\
+	MD3FileData.h				\
+	MD3Loader.cpp				\
+	MD3Loader.h
+
+
+MD5_SRCS = 					\
+	MD5Loader.cpp				\
+	MD5Loader.h				\
+	MD5Parser.cpp				\
+	MD5Parser.h
+
+
+MDC_SRCS = 					\
+	MDCFileData.h				\
+	MDCLoader.cpp				\
+	MDCLoader.h				\
+	MDCNormalTable.h
+
+
+MDL_SRCS = 					\
+	MDLDefaultColorMap.h			\
+	MDLFileData.h				\
+	MDLLoader.cpp				\
+	MDLLoader.h				\
+	MDLMaterialLoader.cpp
+
+
+MaterialSystem_SRCS = 				\
+	MaterialSystem.cpp			\
+	MaterialSystem.h
+
+
+NFF_SRCS = 					\
+	NFFLoader.cpp				\
+	NFFLoader.h
+
+
+NDO_SRCS = 					\
+	NDOLoader.cpp				\
+	NDOLoader.h
+
+
+OFFFormat_SRCS = 				\
+	OFFLoader.cpp				\
+	OFFLoader.h
+
+
+Obj_SRCS = 					\
+	ObjFileData.h				\
+	ObjFileImporter.cpp			\
+	ObjFileImporter.h			\
+	ObjFileMtlImporter.cpp			\
+	ObjFileMtlImporter.h			\
+	ObjFileParser.cpp			\
+	ObjFileParser.h				\
+	ObjTools.h				\
+	ObjExporter.h				\
+	ObjExporter.cpp
+
+
+Ogre_SRCS = 					\
+	OgreImporter.h				\
+	OgreImporter.cpp			\
+	OgreImporterMaterial.cpp
+
+
+Ply_SRCS = 					\
+	PlyLoader.cpp				\
+	PlyLoader.h				\
+	PlyParser.cpp				\
+	PlyParser.h
+
+
+MS3D_SRCS = 					\
+	MS3DLoader.cpp				\
+	MS3DLoader.h
+
+
+COB_SRCS = 					\
+	COBLoader.cpp				\
+	COBLoader.h				\
+	COBScene.h
+
+
+BLENDER_SRCS = 					\
+	BlenderLoader.cpp			\
+	BlenderLoader.h				\
+	BlenderDNA.cpp				\
+	BlenderDNA.h				\
+	BlenderDNA.inl				\
+	BlenderScene.cpp			\
+	BlenderScene.h				\
+	BlenderSceneGen.h			\
+	BlenderIntermediate.h			\
+	BlenderModifier.h			\
+	BlenderModifier.cpp
+
+
+IFC_SRCS = 					\
+	IFCLoader.cpp				\
+	IFCLoader.h				\
+	IFCReaderGen.cpp			\
+	IFCReaderGen.h				\
+	IFCUtil.h				\
+	IFCUtil.cpp				\
+	IFCGeometry.cpp				\
+	IFCMaterial.cpp				\
+	IFCProfile.cpp				\
+	IFCCurve.cpp				\
+	STEPFile.h				\
+	STEPFileReader.h			\
+	STEPFileReader.cpp
+
+
+PostProcessing_SRCS = 				\
+	CalcTangentsProcess.cpp			\
+	CalcTangentsProcess.h			\
+	ComputeUVMappingProcess.cpp		\
+	ComputeUVMappingProcess.h		\
+	ConvertToLHProcess.cpp			\
+	ConvertToLHProcess.h			\
+	FindDegenerates.cpp			\
+	FindDegenerates.h			\
+	FindInstancesProcess.cpp		\
+	FindInstancesProcess.h			\
+	FindInvalidDataProcess.cpp		\
+	FindInvalidDataProcess.h		\
+	FixNormalsStep.cpp			\
+	FixNormalsStep.h			\
+	GenFaceNormalsProcess.cpp		\
+	GenFaceNormalsProcess.h			\
+	GenVertexNormalsProcess.cpp		\
+	GenVertexNormalsProcess.h		\
+	PretransformVertices.cpp		\
+	PretransformVertices.h			\
+	ImproveCacheLocality.cpp		\
+	ImproveCacheLocality.h			\
+	JoinVerticesProcess.cpp			\
+	JoinVerticesProcess.h			\
+	LimitBoneWeightsProcess.cpp		\
+	LimitBoneWeightsProcess.h		\
+	RemoveRedundantMaterials.cpp		\
+	RemoveRedundantMaterials.h		\
+	RemoveVCProcess.cpp			\
+	RemoveVCProcess.h			\
+	SortByPTypeProcess.cpp			\
+	SortByPTypeProcess.h			\
+	SplitLargeMeshes.cpp			\
+	SplitLargeMeshes.h			\
+	TerragenLoader.cpp			\
+	TerragenLoader.h			\
+	TextureTransform.cpp			\
+	TextureTransform.h			\
+	TriangulateProcess.cpp			\
+	TriangulateProcess.h			\
+	ValidateDataStructure.cpp		\
+	ValidateDataStructure.h			\
+	OptimizeGraph.cpp			\
+	OptimizeGraph.h				\
+	OptimizeMeshes.cpp			\
+	OptimizeMeshes.h			\
+	DeboneProcess.cpp			\
+	DeboneProcess.h				\
+	ProcessHelper.h				\
+	ProcessHelper.cpp			\
+	PolyTools.h				\
+	MakeVerboseFormat.cpp			\
+	MakeVerboseFormat.h
+
+
+Q3D_SRCS = 					\
+	Q3DLoader.cpp				\
+	Q3DLoader.h
+
+
+Q3BSP_SRCS = 					\
+	Q3BSPFileData.h				\
+	Q3BSPFileParser.h			\
+	Q3BSPFileParser.cpp			\
+	Q3BSPFileImporter.h			\
+	Q3BSPFileImporter.cpp			\
+	Q3BSPZipArchive.h			\
+	Q3BSPZipArchive.cpp
+
+
+Raw_SRCS = 					\
+	RawLoader.cpp				\
+	RawLoader.h
+
+
+SMD_SRCS = 					\
+	SMDLoader.cpp				\
+	SMDLoader.h
+
+
+STL_SRCS = 					\
+	STLLoader.cpp				\
+	STLLoader.h				\
+	STLExporter.h				\
+	STLExporter.cpp
+
+
+Unreal_SRCS = 					\
+	UnrealLoader.cpp			\
+	UnrealLoader.h
+
+
+XFile_SRCS = 					\
+	XFileHelper.h				\
+	XFileImporter.cpp			\
+	XFileImporter.h				\
+	XFileParser.cpp				\
+	XFileParser.h
+
+
+Exporter_SRCS = 				\
+	Exporter.cpp				\
+	AssimpCExport.cpp			\
+	BlobIOSystem.h
+
+
+Extra_SRCS = 					\
+	MD4FileData.h
+
+
+IrrXML_SRCS = 					\
+	irrXMLWrapper.h				\
+	../contrib/irrXML/CXMLReaderImpl.h	\
+	../contrib/irrXML/heapsort.h		\
+	../contrib/irrXML/irrArray.h		\
+	../contrib/irrXML/irrString.h		\
+	../contrib/irrXML/irrTypes.h		\
+	../contrib/irrXML/irrXML.cpp		\
+	../contrib/irrXML/irrXML.h
+
+
+ConvertUTF_SRCS = 				\
+	../contrib/ConvertUTF/ConvertUTF.h	\
+	../contrib/ConvertUTF/ConvertUTF.c
+
+
+unzip_SRCS = 					\
+	../contrib/unzip/crypt.h		\
+	../contrib/unzip/ioapi.c		\
+	../contrib/unzip/ioapi.h		\
+	../contrib/unzip/unzip.c		\
+	../contrib/unzip/unzip.h
+
+PSL1GHT_port_SRCS = realpath.c symlinks.c
+
+importer_flags = 				\
+	ASSIMP_BUILD_NO_X_IMPORTER		\
+	ASSIMP_BUILD_NO_3DS_IMPORTER		\
+	ASSIMP_BUILD_NO_MD3_IMPORTER		\
+	ASSIMP_BUILD_NO_MDL_IMPORTER		\
+	ASSIMP_BUILD_NO_MD2_IMPORTER		\
+	ASSIMP_BUILD_NO_PLY_IMPORTER		\
+	ASSIMP_BUILD_NO_ASE_IMPORTER		\
+	ASSIMP_BUILD_NO_OBJ_IMPORTER		\
+	ASSIMP_BUILD_NO_HMP_IMPORTER		\
+	ASSIMP_BUILD_NO_SMD_IMPORTER		\
+	ASSIMP_BUILD_NO_MDC_IMPORTER		\
+	ASSIMP_BUILD_NO_MD5_IMPORTER		\
+	ASSIMP_BUILD_NO_STL_IMPORTER		\
+	ASSIMP_BUILD_NO_LWO_IMPORTER		\
+	ASSIMP_BUILD_NO_DXF_IMPORTER		\
+	ASSIMP_BUILD_NO_NFF_IMPORTER		\
+	ASSIMP_BUILD_NO_RAW_IMPORTER		\
+	ASSIMP_BUILD_NO_OFF_IMPORTER		\
+	ASSIMP_BUILD_NO_AC_IMPORTER		\
+	ASSIMP_BUILD_NO_BVH_IMPORTER		\
+	ASSIMP_BUILD_NO_IRRMESH_IMPORTER	\
+	ASSIMP_BUILD_NO_IRR_IMPORTER		\
+	ASSIMP_BUILD_NO_Q3D_IMPORTER		\
+	ASSIMP_BUILD_NO_B3D_IMPORTER		\
+	ASSIMP_BUILD_NO_COLLADA_IMPORTER	\
+	ASSIMP_BUILD_NO_TERRAGEN_IMPORTER	\
+	ASSIMP_BUILD_NO_CSM_IMPORTER		\
+	ASSIMP_BUILD_NO_3D_IMPORTER		\
+	ASSIMP_BUILD_NO_LWS_IMPORTER		\
+	ASSIMP_BUILD_NO_OGRE_IMPORTER		\
+	ASSIMP_BUILD_NO_MS3D_IMPORTER		\
+	ASSIMP_BUILD_NO_COB_IMPORTER		\
+	ASSIMP_BUILD_NO_BLEND_IMPORTER		\
+	ASSIMP_BUILD_NO_Q3BSP_IMPORTER		\
+	ASSIMP_BUILD_NO_NDO_IMPORTER		\
+	ASSIMP_BUILD_NO_IFC_IMPORTER
+
+
+all_libassimp_SOURCES = $(Core_SRCS)				\
+	$(Common_SRCS)				\
+	$(Logging_SRCS)				\
+	$(Exporter_SRCS)			\
+	$(PostProcessing_SRCS)			\
+	$(3DS_SRCS)				\
+	$(AC_SRCS)				\
+	$(ASE_SRCS)				\
+	$(B3D_SRCS)				\
+	$(BVH_SRCS)				\
+	$(Collada_SRCS)				\
+	$(DXF_SRCS)				\
+	$(CSM_SRCS)				\
+	$(HMP_SRCS)				\
+	$(Irr_SRCS)				\
+	$(LWO_SRCS)				\
+	$(LWS_SRCS)				\
+	$(M3_SRCS)				\
+	$(MD2_SRCS)				\
+	$(MD3_SRCS)				\
+	$(MD5_SRCS)				\
+	$(MDC_SRCS)				\
+	$(MDL_SRCS)				\
+	$(MaterialSystem_SRCS)			\
+	$(NFF_SRCS)				\
+	$(OFFFormat_SRCS)			\
+	$(Obj_SRCS)				\
+	$(Ogre_SRCS)				\
+	$(Ply_SRCS)				\
+	$(Q3D_SRCS)				\
+	$(Q3BSP_SRCS)				\
+	$(Raw_SRCS)				\
+	$(SMD_SRCS)				\
+	$(STL_SRCS)				\
+	$(Unreal_SRCS)				\
+	$(XFile_SRCS)				\
+	$(Extra_SRCS)				\
+	$(MS3D_SRCS)				\
+	$(COB_SRCS)				\
+	$(BLENDER_SRCS)				\
+	$(NDO_SRCS)				\
+	$(IFC_SRCS)				\
+	$(IrrXML_SRCS)				\
+	$(ConvertUTF_SRCS)			\
+	$(unzip_SRCS)				\
+	$(PUBLIC_HEADERS)			\
+	$(COMPILER_HEADERS)			\
+	$(PSL1GHT_port_SRCS)
+
+# I suspect the static initialization order fiasco is happening - disabling importers that have static variables.
+libassimp_SOURCES = $(Core_SRCS)				\
+	$(Common_SRCS)				\
+	$(Logging_SRCS)				\
+	$(PostProcessing_SRCS)			\
+	$(3DS_SRCS)				\
+	$(AC_SRCS)				\
+	$(ASE_SRCS)				\
+	$(B3D_SRCS)				\
+	$(BVH_SRCS)				\
+	$(Collada_SRCS)				\
+	$(DXF_SRCS)				\
+	$(CSM_SRCS)				\
+	$(Irr_SRCS)				\
+	$(LWO_SRCS)				\
+	$(LWS_SRCS)				\
+	$(MD2_SRCS)				\
+	$(MD3_SRCS)				\
+	$(MD5_SRCS)				\
+	$(MDC_SRCS)				\
+	$(MaterialSystem_SRCS)			\
+	$(NFF_SRCS)				\
+	$(OFFFormat_SRCS)			\
+	$(Obj_SRCS)				\
+	$(Ogre_SRCS)				\
+	$(Ply_SRCS)				\
+	$(Raw_SRCS)				\
+	$(SMD_SRCS)				\
+	$(STL_SRCS)				\
+	$(Unreal_SRCS)				\
+	$(Extra_SRCS)				\
+	$(MS3D_SRCS)				\
+	$(COB_SRCS)				\
+	$(NDO_SRCS)				\
+	$(IrrXML_SRCS)				\
+	$(ConvertUTF_SRCS)			\
+	$(unzip_SRCS)				\
+	$(PUBLIC_HEADERS)			\
+	$(COMPILER_HEADERS)			\
+	$(PSL1GHT_port_SRCS)
+
+# Only OBJ:
+libassimp_obj_SOURCES = $(Core_SRCS)				\
+	$(Common_SRCS)				\
+	$(Logging_SRCS)				\
+	$(PostProcessing_SRCS)			\
+	$(MaterialSystem_SRCS)			\
+	$(Obj_SRCS)				\
+	$(Extra_SRCS)				\
+	$(ConvertUTF_SRCS)			\
+	$(unzip_SRCS)				\
+	$(PUBLIC_HEADERS)			\
+	$(COMPILER_HEADERS)			\
+	$(PSL1GHT_port_SRCS)
+
+C_SOURCES = $(filter %.c,$(notdir $(SOURCES)))
+CXX_SOURCES = $(filter %.cpp,$(notdir $(SOURCES)))
+HEADERS = $(filter %.h %.hpp,$(SOURCES))
+
+DEPFILES = $(addprefix $(DEPDIR)/,$(SOURCES:.c=.Po)) $(addprefix $(DEPDIR)/,$(SOURCES:.cpp=.Po))
+libassimp_OBJS = $(C_SOURCES:.c=.o) $(CXX_SOURCES:.cpp=.o)
+
+obj_C_SOURCES = $(filter %.c,$(notdir $(obj_C_SOURCES)))
+obj_CXX_SOURCES = $(filter %.cpp,$(notdir $(obj_CXX_SOURCES)))
+obj_OBJS = $(obj_C_SOURCES:.c=.o) $(obj_CXX_SOURCES:.cpp=.o)
+
+CPPFLAGS = $(PPU_CPPFLAGS) -I@srcdir@ -I$(assimp_code_SOURCE_LOCATION) -I$(assimp_code_SOURCE_LOCATION)/BoostWorkaround -include @srcdir@/realpath.h -include strings.h -include disable_importers.h
+CFLAGS = $(PPU_CFLAGS) -std=gnu99
+CXXFLAGS = $(PPU_CXXFLAGS) -include memory 
+
+define cc
+	echo Compiling $<
+	echo $(CC) $(CPPFLAGS) $(CFLAGS) -o $@ -c $<
+	mkdir -p @builddir@/deps
+	source=$< object=$@ depmode=gcc DEPDIR=$(DEPDIR) $(DEPCOMP) $(CC) $(CPPFLAGS) $(CFLAGS) -o $@ -c $<
+endef
+
+define cxx
+	echo Compiling $<
+	mkdir -p @builddir@/deps
+	echo $(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ -c $<
+	source=$< object=$@ depmode=gcc DEPDIR=$(DEPDIR) $(DEPCOMP) $(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ -c $<
+endef
+
+c_sources = $(filter %.c,$(notdir $(1)))
+
+cxx_sources = $(filter %.cpp,$(notdir $(1)))
+
+c_objs = $(1:.c=.o)
+
+cxx_objs = $(1:.cpp=.o)
+
+c_cxx_objs = $(call c_objs,$(call c_sources,$(1))) $(call cxx_objs,$(call cxx_sources,$(1)))
+
+%.o : $(srcdir)/%.c
+	@$(cc)
+
+%.o : $(assimp_code_SOURCE_LOCATION)/%.c
+	@$(cc)
+
+%.o : $(assimp_code_SOURCE_LOCATION)/../contrib/ConvertUTF/%.c
+	@$(cc)
+
+%.o : $(assimp_code_SOURCE_LOCATION)/../contrib/unzip/%.c
+	@$(cc)
+
+%.o : $(assimp_code_SOURCE_LOCATION)/../contrib/irrXML/%.cpp
+	@$(cxx)
+
+%.o : $(assimp_code_SOURCE_LOCATION)/%.cpp
+	@$(cxx)
+
+libassimp_OBJS = $(call c_cxx_objs,$(libassimp_SOURCES))
+libassimp_obj_OBJS = $(call c_cxx_objs,$(libassimp_obj_SOURCES))
+
+dumb:
+	@echo $(libassimp_OBJS)
+	@echo $(libassimp_obj_OBJS)
+
+$(libassimp_TARGET): $(libassimp_OBJS)
+	@rm -rf $@
+	$(AR) $(ARFLAGS) $@ $^
+
+$(libassimp_obj_TARGET): $(libassimp_obj_OBJS)
+	@rm -rf $@
+	$(AR) $(ARFLAGS) $@ $^
+
+clean:
+	@echo Cleaning...
+	@rm -rf $(libassimp_TARGET) $(libassimp_OBJS) $(libassimp_obj_TARGET) $(libassimp_obj_OBJS) $(DEPDIR)
+
+.PHONY: all clean test
+
+-include $(DEPFILES)

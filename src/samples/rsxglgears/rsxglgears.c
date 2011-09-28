@@ -507,8 +507,9 @@ draw_gear(struct gear *gear, GLfloat *transform,
 
    /* Draw the triangle strips that comprise the gear */
    int n;
-   for (n = 0; n < gear->nstrips; n++)
+   for (n = 0; n < gear->nstrips; n++) 
       glDrawArrays(GL_TRIANGLE_STRIP, gear->strips[n].first, gear->strips[n].count);
+
 
    /* Disable the attributes */
    glDisableVertexAttribArray(1);
@@ -752,7 +753,7 @@ main(int argc, char *argv[])
 char * rsxgltest_name = "rsxglgears";
 
 void
-rsxgltest_pad(const padData * paddata)
+rsxgltest_pad(unsigned int ipad,const padData * paddata)
 {
 }
 
