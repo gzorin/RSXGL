@@ -32,6 +32,7 @@ glEnable (GLenum cap)
     break;
   case GL_CULL_FACE:
     ctx -> state.polygon.cullEnable = 1;
+    ctx -> state.invalid.parts.the_rest = 1;
     break;
   case GL_STENCIL_TEST:
     ctx -> state.stencil.face[0].enable = 1;
@@ -68,6 +69,7 @@ glDisable (GLenum cap)
     break;
   case GL_CULL_FACE:
     ctx -> state.polygon.cullEnable = 0;
+    ctx -> state.invalid.parts.the_rest = 1;
     break;
   case GL_STENCIL_TEST:
     ctx -> state.stencil.face[0].enable = 0;

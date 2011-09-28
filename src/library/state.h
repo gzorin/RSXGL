@@ -150,7 +150,7 @@ struct state_t {
   } stencil;
 
   struct {
-    uint32_t cullEnable:1, cullFace:2, frontFace:1, mode: 2
+    uint32_t cullEnable:1, cullFace:2, frontFace:1, frontMode: 2, backMode: 2
       ;
     float offsetFactor, offsetUnits;    
   } polygon;
