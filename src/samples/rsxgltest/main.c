@@ -37,7 +37,7 @@ extern const char * rsxgltest_name;
 
 extern void rsxgltest_init(int, const char **);
 extern int rsxgltest_draw();
-extern void rsxgltest_pad(const padData *);
+extern void rsxgltest_pad(unsigned int,const padData *);
 extern void rsxgltest_exit();
 
 // Test program might want to use these:
@@ -399,7 +399,7 @@ main(int argc, const char ** argv)
 	      for(size_t i = 0;i < MAX_PADS;++i) {
 		if(padinfo.status[i]) {
 		  ioPadGetData(i,&paddata);
-		  rsxgltest_pad(&paddata);
+		  rsxgltest_pad(i,&paddata);
 		  break;
 		}
 	      }

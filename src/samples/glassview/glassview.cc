@@ -95,7 +95,8 @@ struct asset_model {
   }
 };
 
-const size_t nmodels = 3, imodel = 2;
+const size_t nmodels = 3;
+size_t imodel = 0;
 
 asset_model_spec model_specs[nmodels] = {
   { teapot_obj, teapot_obj_size, 1.0 },
@@ -339,13 +340,24 @@ asset_to_gl(asset_model_spec const & model_spec)
 
 extern "C"
 void
-rsxgltest_pad(const padData * paddata)
+rsxgltest_pad(unsigned int,const padData * paddata)
 {
-  if(paddata -> BTN_UP) {
-    tcp_printf("up\n");
+  static unsigned int square = ~0, circle = ~0;
+
+  if(paddata -> BTN_SQUARE != square) {
+    square = paddata -> BTN_SQUARE;
+    
+    if(square) {
+      imodel = (imodel - 1) % nmodels;
+    }
   }
-  else if(paddata -> BTN_DOWN) {
-    tcp_printf("down\n");
+
+  if(paddata -> BTN_CIRCLE != circle) {
+    circle = paddata -> BTN_CIRCLE;
+    
+    if(circle) {
+      imodel = (imodel + 1) % nmodels;
+    }
   }
 }
 

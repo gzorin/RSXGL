@@ -753,7 +753,7 @@ main(int argc, char *argv[])
 char * rsxgltest_name = "rsxglgears";
 
 void
-rsxgltest_pad(const padData * paddata)
+rsxgltest_pad(unsigned int ipad,const padData * paddata)
 {
 }
 

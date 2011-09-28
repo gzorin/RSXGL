@@ -194,7 +194,7 @@ Eigen::Affine3f ViewMatrixInv =
 
 extern "C"
 void
-rsxgltest_pad(const padData * paddata)
+rsxgltest_pad(unsigned int,const padData * paddata)
 {
   if(paddata -> BTN_UP) {
     tcp_printf("up\n");
