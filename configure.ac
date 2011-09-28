@@ -108,9 +108,19 @@ RSXGL_CONFIG_RSX_compatibility=0
 AC_ARG_ENABLE([RSX-compatibility],AS_HELP_STRING([--enable-RSX-compatibility],[configure the library to support (minimal) compatibility with older OpenGL profiles]),[if test "$enableval" == "yes"; then RSXGL_CONFIG_RSX_compatibility=1; fi],[])
 AC_SUBST([RSXGL_CONFIG_RSX_compatibility])
 
+# Samples can send debugging information back to the host used to build them; set its IP here,
+# or leave it unset & it won't try to phone home:
+AC_ARG_WITH([samples-host-ip],AS_HELP_STRING([--with-samples-host-ip],[IP address of host for samples to send reporting to]),[RSXGL_CONFIG_samples_host_ip="$withval"],[RSXGL_CONFIG_samples_host_ip="no"])
+AC_ARG_WITH([samples-host-port],AS_HELP_STRING([--with-samples-host-port],[port number on host for samples to send reporting to]),[RSXGL_CONFIG_samples_host_port="$withval"],[RSXGL_CONFIG_samples_host_port=9000])
+if test "$RSXGL_CONFIG_samples_host_ip" == "no" -o -z "$RSXGL_CONFIG_samples_host_ip"; then
+   RSXGL_CONFIG_samples_host_ip=""
+   RSXGL_CONFIG_samples_host_port=0
+fi;
+AC_SUBST([RSXGL_CONFIG_samples_host_ip])
+AC_SUBST([RSXGL_CONFIG_samples_host_port])
+
 # Find the Cg compiler:
 AC_PATH_PROG([CGC],[cgc])
-
 AC_MSG_NOTICE([path to the cgc compiler is ${CGC}])
 
 # Where is PSL1GHT?
