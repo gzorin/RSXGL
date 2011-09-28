@@ -251,7 +251,7 @@ struct rsxgl_draw_points {
     static const uint32_t batch_size = max_batch_size;
 
     // Will have these also:
-    // - repeat_nudge is the amount to subtract from the start vertex index for each batch, due to 
+    // - repeat_offset is the amount to subtract from the start vertex index for each batch, due to 
     //   a primitive being split across the batch_size boundary (line strip, line loop, triangle strip, triangle fan, quad strip, maybe polygon, need this, potentially)
     // - repeat_first says that each batch iteration will begin by repeating the first vertex in the primitive (triangle fan, polygon need this)
     // - close_first says that the first vertex of the primitive will be repeated at the end of the entire iteration (line_loop needs this)

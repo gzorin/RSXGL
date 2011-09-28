@@ -13,6 +13,9 @@
 #include "glassview_vpo.h"
 #include "glassview_fpo.h"
 
+#include "diffuse_vpo.h"
+#include "diffuse_fpo.h"
+
 #include <io/pad.h>
 
 #include <math.h>
@@ -55,10 +58,13 @@ GLuint shaders[2] = { 0,0 };
 
 GLuint program = 0;
 
-GLint ProjMatrix_location = -1, TransMatrix_location = -1,
-  vertex_location = -1, normal_location = -1, uv_location = -1;
+GLint ProjMatrix_location = -1, TransMatrix_location = -1, NormalMatrix_location = -1,
+  vertex_location = -1, normal_location = -1, uv_location = -1,
+  light_location = -1;
 
 GLfloat rotate_y = 0.0;
+
+const GLfloat light[4] = { 10.0f, 10.0f, 10.0f, 1.0f };
 
 // degrees per second:
 const GLfloat rotate_y_rate = 40.0f;
@@ -68,17 +74,7 @@ const GLfloat rotate_y_rate = 40.0f;
 
 Eigen::Projective3f ProjMatrix(perspective(DTOR(54.3),1920.0 / 1080.0,0.1,1000.0));
 
-Eigen::Affine3f ViewMatrixInv = 
-  Eigen::Affine3f(Eigen::Affine3f::Identity() * 
-		  (
-		   Eigen::Translation3f(1.779,2.221,4.034) *
-		   (
-		    Eigen::AngleAxisf(DTOR(0),Eigen::Vector3f::UnitZ()) *
-		    Eigen::AngleAxisf(DTOR(23.8),Eigen::Vector3f::UnitY()) *
-		    Eigen::AngleAxisf(DTOR(-26.738),Eigen::Vector3f::UnitX())
-		    )
-		   )
-		  ).inverse();
+Transform3f ViewTransform;
 
 struct asset_model_spec {
   uint8_t const * data;
@@ -100,7 +96,7 @@ struct asset_model {
 const size_t nmodels = 1, imodel = 0;
 
 asset_model_spec model_specs[nmodels] = {
-  { teapot_obj, teapot_obj_size, 1.0 / 200.0 },
+  { teapot_obj, teapot_obj_size, 1.0 },
 };
 
 asset_model models[nmodels];
@@ -309,7 +305,7 @@ asset_to_gl(asset_model_spec const & model_spec)
       op.colors = buffer + color_offset;
 
       tcp_printf("\tabout to fill\n");
-      const triangulated_aiMesh_to_vertex_array::output op_out = op.fill(mesh,false,false,false);
+      const triangulated_aiMesh_to_vertex_array::output op_out = op.fill(mesh,true,false,false);
 
       tcp_printf("filled-in: %u positions, %u normals, %u uvs, %u colors\n",
 		 op_out.nPositions,op_out.nNormals,op_out.nUVs,op_out.nColors);
@@ -338,6 +334,7 @@ asset_to_gl(asset_model_spec const & model_spec)
       glVertexAttribPointer(vertex_location,3,GL_FLOAT,GL_FALSE,op.position_stride,(const GLfloat *)position_offset);
 
       if(normal_location > 0 && op.normal_size > 0) {
+	tcp_printf("enabling normals\n");
 	glEnableVertexAttribArray(normal_location);
 	glVertexAttribPointer(normal_location,3,GL_FLOAT,GL_FALSE,op.normal_stride,(const GLfloat *)normal_offset);
       }
@@ -357,135 +354,6 @@ asset_to_gl(asset_model_spec const & model_spec)
   tcp_printf("Failed to read scene");
   return result;
 }
-
-#if 0
-// Turn a obj_scene_data into an OpenGL vertex array object. This function performs no checking on the component indices
-//  to determine if they're valid.
-asset_model
-asset_to_gl(asset_model_spec const & model_spec)
-{
-  asset_model result;
-
-  obj_scene_data asset;
-  int r = parse_inline_obj_scene(&asset,(char const *)model_spec.data,model_spec.size);
-  if(!r) return result;
-
-  // count number of triangles:
-  uint32_t ntris = 0;
-  
-  for(size_t i = 0,n = asset.face_count;i < n;++i) {
-    obj_face const * face = asset.face_list[i];
-
-    ntris += (face -> vertex_count == 4) ? 2 : (face -> vertex_count == 3) ? 1 : 0;
-  }
-
-  tcp_printf("model has %u triangles\n",ntris);
-
-  // size of a single vertex - vec3, vec3, vec2
-  struct vertex {
-    GLfloat position[3], normal[3], uv[2];
-
-    vertex() {
-      position[0] = 0.0;
-      position[1] = 0.0;
-      position[2] = 0.0;
-      normal[0] = 0.0;
-      normal[1] = 0.0;
-      normal[2] = 0.0;
-      uv[0] = 0.0;
-      uv[1] = 0.0;
-    }
-
-    static
-    vertex create(obj_scene_data const& object,
-		  obj_face const * face,const size_t j) {
-      vertex result;
-
-      // vertex:
-      const int vertex_index = face -> vertex_index[j];
-      if(vertex_index >= 0) {
-	obj_vector const * position = object.vertex_list[vertex_index];
-	result.position[0] = position -> e[0];
-	result.position[1] = position -> e[1];
-	result.position[2] = position -> e[2];
-      }
-      
-      // normal:
-      const int normal_index = face -> normal_index[j];
-      if(normal_index >= 0) {
-	obj_vector const * normal = object.vertex_normal_list[normal_index];
-	result.normal[0] = normal -> e[0];
-	result.normal[1] = normal -> e[1];
-	result.normal[2] = normal -> e[2];
-      }
-      
-      // uv:
-      const int texture_index = face -> texture_index[j];
-      if(texture_index >= 0) {
-	obj_vector const * uv = object.vertex_texture_list[texture_index];
-	result.uv[0] = uv -> e[0];
-	result.uv[1] = uv -> e[1];
-      }
-
-      return result;
-    }
-  };
-
-  glGenBuffers(1,&result.vbo);
-
-  glBindBuffer(GL_ARRAY_BUFFER,result.vbo);
-
-  tcp_printf(" building buffer object: want %u bytes\n",(uint32_t)(sizeof(vertex) * ntris * 3));
-  glBufferData(GL_ARRAY_BUFFER,sizeof(vertex) * ntris * 3,0,GL_STATIC_DRAW);
-  
-  vertex * _vbo = (vertex *)glMapBuffer(GL_ARRAY_BUFFER,GL_WRITE_ONLY);
-  vertex * pvbo = _vbo;
-
-  obj_face ** pface = asset.face_list;
-  for(size_t i = 0,n = asset.face_count;i < n;++i,++pface) {
-    obj_face const * face = *pface;
-
-    if(face -> vertex_count == 3) {
-      *pvbo++ = vertex::create(asset,face,0);
-      *pvbo++ = vertex::create(asset,face,1);
-      *pvbo++ = vertex::create(asset,face,2);
-    }
-    else if(face -> vertex_count == 4) {
-      *pvbo++ = vertex::create(asset,face,0);
-      *pvbo++ = vertex::create(asset,face,1);
-      *pvbo++ = vertex::create(asset,face,2);
-
-      *pvbo++ = vertex::create(asset,face,2);
-      *pvbo++ = vertex::create(asset,face,3);
-      *pvbo++ = vertex::create(asset,face,0);
-    }
-  }
-
-  glUnmapBuffer(GL_ARRAY_BUFFER);
-
-  glGenVertexArrays(1,&result.vao);
-
-  glBindVertexArray(result.vao);
-  glEnableVertexAttribArray(vertex_location);
-  if(normal_location > 0) glEnableVertexAttribArray(normal_location);
-  if(uv_location > 0) glEnableVertexAttribArray(uv_location);
-
-  glVertexAttribPointer(vertex_location,3,GL_FLOAT,GL_FALSE,sizeof(vertex),0);
-  if(normal_location > 0) glVertexAttribPointer(normal_location,3,GL_FLOAT,GL_FALSE,sizeof(vertex),(const GLfloat *)0 + 3);
-  if(normal_location > 0) glVertexAttribPointer(uv_location,2,GL_FLOAT,GL_FALSE,sizeof(vertex),(const GLfloat *)0 + 6);
-
-  glBindBuffer(GL_ARRAY_BUFFER,0);
-  glBindVertexArray(0);
-
-  result.ntris = ntris;
-
-  result.scale = model_spec.scale;
-
-  tcp_printf(" finished processing model");
-
-  return result;
-}
-#endif
 
 extern "C"
 void
@@ -516,8 +384,8 @@ rsxgltest_init(int argc,const char ** argv)
   glAttachShader(program,shaders[1]);
 
   // Supply shader binaries:
-  glShaderBinary(1,shaders,0,glassview_vpo,glassview_vpo_size);
-  glShaderBinary(1,shaders + 1,0,glassview_fpo,glassview_fpo_size);
+  glShaderBinary(1,shaders,0,diffuse_vpo,diffuse_vpo_size);
+  glShaderBinary(1,shaders + 1,0,diffuse_fpo,diffuse_fpo_size);
 
   // Link the program for real:
   glLinkProgram(program);
@@ -531,25 +399,47 @@ rsxgltest_init(int argc,const char ** argv)
 
   ProjMatrix_location = glGetUniformLocation(program,"ProjMatrix");
   TransMatrix_location = glGetUniformLocation(program,"TransMatrix");
+  NormalMatrix_location = glGetUniformLocation(program,"NormalMatrix");
+
+  light_location = glGetUniformLocation(program,"light");
 
   glUseProgram(program);
 
   glUniformMatrix4fv(ProjMatrix_location,1,GL_FALSE,ProjMatrix.data());
+  glUniform4fv(light_location,1,light);
 
   // Load the models:
   for(size_t i = 0;i < nmodels;++i) {
     models[i] = asset_to_gl(model_specs[i]);
   }
 
+#if 0
   // Draw wireframe models for now:
   glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
   glLineWidth(1.0);
+#endif
+
+  // The hell with that, draw a diffuse-shaded object, dammit:
+  glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
+
+  // Viewing matrix:
+  ViewTransform = 
+    Transform3f::Identity() *
+    Eigen::Translation3f(7.806,7.419,11.525) *
+    (
+     Eigen::AngleAxisf(DTOR(0),Eigen::Vector3f::UnitZ()) *
+     Eigen::AngleAxisf(DTOR(31.8),Eigen::Vector3f::UnitY()) *
+     Eigen::AngleAxisf(DTOR(-22.538),Eigen::Vector3f::UnitX())
+     );
+  
 }
 
 extern "C"
 int
 rsxgltest_draw()
 {
+  Transform3f ViewTransformInv = ViewTransform.inverse();
+
   float rgb[3] = {
     compute_sine_wave(rgb_waves,rsxgltest_elapsed_time),
     compute_sine_wave(rgb_waves + 1,rsxgltest_elapsed_time),
@@ -559,18 +449,29 @@ rsxgltest_draw()
   glClearColor(rgb[0] * 0.1,rgb[1] * 0.1,rgb[2] * 0.1,1.0);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-  Eigen::Affine3f rotmat = 
-    Eigen::Affine3f::Identity() * 
-    Eigen::AngleAxisf(DTOR(rotate_y),Eigen::Vector3f::UnitY());
-
   if(models[imodel].ntris > 0 &&
      models[imodel].vbo != 0 &&
      models[imodel].ibo != 0 &&
      models[imodel].vao != 0) {
     glBindVertexArray(models[imodel].vao);
 
-    Eigen::Affine3f modelview = ViewMatrixInv * (Eigen::Affine3f::Identity() * rotmat * Eigen::UniformScaling< float >(models[imodel].scale));
+    //Transform3f transform = (Transform3f::Identity() * Eigen::AngleAxisf(DTOR(rotate_y),Eigen::Vector3f::UnitY())) * Eigen::UniformScaling< float >(models[imodel].scale);
+    Transform3f transform = Transform3f::Identity() * Eigen::AngleAxisf(DTOR(rotate_y),Eigen::Vector3f::UnitY()) * Eigen::UniformScaling< float >(models[imodel].scale);
+    //Transform3f transform(Eigen::AngleAxisf(DTOR(rotate_y),Eigen::Vector3f::UnitY()));
+
+    //Eigen::Affine3f modelview = ViewMatrixInv * (Eigen::Affine3f::Identity() * rotmat * Eigen::UniformScaling< float >(models[imodel].scale));
+    //Eigen::Affine3f modelview = ViewMatrixInv * transform;
+    //Eigen::Affine3f normalmatrix = modelview.linear().inverse().transpose();
+
+    //Transform3f transform = Transform3f::Identity();
+    Transform3f modelview = ViewTransformInv * transform;
+    //Eigen::Matrix3f normal = modelview.linear().inverse().transpose();
+
+    Eigen::Affine3f normal = Eigen::Affine3f::Identity();
+    normal.linear() = modelview.linear().inverse().transpose();
+
     glUniformMatrix4fv(TransMatrix_location,1,GL_FALSE,modelview.data());
+    glUniformMatrix4fv(NormalMatrix_location,1,GL_FALSE,normal.data());
 
     glDrawArrays(GL_TRIANGLES,0,models[imodel].ntris * 3);
 

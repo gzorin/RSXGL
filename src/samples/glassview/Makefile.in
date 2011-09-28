@@ -46,14 +46,15 @@ CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 PROGRAMS = $(noinst_PROGRAMS)
 am__objects_1 =
-am__objects_2 = glassview_elf-glassview.$(OBJEXT) $(am__objects_1)
+am__objects_2 = glassview_elf-glassview.$(OBJEXT) $(am__objects_1) \
+	$(am__objects_1)
 am_glassview_elf_OBJECTS = glassview_elf-main.$(OBJEXT) \
 	glassview_elf-math3d.$(OBJEXT) \
 	glassview_elf-sine_wave.$(OBJEXT) $(am__objects_2)
 glassview_elf_OBJECTS = $(am_glassview_elf_OBJECTS)
 am__DEPENDENCIES_1 = cornell_box_obj.o teapot_obj.o
 am__DEPENDENCIES_2 = $(am__DEPENDENCIES_1)
-am__DEPENDENCIES_3 = glassview_vpo.o glassview_fpo.o \
+am__DEPENDENCIES_3 = $(call shader_objs,$(shaders)) \
 	$(am__DEPENDENCIES_2)
 glassview_elf_LINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) \
 	$(glassview_elf_LDFLAGS) $(LDFLAGS) -o $@
@@ -212,17 +213,26 @@ SUFFIXES = .bin _bin.o _bin.h .vcg .fcg .vert .frag _vpo.o _fpo.o \
 objs = cornell_box.obj teapot.obj
 objs_H = $(objs:.obj=_obj.h)
 objs_OBJS = $(objs:.obj=_obj.o)
-BUILT_SOURCES = glassview_vpo.h glassview_fpo.h \
-	$(objs_H)
-
-CLEANFILES = glassview_vpo.h glassview_fpo.h glassview_vpo.o glassview_fpo.o \
-	$(objs_H) $(objs_OBJS)
-
-sources = glassview.cc \
+vertex_shaders = $(filter %.vert,$(notdir $(1)))
+fragment_shaders = $(filter %.frag,$(notdir $(1)))
+vertex_shader_objs = $(1:.vert=_vpo.o)
+fragment_shader_objs = $(1:.frag=_fpo.o)
+vertex_shader_headers = $(1:.vert=_vpo.h)
+fragment_shader_headers = $(1:.frag=_fpo.h)
+shader_objs = $(call vertex_shader_objs,$(call vertex_shaders,$(1))) $(call fragment_shader_objs,$(call fragment_shaders,$(1)))
+shader_headers = $(call vertex_shader_headers,$(call vertex_shaders,$(1))) $(call fragment_shader_headers,$(call fragment_shaders,$(1)))
+shaders = glassview.vert glassview.frag diffuse.vert diffuse.frag 
+sources = glassview.cc $(shaders) \
 	$(objs)
 
-objects = glassview_vpo.o glassview_fpo.o \
+objects = $(call shader_objs,$(shaders)) \
 	$(objs_OBJS)
+
+BUILT_SOURCES = $(call shader_headers,$(shaders)) \
+	$(objs_H)
+
+CLEANFILES = $(call shader_headers,$(shaders)) $(call shader_objs,$(shaders)) \
+	$(objs_H) $(objs_OBJS)
 
 glassview_elf_DEPENDENCIES = $(top_builddir)/src/library/libEGL.a $(top_builddir)/src/library/libGL.a	\
 	$(objects)											\
@@ -659,7 +669,7 @@ pkg: glassview.pkg
 all-local: pkg
 
 clean-local:
-	rm -rf pkg glassview.self glassview.pkg 
+	@rm -rf pkg glassview.self glassview.pkg 
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

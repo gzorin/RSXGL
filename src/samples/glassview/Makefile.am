@@ -17,6 +17,18 @@ objs = cornell_box.obj teapot.obj
 objs_H = $(objs:.obj=_obj.h)
 objs_OBJS = $(objs:.obj=_obj.o)
 
+vertex_shaders = $(filter %.vert,$(notdir $(1)))
+fragment_shaders = $(filter %.frag,$(notdir $(1)))
+
+vertex_shader_objs = $(1:.vert=_vpo.o)
+fragment_shader_objs = $(1:.frag=_fpo.o)
+
+vertex_shader_headers = $(1:.vert=_vpo.h)
+fragment_shader_headers = $(1:.frag=_fpo.h)
+
+shader_objs = $(call vertex_shader_objs,$(call vertex_shaders,$(1))) $(call fragment_shader_objs,$(call fragment_shaders,$(1)))
+shader_headers = $(call vertex_shader_headers,$(call vertex_shaders,$(1))) $(call fragment_shader_headers,$(call fragment_shaders,$(1)))
+
 SUFFIXES += .obj _obj.o _obj.h
 
 %_obj.o: %.obj
@@ -31,15 +43,16 @@ dumb:
 	@echo $(objs_H)
 	@echo $(objs_OBJS)
 
-BUILT_SOURCES = glassview_vpo.h glassview_fpo.h \
-	$(objs_H)
-CLEANFILES = glassview_vpo.h glassview_fpo.h glassview_vpo.o glassview_fpo.o \
-	$(objs_H) $(objs_OBJS)
-
-sources = glassview.cc \
+shaders = glassview.vert glassview.frag diffuse.vert diffuse.frag 
+sources = glassview.cc $(shaders) \
 	$(objs)
-objects = glassview_vpo.o glassview_fpo.o \
+objects = $(call shader_objs,$(shaders)) \
 	$(objs_OBJS)
+
+BUILT_SOURCES = $(call shader_headers,$(shaders)) \
+	$(objs_H)
+CLEANFILES = $(call shader_headers,$(shaders)) $(call shader_objs,$(shaders)) \
+	$(objs_H) $(objs_OBJS)
 
 glassview_elf_DEPENDENCIES = $(top_builddir)/src/library/libEGL.a $(top_builddir)/src/library/libGL.a	\
 	$(objects)											\
@@ -64,4 +77,4 @@ pkg: glassview.pkg
 all-local: pkg
 
 clean-local:
-	rm -rf pkg glassview.self glassview.pkg 
+	@rm -rf pkg glassview.self glassview.pkg 
