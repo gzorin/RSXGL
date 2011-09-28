@@ -242,7 +242,8 @@ struct rsxgl_draw_points {
     //   a primitive being split across the batch_size boundary (line strip, line loop, triangle strip, triangle fan, quad strip, maybe polygon, need this, potentially)
     // - repeat_first says that each batch iteration will begin by repeating the first vertex in the primitive (triangle fan, polygon need this)
     // - close_first says that the first vertex of the primitive will be repeated at the end of the entire iteration (line_loop needs this)
-    // static const uint32_t repeat_nudge, repeat_first, close_first;
+    // static const uint32_t repeat_offset, repeat_first, close_first;
+    static const uint32_t repeat_offset = 0;
 
     static boost::tuple< uint32_t, uint32_t, uint32_t > work_info(const uint32_t count) {
       return boost::make_tuple(count,count >> batch_size_bits,count & (batch_size - 1));
@@ -258,8 +259,10 @@ struct rsxgl_draw_lines {
     static const uint32_t rsx_primitive_type = NV30_3D_VERTEX_BEGIN_END_LINES;
     static const uint32_t batch_size = max_batch_size & ~1;
 
+    static const uint32_t repeat_offset = 0;
+
     static boost::tuple< uint32_t, uint32_t, uint32_t > work_info(const uint32_t count) {
-      const uint32_t _count = (count >> 1) << 1;
+      const uint32_t _count = count & ~1;
       return boost::make_tuple(_count,_count >> batch_size_bits,_count & (batch_size - 1));
     }
   };
@@ -294,9 +297,36 @@ struct rsxgl_draw_triangles {
     static const uint32_t rsx_primitive_type = NV30_3D_VERTEX_BEGIN_END_TRIANGLES;
     static const uint32_t batch_size = max_batch_size - (max_batch_size % 3);
 
+    static const uint32_t repeat_offset = 0;
+
     static boost::tuple< uint32_t, uint32_t, uint32_t > work_info(const uint32_t count) {
       const uint32_t count_for_triangles = count - (count % 3);
       return boost::make_tuple(count_for_triangles,count_for_triangles / batch_size,count_for_triangles % batch_size);
+    }
+  };
+};
+
+template< uint32_t max_batch_size >
+struct rsxgl_draw_triangle_strip {
+  struct traits {
+    static const uint32_t rsx_primitive_type = NV30_3D_VERTEX_BEGIN_END_TRIANGLE_STRIP;
+    // batch_size had better be pot:
+    static const uint32_t batch_size = max_batch_size;
+    static const uint32_t batch_size_bits = boost::static_log2< max_batch_size >::value;
+    static const uint32_t batch_size_minus_two = batch_size - 2;
+
+    static const uint32_t repeat_offset = 2;
+
+    // actual number of vertices, nbatch, natch remainder:
+    static boost::tuple< uint32_t, uint32_t, uint32_t > work_info(const uint32_t count) {
+      uint32_t _count = count;
+
+      if(_count > batch_size) {
+	const uint32_t tmp = _count - batch_size;
+	_count = _count + (tmp / batch_size_minus_two * 2) + ((tmp % batch_size_minus_two) ? 2 : 0);
+      }
+
+      return boost::make_tuple(batch_size,_count >> batch_size_bits,_count & (batch_size - 1));      
     }
   };
 };
@@ -306,6 +336,7 @@ struct rsxgl_draw_array_operations {
   typedef typename primitive_traits< max_batch_size >::traits primitive_traits_type;
   static const uint32_t rsx_primitive_type = primitive_traits_type::rsx_primitive_type;
   static const uint32_t batch_size = primitive_traits_type::batch_size;
+  static const uint32_t repeat_offset = primitive_traits_type::repeat_offset;
   
   mutable uint32_t * buffer;
   mutable uint32_t first, current;
@@ -357,7 +388,7 @@ struct rsxgl_draw_array_operations {
   begin_batch(const uint32_t igroup,const uint32_t n) const {
     const uint32_t actual_n = n;
     gcm_emit_at(buffer,igroup,((actual_n - 1) << NV30_3D_VB_VERTEX_BATCH_COUNT__SHIFT) | first + current);
-    current += actual_n;
+    current += actual_n - repeat_offset;
   }
   
   inline void
@@ -384,6 +415,11 @@ rsxgl_draw_arrays(gcmContextData * context,const uint32_t rsx_primitive_type,con
   }
   else if(rsx_primitive_type == NV30_3D_VERTEX_BEGIN_END_TRIANGLES) {
     rsxgl_draw_array_operations< RSXGL_MAX_DRAW_BATCH_SIZE, rsxgl_draw_triangles > op(first);
+    rsxgl_process_batch< RSXGL_VERTEX_BATCH_MAX_FIFO_METHOD_ARGS > (context,count,op);
+    context -> current = op.buffer;
+  }
+  else if(rsx_primitive_type == NV30_3D_VERTEX_BEGIN_END_TRIANGLE_STRIP) {
+    rsxgl_draw_array_operations< RSXGL_MAX_DRAW_BATCH_SIZE, rsxgl_draw_triangle_strip > op(first);
     rsxgl_process_batch< RSXGL_VERTEX_BATCH_MAX_FIFO_METHOD_ARGS > (context,count,op);
     context -> current = op.buffer;
   }
@@ -461,6 +497,11 @@ rsxgl_draw_array_elements(gcmContextData * context,const uint32_t rsx_primitive_
   }
   else if(rsx_primitive_type == NV30_3D_VERTEX_BEGIN_END_TRIANGLES) {
     rsxgl_draw_array_elements_operations< RSXGL_MAX_DRAW_BATCH_SIZE, rsxgl_draw_triangles > op;
+    rsxgl_process_batch< RSXGL_INDEX_BATCH_MAX_FIFO_METHOD_ARGS > (context,count,op);
+    context -> current = op.buffer;
+  }
+  else if(rsx_primitive_type == NV30_3D_VERTEX_BEGIN_END_TRIANGLE_STRIP) {
+    rsxgl_draw_array_elements_operations< RSXGL_MAX_DRAW_BATCH_SIZE, rsxgl_draw_triangle_strip > op;
     rsxgl_process_batch< RSXGL_INDEX_BATCH_MAX_FIFO_METHOD_ARGS > (context,count,op);
     context -> current = op.buffer;
   }
