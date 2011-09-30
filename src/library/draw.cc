@@ -115,7 +115,7 @@ rsxgl_check_draw_arrays(struct rsxgl_context_t * ctx,GLenum mode)
 }
 
 static inline uint32_t
-rsxgl_draw_arrays_init(struct rsxgl_context_t * ctx,GLenum mode,const uint32_t start,const uint32_t length)
+rsxgl_draw_init(struct rsxgl_context_t * ctx,GLenum mode,const uint32_t start,const uint32_t length)
 {
   const uint32_t timestamp = rsxgl_timestamp_create(ctx);
 
@@ -154,6 +154,7 @@ rsxgl_check_draw_elements(struct rsxgl_context_t * ctx,GLenum mode,GLenum type)
   return std::make_pair(rsx_primitive_type,rsx_type);
 }
 
+#if 0
 static inline uint32_t
 rsxgl_draw_elements_init(struct rsxgl_context_t * ctx,GLenum mode,GLenum type,const uint32_t start,const uint32_t length)
 {
@@ -170,6 +171,7 @@ rsxgl_draw_elements_init(struct rsxgl_context_t * ctx,GLenum mode,GLenum type,co
 
   return timestamp;
 }
+#endif
 
 // The bookend to the above two functions - it posts the timestamp to the command stream:
 static inline void
@@ -577,7 +579,7 @@ glDrawArrays (GLenum mode, GLint first, GLsizei count)
   }
 
   // draw!
-  const uint32_t timestamp = rsxgl_draw_arrays_init(ctx,mode,first,count);
+  const uint32_t timestamp = rsxgl_draw_init(ctx,mode,first,count);
   rsxgl_draw_arrays(context,rsx_primitive_type,first,count);
   rsxgl_draw_exit(ctx,timestamp);
 
@@ -601,7 +603,7 @@ glDrawArraysInstanced (GLenum mode, GLint first, GLsizei count, GLsizei primcoun
     RSXGL_ERROR_(GL_INVALID_VALUE);
   }
 
-  const uint32_t timestamp = rsxgl_draw_arrays_init(ctx,mode,0,0);
+  const uint32_t timestamp = rsxgl_draw_init(ctx,mode,0,0);
 }
 
 GLAPI void APIENTRY
@@ -618,7 +620,7 @@ glMultiDrawArrays (GLenum mode, const GLint *first, const GLsizei *count, GLsize
   }
 
   // draw!
-  const uint32_t timestamp = rsxgl_draw_arrays_init(ctx,mode,0,0);
+  const uint32_t timestamp = rsxgl_draw_init(ctx,mode,0,0);
   for(;primcount > 0;--primcount,++first,++count) {
     rsxgl_draw_arrays(context,rsx_primitive_type,*first,*count);
   }
@@ -689,7 +691,7 @@ glDrawElements (GLenum mode, GLsizei count, GLenum type, const GLvoid* indices)
   }
 
   //
-  const uint32_t timestamp = rsxgl_draw_elements_init(ctx,mode,type,0,0);
+  const uint32_t timestamp = rsxgl_draw_init(ctx,mode,0,0);
 
   rsxgl_draw_array_elements(context,rsx_primitive_type,count);
 
@@ -723,7 +725,7 @@ glDrawElementsInstanced (GLenum mode, GLsizei count, GLenum type, const GLvoid *
   gcmContextData * context = ctx -> base.gcm_context;
 
   // TODO - Implement this
-  const uint32_t timestamp = rsxgl_draw_elements_init(ctx,mode,type,0,0);
+  const uint32_t timestamp = rsxgl_draw_init(ctx,mode,0,0);
 }
 
 GLAPI void APIENTRY
@@ -742,7 +744,7 @@ glDrawElementsBaseVertex (GLenum mode, GLsizei count, GLenum type, const GLvoid 
   gcmContextData * context = ctx -> base.gcm_context;
 
   // TODO - Implement this:
-  const uint32_t timestamp = rsxgl_draw_elements_init(ctx,mode,type,0,0);
+  const uint32_t timestamp = rsxgl_draw_init(ctx,mode,0,0);
 }
 
 GLAPI void APIENTRY
@@ -761,7 +763,7 @@ glDrawElementsInstancedBaseVertex (GLenum mode, GLsizei count, GLenum type, cons
   gcmContextData * context = ctx -> base.gcm_context;
 
   // TODO - implement this
-  const uint32_t timestamp = rsxgl_draw_elements_init(ctx,mode,type,0,0);
+  const uint32_t timestamp = rsxgl_draw_init(ctx,mode,0,0);
 }
 
 GLAPI void APIENTRY
@@ -803,7 +805,7 @@ glDrawRangeElements (GLenum mode, GLuint start, GLuint end, GLsizei count, GLenu
   gcm_finish_commands(context,&buffer);
 
   //
-  const uint32_t timestamp = rsxgl_draw_elements_init(ctx,mode,type,start,end - start);
+  const uint32_t timestamp = rsxgl_draw_init(ctx,mode,start,end - start);
   rsxgl_draw_array_elements(context,rsx_primitive_type,count);
   rsxgl_draw_exit(ctx,timestamp);
 
@@ -830,7 +832,7 @@ glDrawRangeElementsBaseVertex (GLenum mode, GLuint start, GLuint end, GLsizei co
   gcmContextData * context = ctx -> base.gcm_context;
 
   // TODO - Implement this
-  const uint32_t timestamp = rsxgl_draw_elements_init(ctx,mode,type,start,end - start);
+  const uint32_t timestamp = rsxgl_draw_init(ctx,mode,start,end - start);
 }
 
 GLAPI void APIENTRY
@@ -852,7 +854,7 @@ glMultiDrawElements (GLenum mode, const GLsizei *count, GLenum type, const GLvoi
 
   gcmContextData * context = ctx -> base.gcm_context;
 
-  const uint32_t timestamp = rsxgl_draw_elements_init(ctx,mode,type,0,0);
+  const uint32_t timestamp = rsxgl_draw_init(ctx,mode,0,0);
 
   // TODO - Migrate client index arrays
   const buffer_t & index_buffer = ctx -> buffer_binding[RSXGL_ELEMENT_ARRAY_BUFFER];
@@ -894,7 +896,7 @@ glMultiDrawElementsBaseVertex (GLenum mode, const GLsizei *count, GLenum type, c
 
   gcmContextData * context = ctx -> base.gcm_context;
 
-  const uint32_t timestamp = rsxgl_draw_elements_init(ctx,mode,type,0,0);
+  const uint32_t timestamp = rsxgl_draw_init(ctx,mode,0,0);
 }
 
 GLAPI void APIENTRY

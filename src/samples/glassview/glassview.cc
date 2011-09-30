@@ -514,13 +514,13 @@ rsxgltest_draw()
     glUniformMatrix4fv(TransMatrix_location,1,GL_FALSE,modelview.data());
     glUniformMatrix4fv(NormalMatrix_location,1,GL_FALSE,normal.data());
 
-    glDrawArrays(GL_TRIANGLES,0,models[imodel].ntris * 3);
-
 #if 0
+    glDrawArrays(GL_TRIANGLES,0,models[imodel].ntris * 3);
+#endif
+
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,models[imodel].ibo);
     glDrawElements(GL_TRIANGLES,models[imodel].ntris * 3,GL_UNSIGNED_INT,0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,0);
-#endif
 
     glFlush();
 
