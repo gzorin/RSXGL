@@ -242,13 +242,13 @@ glBufferData (GLenum target, GLsizeiptr size, const GLvoid* data, GLenum usage)
     rsxgl_timestamp_wait(ctx,buffer -> timestamp);
     buffer -> timestamp = 0;
   }
-#endif
 
   // Free the old buffer:
   if(buffer -> memory.offset != 0) {
     rsxgl_arena_free(memory_arena_t::storage().at(buffer -> arena),buffer -> memory);
     buffer -> memory = memory_t();
   }
+#endif
 
   // If a buffer is actually being requested, then allocate memory for it:
   rsx_ptr_t address = 0;

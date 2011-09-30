@@ -577,16 +577,18 @@ texture_t::storage_type & texture_t::storage()
 }
 
 texture_t::texture_t()
-  : deleted(0), timestamp(0), invalid_storage(0), valid(0), immutable(0), internalformat(RSXGL_TEX_FORMAT_INVALID), cube(0), rect(0), max_level(0), dims(0), format(0), pitch(0), remap(0)
+  : deleted(0), timestamp(0), ref_count(0), invalid_storage(0), valid(0), immutable(0), internalformat(RSXGL_TEX_FORMAT_INVALID), cube(0), rect(0), max_level(0), dims(0), format(0), pitch(0), remap(0)
 {
   size[0] = 0;
   size[1] = 0;
   size[2] = 0;
 }
 
-void
-texture_t::destroy()
+texture_t::~texture_t()
 {
+  if(memory.offset != 0) {
+    rsxgl_arena_free(memory_arena_t::storage().at(arena),memory);
+  }
 }
 
 texture_t::level_t::level_t()
@@ -626,26 +628,18 @@ glDeleteTextures (GLsizei n, const GLuint *textures)
 
     // Free resources used by this object:
     if(texture_t::storage().is_object(texture_name)) {
-      const texture_t & texture = texture_t::storage().at(texture_name);
-      
-      // If this texture_name is bound to any texture_name targets, unbind it from them:
-      const texture_t::binding_bitfield_type binding = texture.binding_bitfield;
-      if(binding.any()) {
-	for(size_t rsx_target = 0;rsx_target < RSXGL_MAX_COMBINED_TEXTURE_IMAGE_UNITS;++rsx_target) {
-	  if(binding[rsx_target]) {
-	    ctx -> texture_binding.bind(rsx_target,0);
-	  }
-	}
+      ctx -> texture_binding.unbind_from_all(texture_name);
+
+      // TODO - orphan it, instead of doing this:
+      texture_t & texture = texture_t::storage().at(texture_name);
+      if(texture.timestamp > 0) {
+	rsxgl_timestamp_wait(ctx,texture.timestamp);
+	texture.timestamp = 0;
       }
 
-      // Free memory used by this texture:
-      if(texture.memory.offset != 0) {
-	rsxgl_arena_free(memory_arena_t::storage().at(texture.arena),texture.memory);
-      }
+      texture_t::gl_object_type::maybe_delete(texture_name);
     }
-
-    // Delete the name:
-    if(texture_t::storage().is_name(texture_name)) {
+    else if(texture_t::storage().is_name(texture_name)) {
       texture_t::storage().destroy(texture_name);
     }
   }
@@ -1400,6 +1394,10 @@ rsxgl_tex_storage(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,G
     RSXGL_ERROR_(GL_INVALID_ENUM);
   }
 
+  if(texture.immutable) {
+    RSXGL_ERROR_(GL_INVALID_OPERATION);
+  }
+
 #if 0
   // TODO - Orphan the texture
   if(texture.valid && texture.timestamp != 0 && (!rsxgl_timestamp_passed(ctx -> cached_timestamp,ctx -> timestamp_sync,texture.timestamp))) {
@@ -1410,12 +1408,12 @@ rsxgl_tex_storage(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,G
     rsxgl_timestamp_wait(ctx,texture.timestamp);
     texture.timestamp = 0;
   }
-#endif
 
   // free any existing texture memory:
   if(texture.memory.offset != 0) {
     rsxgl_arena_free(memory_arena_t::storage().at(texture.arena),texture.memory);
   }
+#endif
 
   // free any temporary buffers previously used by the texture:
   texture_t::level_t * plevel = texture.levels;
@@ -1840,8 +1838,11 @@ glTexBuffer (GLenum target, GLenum internalformat, GLuint buffer)
 }
 
 void
-rsxgl_texture_validate(rsxgl_context_t * ctx,texture_t & texture)
+rsxgl_texture_validate(rsxgl_context_t * ctx,texture_t & texture,const uint32_t timestamp)
 {
+  rsxgl_assert(timestamp >= texture.timestamp);
+  texture.timestamp = timestamp;
+
   // storage is invalid:
   if(texture.invalid_storage) {
     //rsxgl_debug_printf("\t\tinvalid_storage: dims: %u\n",texture.dims);
@@ -2071,7 +2072,7 @@ rsxgl_textures_validate(rsxgl_context_t * ctx,program_t & program,const uint32_t
 	//rsxgl_debug_printf("\t%u\n",i);
 	texture_t & texture = ctx -> texture_binding[i];
 
-	rsxgl_texture_validate(ctx,texture);
+	rsxgl_texture_validate(ctx,texture,timestamp);
 
 	if(texture.valid) {
 	  // activate the texture:

@@ -19,8 +19,6 @@
 #include <cassert>
 
 #include <boost/integer.hpp>
-#include <boost/scoped_array.hpp>
-#include <boost/mpl/min_max.hpp>
 
 enum rsxgl_program_target {
   RSXGL_ACTIVE_PROGRAM = 0,

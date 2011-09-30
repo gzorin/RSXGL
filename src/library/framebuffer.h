@@ -11,7 +11,15 @@
 #include "gl_constants.h"
 #include "rsxgl_limits.h"
 #include "gl_object.h"
+#include "smint_array.h"
 #include "arena.h"
+#include "textures.h"
+
+#include <boost/mpl/list.hpp>
+#include <boost/mpl/transform_view.hpp>
+#include <boost/mpl/max_element.hpp>
+#include <boost/mpl/sizeof.hpp>
+#include <boost/mpl/deref.hpp>
 
 enum rsxgl_renderbuffer_target {
   RSXGL_RENDERBUFFER = 0,
@@ -58,6 +66,9 @@ struct renderbuffer_t {
 
   binding_bitfield_type binding_bitfield;
 
+  uint32_t deleted:1, timestamp:31;
+  uint32_t ref_count;
+
   memory_arena_t::name_type arena;
   surface_t surface;
 
@@ -71,6 +82,19 @@ enum rsxgl_framebuffer_target {
   RSXGL_MAX_FRAMEBUFFER_TARGETS = 2
 };
 
+enum rsxgl_framebuffer_attachment {
+  RSXGL_COLOR_ATTACHMENT_COLOR0,
+  RSXGL_DEPTH_STENCIL_ATTACHMENT = RSXGL_COLOR_ATTACHMENT_COLOR0 + RSXGL_MAX_COLOR_ATTACHMENTS,
+  RSXGL_MAX_ATTACHMENTS = RSXGL_DEPTH_STENCIL_ATTACHMENT + 1
+};
+
+enum rsxgl_framebuffer_attachment_type {
+  RSXGL_ATTACHMENT_TYPE_NONE = 0,
+  RSXGL_ATTACHMENT_TYPE_RENDERBUFFER = 1,
+  RSXGL_ATTACHMENT_TYPE_TEXTURE = 2,
+  RSXGL_MAX_ATTACHMENT_TYPES = 3
+};
+
 struct framebuffer_t {
   typedef bindable_gl_object< framebuffer_t, RSXGL_MAX_FRAMEBUFFERS, RSXGL_MAX_FRAMEBUFFER_TARGETS > gl_object_type;
   typedef typename gl_object_type::name_type name_type;
@@ -82,8 +106,15 @@ struct framebuffer_t {
 
   binding_bitfield_type binding_bitfield;
 
-#if 0
+  // Determine the largest of the name types for things that can be attached to the framebuffer (renderbuffers and textures):
+  typedef boost::mpl::list< framebuffer_t::name_type, texture_t::name_type > attachment_name_types;
+  typedef boost::mpl::max_element< boost::mpl::transform_view< attachment_name_types, boost::mpl::sizeof_< boost::mpl::_1 > > >::type attachment_name_types_iter;
+  typedef boost::mpl::deref< attachment_name_types_iter::base >::type attachment_name_type;
 
+  smint_array< RSXGL_MAX_ATTACHMENT_TYPES - 1, RSXGL_MAX_ATTACHMENTS > attachment_types;
+  attachment_name_type attachments[RSXGL_MAX_ATTACHMENTS];
+
+#if 0
   // attachments - 4 color, 1 depth + stencil (up to 5)
   // these have a type, too - renderbuffer or texture
   // there is also a mapping (set by glDrawBuffer() or glDrawBuffers()) - up to 4 values

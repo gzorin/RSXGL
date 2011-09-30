@@ -29,12 +29,16 @@ renderbuffer_t::storage_type & renderbuffer_t::storage()
 }
 
 renderbuffer_t::renderbuffer_t()
-  : arena(0)
+  : deleted(0), timestamp(0), ref_count(0), arena(0)
 {
 }
 
 renderbuffer_t::~renderbuffer_t()
 {
+  // Free memory used by this buffer:
+  if(surface.memory.offset != 0) {
+    rsxgl_arena_free(memory_arena_t::storage().at(arena),surface.memory);
+  }
 }
 
 GLAPI void APIENTRY
@@ -61,21 +65,18 @@ glDeleteRenderbuffers (GLsizei count, const GLuint *renderbuffers)
 
     // Free resources used by this object:
     if(renderbuffer_t::storage().is_object(renderbuffer_name)) {
-      const renderbuffer_t & renderbuffer = renderbuffer_t::storage().at(renderbuffer_name);
-      
-      // If this renderbuffer_name is bound to any renderbuffer_name targets, unbind it from them:
-      const renderbuffer_t::binding_bitfield_type binding = renderbuffer.binding_bitfield;
-      if(binding.any()) {
-	for(size_t rsx_target = 0;rsx_target < RSXGL_MAX_COMBINED_TEXTURE_IMAGE_UNITS;++rsx_target) {
-	  if(binding[rsx_target]) {
-	    ctx -> renderbuffer_binding.bind(rsx_target,0);
-	  }
-	}
-      }
-    }
+      ctx -> renderbuffer_binding.unbind_from_all(renderbuffer_name);
 
-    // Delete the name:
-    if(renderbuffer_t::storage().is_name(renderbuffer_name)) {
+      // TODO - orphan it, instead of doing this:
+      renderbuffer_t & renderbuffer = renderbuffer_t::storage().at(renderbuffer_name);
+      if(renderbuffer.timestamp > 0) {
+	rsxgl_timestamp_wait(ctx,renderbuffer.timestamp);
+	renderbuffer.timestamp = 0;
+      }
+
+      renderbuffer_t::gl_object_type::maybe_delete(renderbuffer_name);
+    }
+    else if(renderbuffer_t::storage().is_name(renderbuffer_name)) {
       renderbuffer_t::storage().destroy(renderbuffer_name);
     }
   }
@@ -127,10 +128,23 @@ rsxgl_renderbuffer_bytesPerPixel[] = {
   2
 };
 
+static inline uint32_t
+rsxgl_renderbuffer_target(GLenum target)
+{
+  switch(target) {
+  case GL_RENDERBUFFER:
+    return RSXGL_RENDERBUFFER;
+    break;
+  default:
+    return ~0;
+  };
+}
+
 GLAPI void APIENTRY
 glBindRenderbuffer (GLuint target, GLuint renderbuffer_name)
 {
-  if(!(target == GL_RENDERBUFFER)) {
+  const uint32_t rsx_target = rsxgl_renderbuffer_target(target);
+  if(rsx_target == ~0) {
     RSXGL_ERROR_(GL_INVALID_ENUM);
   }
 
@@ -143,16 +157,18 @@ glBindRenderbuffer (GLuint target, GLuint renderbuffer_name)
   }
 
   rsxgl_context_t * ctx = current_ctx();
-  ctx -> renderbuffer_binding.bind(RSXGL_RENDERBUFFER,renderbuffer_name);
+  ctx -> renderbuffer_binding.bind(rsx_target,renderbuffer_name);
+
+  RSXGL_NOERROR_();
 }
 
 GLAPI void APIENTRY
 glRenderbufferStorage (GLenum target, GLenum internalformat, GLsizei width, GLsizei height)
 {
-  if(!(target == GL_RENDERBUFFER)) {
+  const uint32_t rsx_target = rsxgl_renderbuffer_target(target);
+  if(rsx_target == ~0) {
     RSXGL_ERROR_(GL_INVALID_ENUM);
   }
-  const uint32_t rsx_target = 0;
 
   if(width < 0 || width > RSXGL_MAX_RENDERBUFFER_SIZE || height < 0 || height > RSXGL_MAX_RENDERBUFFER_SIZE) {
     RSXGL_ERROR_(GL_INVALID_VALUE);
@@ -171,7 +187,12 @@ glRenderbufferStorage (GLenum target, GLenum internalformat, GLsizei width, GLsi
   renderbuffer_t & renderbuffer = ctx -> renderbuffer_binding[rsx_target];
   surface_t & surface = renderbuffer.surface;
 
-  // TODO - worry about this object still being in use by the RSX:
+  // TODO - orphan instead of delete:
+  if(renderbuffer.timestamp > 0) {
+    rsxgl_timestamp_wait(ctx,renderbuffer.timestamp);
+    renderbuffer.timestamp = 0;
+  }
+
   if(surface.memory.offset != 0) {
     rsxgl_arena_free(memory_arena_t::storage().at(renderbuffer.arena),surface.memory);
   }
@@ -190,11 +211,19 @@ glRenderbufferStorage (GLenum target, GLenum internalformat, GLsizei width, GLsi
   surface.size[0] = width;
   surface.size[1] = height;
   surface.pitch = pitch;
+
+  RSXGL_NOERROR_();
 }
 
 GLAPI void APIENTRY
 glGetRenderbufferParameteriv (GLenum target, GLenum pname, GLint *params)
 {
+  const uint32_t rsx_target = rsxgl_renderbuffer_target(target);
+  if(rsx_target == ~0) {
+    RSXGL_ERROR_(GL_INVALID_ENUM);
+  }
+
+  RSXGL_NOERROR_();
 }
 
 // Framebuffers:
@@ -206,10 +235,25 @@ framebuffer_t::storage_type & framebuffer_t::storage()
 
 framebuffer_t::framebuffer_t()
 {
+  for(size_t i = 0;i < RSXGL_MAX_ATTACHMENTS;++i) {
+    attachments[i] = 0;
+  }
 }
 
 framebuffer_t::~framebuffer_t()
 {
+  for(size_t i = 0;i < RSXGL_MAX_ATTACHMENTS;++i) {
+    const uint32_t attachment_type = attachment_types.get(i);
+    if(attachment_type == RSXGL_ATTACHMENT_TYPE_NONE) {
+      continue;
+    }
+    else if(attachment_type == RSXGL_ATTACHMENT_TYPE_RENDERBUFFER && attachments[i] != 0) {
+      renderbuffer_t::gl_object_type::unref_and_maybe_delete(attachments[i]);
+    }
+    else if(attachment_type == RSXGL_ATTACHMENT_TYPE_TEXTURE && attachments[i] != 0) {
+      texture_t::gl_object_type::unref_and_maybe_delete(attachments[i]);
+    }
+  }
 }
 
 GLAPI void APIENTRY
@@ -234,23 +278,11 @@ glDeleteFramebuffers (GLsizei n, const GLuint *framebuffers)
 
     if(framebuffer_name == 0) continue;
 
-    // Free resources used by this object:
     if(framebuffer_t::storage().is_object(framebuffer_name)) {
-      const framebuffer_t & framebuffer = framebuffer_t::storage().at(framebuffer_name);
-      
-      // If this framebuffer_name is bound to any framebuffer_name targets, unbind it from them:
-      const framebuffer_t::binding_bitfield_type binding = framebuffer.binding_bitfield;
-      if(binding.any()) {
-	for(size_t rsx_target = 0;rsx_target < RSXGL_MAX_FRAMEBUFFER_TARGETS;++rsx_target) {
-	  if(binding[rsx_target]) {
-	    ctx -> framebuffer_binding.bind(rsx_target,0);
-	  }
-	}
-      }
+      ctx -> framebuffer_binding.unbind_from_all(framebuffer_name);
+      framebuffer_t::storage().destroy(framebuffer_name);
     }
-
-    // Delete the name:
-    if(framebuffer_t::storage().is_name(framebuffer_name)) {
+    else if(framebuffer_t::storage().is_name(framebuffer_name)) {
       framebuffer_t::storage().destroy(framebuffer_name);
     }
   }
@@ -262,20 +294,6 @@ GLAPI GLboolean APIENTRY
 glIsFramebuffer (GLuint framebuffer)
 {
   return framebuffer_t::storage().is_object(framebuffer);
-}
-
-static inline size_t
-rsxgl_framebuffer_target(GLenum target)
-{
-  if(target == GL_DRAW_FRAMEBUFFER) {
-    return RSXGL_DRAW_FRAMEBUFFER;
-  }
-  else if(target == GL_READ_FRAMEBUFFER) {
-    return RSXGL_DRAW_FRAMEBUFFER;
-  }
-  else {
-    return ~0;
-  }
 }
 
 GLAPI void APIENTRY
@@ -307,59 +325,126 @@ glBindFramebuffer (GLenum target, GLuint framebuffer_name)
   RSXGL_NOERROR_();
 }
 
+static inline uint32_t
+rsxgl_framebuffer_target(GLenum target)
+{
+  switch(target) {
+  case GL_FRAMEBUFFER:
+  case GL_DRAW_FRAMEBUFFER:
+    return RSXGL_DRAW_FRAMEBUFFER;
+    break;
+  case GL_READ_FRAMEBUFFER:
+    return RSXGL_READ_FRAMEBUFFER;
+    break;
+  default:
+    return ~0;
+  };
+}
+
+static inline uint32_t
+rsxgl_framebuffer_attachment(GLenum attachment)
+{
+  if(attachment >= GL_COLOR_ATTACHMENT0 && attachment < (GL_COLOR_ATTACHMENT0 + RSXGL_MAX_COLOR_ATTACHMENTS)) {
+    return RSXGL_COLOR_ATTACHMENT_COLOR0 + (attachment - GL_COLOR_ATTACHMENT0);
+  }
+  else if(attachment == GL_DEPTH_ATTACHMENT || attachment == GL_DEPTH_STENCIL_ATTACHMENT) {
+    return RSXGL_DEPTH_STENCIL_ATTACHMENT;
+  }
+  else {
+    return ~0;
+  }
+}
+
+static inline uint32_t
+rsxgl_framebuffer_attachment_type(GLenum target)
+{
+  if(target == GL_RENDERBUFFER) {
+    return RSXGL_ATTACHMENT_TYPE_RENDERBUFFER;
+  }
+  else {
+    return ~0;
+  }
+}
+
 GLAPI GLenum APIENTRY
 glCheckFramebufferStatus (GLenum target)
 {
+  //RSXGL_NOERROR_();
 }
 
 GLAPI void APIENTRY
 glFramebufferTexture1D (GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level)
 {
+  RSXGL_NOERROR_();
 }
 
 GLAPI void APIENTRY
 glFramebufferTexture2D (GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level)
 {
+  RSXGL_NOERROR_();
 }
 
 GLAPI void APIENTRY
 glFramebufferTexture3D (GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level, GLint zoffset)
 {
+  RSXGL_NOERROR_();
 }
 
 GLAPI void APIENTRY
 glFramebufferRenderbuffer (GLenum target, GLenum attachment, GLenum renderbuffertarget, GLuint renderbuffer)
 {
+  const uint32_t rsx_framebuffer_target = rsxgl_framebuffer_target(target);
+  if(rsx_framebuffer_target == ~0) {
+    RSXGL_ERROR_(GL_INVALID_ENUM);
+  }
+
+  const uint32_t rsx_attachment = rsxgl_framebuffer_attachment(attachment);
+  if(rsx_attachment == ~0) {
+    RSXGL_NOERROR_();
+  }
+
+  const uint32_t rsx_attachment_type = rsxgl_framebuffer_attachment_type(renderbuffertarget);
+  if(rsx_attachment_type != RSXGL_ATTACHMENT_TYPE_RENDERBUFFER) {
+    RSXGL_ERROR_(GL_INVALID_ENUM);
+  }
+
+  RSXGL_NOERROR_();
 }
 
 GLAPI void APIENTRY
 glGetFramebufferAttachmentParameteriv (GLenum target, GLenum attachment, GLenum pname, GLint *params)
 {
+  RSXGL_NOERROR_();
 }
 
 GLAPI void APIENTRY
 glGenerateMipmap (GLenum target)
 {
+  RSXGL_NOERROR_();
 }
 
 GLAPI void APIENTRY
 glBlitFramebuffer (GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1, GLint dstX0, GLint dstY0, GLint dstX1, GLint dstY1, GLbitfield mask, GLenum filter)
 {
+  RSXGL_NOERROR_();
 }
 
 GLAPI void APIENTRY
 glRenderbufferStorageMultisample (GLenum target, GLsizei samples, GLenum internalformat, GLsizei width, GLsizei height)
 {
+  RSXGL_NOERROR_();
 }
 
 GLAPI void APIENTRY
 glFramebufferTextureLayer (GLenum target, GLenum attachment, GLuint texture, GLint level, GLint layer)
 {
+  RSXGL_NOERROR_();
 }
 
 GLAPI void APIENTRY
 glFramebufferTexture (GLenum target, GLenum attachment, GLuint texture, GLint level)
 {
+  RSXGL_NOERROR_();
 }
 
 GLAPI void APIENTRY

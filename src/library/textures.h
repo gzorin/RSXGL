@@ -131,9 +131,10 @@ struct texture_t {
   binding_bitfield_type binding_bitfield;
 
   uint32_t deleted:1, timestamp:31;
+  uint32_t ref_count;
 
   texture_t();
-  void destroy();
+  ~texture_t();
 
   static const boost::static_log2_argument_type max_levels = boost::static_log2< RSXGL_MAX_TEXTURE_SIZE >::value + 1;
   typedef boost::uint_value_t< max_levels - 1 >::least level_size_type;
@@ -168,7 +169,7 @@ struct texture_t {
 
 struct rsxgl_context_t;
 
-void rsxgl_texture_validate(rsxgl_context_t *,texture_t &);
+void rsxgl_texture_validate(rsxgl_context_t *,texture_t &,const uint32_t);
 void rsxgl_textures_validate(rsxgl_context_t *,program_t &,const uint32_t);
 
 #endif
