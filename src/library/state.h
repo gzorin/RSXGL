@@ -100,7 +100,8 @@ struct state_t {
 	depth_write_mask:1,
 	primitive_restart:1,
 	the_rest:1,
-	framebuffer:1,
+	draw_framebuffer:1,
+	read_framebuffer:1,
 	program:1;
     } parts;
   } invalid;
