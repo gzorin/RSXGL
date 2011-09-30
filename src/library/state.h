@@ -90,11 +90,6 @@ enum pixel_store_alignment {
 };
 
 struct state_t {
-#if 0
-  struct surface_t colorSurface, depthSurface;
-  struct format_t format;
-#endif
-
   union {
     uint32_t all;
     struct {

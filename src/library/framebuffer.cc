@@ -391,8 +391,6 @@ rsxgl_draw_framebuffer_validate(rsxgl_context_t * ctx)
     if(ctx -> framebuffer_binding.names[RSXGL_DRAW_FRAMEBUFFER] == 0) {
       rsxegl_surface_t const * egl_surface = ctx -> base.draw;
 
-      rsxgl_debug_printf("%s, EGL buffers: %u\n",__PRETTY_FUNCTION__,egl_surface -> buffer);
-
       // color buffer:
       {
 	uint32_t * buffer = gcm_reserve(context,6);
@@ -458,69 +456,3 @@ rsxgl_draw_framebuffer_validate(rsxgl_context_t * ctx)
     ctx -> state.invalid.parts.framebuffer = 0;
   }
 }
-
-#if 0
-//
-void
-rsxgl_surface_emit(gcmContextData * context,const struct surface_t * s)
-{
-  const static uint32_t surface_offset_cmds[] = {
-    NV30_3D_COLOR0_OFFSET,
-    NV30_3D_COLOR1_OFFSET,
-    NV40_3D_COLOR2_OFFSET,
-    NV40_3D_COLOR3_OFFSET,
-    NV30_3D_ZETA_OFFSET
-  };
-  
-  const static uint32_t surface_dma_cmds[] = {
-    NV30_3D_DMA_COLOR0,
-    NV30_3D_DMA_COLOR1,
-    NV40_3D_DMA_COLOR2,
-    NV40_3D_DMA_COLOR3,
-    NV30_3D_DMA_ZETA
-  };
-  
-  const static uint32_t surface_pitch_cmds[] = {
-    NV30_3D_COLOR0_PITCH,
-    NV30_3D_COLOR1_PITCH,
-    NV40_3D_COLOR2_PITCH,
-    NV40_3D_COLOR3_PITCH,
-    NV40_3D_ZETA_PITCH
-  };
-
-  uint32_t * buffer = gcm_reserve(context,6);
-
-  gcm_emit_method(&buffer,surface_dma_cmds[s -> surface],1);
-  gcm_emit(&buffer,0xFEED0000 | s -> location);
-
-  gcm_emit_method(&buffer,surface_offset_cmds[s -> surface],1);
-  gcm_emit(&buffer,s -> offset);
-
-  gcm_emit_method(&buffer,surface_pitch_cmds[s -> surface],1);
-  gcm_emit(&buffer,s -> pitch);
-
-  gcm_finish_commands(context,&buffer);
-};
-
-void
-rsxgl_format_emit(gcmContextData * context,const struct format_t * f)
-{
-  const uint16_t w = f -> width, h = f -> height;
-  uint32_t * buffer = gcm_reserve(context,9);
-
-  gcm_emit_method(&buffer,NV30_3D_RT_FORMAT,1);
-  gcm_emit(&buffer,(uint32_t)f -> format | ((31 - __builtin_clz(w)) << NV30_3D_RT_FORMAT_LOG2_WIDTH__SHIFT) | ((31 - __builtin_clz(h)) << NV30_3D_RT_FORMAT_LOG2_HEIGHT__SHIFT));
-
-  gcm_emit_method(&buffer,NV30_3D_RT_HORIZ,2);
-  gcm_emit(&buffer,w << 16);
-  gcm_emit(&buffer,h << 16);
-
-  gcm_emit_method(&buffer,NV30_3D_COORD_CONVENTIONS,1);
-  gcm_emit(&buffer,h | NV30_3D_COORD_CONVENTIONS_ORIGIN_NORMAL);
-
-  gcm_emit_method(&buffer,NV30_3D_RT_ENABLE,1);
-  gcm_emit(&buffer,f -> enabled);
-  
-  gcm_finish_commands(context,&buffer);
-}
-#endif

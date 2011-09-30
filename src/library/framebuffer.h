@@ -98,8 +98,4 @@ struct rsxgl_context_t;
 
 void rsxgl_draw_framebuffer_validate(rsxgl_context_t *);
 
-#if 0
-void rsxgl_surface_emit(gcmContextData *,const struct surface_t *);
-#endif
-
 #endif

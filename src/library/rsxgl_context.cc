@@ -55,23 +55,6 @@ rsxgl_context_t::egl_callback(struct rsxegl_context_t * egl_ctx,const uint8_t op
   rsxgl_context_t * ctx = (rsxgl_context_t *)egl_ctx;
 
   if(op == RSXEGL_MAKE_CONTEXT_CURRENT) {
-#if 0
-    ctx -> state.colorSurface.surface = 0;
-    ctx -> state.colorSurface.location = 0;
-    ctx -> state.colorSurface.offset = ctx -> base.draw -> color_addr[ctx -> base.draw -> buffer];
-    ctx -> state.colorSurface.pitch = ctx -> base.draw -> color_pitch;
-    
-    ctx -> state.depthSurface.surface = 4;
-    ctx -> state.depthSurface.location = 0;
-    ctx -> state.depthSurface.offset = ctx -> base.draw -> depth_addr;
-    ctx -> state.depthSurface.pitch = ctx -> base.draw -> depth_pitch;
-    
-    ctx -> state.format.enabled = NV30_3D_RT_ENABLE_COLOR0;
-    ctx -> state.format.format = ctx -> base.draw -> format;
-    ctx -> state.format.width = ctx -> base.draw -> width;
-    ctx -> state.format.height = ctx -> base.draw -> height;
-#endif
-    
     if(ctx -> state.viewport.width == 0 && ctx -> state.viewport.height == 0) {
       ctx -> state.viewport.x = 0;
       ctx -> state.viewport.y = 0;
@@ -80,14 +63,6 @@ rsxgl_context_t::egl_callback(struct rsxegl_context_t * egl_ctx,const uint8_t op
       ctx -> state.viewport.depthRange[0] = 0.0f;
       ctx -> state.viewport.depthRange[1] = 1.0f;
     }
-    
-#if 0
-    //
-    rsxgl_surface_emit(ctx -> base.gcm_context,&ctx -> state.colorSurface);
-    rsxgl_surface_emit(ctx -> base.gcm_context,&ctx -> state.depthSurface);
-    rsxgl_format_emit(ctx -> base.gcm_context,&ctx -> state.format);
-#endif
-
     rsxgl_make_context_current(ctx);
   }
   else if(op == RSXEGL_POST_GPU_SWAP) {
