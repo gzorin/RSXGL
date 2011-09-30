@@ -967,6 +967,7 @@ EGLAPI EGLBoolean eglSwapBuffers(EGLDisplay dpy,EGLSurface _surface)
       usleep(rsxgl_init_parameters.swap_wait_interval);
       ++iter;
     }
+    (*current_rsxgl_ctx -> callback)(current_rsxgl_ctx,RSXEGL_POST_GPU_SWAP);
 
     RSXEGL_NOERROR(((rsxgl_init_parameters.max_swap_wait_iterations == 0) || (iter < rsxgl_init_parameters.max_swap_wait_iterations)) ? EGL_TRUE : EGL_FALSE);
   }

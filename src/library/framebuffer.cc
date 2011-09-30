@@ -379,6 +379,77 @@ glDrawBuffers(GLsizei n, const GLenum *bufs)
 {
 }
 
+#if 0
+  RSXGL_RENDERBUFFER_FORMAT_R5G6B5 = 0,
+  RSXGL_RENDERBUFFER_FORMAT_X8R8G8B8 = 1,
+  RSXGL_RENDERBUFFER_FORMAT_A8R8G8B8 = 2,
+  RSXGL_RENDERBUFFER_FORMAT_B8 = 3,
+  RSXGL_RENDERBUFFER_FORMAT_A16B16G16R16_FLOAT = 4,
+  RSXGL_RENDERBUFFER_FORMAT_A32B32G32R32_FLOAT = 5,
+  RSXGL_RENDERBUFFER_FORMAT_R32_FLOAT = 6,
+  RSXGL_RENDERBUFFER_FORMAT_X8B8G8R8 = 7,
+  RSXGL_RENDERBUFFER_FORMAT_A8B8G8R8 = 8,
+  RSXGL_RENDERBUFFER_FORMAT_DEPTH24_D8 = 9,
+  RSXGL_RENDERBUFFER_FORMAT_DEPTH16 = 10
+#endif
+
+static uint32_t
+rsxgl_renderbuffer_nv40_format[] = {
+    NV30_3D_RT_FORMAT_COLOR_R5G6B5,
+    NV30_3D_RT_FORMAT_COLOR_X8R8G8B8,
+    NV30_3D_RT_FORMAT_COLOR_A8R8G8B8,
+    NV30_3D_RT_FORMAT_COLOR_B8,
+    NV30_3D_RT_FORMAT_COLOR_A16B16G16R16_FLOAT,
+    NV30_3D_RT_FORMAT_COLOR_A32B32G32R32_FLOAT,
+    NV30_3D_RT_FORMAT_COLOR_R32_FLOAT,
+    NV30_3D_RT_FORMAT_COLOR_X8B8G8R8,
+    NV30_3D_RT_FORMAT_COLOR_A8B8G8R8
+};
+
+static const uint32_t
+rsxgl_dma_methods[] = {
+  NV30_3D_DMA_COLOR0,
+  NV30_3D_DMA_COLOR1,
+  NV40_3D_DMA_COLOR2,
+  NV40_3D_DMA_COLOR3,
+  NV30_3D_DMA_ZETA
+};
+
+static const uint32_t
+rsxgl_offset_methods[] = {
+  NV30_3D_COLOR0_OFFSET,
+  NV30_3D_COLOR1_OFFSET,
+  NV40_3D_COLOR2_OFFSET,
+  NV40_3D_COLOR3_OFFSET,
+  NV30_3D_ZETA_OFFSET
+};
+
+static const uint32_t
+rsxgl_pitch_methods[] = {
+  NV30_3D_COLOR0_PITCH,
+  NV30_3D_COLOR1_PITCH,
+  NV40_3D_COLOR2_PITCH,
+  NV40_3D_COLOR3_PITCH,
+  NV40_3D_ZETA_PITCH
+};
+
+static inline void
+rsxgl_emit_surface(gcmContextData * context,const uint8_t which,surface_t const * surface)
+{
+  uint32_t * buffer = gcm_reserve(context,6);
+	
+  gcm_emit_method_at(buffer,0,rsxgl_dma_methods[which],1);
+  gcm_emit_at(buffer,1,(surface -> memory.location == RSXGL_MEMORY_LOCATION_LOCAL) ? RSXGL_DMA_MEMORY_FRAME_BUFFER : RSXGL_DMA_MEMORY_HOST_BUFFER);
+  
+  gcm_emit_method_at(buffer,2,rsxgl_offset_methods[which],1);
+  gcm_emit_at(buffer,3,surface -> memory.offset);
+  
+  gcm_emit_method_at(buffer,4,rsxgl_pitch_methods[which],1);
+  gcm_emit_at(buffer,5,surface -> pitch);
+  
+  gcm_finish_n_commands(context,6);
+}
+
 void
 rsxgl_draw_framebuffer_validate(rsxgl_context_t * ctx)
 {
@@ -389,6 +460,7 @@ rsxgl_draw_framebuffer_validate(rsxgl_context_t * ctx)
 
     // no FBO is bound - use the window system's:
     if(ctx -> framebuffer_binding.names[RSXGL_DRAW_FRAMEBUFFER] == 0) {
+#if 0
       rsxegl_surface_t const * egl_surface = ctx -> base.draw;
 
       // color buffer:
@@ -427,6 +499,15 @@ rsxgl_draw_framebuffer_validate(rsxgl_context_t * ctx)
       format = egl_surface -> format;
       w = egl_surface -> width;
       h = egl_surface -> height;
+      enabled = NV30_3D_RT_ENABLE_COLOR0;
+#endif
+
+      rsxgl_emit_surface(context,0,ctx -> color_surfaces + ctx -> draw_buffer);
+      rsxgl_emit_surface(context,4,&ctx -> depth_surface);
+
+      format = (uint32_t)ctx -> surfaces_format;
+      w = ctx -> color_surfaces[ctx -> draw_buffer].size[0];
+      h = ctx -> color_surfaces[ctx -> draw_buffer].size[1];
       enabled = NV30_3D_RT_ENABLE_COLOR0;
     }
     // do something with the attached FBO:

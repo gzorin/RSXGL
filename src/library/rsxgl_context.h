@@ -21,8 +21,13 @@
 #include <stddef.h>
 
 struct rsxgl_context_t {
-  struct rsxegl_context_t base;
-  struct state_t state;
+  rsxegl_context_t base;
+
+  surface_t color_surfaces[2], depth_surface;
+  uint32_t surfaces_format;
+  uint8_t draw_buffer;
+
+  state_t state;
 
   memory_arena_t::binding_type arena_binding;
   buffer_t::binding_type buffer_binding;

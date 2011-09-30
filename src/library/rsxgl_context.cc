@@ -22,7 +22,7 @@ rsxgl_context_create(const struct rsxegl_config_t * config,gcmContextData * gcm_
 }
 
 rsxgl_context_t::rsxgl_context_t(const struct rsxegl_config_t * config,gcmContextData * gcm_context)
-  : active_texture(0), ref(0), timestamp_sync(0), next_timestamp(1), last_timestamp(0), cached_timestamp(0)
+  : draw_buffer(0), active_texture(0), ref(0), timestamp_sync(0), next_timestamp(1), last_timestamp(0), cached_timestamp(0)
 {
   base.api = EGL_OPENGL_API;
   base.config = config;
@@ -55,6 +55,35 @@ rsxgl_context_t::egl_callback(struct rsxegl_context_t * egl_ctx,const uint8_t op
   rsxgl_context_t * ctx = (rsxgl_context_t *)egl_ctx;
 
   if(op == RSXEGL_MAKE_CONTEXT_CURRENT) {
+    ctx -> surfaces_format = ctx -> base.draw -> format;
+
+    // formats are unused when validating framebuffer 0 (the EGL-supplied framebuffer):
+    ctx -> color_surfaces[0].format = ~0;
+    ctx -> color_surfaces[0].size[0] = ctx -> base.draw -> width;
+    ctx -> color_surfaces[0].size[1] = ctx -> base.draw -> height;
+    ctx -> color_surfaces[0].pitch = ctx -> base.draw -> color_pitch;
+    ctx -> color_surfaces[0].memory.location = ctx -> base.draw -> color_buffer[0].location;
+    ctx -> color_surfaces[0].memory.offset = ctx -> base.draw -> color_buffer[0].offset;
+    ctx -> color_surfaces[0].memory.owner = 0;
+
+    ctx -> color_surfaces[1].format = ~0;
+    ctx -> color_surfaces[1].size[0] = ctx -> base.draw -> width;
+    ctx -> color_surfaces[1].size[1] = ctx -> base.draw -> height;
+    ctx -> color_surfaces[1].pitch = ctx -> base.draw -> color_pitch;
+    ctx -> color_surfaces[1].memory.location = ctx -> base.draw -> color_buffer[1].location;
+    ctx -> color_surfaces[1].memory.offset = ctx -> base.draw -> color_buffer[1].offset;
+    ctx -> color_surfaces[1].memory.owner = 0;
+
+    ctx -> depth_surface.format = ~0;
+    ctx -> depth_surface.size[0] = ctx -> base.draw -> width;
+    ctx -> depth_surface.size[1] = ctx -> base.draw -> height;
+    ctx -> depth_surface.pitch = ctx -> base.draw -> depth_pitch;
+    ctx -> depth_surface.memory.location = ctx -> base.draw -> depth_buffer.location;
+    ctx -> depth_surface.memory.offset = ctx -> base.draw -> depth_buffer.offset;
+    ctx -> depth_surface.memory.owner = 0;
+
+    ctx -> draw_buffer = ctx -> base.draw -> buffer;
+
     if(ctx -> state.viewport.width == 0 && ctx -> state.viewport.height == 0) {
       ctx -> state.viewport.x = 0;
       ctx -> state.viewport.y = 0;
@@ -66,6 +95,7 @@ rsxgl_context_t::egl_callback(struct rsxegl_context_t * egl_ctx,const uint8_t op
     rsxgl_make_context_current(ctx);
   }
   else if(op == RSXEGL_POST_GPU_SWAP) {
+    ctx -> draw_buffer = ctx -> base.draw -> buffer;
     rsxgl_migrate_reset(ctx -> base.gcm_context);
 #if 0
     //
