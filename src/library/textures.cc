@@ -1840,6 +1840,152 @@ glTexBuffer (GLenum target, GLenum internalformat, GLuint buffer)
 }
 
 void
+rsxgl_texture_validate(rsxgl_context_t * ctx,texture_t & texture)
+{
+  // storage is invalid:
+  if(texture.invalid_storage) {
+    //rsxgl_debug_printf("\t\tinvalid_storage: dims: %u\n",texture.dims);
+    
+    // destroy whatever is already there:
+    if(texture.memory.offset != 0) {
+      rsxgl_arena_free(memory_arena_t::storage().at(texture.arena),texture.memory);
+      texture.memory = memory_t();
+    }
+    
+    uint32_t nbytes = 0, bytesPerPixel = 0,pitch = 0, format = RSXGL_TEX_FORMAT_INVALID;
+    memory_arena_t::name_type arena = 0;
+    
+    uint8_t dims = 0;
+    texture_t::level_t * plevel = texture.levels;
+    size_t level = 0, levels = 0, ntransfer = 0;
+    texture_t::dimension_size_type expected_size[3] = { 0,0,0 };
+    for(;level < texture_t::max_levels;++level,++plevel) {
+#if 0
+      rsxgl_debug_printf("\t\t\t%u: format:%x %ux%ux%u\n",
+			 level,
+			 plevel -> internalformat,
+			 plevel -> size[0],plevel -> size[1],plevel -> size[2]);
+#endif
+      if(plevel -> internalformat == RSXGL_TEX_FORMAT_INVALID && plevel -> dims == 0) break;
+      
+      // is the size what we expected? if not, fail:
+      if(levels > 0 && (plevel -> internalformat != format ||
+			plevel -> dims != dims ||
+			plevel -> size[0] != expected_size[0] || plevel -> size[1] != expected_size[1] || plevel -> size[2] ||
+			plevel -> arena != arena)) break;
+      
+      // fill in the expected size:
+      if(levels == 0) {
+	dims = plevel -> dims;
+	format = plevel -> internalformat;
+	bytesPerPixel = rsxgl_tex_bytesPerPixel[format];
+	
+	// pitch is a multiple of 64, to make it compatible with framebuffer objects:
+	pitch = align_pot< uint32_t, 64 >(plevel -> size[0] * bytesPerPixel);
+	arena = plevel -> arena;
+	
+	expected_size[0] = std::max(plevel -> size[0] >> 1,1);
+	expected_size[1] = std::max(plevel -> size[1] >> 1,1);
+	expected_size[2] = std::max(plevel -> size[2] >> 1,1);
+      }
+      else {
+	expected_size[0] = std::max(expected_size[0] >> 1,1);
+	expected_size[1] = std::max(expected_size[1] >> 1,1);
+	expected_size[2] = std::max(expected_size[2] >> 1,1);
+      }
+      
+      // accumulate storage requirements:
+      nbytes += pitch * plevel -> size[1] * plevel -> size[2];
+      
+      if(plevel -> data != 0 || plevel -> memory.offset != 0) ++ntransfer;
+      
+      ++levels;
+    }
+    
+    // successfully specified the texture levels, now allocate:
+    if(levels > 0) {
+      rsx_ptr_t address = 0;
+      texture.memory = rsxgl_arena_allocate(memory_arena_t::storage().at(arena),128,nbytes,&address);
+      
+      if(texture.memory) {
+	texture.valid = 1;
+	texture.internalformat = format;
+	texture.max_level = levels;
+	texture.dims = dims;
+	texture.size[0] = texture.levels[0].size[0];
+	texture.size[1] = texture.levels[0].size[1];
+	texture.size[2] = texture.levels[0].size[2];
+	texture.pitch = pitch;
+	texture.arena = arena;
+	
+	texture.format =
+	  ((texture.memory.location == 0) ? NV30_3D_TEX_FORMAT_DMA0 : NV30_3D_TEX_FORMAT_DMA1) |
+	  ((texture.cube) ? NV30_3D_TEX_FORMAT_CUBIC : 0) |
+	  NV30_3D_TEX_FORMAT_NO_BORDER |
+	  ((uint32_t)texture.dims << NV30_3D_TEX_FORMAT_DIMS__SHIFT) |
+	  ((uint32_t)(rsx_texture_formats[texture.internalformat] | 0x80 | RSXGL_TEX_FORMAT_LN | (texture.rect ? RSXGL_TEX_FORMAT_UN : 0)) << NV30_3D_TEX_FORMAT_FORMAT__SHIFT) |
+	  ((uint32_t)texture.max_level << NV40_3D_TEX_FORMAT_MIPMAP_COUNT__SHIFT)
+	  ;
+	
+#if 0	      
+	rsxgl_debug_printf("\t\tsuccess dims: %u format: %u (%x) size: %u,%u,%u bytes: %u pitch: %u max_level: %u remap: %x offset: %u\n",
+			   texture.dims,
+			   texture.internalformat,(uint32_t)rsx_texture_formats[texture.internalformat],
+			   texture.size[0],texture.size[1],texture.size[2],
+			   nbytes,texture.pitch,
+			   texture.max_level,
+			   texture.remap,
+			   texture.memory.offset);
+#endif
+	
+	// upload initial texture values:
+	if(ntransfer > 0) {
+	  gcmContextData * context = ctx -> gcm_context();
+
+	  uint32_t offset = 0;
+	  texture_t::level_t * plevel = texture.levels;
+	  texture_t::dimension_size_type size[3] = { texture.size[0],texture.size[1],texture.size[2] };
+	  for(level = 0;level < levels;++level,++plevel) {
+	    // transfer from main memory:
+	    if(plevel -> data != 0) {
+	      rsxgl_tex_copy_image((uint8_t *)address + offset,pitch,0,0,0,
+				   plevel -> data,bytesPerPixel * plevel -> size[0],0,0,0,
+				   size[0],size[1],size[2],bytesPerPixel);
+	    }
+	    // transfer with RSX DMA:
+	    else if(plevel -> memory.offset != 0) {
+	      //rsxgl_debug_printf("\t\ttransfer from RSX memory offset: %u:%u\n",texture.levels[level].memory.location,texture.levels[level].memory.offset);
+	      rsxgl_tex_transfer_image(context,
+				       texture.memory + offset,pitch,0,0,0,
+				       plevel -> memory,bytesPerPixel * plevel -> size[0],0,0,0,
+				       size[0],size[1],size[2],bytesPerPixel);
+	    }
+	    
+	    offset += pitch * size[1] * size[2];
+	    
+	    size[0] = std::max(size[0] >> 1,1);
+	    size[1] = std::max(size[1] >> 1,1);
+	    size[2] = std::max(size[2] >> 1,1);
+	  }
+	}
+      }
+      else {
+	texture.valid = 0;
+      }
+    }
+    // failure:
+    else {
+      //rsxgl_debug_printf("\t\tfailure: %u %u\n",levels,level);
+      
+      texture.valid = 0;
+    }
+    
+    // always set this to 0:
+    texture.invalid_storage = 0;
+  }  
+}
+
+void
 rsxgl_textures_validate(rsxgl_context_t * ctx,program_t & program,const uint32_t timestamp)
 {
   gcmContextData * context = ctx -> base.gcm_context;
@@ -1925,6 +2071,9 @@ rsxgl_textures_validate(rsxgl_context_t * ctx,program_t & program,const uint32_t
 	//rsxgl_debug_printf("\t%u\n",i);
 	texture_t & texture = ctx -> texture_binding[i];
 
+	rsxgl_texture_validate(ctx,texture);
+
+#if 0
 	// storage is invalid:
 	if(texture.invalid_storage) {
 	  //rsxgl_debug_printf("\t\tinvalid_storage: dims: %u\n",texture.dims);
@@ -2064,6 +2213,7 @@ rsxgl_textures_validate(rsxgl_context_t * ctx,program_t & program,const uint32_t
 	  // always set this to 0:
 	  texture.invalid_storage = 0;
 	}
+#endif
 
 	if(texture.valid) {
 	  // activate the texture:

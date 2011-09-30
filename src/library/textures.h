@@ -168,6 +168,7 @@ struct texture_t {
 
 struct rsxgl_context_t;
 
+void rsxgl_texture_validate(rsxgl_context_t *,texture_t &);
 void rsxgl_textures_validate(rsxgl_context_t *,program_t &,const uint32_t);
 
 #endif

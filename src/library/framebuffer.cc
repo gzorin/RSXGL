@@ -247,13 +247,6 @@ glDeleteFramebuffers (GLsizei n, const GLuint *framebuffers)
 	  }
 	}
       }
-
-      // Free memory used by this framebuffer:
-#if 0
-      if(framebuffer.memory.offset != 0) {
-	rsxgl_arena_free(memory_arena_t::storage().at(framebuffer.arena),&framebuffer.memory);
-      }
-#endif
     }
 
     // Delete the name:
