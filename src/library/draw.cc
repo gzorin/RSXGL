@@ -120,7 +120,7 @@ rsxgl_draw_arrays_init(struct rsxgl_context_t * ctx,GLenum mode,const uint32_t s
   const uint32_t timestamp = rsxgl_timestamp_create(ctx);
 
   // validate everything:
-  rsxgl_draw_framebuffer_validate(ctx);
+  rsxgl_draw_framebuffer_validate(ctx,timestamp);
   rsxgl_state_validate(ctx);
   rsxgl_program_validate(ctx,timestamp);
   rsxgl_attribs_validate(ctx,ctx -> program_binding[RSXGL_ACTIVE_PROGRAM].attribs_enabled,start,length,timestamp);
@@ -161,7 +161,7 @@ rsxgl_draw_elements_init(struct rsxgl_context_t * ctx,GLenum mode,GLenum type,co
   const uint32_t timestamp = rsxgl_timestamp_create(ctx);
 
   // validate everything:
-  rsxgl_draw_framebuffer_validate(ctx);
+  rsxgl_draw_framebuffer_validate(ctx,timestamp);
   rsxgl_state_validate(ctx);
   rsxgl_program_validate(ctx,timestamp);
   rsxgl_attribs_validate(ctx,ctx -> program_binding[RSXGL_ACTIVE_PROGRAM].attribs_enabled,start,length,timestamp);

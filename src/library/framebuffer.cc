@@ -432,7 +432,7 @@ rsxgl_emit_surface(gcmContextData * context,const uint8_t which,surface_t const 
 }
 
 void
-rsxgl_draw_framebuffer_validate(rsxgl_context_t * ctx)
+rsxgl_draw_framebuffer_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
 {
   gcmContextData * context = ctx -> gcm_context();
 
