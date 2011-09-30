@@ -28,6 +28,7 @@
 #include "teapot_obj.h"
 #include "teddy_obj.h"
 #include "crab_obj.h"
+#include "yamato_obj.h"
 
 const char * rsxgltest_name = "glassview";
 
@@ -94,13 +95,14 @@ struct asset_model {
   }
 };
 
-const size_t nmodels = 3;
+const size_t nmodels = 4;
 size_t imodel = 0;
 
 asset_model_spec model_specs[nmodels] = {
   { teapot_obj, teapot_obj_size, 1.0 },
   { teddy_obj, teddy_obj_size, 1.0 },
-  { crab_obj, crab_obj_size, 1.0 }
+  { crab_obj, crab_obj_size, 1.0 },
+  { yamato_obj, yamato_obj_size, 1.0 }
 };
 
 asset_model models[nmodels];
