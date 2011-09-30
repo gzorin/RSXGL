@@ -516,11 +516,19 @@ struct rsxegl_surface_t rsxegl_screen_surface = {
   .color_pitch = 0,
   .depth_pitch = 0,
 
-  .color_addr = { 0,0 },
-  .depth_addr = 0,
-
-  ._color_addr = { 0,0 },
-  ._depth_addr = 0
+  .color_buffer = { 
+    { .location = 0,
+      .offset = 0,
+      .owner = 0 },
+    { .location = 0,
+      .offset = 0,
+      .owner = 0 }
+  },
+  .depth_buffer = {
+    .location = 0,
+    .offset = 0,
+    .owner = 0
+  }
 };
 
 static int rsxegl_created_screen_surface = 0;
@@ -590,24 +598,31 @@ eglCreateWindowSurface(EGLDisplay _dpy,EGLConfig _config,EGLNativeWindowType win
       RSXEGL_ERROR(EGL_BAD_ALLOC,EGL_NO_SURFACE);
     }
 
-    if(gcmAddressToOffset(buffers[0],&surface -> color_addr[0]) != 0) {
+    uint32_t offsets[] = { 0,0,0 };
+
+    if(gcmAddressToOffset(buffers[0],offsets + 0) != 0) {
       RSXEGL_ERROR(EGL_BAD_ALLOC,EGL_NO_SURFACE);
     }
-    if(gcmAddressToOffset(buffers[1],&surface -> color_addr[1]) != 0) {
+    if(gcmAddressToOffset(buffers[1],offsets + 1) != 0) {
       RSXEGL_ERROR(EGL_BAD_ALLOC,EGL_NO_SURFACE);
     }
-    if(gcmAddressToOffset(buffers[2],&surface -> depth_addr) != 0) {
+    if(gcmAddressToOffset(buffers[2],offsets + 2) != 0) {
       RSXEGL_ERROR(EGL_BAD_ALLOC,EGL_NO_SURFACE);
     }
 
-    surface -> _color_addr[0] = buffers[0];
-    surface -> _color_addr[1] = buffers[1];
-    surface -> _depth_addr = buffers[2];
+    surface -> color_buffer[0].offset = offsets[0];
+    surface -> color_buffer[0].location = 0;
 
-    if(gcmSetDisplayBuffer(0, surface -> color_addr[0], surface -> color_pitch, surface -> width, surface -> height) != 0) {
+    surface -> color_buffer[1].offset = offsets[1];
+    surface -> color_buffer[1].location = 0;
+
+    surface -> depth_buffer.offset = offsets[2];
+    surface -> depth_buffer.location = 0;
+
+    if(gcmSetDisplayBuffer(0, surface -> color_buffer[0].offset, surface -> color_pitch, surface -> width, surface -> height) != 0) {
       RSXEGL_ERROR(EGL_BAD_ALLOC,EGL_NO_SURFACE);
     }
-    if(gcmSetDisplayBuffer(1, surface -> color_addr[1], surface -> color_pitch, surface -> width, surface -> height) != 0) {
+    if(gcmSetDisplayBuffer(1, surface -> color_buffer[1].offset, surface -> color_pitch, surface -> width, surface -> height) != 0) {
       RSXEGL_ERROR(EGL_BAD_ALLOC,EGL_NO_SURFACE);
     }
 

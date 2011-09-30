@@ -32,6 +32,21 @@ enum rsxgl_renderbuffer_formats {
   RSXGL_RENDERBUFFER_FORMAT_DEPTH16 = 10
 };
 
+struct surface_t {
+  typedef boost::uint_value_t< RSXGL_MAX_RENDERBUFFER_SIZE - 1 >::least dimension_size_type;
+
+  uint8_t format;
+  dimension_size_type size[2];
+  uint32_t pitch;
+  memory_t memory;
+
+  surface_t()
+    : format(~0), pitch(0) {
+    size[0] = 0;
+    size[1] = 0;
+  }
+};
+
 struct renderbuffer_t {
   typedef bindable_gl_object< renderbuffer_t, RSXGL_MAX_RENDERBUFFERS, RSXGL_MAX_RENDERBUFFER_TARGETS > gl_object_type;
   typedef typename gl_object_type::name_type name_type;
@@ -43,17 +58,11 @@ struct renderbuffer_t {
 
   binding_bitfield_type binding_bitfield;
 
-  typedef boost::uint_value_t< RSXGL_MAX_RENDERBUFFER_SIZE - 1 >::least dimension_size_type;
-
-  uint8_t format;
-  dimension_size_type size[2];
-  uint32_t pitch;
-
-  memory_t memory;
   memory_arena_t::name_type arena;
+  surface_t surface;
 
   renderbuffer_t();
-  void destroy();
+  ~renderbuffer_t();
 };
 
 enum rsxgl_framebuffer_target {
@@ -63,7 +72,7 @@ enum rsxgl_framebuffer_target {
 };
 
 struct framebuffer_t {
-  typedef bindable_gl_object< framebuffer_t, RSXGL_MAX_FRAMEBUFFERS, RSXGL_MAX_FRAMEBUFFER_TARGETS, 1 > gl_object_type;
+  typedef bindable_gl_object< framebuffer_t, RSXGL_MAX_FRAMEBUFFERS, RSXGL_MAX_FRAMEBUFFER_TARGETS > gl_object_type;
   typedef typename gl_object_type::name_type name_type;
   typedef typename gl_object_type::storage_type storage_type;
   typedef typename gl_object_type::binding_bitfield_type binding_bitfield_type;
@@ -73,13 +82,24 @@ struct framebuffer_t {
 
   binding_bitfield_type binding_bitfield;
 
+#if 0
+
+  // attachments - 4 color, 1 depth + stencil (up to 5)
+  // these have a type, too - renderbuffer or texture
+  // there is also a mapping (set by glDrawBuffer() or glDrawBuffers()) - up to 4 values
+
+#endif  
+
   framebuffer_t();
-  void destroy();
+  ~framebuffer_t();
 };
 
 struct rsxgl_context_t;
 
+void rsxgl_draw_framebuffer_validate(rsxgl_context_t *);
+
+#if 0
 void rsxgl_surface_emit(gcmContextData *,const struct surface_t *);
-void rsxgl_format_emit(gcmContextData *,const struct format_t *);
+#endif
 
 #endif

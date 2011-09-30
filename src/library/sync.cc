@@ -27,20 +27,6 @@
 static inline void
 rsxgl_flush(rsxgl_context_t * ctx)
 {
-#if 0
-  // I don't know if this is necessary. GL spec says that changes to GL state should take effect here,
-  // but that may only refer to the effects of commands that have already been sent to the GPU,
-  // and not to GL calls that might further populate the command buffer. In any case, this function
-  // does /not/ have the knowledge to correctly call the attribute and texture validation functions.
-  rsxgl_state_validate(ctx);
-  rsxgl_program_validate(ctx);
-  if(ctx -> program_binding.names[RSXGL_ACTIVE_PROGRAM] != 0) {
-    rsxgl_attribs_validate(ctx,ctx -> program_binding[RSXGL_ACTIVE_PROGRAM].attribs_enabled);
-    rsxgl_uniforms_validate(ctx,ctx -> program_binding[RSXGL_ACTIVE_PROGRAM]);
-    rsxgl_textures_validate(ctx,ctx -> program_binding[RSXGL_ACTIVE_PROGRAM]);
-  }
-#endif
-
   rsxgl_gcm_flush(ctx -> gcm_context());
 }
 

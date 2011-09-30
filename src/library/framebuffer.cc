@@ -29,14 +29,11 @@ renderbuffer_t::storage_type & renderbuffer_t::storage()
 }
 
 renderbuffer_t::renderbuffer_t()
-  : format(~0), pitch(0), arena(0)
+  : arena(0)
 {
-  size[0] = 0;
-  size[1] = 0;
 }
 
-void
-renderbuffer_t::destroy()
+renderbuffer_t::~renderbuffer_t()
 {
 }
 
@@ -145,7 +142,7 @@ glBindRenderbuffer (GLuint target, GLuint renderbuffer_name)
     renderbuffer_t::storage().create_object(renderbuffer_name);
   }
 
-  struct rsxgl_context_t * ctx = current_ctx();
+  rsxgl_context_t * ctx = current_ctx();
   ctx -> renderbuffer_binding.bind(RSXGL_RENDERBUFFER,renderbuffer_name);
 }
 
@@ -172,11 +169,11 @@ glRenderbufferStorage (GLenum target, GLenum internalformat, GLsizei width, GLsi
     RSXGL_ERROR_(GL_INVALID_OPERATION);
   }
   renderbuffer_t & renderbuffer = ctx -> renderbuffer_binding[rsx_target];
+  surface_t & surface = renderbuffer.surface;
 
   // TODO - worry about this object still being in use by the RSX:
-
-  if(renderbuffer.memory.offset != 0) {
-    rsxgl_arena_free(memory_arena_t::storage().at(renderbuffer.arena),renderbuffer.memory);
+  if(surface.memory.offset != 0) {
+    rsxgl_arena_free(memory_arena_t::storage().at(renderbuffer.arena),surface.memory);
   }
 
   memory_arena_t::name_type arena = ctx -> arena_binding.names[RSXGL_RENDERBUFFER_ARENA];
@@ -184,15 +181,15 @@ glRenderbufferStorage (GLenum target, GLenum internalformat, GLsizei width, GLsi
   const uint32_t pitch = align_pot< uint32_t, 64 >(width * rsxgl_renderbuffer_bytesPerPixel[rsx_format]);
   const uint32_t nbytes = pitch * height;
 
-  renderbuffer.memory = rsxgl_arena_allocate(memory_arena_t::storage().at(arena),128,nbytes);
-  if(renderbuffer.memory.offset == 0) {
+  surface.memory = rsxgl_arena_allocate(memory_arena_t::storage().at(arena),128,nbytes);
+  if(surface.memory.offset == 0) {
     RSXGL_ERROR_(GL_OUT_OF_MEMORY);
   }
 
-  renderbuffer.format = rsx_format;
-  renderbuffer.size[0] = width;
-  renderbuffer.size[1] = height;
-  renderbuffer.pitch = pitch;
+  surface.format = rsx_format;
+  surface.size[0] = width;
+  surface.size[1] = height;
+  surface.pitch = pitch;
 }
 
 GLAPI void APIENTRY
@@ -211,8 +208,7 @@ framebuffer_t::framebuffer_t()
 {
 }
 
-void
-framebuffer_t::destroy()
+framebuffer_t::~framebuffer_t()
 {
 }
 
@@ -313,6 +309,8 @@ glBindFramebuffer (GLenum target, GLuint framebuffer_name)
     ctx -> framebuffer_binding.bind(RSXGL_READ_FRAMEBUFFER,framebuffer_name);
   }
 
+  // invalidate something here:
+
   RSXGL_NOERROR_();
 }
 
@@ -381,6 +379,87 @@ glDrawBuffers(GLsizei n, const GLenum *bufs)
 {
 }
 
+void
+rsxgl_draw_framebuffer_validate(rsxgl_context_t * ctx)
+{
+  gcmContextData * context = ctx -> gcm_context();
+
+  if(ctx -> state.invalid.parts.framebuffer) {
+    uint16_t enabled = 0, format = 0, w = 0,h = 0;
+
+    // no FBO is bound - use the window system's:
+    if(ctx -> framebuffer_binding.names[RSXGL_DRAW_FRAMEBUFFER] == 0) {
+      rsxegl_surface_t const * egl_surface = ctx -> base.draw;
+
+      rsxgl_debug_printf("%s, EGL buffers: %u\n",__PRETTY_FUNCTION__,egl_surface -> buffer);
+
+      // color buffer:
+      {
+	uint32_t * buffer = gcm_reserve(context,6);
+	
+	gcm_emit_method_at(buffer,0,NV30_3D_DMA_COLOR0,1);
+	gcm_emit_at(buffer,1,(egl_surface -> color_buffer[egl_surface -> buffer].location == RSXGL_MEMORY_LOCATION_LOCAL) ? RSXGL_DMA_MEMORY_FRAME_BUFFER : RSXGL_DMA_MEMORY_HOST_BUFFER);
+	
+	gcm_emit_method_at(buffer,2,NV30_3D_COLOR0_OFFSET,1);
+	gcm_emit_at(buffer,3,egl_surface -> color_buffer[egl_surface -> buffer].offset);
+	
+	gcm_emit_method_at(buffer,4,NV30_3D_COLOR0_PITCH,1);
+	gcm_emit_at(buffer,5,egl_surface -> color_pitch);
+	
+	gcm_finish_n_commands(context,6);
+      }
+
+      // depth buffer:
+      {
+	uint32_t * buffer = gcm_reserve(context,6);
+	
+	gcm_emit_method_at(buffer,0,NV30_3D_DMA_ZETA,1);
+	gcm_emit_at(buffer,1,(egl_surface -> depth_buffer.location == RSXGL_MEMORY_LOCATION_LOCAL) ? RSXGL_DMA_MEMORY_FRAME_BUFFER : RSXGL_DMA_MEMORY_HOST_BUFFER);
+	
+	gcm_emit_method_at(buffer,2,NV30_3D_ZETA_OFFSET,1);
+	gcm_emit_at(buffer,3,egl_surface -> depth_buffer.offset);
+	
+	gcm_emit_method_at(buffer,4,NV40_3D_ZETA_PITCH,1);
+	gcm_emit_at(buffer,5,egl_surface -> depth_pitch);
+	
+	gcm_finish_n_commands(context,6);
+      }
+
+      //
+      format = egl_surface -> format;
+      w = egl_surface -> width;
+      h = egl_surface -> height;
+      enabled = NV30_3D_RT_ENABLE_COLOR0;
+    }
+    // do something with the attached FBO:
+    else {
+      
+    }
+
+    {
+      uint32_t * buffer = gcm_reserve(context,9);
+      
+      gcm_emit_method_at(buffer,0,NV30_3D_RT_FORMAT,1);
+      gcm_emit_at(buffer,1,(uint32_t)format | ((31 - __builtin_clz(w)) << NV30_3D_RT_FORMAT_LOG2_WIDTH__SHIFT) | ((31 - __builtin_clz(h)) << NV30_3D_RT_FORMAT_LOG2_HEIGHT__SHIFT));
+      
+      gcm_emit_method_at(buffer,2,NV30_3D_RT_HORIZ,2);
+      gcm_emit_at(buffer,3,w << 16);
+      gcm_emit_at(buffer,4,h << 16);
+      
+      gcm_emit_method_at(buffer,5,NV30_3D_COORD_CONVENTIONS,1);
+      gcm_emit_at(buffer,6,h | NV30_3D_COORD_CONVENTIONS_ORIGIN_NORMAL);
+      
+      gcm_emit_method_at(buffer,7,NV30_3D_RT_ENABLE,1);
+      gcm_emit_at(buffer,8,enabled);
+      
+      gcm_finish_n_commands(context,9);
+    }
+
+    ctx -> state.invalid.parts.framebuffer = 0;
+  }
+}
+
+#if 0
 //
 void
 rsxgl_surface_emit(gcmContextData * context,const struct surface_t * s)
@@ -444,3 +523,4 @@ rsxgl_format_emit(gcmContextData * context,const struct format_t * f)
   
   gcm_finish_commands(context,&buffer);
 }
+#endif

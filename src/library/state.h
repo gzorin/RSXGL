@@ -90,8 +90,10 @@ enum pixel_store_alignment {
 };
 
 struct state_t {
+#if 0
   struct surface_t colorSurface, depthSurface;
   struct format_t format;
+#endif
 
   union {
     uint32_t all;
@@ -103,6 +105,7 @@ struct state_t {
 	depth_write_mask:1,
 	primitive_restart:1,
 	the_rest:1,
+	framebuffer:1,
 	program:1;
     } parts;
   } invalid;

@@ -27,6 +27,9 @@ CLEANFILES = draw_vpo.h draw_fpo.h draw_vpo.o draw_fpo.o \
 	bagel_bin.o nagel_bin.h
 
 # clear.c viewport_scissor.c buffer.c program.c draw.c uniforms.c textures.c cube.cc
+clear_objects = 
+clear_sources = clear.c
+
 cube_objects = cube_vpo.o cube_fpo.o
 cube_sources = cube.cc cube.vcg cube.fcg
 
@@ -45,8 +48,8 @@ manycubestream_sources = manycubestream.cc cube.vcg cube.fcg
 texcube_objects = texcube_vpo.o texcube_fpo.o nagel_bin.o
 texcube_sources = texcube.cc texture.c texcube.vcg texcube.fcg nagel.bin
 
-objects = $(manypoints_objects)
-sources = $(manypoints_sources)
+objects = $(texcube_objects)
+sources = $(texcube_sources)
 
 rsxgltest_elf_DEPENDENCIES = $(top_builddir)/src/library/libEGL.a $(top_builddir)/src/library/libGL.a	\
 	$(objects)

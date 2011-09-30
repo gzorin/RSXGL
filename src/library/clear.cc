@@ -11,6 +11,7 @@
 #include "gl_fifo.h"
 #include "nv40.h"
 #include "error.h"
+#include "framebuffer.h"
 #include "state.h"
 
 #if defined(GLAPI)
@@ -97,6 +98,7 @@ glClear(GLbitfield mask)
 
   struct rsxgl_context_t * ctx = current_ctx();
 
+  rsxgl_draw_framebuffer_validate(ctx);
   rsxgl_state_validate(ctx);
 
   gcmContextData * context = ctx -> base.gcm_context;

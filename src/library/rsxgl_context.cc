@@ -1,6 +1,5 @@
 #include "debug.h"
 #include "rsxgl_context.h"
-#include "egl_types.h"
 #include "framebuffer.h"
 #include "migrate.h"
 #include "nv40.h"
@@ -23,7 +22,7 @@ rsxgl_context_create(const struct rsxegl_config_t * config,gcmContextData * gcm_
 }
 
 rsxgl_context_t::rsxgl_context_t(const struct rsxegl_config_t * config,gcmContextData * gcm_context)
-  : active_texture(0), ref(0), buffer(0), timestamp_sync(0), next_timestamp(1), last_timestamp(0), cached_timestamp(0)
+  : active_texture(0), ref(0), timestamp_sync(0), next_timestamp(1), last_timestamp(0), cached_timestamp(0)
 {
   base.api = EGL_OPENGL_API;
   base.config = config;
@@ -56,6 +55,7 @@ rsxgl_context_t::egl_callback(struct rsxegl_context_t * egl_ctx,const uint8_t op
   rsxgl_context_t * ctx = (rsxgl_context_t *)egl_ctx;
 
   if(op == RSXEGL_MAKE_CONTEXT_CURRENT) {
+#if 0
     ctx -> state.colorSurface.surface = 0;
     ctx -> state.colorSurface.location = 0;
     ctx -> state.colorSurface.offset = ctx -> base.draw -> color_addr[ctx -> base.draw -> buffer];
@@ -70,6 +70,7 @@ rsxgl_context_t::egl_callback(struct rsxegl_context_t * egl_ctx,const uint8_t op
     ctx -> state.format.format = ctx -> base.draw -> format;
     ctx -> state.format.width = ctx -> base.draw -> width;
     ctx -> state.format.height = ctx -> base.draw -> height;
+#endif
     
     if(ctx -> state.viewport.width == 0 && ctx -> state.viewport.height == 0) {
       ctx -> state.viewport.x = 0;
@@ -80,10 +81,12 @@ rsxgl_context_t::egl_callback(struct rsxegl_context_t * egl_ctx,const uint8_t op
       ctx -> state.viewport.depthRange[1] = 1.0f;
     }
     
+#if 0
     //
     rsxgl_surface_emit(ctx -> base.gcm_context,&ctx -> state.colorSurface);
     rsxgl_surface_emit(ctx -> base.gcm_context,&ctx -> state.depthSurface);
     rsxgl_format_emit(ctx -> base.gcm_context,&ctx -> state.format);
+#endif
 
     rsxgl_make_context_current(ctx);
   }
