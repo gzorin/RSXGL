@@ -379,20 +379,6 @@ glDrawBuffers(GLsizei n, const GLenum *bufs)
 {
 }
 
-#if 0
-  RSXGL_RENDERBUFFER_FORMAT_R5G6B5 = 0,
-  RSXGL_RENDERBUFFER_FORMAT_X8R8G8B8 = 1,
-  RSXGL_RENDERBUFFER_FORMAT_A8R8G8B8 = 2,
-  RSXGL_RENDERBUFFER_FORMAT_B8 = 3,
-  RSXGL_RENDERBUFFER_FORMAT_A16B16G16R16_FLOAT = 4,
-  RSXGL_RENDERBUFFER_FORMAT_A32B32G32R32_FLOAT = 5,
-  RSXGL_RENDERBUFFER_FORMAT_R32_FLOAT = 6,
-  RSXGL_RENDERBUFFER_FORMAT_X8B8G8R8 = 7,
-  RSXGL_RENDERBUFFER_FORMAT_A8B8G8R8 = 8,
-  RSXGL_RENDERBUFFER_FORMAT_DEPTH24_D8 = 9,
-  RSXGL_RENDERBUFFER_FORMAT_DEPTH16 = 10
-#endif
-
 static uint32_t
 rsxgl_renderbuffer_nv40_format[] = {
     NV30_3D_RT_FORMAT_COLOR_R5G6B5,
@@ -403,7 +389,9 @@ rsxgl_renderbuffer_nv40_format[] = {
     NV30_3D_RT_FORMAT_COLOR_A32B32G32R32_FLOAT,
     NV30_3D_RT_FORMAT_COLOR_R32_FLOAT,
     NV30_3D_RT_FORMAT_COLOR_X8B8G8R8,
-    NV30_3D_RT_FORMAT_COLOR_A8B8G8R8
+    NV30_3D_RT_FORMAT_COLOR_A8B8G8R8,
+    NV30_3D_RT_FORMAT_ZETA_Z24S8,
+    NV30_3D_RT_FORMAT_ZETA_Z16
 };
 
 static const uint32_t
@@ -434,18 +422,18 @@ rsxgl_pitch_methods[] = {
 };
 
 static inline void
-rsxgl_emit_surface(gcmContextData * context,const uint8_t which,surface_t const * surface)
+rsxgl_emit_surface(gcmContextData * context,const uint8_t which,surface_t const & surface)
 {
   uint32_t * buffer = gcm_reserve(context,6);
 	
   gcm_emit_method_at(buffer,0,rsxgl_dma_methods[which],1);
-  gcm_emit_at(buffer,1,(surface -> memory.location == RSXGL_MEMORY_LOCATION_LOCAL) ? RSXGL_DMA_MEMORY_FRAME_BUFFER : RSXGL_DMA_MEMORY_HOST_BUFFER);
+  gcm_emit_at(buffer,1,(surface.memory.location == RSXGL_MEMORY_LOCATION_LOCAL) ? RSXGL_DMA_MEMORY_FRAME_BUFFER : RSXGL_DMA_MEMORY_HOST_BUFFER);
   
   gcm_emit_method_at(buffer,2,rsxgl_offset_methods[which],1);
-  gcm_emit_at(buffer,3,surface -> memory.offset);
+  gcm_emit_at(buffer,3,surface.memory.offset);
   
   gcm_emit_method_at(buffer,4,rsxgl_pitch_methods[which],1);
-  gcm_emit_at(buffer,5,surface -> pitch);
+  gcm_emit_at(buffer,5,surface.pitch);
   
   gcm_finish_n_commands(context,6);
 }
@@ -456,58 +444,18 @@ rsxgl_draw_framebuffer_validate(rsxgl_context_t * ctx)
   gcmContextData * context = ctx -> gcm_context();
 
   if(ctx -> state.invalid.parts.framebuffer) {
-    uint16_t enabled = 0, format = 0, w = 0,h = 0;
+    uint16_t enabled = 0, format = 0, w = 0, h = 0;
 
     // no FBO is bound - use the window system's:
     if(ctx -> framebuffer_binding.names[RSXGL_DRAW_FRAMEBUFFER] == 0) {
-#if 0
-      rsxegl_surface_t const * egl_surface = ctx -> base.draw;
+      surface_t const & surface = ctx -> color_surfaces[ctx -> draw_buffer];
 
-      // color buffer:
-      {
-	uint32_t * buffer = gcm_reserve(context,6);
-	
-	gcm_emit_method_at(buffer,0,NV30_3D_DMA_COLOR0,1);
-	gcm_emit_at(buffer,1,(egl_surface -> color_buffer[egl_surface -> buffer].location == RSXGL_MEMORY_LOCATION_LOCAL) ? RSXGL_DMA_MEMORY_FRAME_BUFFER : RSXGL_DMA_MEMORY_HOST_BUFFER);
-	
-	gcm_emit_method_at(buffer,2,NV30_3D_COLOR0_OFFSET,1);
-	gcm_emit_at(buffer,3,egl_surface -> color_buffer[egl_surface -> buffer].offset);
-	
-	gcm_emit_method_at(buffer,4,NV30_3D_COLOR0_PITCH,1);
-	gcm_emit_at(buffer,5,egl_surface -> color_pitch);
-	
-	gcm_finish_n_commands(context,6);
-      }
-
-      // depth buffer:
-      {
-	uint32_t * buffer = gcm_reserve(context,6);
-	
-	gcm_emit_method_at(buffer,0,NV30_3D_DMA_ZETA,1);
-	gcm_emit_at(buffer,1,(egl_surface -> depth_buffer.location == RSXGL_MEMORY_LOCATION_LOCAL) ? RSXGL_DMA_MEMORY_FRAME_BUFFER : RSXGL_DMA_MEMORY_HOST_BUFFER);
-	
-	gcm_emit_method_at(buffer,2,NV30_3D_ZETA_OFFSET,1);
-	gcm_emit_at(buffer,3,egl_surface -> depth_buffer.offset);
-	
-	gcm_emit_method_at(buffer,4,NV40_3D_ZETA_PITCH,1);
-	gcm_emit_at(buffer,5,egl_surface -> depth_pitch);
-	
-	gcm_finish_n_commands(context,6);
-      }
-
-      //
-      format = egl_surface -> format;
-      w = egl_surface -> width;
-      h = egl_surface -> height;
-      enabled = NV30_3D_RT_ENABLE_COLOR0;
-#endif
-
-      rsxgl_emit_surface(context,0,ctx -> color_surfaces + ctx -> draw_buffer);
-      rsxgl_emit_surface(context,4,&ctx -> depth_surface);
+      rsxgl_emit_surface(context,0,surface);
+      rsxgl_emit_surface(context,4,ctx -> depth_surface);
 
       format = (uint32_t)ctx -> surfaces_format;
-      w = ctx -> color_surfaces[ctx -> draw_buffer].size[0];
-      h = ctx -> color_surfaces[ctx -> draw_buffer].size[1];
+      w = surface.size[0];
+      h = surface.size[1];
       enabled = NV30_3D_RT_ENABLE_COLOR0;
     }
     // do something with the attached FBO:
