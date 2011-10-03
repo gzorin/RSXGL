@@ -47,7 +47,7 @@ state_t::state_t()
   color.clear = 0;
 
   enable.depth_test = 0;
-  depth.write_mask = 0;
+  depth.write_mask = 1;
   depth.clear = 0xffff;
   depth.func = RSXGL_LESS;
 
