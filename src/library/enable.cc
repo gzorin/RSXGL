@@ -26,6 +26,8 @@ glEnable (GLenum cap)
     break;
   case GL_DEPTH_TEST:
     ctx -> state.enable.depth_test = 1;
+    ctx -> state.write_mask.depth = ctx -> state.enable.depth_test | ctx -> state.depth.write_mask;
+    ctx -> state.invalid.parts.draw_status = 1;
     break;
   case GL_BLEND:
     ctx -> state.enable.blend = 1;
@@ -37,6 +39,8 @@ glEnable (GLenum cap)
   case GL_STENCIL_TEST:
     ctx -> state.stencil.face[0].enable = 1;
     ctx -> state.stencil.face[1].enable = 1;
+    ctx -> state.write_mask.stencil = 1;
+    ctx -> state.invalid.parts.draw_status = 1;
     break;
   case GL_PRIMITIVE_RESTART:
     ctx -> state.enable.primitive_restart = 1;
@@ -63,6 +67,8 @@ glDisable (GLenum cap)
     break;
   case GL_DEPTH_TEST:
     ctx -> state.enable.depth_test = 0;
+    ctx -> state.write_mask.depth = ctx -> state.enable.depth_test | ctx -> state.depth.write_mask;
+    ctx -> state.invalid.parts.draw_status = 1;
     break;
   case GL_BLEND:
     ctx -> state.enable.blend = 0;
@@ -74,6 +80,8 @@ glDisable (GLenum cap)
   case GL_STENCIL_TEST:
     ctx -> state.stencil.face[0].enable = 0;
     ctx -> state.stencil.face[1].enable = 0;
+    ctx -> state.write_mask.stencil = 0;
+    ctx -> state.invalid.parts.draw_status = 1;
     break;
   case GL_PRIMITIVE_RESTART:
     ctx -> state.enable.primitive_restart = 0;

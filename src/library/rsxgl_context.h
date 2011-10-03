@@ -48,6 +48,8 @@ struct rsxgl_context_t {
   
   program_t::binding_type program_binding;
 
+  uint8_t draw_status:1, read_status:1;
+
   // Used by glFinish():
   uint32_t ref;
 
@@ -85,5 +87,8 @@ current_ctx()
 uint32_t rsxgl_timestamp_create(rsxgl_context_t *);
 void rsxgl_timestamp_wait(rsxgl_context_t *,const uint32_t);
 void rsxgl_timestamp_post(rsxgl_context_t *,const uint32_t);
+
+uint32_t rsxgl_draw_status_validate(rsxgl_context_t *);
+uint32_t rsxgl_read_status_validate(rsxgl_context_t *);
 
 #endif

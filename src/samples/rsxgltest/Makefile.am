@@ -17,12 +17,14 @@ BUILT_SOURCES = textures_vpo.h textures_fpo.h \
 	dice_bin.h nagel_bin.h \
 	cube_vpo.h cube_fpo.h \
 	manypoints_vpo.h manypoints_fpo.h \
-	texcube_vpo.h texcube_fpo.h
+	texcube_vpo.h texcube_fpo.h \
+	fbo_vpo.h fbo_fpo.h
 CLEANFILES = draw_vpo.h draw_fpo.h draw_vpo.o draw_fpo.o \
 	textures_vpo.h textures_fpo.h textures_vpo.o textures_fpo.o \
 	cube_vpo.h cube_fpo.h cube_vpo.o cube_fpo.o \
 	manypoints_vpo.h manypoints_fpo.h manypoints_vpo.o manypoints_fpo.o \
 	texcube_vpo.h texcube_fpo.h texcube_vpo.o texcube_fpo.o \
+	fbo_vpo.h fbo_fpo.h fbo_vpo.o fbo_fpo.o \
 	dice_bin.o dice_bin.h \
 	bagel_bin.o nagel_bin.h
 
@@ -48,8 +50,11 @@ manycubestream_sources = manycubestream.cc cube.vcg cube.fcg
 texcube_objects = texcube_vpo.o texcube_fpo.o nagel_bin.o
 texcube_sources = texcube.cc texture.c texcube.vcg texcube.fcg nagel.bin
 
-objects = $(texcube_objects)
-sources = $(texcube_sources)
+fbo_objects = fbo_vpo.o fbo_fpo.o nagel_bin.o
+fbo_sources = fbo.cc texture.c fbo.vcg fbo.fcg nagel.bin
+
+objects = $(fbo_objects)
+sources = $(fbo_sources)
 
 rsxgltest_elf_DEPENDENCIES = $(top_builddir)/src/library/libEGL.a $(top_builddir)/src/library/libGL.a	\
 	$(objects)

@@ -70,6 +70,8 @@ struct renderbuffer_t {
   uint32_t ref_count;
 
   memory_arena_t::name_type arena;
+  uint8_t samples;
+
   surface_t surface;
 
   renderbuffer_t();

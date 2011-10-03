@@ -29,7 +29,7 @@ renderbuffer_t::storage_type & renderbuffer_t::storage()
 }
 
 renderbuffer_t::renderbuffer_t()
-  : deleted(0), timestamp(0), ref_count(0), arena(0)
+  : deleted(0), timestamp(0), ref_count(0), arena(0), samples(0)
 {
 }
 
@@ -93,19 +93,25 @@ glIsRenderbuffer (GLuint renderbuffer)
 static inline uint8_t
 rsxgl_renderbuffer_format(GLenum internalformat)
 {
-  if(internalformat == GL_RGBA || internalformat == GL_RGBA8) {
+  if(internalformat == GL_RGBA) {
     return RSXGL_RENDERBUFFER_FORMAT_A8R8G8B8;
   }
-  else if(internalformat == GL_RGB || internalformat == GL_RGB8) {
+  else if(internalformat == GL_BGRA) {
+    return RSXGL_RENDERBUFFER_FORMAT_A8B8G8R8;
+  }
+  else if(internalformat == GL_RGB) {
     return RSXGL_RENDERBUFFER_FORMAT_X8R8G8B8;
   }
-  else if(internalformat == GL_RED || internalformat == GL_R8) {
+  else if(internalformat == GL_BGR) {
+    return RSXGL_RENDERBUFFER_FORMAT_X8B8G8R8;
+  }
+  else if(internalformat == GL_RED) {
     return RSXGL_RENDERBUFFER_FORMAT_B8;
   }
-  else if(internalformat == GL_DEPTH_COMPONENT16 || internalformat == GL_DEPTH_COMPONENT) {
+  else if(internalformat == GL_DEPTH_COMPONENT) {
     return RSXGL_RENDERBUFFER_FORMAT_DEPTH16;
   }
-  else if(internalformat == GL_DEPTH_COMPONENT24) {
+  else if(internalformat == GL_DEPTH_STENCIL) {
     return RSXGL_RENDERBUFFER_FORMAT_DEPTH24_D8;
   }
   else {
@@ -126,6 +132,36 @@ rsxgl_renderbuffer_bytesPerPixel[] = {
   4,
   4,
   2
+};
+
+static GLenum
+rsxgl_renderbuffer_gl_format[] = {
+  GL_RGB,
+  GL_RGB,
+  GL_RGBA,
+  GL_RED,
+  GL_NONE,
+  GL_NONE,
+  GL_NONE,
+  GL_BGR,
+  GL_BGRA,
+  GL_DEPTH_STENCIL,
+  GL_DEPTH_COMPONENT
+};
+
+// red, green, blue, alpha, depth, stencil
+static uint32_t
+rsxgl_renderbuffer_bit_depth[][6] = {
+  { 5, 6, 5, 0, 0, 0 },
+  { 8, 8, 8, 0, 0, 0 },
+  { 8, 8, 8, 8, 0, 0 },
+  { 8, 0, 0, 0, 0, 0 },
+  { 16, 16, 16, 16, 0, 0 },
+  { 32, 32, 32, 32, 0, 0 },
+  { 8, 8, 8, 0, 0, 0 },
+  { 8, 8, 8, 8, 0, 0 },
+  { 0, 0, 0, 0, 24, 8 },
+  { 0, 0, 0, 0, 16, 0 }
 };
 
 static inline uint32_t
@@ -162,14 +198,9 @@ glBindRenderbuffer (GLuint target, GLuint renderbuffer_name)
   RSXGL_NOERROR_();
 }
 
-GLAPI void APIENTRY
-glRenderbufferStorage (GLenum target, GLenum internalformat, GLsizei width, GLsizei height)
+static inline void
+rsxgl_renderbuffer_storage(rsxgl_context_t * ctx,const renderbuffer_t::name_type renderbuffer_name,GLenum internalformat, GLsizei width, GLsizei height)
 {
-  const uint32_t rsx_target = rsxgl_renderbuffer_target(target);
-  if(rsx_target == ~0) {
-    RSXGL_ERROR_(GL_INVALID_ENUM);
-  }
-
   if(width < 0 || width > RSXGL_MAX_RENDERBUFFER_SIZE || height < 0 || height > RSXGL_MAX_RENDERBUFFER_SIZE) {
     RSXGL_ERROR_(GL_INVALID_VALUE);
   }
@@ -179,12 +210,7 @@ glRenderbufferStorage (GLenum target, GLenum internalformat, GLsizei width, GLsi
     RSXGL_ERROR_(GL_INVALID_ENUM);
   }
 
-  rsxgl_context_t * ctx = current_ctx();
-
-  if(ctx -> renderbuffer_binding.names[rsx_target] == 0) {
-    RSXGL_ERROR_(GL_INVALID_OPERATION);
-  }
-  renderbuffer_t & renderbuffer = ctx -> renderbuffer_binding[rsx_target];
+  renderbuffer_t & renderbuffer = renderbuffer_t::storage().at(renderbuffer_name);
 
   // TODO - orphan instead of delete:
   if(renderbuffer.timestamp > 0) {
@@ -203,6 +229,9 @@ glRenderbufferStorage (GLenum target, GLenum internalformat, GLsizei width, GLsi
   const uint32_t pitch = align_pot< uint32_t, 64 >(width * rsxgl_renderbuffer_bytesPerPixel[rsx_format]);
   const uint32_t nbytes = pitch * height;
 
+  rsxgl_debug_printf("\t%ux%u pitch: %u bytes: %u\n",
+		     width,height,pitch,nbytes);
+
   surface.memory = rsxgl_arena_allocate(memory_arena_t::storage().at(arena),128,nbytes);
   if(surface.memory.offset == 0) {
     RSXGL_ERROR_(GL_OUT_OF_MEMORY);
@@ -217,6 +246,87 @@ glRenderbufferStorage (GLenum target, GLenum internalformat, GLsizei width, GLsi
 }
 
 GLAPI void APIENTRY
+glRenderbufferStorage (GLenum target, GLenum internalformat, GLsizei width, GLsizei height)
+{
+  const uint32_t rsx_target = rsxgl_renderbuffer_target(target);
+  if(rsx_target == ~0) {
+    RSXGL_ERROR_(GL_INVALID_ENUM);
+  }
+
+  rsxgl_context_t * ctx = current_ctx();
+
+  if(ctx -> renderbuffer_binding.names[rsx_target] == 0) {
+    RSXGL_ERROR_(GL_INVALID_OPERATION);
+  }
+
+  rsxgl_renderbuffer_storage(ctx,ctx -> renderbuffer_binding.names[rsx_target],internalformat,width,height);
+}
+
+GLAPI void APIENTRY
+glRenderbufferStorageMultisample (GLenum target, GLsizei samples, GLenum internalformat, GLsizei width, GLsizei height)
+{
+  const uint32_t rsx_target = rsxgl_renderbuffer_target(target);
+  if(rsx_target == ~0) {
+    RSXGL_ERROR_(GL_INVALID_ENUM);
+  }
+
+  if(samples > RSXGL_MAX_SAMPLES) {
+    RSXGL_ERROR_(GL_INVALID_VALUE);
+  }
+
+  rsxgl_context_t * ctx = current_ctx();
+
+  if(ctx -> renderbuffer_binding.names[rsx_target] == 0) {
+    RSXGL_ERROR_(GL_INVALID_OPERATION);
+  }
+
+  rsxgl_renderbuffer_storage(ctx,ctx -> renderbuffer_binding.names[rsx_target],internalformat,width,height);
+}
+
+static inline void
+rsxgl_renderbuffer_parameteriv(rsxgl_context_t * ctx,const renderbuffer_t::name_type renderbuffer_name, GLenum pname, GLint *params)
+{
+  const renderbuffer_t & renderbuffer = renderbuffer_t::storage().at(renderbuffer_name);
+  const surface_t & surface = renderbuffer.surface;
+
+  if(pname == GL_RENDERBUFFER_WIDTH) {
+    *params = surface.size[0];
+  }
+  else if(pname == GL_RENDERBUFFER_HEIGHT) {
+    *params = surface.size[1];
+  }
+  else if(pname == GL_RENDERBUFFER_INTERNAL_FORMAT) {
+    *params = rsxgl_renderbuffer_gl_format[surface.format];
+  }
+  else if(pname == GL_RENDERBUFFER_SAMPLES) {
+    *params = renderbuffer.samples;
+  }
+  else if(pname == GL_RENDERBUFFER_RED_SIZE) {
+    *params = rsxgl_renderbuffer_bit_depth[surface.format][0];
+  }
+  else if(pname == GL_RENDERBUFFER_BLUE_SIZE) {
+    *params = rsxgl_renderbuffer_bit_depth[surface.format][1];
+  }
+  else if(pname == GL_RENDERBUFFER_GREEN_SIZE) {
+    *params = rsxgl_renderbuffer_bit_depth[surface.format][2];
+  }
+  else if(pname == GL_RENDERBUFFER_ALPHA_SIZE) {
+    *params = rsxgl_renderbuffer_bit_depth[surface.format][3];
+  }
+  else if(pname == GL_RENDERBUFFER_DEPTH_SIZE) {
+    *params = rsxgl_renderbuffer_bit_depth[surface.format][4];
+  }
+  else if(pname == GL_RENDERBUFFER_STENCIL_SIZE) {
+    *params = rsxgl_renderbuffer_bit_depth[surface.format][5];
+  }
+  else {
+    RSXGL_ERROR_(GL_INVALID_ENUM);
+  }
+
+  RSXGL_NOERROR_();
+}
+
+GLAPI void APIENTRY
 glGetRenderbufferParameteriv (GLenum target, GLenum pname, GLint *params)
 {
   const uint32_t rsx_target = rsxgl_renderbuffer_target(target);
@@ -224,7 +334,13 @@ glGetRenderbufferParameteriv (GLenum target, GLenum pname, GLint *params)
     RSXGL_ERROR_(GL_INVALID_ENUM);
   }
 
-  RSXGL_NOERROR_();
+  rsxgl_context_t * ctx = current_ctx();
+
+  if(ctx -> renderbuffer_binding.names[rsx_target] == 0) {
+    RSXGL_ERROR_(GL_INVALID_OPERATION);
+  }
+
+  rsxgl_renderbuffer_parameteriv(ctx,ctx -> renderbuffer_binding.names[rsx_target],pname,params);
 }
 
 // Framebuffers:
@@ -467,12 +583,6 @@ glGenerateMipmap (GLenum target)
 
 GLAPI void APIENTRY
 glBlitFramebuffer (GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1, GLint dstX0, GLint dstY0, GLint dstX1, GLint dstY1, GLbitfield mask, GLenum filter)
-{
-  RSXGL_NOERROR_();
-}
-
-GLAPI void APIENTRY
-glRenderbufferStorageMultisample (GLenum target, GLsizei samples, GLenum internalformat, GLsizei width, GLsizei height)
 {
   RSXGL_NOERROR_();
 }
