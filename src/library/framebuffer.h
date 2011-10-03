@@ -106,7 +106,7 @@ enum rsxgl_framebuffer_attachment_type {
 };
 
 struct framebuffer_t {
-  typedef bindable_gl_object< framebuffer_t, RSXGL_MAX_FRAMEBUFFERS, RSXGL_MAX_FRAMEBUFFER_TARGETS > gl_object_type;
+  typedef bindable_gl_object< framebuffer_t, RSXGL_MAX_FRAMEBUFFERS, RSXGL_MAX_FRAMEBUFFER_TARGETS, 1 > gl_object_type;
   typedef typename gl_object_type::name_type name_type;
   typedef typename gl_object_type::storage_type storage_type;
   typedef typename gl_object_type::binding_bitfield_type binding_bitfield_type;
@@ -126,12 +126,10 @@ struct framebuffer_t {
 
   write_mask_t write_mask;
 
-#if 0
-  // attachments - 4 color, 1 depth + stencil (up to 5)
-  // these have a type, too - renderbuffer or texture
-  // there is also a mapping (set by glDrawBuffer() or glDrawBuffers()) - up to 4 values
+  uint8_t is_default:1, invalid:1;
 
-#endif  
+  surface_t surfaces[RSXGL_MAX_ATTACHMENTS];
+  uint32_t fmt;
 
   framebuffer_t();
   ~framebuffer_t();
@@ -139,6 +137,7 @@ struct framebuffer_t {
 
 struct rsxgl_context_t;
 
+void rsxgl_framebuffer_validate(rsxgl_context_t *,framebuffer_t &,const uint32_t);
 void rsxgl_draw_framebuffer_validate(rsxgl_context_t *,const uint32_t);
 
 #endif

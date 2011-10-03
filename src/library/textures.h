@@ -153,7 +153,7 @@ struct texture_t {
     ~level_t();
   } levels[max_levels];
 
-  uint16_t invalid_storage:1,valid:1,immutable:1,internalformat:5, cube:1, rect:1, max_level:4, dims:2;
+  uint16_t invalid:1,valid:1,immutable:1,internalformat:5, cube:1, rect:1, max_level:4, dims:2;
 
   // --- Hot:
   uint32_t format;

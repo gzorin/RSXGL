@@ -62,7 +62,7 @@ glDeleteBuffers (GLsizei n, const GLuint* buffers)
   struct rsxgl_context_t * ctx = current_ctx();
 
   for(GLsizei i = 0;i < n;++i,++buffers) {
-    GLuint buffer_name = *buffers;
+    const GLuint buffer_name = *buffers;
 
     if(buffer_name == 0) continue;
 

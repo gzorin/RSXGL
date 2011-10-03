@@ -70,7 +70,7 @@ glDeleteSamplers (GLsizei count, const GLuint *samplers)
   struct rsxgl_context_t * ctx = current_ctx();
 
   for(GLsizei i = 0;i < count;++i,++samplers) {
-    GLuint sampler_name = *samplers;
+    const GLuint sampler_name = *samplers;
 
     if(sampler_name == 0) continue;
 
@@ -577,7 +577,7 @@ texture_t::storage_type & texture_t::storage()
 }
 
 texture_t::texture_t()
-  : deleted(0), timestamp(0), ref_count(0), invalid_storage(0), valid(0), immutable(0), internalformat(RSXGL_TEX_FORMAT_INVALID), cube(0), rect(0), max_level(0), dims(0), format(0), pitch(0), remap(0)
+  : deleted(0), timestamp(0), ref_count(0), invalid(0), valid(0), immutable(0), internalformat(RSXGL_TEX_FORMAT_INVALID), cube(0), rect(0), max_level(0), dims(0), format(0), pitch(0), remap(0)
 {
   size[0] = 0;
   size[1] = 0;
@@ -622,7 +622,7 @@ glDeleteTextures (GLsizei n, const GLuint *textures)
   struct rsxgl_context_t * ctx = current_ctx();
 
   for(GLsizei i = 0;i < n;++i,++textures) {
-    GLuint texture_name = *textures;
+    const GLuint texture_name = *textures;
 
     if(texture_name == 0) continue;
 
@@ -1311,8 +1311,8 @@ rsxgl_tex_image(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,GLi
   }
 #endif
 
-  // set the texture's invalid_storage & valid bits:
-  texture.invalid_storage = 1;
+  // set the texture's invalid & valid bits:
+  texture.invalid = 1;
   texture.valid = 0;
   texture.dims = 0;
 
@@ -1424,7 +1424,7 @@ rsxgl_tex_storage(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,G
     }
   }
 
-  texture.invalid_storage = 0;
+  texture.invalid = 0;
   texture.valid = 1;
   texture.immutable = 1;
   texture.internalformat = internalformat;
@@ -1527,7 +1527,7 @@ rsxgl_tex_subimage(rsxgl_context_t * ctx,texture_t & texture,GLint level,GLint x
   }
   // rsxgl_tex_image was called to request that a texture level be allocated, but that hasn't been done yet
   // allocate the temporary buffer for that level if it hasn't been already
-  else if(texture.invalid_storage && texture.levels[level].internalformat != RSXGL_TEX_FORMAT_INVALID) {
+  else if(texture.invalid && texture.levels[level].internalformat != RSXGL_TEX_FORMAT_INVALID) {
     // there is a pixel buffer object attached - obtain pointer to it, then memcpy:
     if(ctx -> buffer_binding.names[RSXGL_PIXEL_UNPACK_BUFFER] != 0) {
       srcaddress = rsxgl_arena_address(memory_arena_t::storage().at(ctx -> buffer_binding[RSXGL_PIXEL_UNPACK_BUFFER].arena),
@@ -1844,7 +1844,7 @@ rsxgl_texture_validate(rsxgl_context_t * ctx,texture_t & texture,const uint32_t 
   texture.timestamp = timestamp;
 
   // storage is invalid:
-  if(texture.invalid_storage) {
+  if(texture.invalid) {
     //rsxgl_debug_printf("\t\tinvalid_storage: dims: %u\n",texture.dims);
     
     // destroy whatever is already there:
@@ -1982,7 +1982,7 @@ rsxgl_texture_validate(rsxgl_context_t * ctx,texture_t & texture,const uint32_t 
     }
     
     // always set this to 0:
-    texture.invalid_storage = 0;
+    texture.invalid = 0;
   }  
 }
 

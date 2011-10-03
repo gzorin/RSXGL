@@ -344,13 +344,25 @@ glGetRenderbufferParameteriv (GLenum target, GLenum pname, GLint *params)
 }
 
 // Framebuffers:
+void
+rsxgl_init_default_framebuffer(void * ptr)
+{
+  rsxgl_debug_printf("%s\n",__PRETTY_FUNCTION__);
+
+  framebuffer_t::storage_type * storage = (framebuffer_t::storage_type *)ptr;
+  framebuffer_t & framebuffer = storage -> at(0);
+  framebuffer = framebuffer_t();
+  framebuffer.is_default = 1;
+}
+
 framebuffer_t::storage_type & framebuffer_t::storage()
 {
-  static framebuffer_t::storage_type _storage(0,0);
+  static framebuffer_t::storage_type _storage(0,0,rsxgl_init_default_framebuffer);
   return _storage;
 }
 
 framebuffer_t::framebuffer_t()
+  : is_default(0), invalid(0)
 {
   for(size_t i = 0;i < RSXGL_MAX_ATTACHMENTS;++i) {
     attachments[i] = 0;
@@ -392,7 +404,7 @@ glDeleteFramebuffers (GLsizei n, const GLuint *framebuffers)
   struct rsxgl_context_t * ctx = current_ctx();
 
   for(GLsizei i = 0;i < n;++i,++framebuffers) {
-    GLuint framebuffer_name = *framebuffers;
+    const GLuint framebuffer_name = *framebuffers;
 
     if(framebuffer_name == 0) continue;
 
@@ -550,8 +562,14 @@ rsxgl_framebuffer_renderbuffer(rsxgl_context_t * ctx,const framebuffer_t::name_t
     framebuffer.attachments[rsx_attachment] = renderbuffer_name;
   }
 
-  if(ctx -> framebuffer_binding.is_bound(RSXGL_DRAW_FRAMEBUFFER,framebuffer_name)) ctx -> state.invalid.parts.draw_framebuffer = 1;
-  if(ctx -> framebuffer_binding.is_bound(RSXGL_READ_FRAMEBUFFER,framebuffer_name)) ctx -> state.invalid.parts.read_framebuffer = 1;
+  if(ctx -> framebuffer_binding.is_bound(RSXGL_DRAW_FRAMEBUFFER,framebuffer_name)) {
+    ctx -> state.invalid.parts.draw_framebuffer = 1;
+    ctx -> state.invalid.parts.draw_status = 1;
+  }
+  if(ctx -> framebuffer_binding.is_bound(RSXGL_READ_FRAMEBUFFER,framebuffer_name)) {
+    ctx -> state.invalid.parts.read_framebuffer = 1;
+    ctx -> state.invalid.parts.read_status = 1;
+  }
 
   RSXGL_NOERROR_();
 }
@@ -672,12 +690,29 @@ rsxgl_emit_surface(gcmContextData * context,const uint8_t which,surface_t const 
 }
 
 void
+rsxgl_framebuffer_validate(rsxgl_context_t * ctx,framebuffer_t & framebuffer,const uint32_t timestamp)
+{
+  if(framebuffer.invalid) {
+    if(framebuffer.is_default) {
+    }
+    else {
+    }
+
+    framebuffer.invalid = 0;
+  }
+}
+
+void
 rsxgl_draw_framebuffer_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
 {
   gcmContextData * context = ctx -> gcm_context();
 
   if(ctx -> state.invalid.parts.draw_framebuffer) {
     uint16_t enabled = 0, format = 0, w = 0, h = 0;
+
+    framebuffer_t & framebuffer = ctx -> framebuffer_binding[RSXGL_DRAW_FRAMEBUFFER];
+
+    rsxgl_framebuffer_validate(ctx,framebuffer,timestamp);
 
     // no FBO is bound - use the window system's:
     if(ctx -> framebuffer_binding.names[RSXGL_DRAW_FRAMEBUFFER] == 0) {
