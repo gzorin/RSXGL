@@ -55,8 +55,6 @@ rsxgl_context_t::egl_callback(struct rsxegl_context_t * egl_ctx,const uint8_t op
   rsxgl_context_t * ctx = (rsxgl_context_t *)egl_ctx;
 
   if(op == RSXEGL_MAKE_CONTEXT_CURRENT) {
-    ctx -> surfaces_format = ctx -> base.draw -> format;
-
     // formats are unused when validating framebuffer 0 (the EGL-supplied framebuffer):
     ctx -> color_surfaces[0].format = ~0;
     ctx -> color_surfaces[0].size[0] = ctx -> base.draw -> width;
@@ -82,7 +80,59 @@ rsxgl_context_t::egl_callback(struct rsxegl_context_t * egl_ctx,const uint8_t op
     ctx -> depth_surface.memory.offset = ctx -> base.draw -> depth_buffer.offset;
     ctx -> depth_surface.memory.owner = 0;
 
+    const uint32_t surfaces_format = ctx -> base.draw -> format;
+
+    ctx -> surfaces_format = surfaces_format;
     ctx -> draw_buffer = ctx -> base.draw -> buffer;
+
+    write_mask_t surfaces_write_mask;
+    surfaces_write_mask.all = 0;
+
+    if(ctx -> color_surfaces[0].memory.offset != 0) {
+      const uint32_t surfaces_format_color = surfaces_format & NV30_3D_RT_FORMAT_COLOR__MASK;
+      switch(surfaces_format_color) {
+      case NV30_3D_RT_FORMAT_COLOR_R5G6B5:
+      case NV30_3D_RT_FORMAT_COLOR_X8R8G8B8:
+      case NV30_3D_RT_FORMAT_COLOR_X8B8G8R8:
+	surfaces_write_mask.parts.r = 1;
+	surfaces_write_mask.parts.g = 1;
+	surfaces_write_mask.parts.b = 1;
+	surfaces_write_mask.parts.a = 0;
+	break;
+      case NV30_3D_RT_FORMAT_COLOR_A8R8G8B8:
+      case NV30_3D_RT_FORMAT_COLOR_A8B8G8R8:
+      case NV30_3D_RT_FORMAT_COLOR_A16B16G16R16_FLOAT:
+      case NV30_3D_RT_FORMAT_COLOR_A32B32G32R32_FLOAT:
+	surfaces_write_mask.parts.r = 1;
+	surfaces_write_mask.parts.g = 1;
+	surfaces_write_mask.parts.b = 1;
+	surfaces_write_mask.parts.a = 1;
+	break;
+      case NV30_3D_RT_FORMAT_COLOR_B8:
+      case NV30_3D_RT_FORMAT_COLOR_R32_FLOAT:
+	surfaces_write_mask.parts.r = 1;
+	surfaces_write_mask.parts.g = 0;
+	surfaces_write_mask.parts.b = 0;
+	surfaces_write_mask.parts.a = 0;
+	break;
+      };
+    }
+
+    if(ctx -> depth_surface.memory.offset != 0) {
+      const uint32_t surfaces_format_depth = surfaces_format & NV30_3D_RT_FORMAT_ZETA__MASK;
+      switch(surfaces_format_depth) {
+      case NV30_3D_RT_FORMAT_ZETA_Z16:
+	surfaces_write_mask.parts.depth = 1;
+	surfaces_write_mask.parts.stencil = 0;
+	break;
+      case NV30_3D_RT_FORMAT_ZETA_Z24S8:
+	surfaces_write_mask.parts.depth = 1;
+	surfaces_write_mask.parts.stencil = 1;
+	break;
+      };
+    }
+      
+    ctx -> surfaces_write_mask = surfaces_write_mask;
 
     if(ctx -> state.viewport.width == 0 && ctx -> state.viewport.height == 0) {
       ctx -> state.viewport.x = 0;
@@ -179,15 +229,21 @@ rsxgl_timestamp_post(rsxgl_context_t * ctx,const uint32_t timestamp)
 uint32_t
 rsxgl_draw_status_validate(rsxgl_context_t * ctx)
 {
-  if(ctx -> state.invalid.draw_status) {
+  if(ctx -> state.invalid.parts.draw_status) {
     uint8_t draw_status = 1;
 
-    // Is there a valid program bound?
-    draw_status &= ctx -> program_binding.is_anything_bound(RSXGL_ACTIVE_PROGRAM) && program_binding[RSXGL_ACTIVE_PROGRAM].validated;
+    // Is there a valid program bound:
+    draw_status &= ctx -> program_binding.is_anything_bound(RSXGL_ACTIVE_PROGRAM) && ctx -> program_binding[RSXGL_ACTIVE_PROGRAM].validated;
 
-    // Writing to 
+    // Check current framebuffer vs. writemask:
+    if(ctx -> framebuffer_binding.is_anything_bound(RSXGL_DRAW_FRAMEBUFFER)) {
+    }
+    else {
+      draw_status &= (ctx -> surfaces_write_mask.all == ctx -> state.write_mask.all);
+    }
 
-    ctx -> state.invalid.draw_status = 0;
+    ctx -> draw_status = draw_status;
+    ctx -> state.invalid.parts.draw_status = 0;
   }
   return ctx -> draw_status;
 }
@@ -195,8 +251,11 @@ rsxgl_draw_status_validate(rsxgl_context_t * ctx)
 uint32_t
 rsxgl_read_status_validate(rsxgl_context_t * ctx)
 {
-  if(ctx -> state.invalid.read_status) {
-    ctx -> state.invalid.read_status = 0;
+  if(ctx -> state.invalid.parts.read_status) {
+    uint8_t read_status = 1;
+
+    ctx -> read_status = read_status;
+    ctx -> state.invalid.parts.read_status = 0;
   }
   return ctx -> read_status;
 }

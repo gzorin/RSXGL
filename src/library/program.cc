@@ -1534,6 +1534,7 @@ glUseProgram (GLuint program_name)
   if(ctx -> program_binding.names[RSXGL_ACTIVE_PROGRAM] != program_name) {
     ctx -> program_binding.bind(RSXGL_ACTIVE_PROGRAM,program_name);
     ctx -> state.invalid.parts.program = 1;
+    ctx -> state.invalid.parts.draw_status = 1;
   }
 
   RSXGL_NOERROR_();

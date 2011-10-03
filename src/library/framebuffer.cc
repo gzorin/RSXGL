@@ -355,6 +355,7 @@ framebuffer_t::framebuffer_t()
   for(size_t i = 0;i < RSXGL_MAX_ATTACHMENTS;++i) {
     attachments[i] = 0;
   }
+  write_mask.all = 0;
 }
 
 framebuffer_t::~framebuffer_t()
@@ -432,12 +433,14 @@ glBindFramebuffer (GLenum target, GLuint framebuffer_name)
 
   if(target == GL_FRAMEBUFFER || target == GL_DRAW_FRAMEBUFFER) {
     ctx -> framebuffer_binding.bind(RSXGL_DRAW_FRAMEBUFFER,framebuffer_name);
+    ctx -> state.invalid.parts.draw_framebuffer = 1;
+    ctx -> state.invalid.parts.draw_status = 1;
   }
   if(target == GL_FRAMEBUFFER || target == GL_READ_FRAMEBUFFER) {
     ctx -> framebuffer_binding.bind(RSXGL_READ_FRAMEBUFFER,framebuffer_name);
+    ctx -> state.invalid.parts.read_framebuffer = 1;
+    ctx -> state.invalid.parts.read_status = 1;
   }
-
-  ctx -> state.invalid.parts.draw_framebuffer = 1;
 
   RSXGL_NOERROR_();
 }

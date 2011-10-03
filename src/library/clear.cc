@@ -108,11 +108,11 @@ glClear(GLbitfield mask)
   gcm_emit_method(&buffer,NV30_3D_CLEAR_BUFFERS,1);
   
   gcm_emit(&buffer,
-	   (mask & GL_COLOR_BUFFER_BIT ? ((ctx -> state.write_mask.r ? NV30_3D_CLEAR_BUFFERS_COLOR_R : 0) |
-					  (ctx -> state.write_mask.g ? NV30_3D_CLEAR_BUFFERS_COLOR_G : 0) |
-					  (ctx -> state.write_mask.b ? NV30_3D_CLEAR_BUFFERS_COLOR_B : 0) |
-					  (ctx -> state.write_mask.a ? NV30_3D_CLEAR_BUFFERS_COLOR_A : 0)) : 0) |
-	   (mask & GL_DEPTH_BUFFER_BIT ? (ctx -> state.write_mask.depth ? NV30_3D_CLEAR_BUFFERS_DEPTH : 0) : 0) |
+	   (mask & GL_COLOR_BUFFER_BIT ? ((ctx -> state.write_mask.parts.r ? NV30_3D_CLEAR_BUFFERS_COLOR_R : 0) |
+					  (ctx -> state.write_mask.parts.g ? NV30_3D_CLEAR_BUFFERS_COLOR_G : 0) |
+					  (ctx -> state.write_mask.parts.b ? NV30_3D_CLEAR_BUFFERS_COLOR_B : 0) |
+					  (ctx -> state.write_mask.parts.a ? NV30_3D_CLEAR_BUFFERS_COLOR_A : 0)) : 0) |
+	   (mask & GL_DEPTH_BUFFER_BIT ? (ctx -> state.write_mask.parts.depth ? NV30_3D_CLEAR_BUFFERS_DEPTH : 0) : 0) |
 	   (mask & GL_STENCIL_BUFFER_BIT ? NV30_3D_CLEAR_BUFFERS_STENCIL : 0));
   
   gcm_finish_commands(context,&buffer);

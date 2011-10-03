@@ -11,7 +11,7 @@
 #include "gl_constants.h"
 #include "gl_types.h"
 #include "rsxgl_context.h"
-#include "program.h"
+#include "framebuffer.h"
 
 #include <cstddef>
 #include <bitset>
@@ -122,11 +122,7 @@ struct state_t {
     uint64_t x:16,y:16,width:16,height:16;
   } scissor;
 
-  // depth and stencil here are actually derived from other settings
-  // (depth test enable/disable and depth write mask, and stencil test enable/disable)
-  struct write_mask_t {
-    uint8_t r:1, g:1, b:1, a:1, depth:1, stencil:1;
-  } write_mask;
+  write_mask_t write_mask;
 
   struct {
     uint32_t clear;

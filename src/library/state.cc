@@ -40,10 +40,10 @@ state_t::state_t()
   scissor.width = 4096;
   scissor.height = 4096;
 
-  write_mask.r = 1;
-  write_mask.g = 1;
-  write_mask.b = 1;
-  write_mask.a = 1;
+  write_mask.parts.r = 1;
+  write_mask.parts.g = 1;
+  write_mask.parts.b = 1;
+  write_mask.parts.a = 1;
   color.clear = 0;
 
   enable.depth_test = 0;
@@ -51,7 +51,7 @@ state_t::state_t()
   depth.clear = 0xffff;
   depth.func = RSXGL_LESS;
 
-  write_mask.depth = enable.depth_test | depth.write_mask;
+  write_mask.parts.depth = enable.depth_test | depth.write_mask;
 
   enable.blend = 0;
   blend.color = 0;
@@ -76,7 +76,7 @@ state_t::state_t()
   stencil.face[1].zfail_op = RSXGL_KEEP;
   stencil.face[1].pass_op = RSXGL_KEEP;
 
-  write_mask.stencil = stencil.face[0].enable | stencil.face[1].enable;
+  write_mask.parts.stencil = stencil.face[0].enable | stencil.face[1].enable;
 
   polygon.cullEnable = 0;
   polygon.cullFace = RSXGL_CULL_BACK;
@@ -292,7 +292,7 @@ rsxgl_state_validate(rsxgl_context_t * ctx)
 
   // color write mask:
   if(s -> invalid.parts.color_write_mask) {
-    rsxgl_emit_color_write_mask(context,s -> write_mask.r,s -> write_mask.g,s -> write_mask.b,s -> write_mask.a);
+    rsxgl_emit_color_write_mask(context,s -> write_mask.parts.r,s -> write_mask.parts.g,s -> write_mask.parts.b,s -> write_mask.parts.a);
     s -> invalid.parts.color_write_mask = 0;
   }
 
@@ -588,10 +588,10 @@ glColorMask(GLboolean red,GLboolean green,GLboolean blue,GLboolean alpha)
 {
   struct rsxgl_context_t * ctx = current_ctx();
 
-  ctx -> state.write_mask.r = red;
-  ctx -> state.write_mask.g = green;
-  ctx -> state.write_mask.b = blue;
-  ctx -> state.write_mask.a = alpha;
+  ctx -> state.write_mask.parts.r = red;
+  ctx -> state.write_mask.parts.g = green;
+  ctx -> state.write_mask.parts.b = blue;
+  ctx -> state.write_mask.parts.a = alpha;
 
   ctx -> state.invalid.parts.color_write_mask = 1;
   ctx -> state.invalid.parts.draw_status = 1;
@@ -605,7 +605,7 @@ glDepthMask (GLboolean flag)
   struct rsxgl_context_t * ctx = current_ctx();
 
   ctx -> state.depth.write_mask = flag;
-  ctx -> state.write_mask.depth = ctx -> state.enable.depth_test | ctx -> state.depth.write_mask;
+  ctx -> state.write_mask.parts.depth = ctx -> state.enable.depth_test | ctx -> state.depth.write_mask;
 
   ctx -> state.invalid.parts.depth_write_mask = 1;
   ctx -> state.invalid.parts.draw_status = 1;

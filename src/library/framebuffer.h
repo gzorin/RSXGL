@@ -21,6 +21,14 @@
 #include <boost/mpl/sizeof.hpp>
 #include <boost/mpl/deref.hpp>
 
+// This serves to store both what the application wants, and what the current framebuffer provides:
+union write_mask_t {
+  uint8_t all;
+  struct {
+    uint8_t r:1, g:1, b:1, a:1, depth:1, stencil:1;
+  } parts;
+};
+
 enum rsxgl_renderbuffer_target {
   RSXGL_RENDERBUFFER = 0,
   RSXGL_MAX_RENDERBUFFER_TARGETS = 1
@@ -115,6 +123,8 @@ struct framebuffer_t {
 
   smint_array< RSXGL_MAX_ATTACHMENT_TYPES - 1, RSXGL_MAX_ATTACHMENTS > attachment_types;
   attachment_name_type attachments[RSXGL_MAX_ATTACHMENTS];
+
+  write_mask_t write_mask;
 
 #if 0
   // attachments - 4 color, 1 depth + stencil (up to 5)
