@@ -117,7 +117,8 @@ struct framebuffer_t {
   typedef boost::mpl::max_element< boost::mpl::transform_view< attachment_name_types, boost::mpl::sizeof_< boost::mpl::_1 > > >::type attachment_name_types_iter;
   typedef boost::mpl::deref< attachment_name_types_iter::base >::type attachment_name_type;
 
-  smint_array< RSXGL_MAX_ATTACHMENT_TYPES - 1, RSXGL_MAX_ATTACHMENTS > attachment_types;
+  typedef smint_array< RSXGL_MAX_ATTACHMENT_TYPES - 1, RSXGL_MAX_ATTACHMENTS > attachment_types_t;
+  attachment_types_t attachment_types;
   attachment_name_type attachments[RSXGL_MAX_ATTACHMENTS];
 
   write_mask_t write_mask;

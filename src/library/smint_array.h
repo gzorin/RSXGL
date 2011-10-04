@@ -63,61 +63,106 @@ public:
   static const size_t values_per_word = word_bits / value_bits;
   static const size_t num_words = impl_type::num_words;
 
+  typedef typename boost::uint_value_t< N >::least index_type;
+  typedef typename boost::uint_value_t< num_words >::least word_index_type;
+  typedef typename boost::uint_value_t< values_per_word >::least value_index_type;
+
   smint_array() {
-    for(size_t i = 0;i < num_words;++i) {
+    for(word_index_type i = 0;i < num_words;++i) {
       impl.values[i] = 0;
     }
   }
 
-  smint_array(const smint_array & rhs) {
-    for(size_t i = 0;i < num_words;++i) {
+  smint_array(smint_array const & rhs) {
+    for(word_index_type i = 0;i < num_words;++i) {
       impl.values[i] = rhs.impl.values[i];
     }
   }
 
-  smint_array & operator =(const smint_array & rhs) {
-    for(size_t i = 0;i < num_words;++i) {
+  smint_array & operator =(smint_array const & rhs) {
+    for(word_index_type i = 0;i < num_words;++i) {
       impl.values[i] = rhs.impl.values[i];
     }
     return *this;
   }
 
   inline
-  void set(size_t i,value_type x) {
+  void set(const index_type i,value_type x) {
     assert(i < N);
-    const size_t ii = i / values_per_word;
-    const size_t jj = i % values_per_word;
+    const word_index_type ii = i / values_per_word;
+    const value_index_type jj = i % values_per_word;
     const size_t shift_bits = jj * value_bits;
     impl.values[ii] = (impl.values[ii] & ~(value_mask << shift_bits)) | (((word_type)x & value_mask) << shift_bits);
   }
 
   inline
-  value_type get(size_t i) const {
+  value_type get(const index_type i) const {
     assert(i < N);
-    const size_t ii = i / values_per_word;
-    const size_t jj = i % values_per_word;
+    const word_index_type ii = i / values_per_word;
+    const value_index_type jj = i % values_per_word;
     const size_t shift_bits = jj * value_bits;
     return (value_type)((impl.values[ii] >> shift_bits) & value_mask);
   }
 
   inline
-  value_type operator[](size_t i) const {
+  value_type operator[](const index_type i) const {
     assert(i < N);
-    const size_t ii = i / values_per_word;
-    const size_t jj = i % values_per_word;
+    const word_index_type ii = i / values_per_word;
+    const value_index_type jj = i % values_per_word;
     const size_t shift_bits = jj * value_bits;
     return (value_type)((impl.values[ii] >> shift_bits) & value_mask);
   }
 
   template< typename Function >
   static void for_each(smint_array const & array,Function const & fn) {
-    for(size_t i = 0,j = 0;i < num_words && j < N;++i) {
+    index_type j = 0;
+    for(word_index_type i = 0;i < num_words && j < N;++i) {
       word_type word = array.impl.values[i];
-      for(size_t k = 0;k < values_per_word && j < N;++k,++j,word >>= value_bits) {
-	const value_type value = word & value_mask;
-	fn(j,value);
+      for(value_index_type k = 0;k < values_per_word && j < N;++k,++j,word >>= value_bits) {
+	fn(j,(value_type)(word & value_mask));
       }
     }
+  }
+
+  struct const_iterator {
+    word_index_type i;
+    index_type j;
+    value_index_type k;
+    word_type word;
+
+    const_iterator(const word_index_type _i,const index_type _j,const value_index_type _k,const word_type _word)
+      : i(_i), j(_j), k(_k), word(_word) {
+    }
+
+    index_type index() const {
+      return j;
+    }
+
+    value_type value() const {
+      return (value_type)(word & value_mask);
+    }
+
+    void next(smint_array const & array) {
+      ++j;
+      if(j < N) {
+	++k;
+	if(k < values_per_word) {
+	  word >>= value_bits;
+	}
+	else {
+	  word = array.impl.values[++i];
+	  k = 0;
+	}
+      }
+    }
+
+    bool done() const {
+      return !(j < N);
+    }
+  };
+
+  const_iterator begin() const {
+    return const_iterator(0,0,0,impl.values[0]);
   }
 };
 

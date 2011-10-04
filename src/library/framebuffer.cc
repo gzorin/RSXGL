@@ -716,6 +716,16 @@ rsxgl_renderbuffer_validate(rsxgl_context_t * ctx,renderbuffer_t & renderbuffer,
 void
 rsxgl_framebuffer_validate(rsxgl_context_t * ctx,framebuffer_t & framebuffer,const uint32_t timestamp)
 {
+  for(framebuffer_t::attachment_types_t::const_iterator it = framebuffer.attachment_types.begin();!it.done();it.next(framebuffer.attachment_types)) {
+    const uint32_t type = it.value();
+    if(type == RSXGL_ATTACHMENT_TYPE_RENDERBUFFER) {
+      rsxgl_renderbuffer_validate(ctx,renderbuffer_t::storage().at(framebuffer.attachments[it.index()]),timestamp);
+    }
+    else if(type == RSXGL_ATTACHMENT_TYPE_TEXTURE) {
+      rsxgl_texture_validate(ctx,texture_t::storage().at(framebuffer.attachments[it.index()]),timestamp);
+    }
+  }
+
   if(framebuffer.invalid) {
     if(framebuffer.is_default) {
       const uint32_t format = ctx -> base.draw -> format;
@@ -743,7 +753,14 @@ rsxgl_framebuffer_validate(rsxgl_context_t * ctx,framebuffer_t & framebuffer,con
       write_mask_t write_mask;
       write_mask.all = 0;
       
-      if(framebuffer.surfaces[0].memory.offset != 0) {
+      if(format & NV30_3D_RT_FORMAT_COLOR__MASK) {
+	rsxgl_assert(framebuffer.surfaces[0].memory.offset != 0);
+
+	write_mask.parts.r = 1;
+	write_mask.parts.g = 1;
+	write_mask.parts.b = 1;
+	write_mask.parts.a = 1;
+#if 0
 	const uint32_t format_color = format & NV30_3D_RT_FORMAT_COLOR__MASK;
 	switch(format_color) {
 	case NV30_3D_RT_FORMAT_COLOR_R5G6B5:
@@ -771,25 +788,27 @@ rsxgl_framebuffer_validate(rsxgl_context_t * ctx,framebuffer_t & framebuffer,con
 	  write_mask.parts.a = 0;
 	  break;
 	};
+#endif
       }
       
-      if(framebuffer.surfaces[4].memory.offset != 0) {
-	const uint32_t format_depth = format & NV30_3D_RT_FORMAT_ZETA__MASK;
-	switch(format_depth) {
-	case NV30_3D_RT_FORMAT_ZETA_Z16:
-	  write_mask.parts.depth = 1;
-	  write_mask.parts.stencil = 0;
-	  break;
-	case NV30_3D_RT_FORMAT_ZETA_Z24S8:
-	  write_mask.parts.depth = 1;
-	  write_mask.parts.stencil = 1;
-	  break;
-	};
+      if(format & NV30_3D_RT_FORMAT_ZETA__MASK) {
+	rsxgl_assert(framebuffer.surfaces[4].memory.offset != 0);
+
+	write_mask.parts.depth = 1;
+	write_mask.parts.stencil = (format & NV30_3D_RT_FORMAT_ZETA__MASK) == (NV30_3D_RT_FORMAT_ZETA_Z24S8);
       }
       
       framebuffer.write_mask = write_mask;
     }
     else {
+      for(framebuffer_t::attachment_types_t::const_iterator it = framebuffer.attachment_types.begin();!it.done();it.next(framebuffer.attachment_types)) {
+	const uint32_t type = it.value();
+	if(type == RSXGL_ATTACHMENT_TYPE_RENDERBUFFER) {
+	}
+	else if(type == RSXGL_ATTACHMENT_TYPE_TEXTURE) {
+	}
+      }
+
       write_mask_t write_mask;
       write_mask.all = 0;
 
