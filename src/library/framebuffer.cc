@@ -360,7 +360,7 @@ framebuffer_t::storage_type & framebuffer_t::storage()
 }
 
 framebuffer_t::framebuffer_t()
-  : is_default(0), invalid(0), format(0)
+  : is_default(0), invalid(0), format(0), enabled(0)
 {
   for(size_t i = 0;i < RSXGL_MAX_ATTACHMENTS;++i) {
     attachments[i] = 0;
@@ -708,6 +708,12 @@ rsxgl_emit_surface(gcmContextData * context,const uint8_t which,surface_t const 
 }
 
 void
+rsxgl_renderbuffer_validate(rsxgl_context_t * ctx,renderbuffer_t & renderbuffer,const uint32_t timestamp)
+{
+  
+}
+
+void
 rsxgl_framebuffer_validate(rsxgl_context_t * ctx,framebuffer_t & framebuffer,const uint32_t timestamp)
 {
   if(framebuffer.invalid) {
@@ -814,24 +820,27 @@ rsxgl_draw_framebuffer_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
 
     const uint32_t format = framebuffer.format;
     const uint32_t enabled = framebuffer.enabled;
-    const uint16_t w = framebuffer.size[0], h = framebuffer.size[1];
+
+    if(format != 0 && enabled != 0) {
+      const uint16_t w = framebuffer.size[0], h = framebuffer.size[1];
+
+      uint32_t * buffer = gcm_reserve(context,9);
     
-    uint32_t * buffer = gcm_reserve(context,9);
-    
-    gcm_emit_method_at(buffer,0,NV30_3D_RT_FORMAT,1);
-    gcm_emit_at(buffer,1,format | ((31 - __builtin_clz(w)) << NV30_3D_RT_FORMAT_LOG2_WIDTH__SHIFT) | ((31 - __builtin_clz(h)) << NV30_3D_RT_FORMAT_LOG2_HEIGHT__SHIFT));
-    
-    gcm_emit_method_at(buffer,2,NV30_3D_RT_HORIZ,2);
-    gcm_emit_at(buffer,3,w << 16);
-    gcm_emit_at(buffer,4,h << 16);
-    
-    gcm_emit_method_at(buffer,5,NV30_3D_COORD_CONVENTIONS,1);
-    gcm_emit_at(buffer,6,h | NV30_3D_COORD_CONVENTIONS_ORIGIN_NORMAL);
-    
-    gcm_emit_method_at(buffer,7,NV30_3D_RT_ENABLE,1);
-    gcm_emit_at(buffer,8,enabled);
-    
-    gcm_finish_n_commands(context,9);
+      gcm_emit_method_at(buffer,0,NV30_3D_RT_FORMAT,1);
+      gcm_emit_at(buffer,1,format | ((31 - __builtin_clz(w)) << NV30_3D_RT_FORMAT_LOG2_WIDTH__SHIFT) | ((31 - __builtin_clz(h)) << NV30_3D_RT_FORMAT_LOG2_HEIGHT__SHIFT));
+      
+      gcm_emit_method_at(buffer,2,NV30_3D_RT_HORIZ,2);
+      gcm_emit_at(buffer,3,w << 16);
+      gcm_emit_at(buffer,4,h << 16);
+      
+      gcm_emit_method_at(buffer,5,NV30_3D_COORD_CONVENTIONS,1);
+      gcm_emit_at(buffer,6,h | NV30_3D_COORD_CONVENTIONS_ORIGIN_NORMAL);
+      
+      gcm_emit_method_at(buffer,7,NV30_3D_RT_ENABLE,1);
+      gcm_emit_at(buffer,8,enabled);
+      
+      gcm_finish_n_commands(context,9);
+    }
 
     ctx -> state.invalid.parts.draw_framebuffer = 0;
   }

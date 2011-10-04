@@ -134,6 +134,7 @@ struct framebuffer_t {
 
 struct rsxgl_context_t;
 
+void rsxgl_renderbuffer_validate(rsxgl_context_t *,renderbuffer_t &,const uint32_t);
 void rsxgl_framebuffer_validate(rsxgl_context_t *,framebuffer_t &,const uint32_t);
 void rsxgl_draw_framebuffer_validate(rsxgl_context_t *,const uint32_t);
 
