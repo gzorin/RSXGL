@@ -23,10 +23,11 @@
 struct rsxgl_context_t {
   rsxegl_context_t base;
 
+#if 0
   surface_t color_surfaces[2], depth_surface;
   uint32_t surfaces_format;
-  uint8_t draw_buffer;
   write_mask_t surfaces_write_mask;
+#endif
 
   state_t state;
 

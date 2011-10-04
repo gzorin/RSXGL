@@ -22,7 +22,7 @@ rsxgl_context_create(const struct rsxegl_config_t * config,gcmContextData * gcm_
 }
 
 rsxgl_context_t::rsxgl_context_t(const struct rsxegl_config_t * config,gcmContextData * gcm_context)
-  : draw_buffer(0), active_texture(0), draw_status(0), read_status(0), ref(0), timestamp_sync(0), next_timestamp(1), last_timestamp(0), cached_timestamp(0)
+  : active_texture(0), draw_status(0), read_status(0), ref(0), timestamp_sync(0), next_timestamp(1), last_timestamp(0), cached_timestamp(0)
 {
   base.api = EGL_OPENGL_API;
   base.config = config;
@@ -55,6 +55,7 @@ rsxgl_context_t::egl_callback(struct rsxegl_context_t * egl_ctx,const uint8_t op
   rsxgl_context_t * ctx = (rsxgl_context_t *)egl_ctx;
 
   if(op == RSXEGL_MAKE_CONTEXT_CURRENT) {
+#if 0
     // formats are unused when validating framebuffer 0 (the EGL-supplied framebuffer):
     ctx -> color_surfaces[0].format = ~0;
     ctx -> color_surfaces[0].size[0] = ctx -> base.draw -> width;
@@ -133,6 +134,9 @@ rsxgl_context_t::egl_callback(struct rsxegl_context_t * egl_ctx,const uint8_t op
     }
       
     ctx -> surfaces_write_mask = surfaces_write_mask;
+#endif
+
+    framebuffer_t::storage().at(0).invalid = 1;
 
     if(ctx -> state.viewport.width == 0 && ctx -> state.viewport.height == 0) {
       ctx -> state.viewport.x = 0;
@@ -142,19 +146,32 @@ rsxgl_context_t::egl_callback(struct rsxegl_context_t * egl_ctx,const uint8_t op
       ctx -> state.viewport.depthRange[0] = 0.0f;
       ctx -> state.viewport.depthRange[1] = 1.0f;
     }
+
+#if 0
     rsxgl_make_context_current(ctx);
+#endif
+
+    ctx -> state.invalid.all = ~0;
+    
+    ctx -> invalid_attribs.set();
+    ctx -> invalid_textures.set();
+    ctx -> invalid_samplers.set();
+    
+    rsxgl_ctx = ctx;
   }
   else if(op == RSXEGL_POST_GPU_SWAP) {
-    ctx -> draw_buffer = ctx -> base.draw -> buffer;
-    rsxgl_migrate_reset(ctx -> base.gcm_context);
 #if 0
+    ctx -> draw_buffer = ctx -> base.draw -> buffer;
+#endif
+
+    rsxgl_migrate_reset(ctx -> base.gcm_context);
+
     //
     ctx -> state.invalid.all = ~0;
     
     ctx -> invalid_attribs.set();
     ctx -> invalid_textures.set();
     ctx -> invalid_samplers.set();
-#endif
   }
   else if(op == RSXEGL_DESTROY_CONTEXT) {
     ctx -> base.valid = 0;
@@ -233,14 +250,10 @@ rsxgl_draw_status_validate(rsxgl_context_t * ctx)
     uint8_t draw_status = 1;
 
     // Is there a valid program bound:
-    draw_status &= ctx -> program_binding.is_anything_bound(RSXGL_ACTIVE_PROGRAM) && ctx -> program_binding[RSXGL_ACTIVE_PROGRAM].validated;
+    draw_status &= ctx -> program_binding.is_anything_bound(RSXGL_ACTIVE_PROGRAM) && ctx -> program_binding[RSXGL_ACTIVE_PROGRAM].linked;
 
     // Check current framebuffer vs. writemask:
-    if(ctx -> framebuffer_binding.is_anything_bound(RSXGL_DRAW_FRAMEBUFFER)) {
-    }
-    else {
-      draw_status &= (ctx -> surfaces_write_mask.all == ctx -> state.write_mask.all);
-    }
+    draw_status &= (ctx -> framebuffer_binding[RSXGL_DRAW_FRAMEBUFFER].write_mask.all == ctx -> state.write_mask.all);
 
     ctx -> draw_status = draw_status;
     ctx -> state.invalid.parts.draw_status = 0;

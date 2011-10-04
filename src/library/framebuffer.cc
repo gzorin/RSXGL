@@ -31,6 +31,8 @@ renderbuffer_t::storage_type & renderbuffer_t::storage()
 renderbuffer_t::renderbuffer_t()
   : deleted(0), timestamp(0), ref_count(0), arena(0), samples(0)
 {
+  size[0] = 0;
+  size[1] = 0;
 }
 
 renderbuffer_t::~renderbuffer_t()
@@ -237,9 +239,9 @@ rsxgl_renderbuffer_storage(rsxgl_context_t * ctx,const renderbuffer_t::name_type
     RSXGL_ERROR_(GL_OUT_OF_MEMORY);
   }
 
-  surface.format = rsx_format;
-  surface.size[0] = width;
-  surface.size[1] = height;
+  renderbuffer.format = rsx_format;
+  renderbuffer.size[0] = width;
+  renderbuffer.size[1] = height;
   surface.pitch = pitch;
 
   RSXGL_NOERROR_();
@@ -287,37 +289,36 @@ static inline void
 rsxgl_renderbuffer_parameteriv(rsxgl_context_t * ctx,const renderbuffer_t::name_type renderbuffer_name, GLenum pname, GLint *params)
 {
   const renderbuffer_t & renderbuffer = renderbuffer_t::storage().at(renderbuffer_name);
-  const surface_t & surface = renderbuffer.surface;
 
   if(pname == GL_RENDERBUFFER_WIDTH) {
-    *params = surface.size[0];
+    *params = renderbuffer.size[0];
   }
   else if(pname == GL_RENDERBUFFER_HEIGHT) {
-    *params = surface.size[1];
+    *params = renderbuffer.size[1];
   }
   else if(pname == GL_RENDERBUFFER_INTERNAL_FORMAT) {
-    *params = rsxgl_renderbuffer_gl_format[surface.format];
+    *params = rsxgl_renderbuffer_gl_format[renderbuffer.format];
   }
   else if(pname == GL_RENDERBUFFER_SAMPLES) {
     *params = renderbuffer.samples;
   }
   else if(pname == GL_RENDERBUFFER_RED_SIZE) {
-    *params = rsxgl_renderbuffer_bit_depth[surface.format][0];
+    *params = rsxgl_renderbuffer_bit_depth[renderbuffer.format][0];
   }
   else if(pname == GL_RENDERBUFFER_BLUE_SIZE) {
-    *params = rsxgl_renderbuffer_bit_depth[surface.format][1];
+    *params = rsxgl_renderbuffer_bit_depth[renderbuffer.format][1];
   }
   else if(pname == GL_RENDERBUFFER_GREEN_SIZE) {
-    *params = rsxgl_renderbuffer_bit_depth[surface.format][2];
+    *params = rsxgl_renderbuffer_bit_depth[renderbuffer.format][2];
   }
   else if(pname == GL_RENDERBUFFER_ALPHA_SIZE) {
-    *params = rsxgl_renderbuffer_bit_depth[surface.format][3];
+    *params = rsxgl_renderbuffer_bit_depth[renderbuffer.format][3];
   }
   else if(pname == GL_RENDERBUFFER_DEPTH_SIZE) {
-    *params = rsxgl_renderbuffer_bit_depth[surface.format][4];
+    *params = rsxgl_renderbuffer_bit_depth[renderbuffer.format][4];
   }
   else if(pname == GL_RENDERBUFFER_STENCIL_SIZE) {
-    *params = rsxgl_renderbuffer_bit_depth[surface.format][5];
+    *params = rsxgl_renderbuffer_bit_depth[renderbuffer.format][5];
   }
   else {
     RSXGL_ERROR_(GL_INVALID_ENUM);
@@ -347,27 +348,27 @@ glGetRenderbufferParameteriv (GLenum target, GLenum pname, GLint *params)
 void
 rsxgl_init_default_framebuffer(void * ptr)
 {
-  rsxgl_debug_printf("%s\n",__PRETTY_FUNCTION__);
-
   framebuffer_t::storage_type * storage = (framebuffer_t::storage_type *)ptr;
   framebuffer_t & framebuffer = storage -> at(0);
-  framebuffer = framebuffer_t();
   framebuffer.is_default = 1;
 }
 
 framebuffer_t::storage_type & framebuffer_t::storage()
 {
-  static framebuffer_t::storage_type _storage(0,0,rsxgl_init_default_framebuffer);
+  static framebuffer_t::storage_type _storage(0,rsxgl_init_default_framebuffer);
   return _storage;
 }
 
 framebuffer_t::framebuffer_t()
-  : is_default(0), invalid(0)
+  : is_default(0), invalid(0), format(0)
 {
   for(size_t i = 0;i < RSXGL_MAX_ATTACHMENTS;++i) {
     attachments[i] = 0;
   }
   write_mask.all = 0;
+
+  size[0] = 0;
+  size[1] = 0;
 }
 
 framebuffer_t::~framebuffer_t()
@@ -694,6 +695,76 @@ rsxgl_framebuffer_validate(rsxgl_context_t * ctx,framebuffer_t & framebuffer,con
 {
   if(framebuffer.invalid) {
     if(framebuffer.is_default) {
+      const uint32_t format = ctx -> base.draw -> format;
+      
+      framebuffer.format = format;
+      framebuffer.enabled = NV30_3D_RT_ENABLE_COLOR0;
+      framebuffer.size[0] = ctx -> base.draw -> width;
+      framebuffer.size[1] = ctx -> base.draw -> height;
+
+      framebuffer.surfaces[0].pitch = ctx -> base.draw -> color_pitch;
+      framebuffer.surfaces[0].memory.location = ctx -> base.draw -> color_buffer[0].location;
+      framebuffer.surfaces[0].memory.offset = ctx -> base.draw -> color_buffer[0].offset;
+      framebuffer.surfaces[0].memory.owner = 0;
+      
+      framebuffer.surfaces[1].pitch = ctx -> base.draw -> color_pitch;
+      framebuffer.surfaces[1].memory.location = ctx -> base.draw -> color_buffer[1].location;
+      framebuffer.surfaces[1].memory.offset = ctx -> base.draw -> color_buffer[1].offset;
+      framebuffer.surfaces[1].memory.owner = 0;
+      
+      framebuffer.surfaces[4].pitch = ctx -> base.draw -> depth_pitch;
+      framebuffer.surfaces[4].memory.location = ctx -> base.draw -> depth_buffer.location;
+      framebuffer.surfaces[4].memory.offset = ctx -> base.draw -> depth_buffer.offset;
+      framebuffer.surfaces[4].memory.owner = 0;
+
+      write_mask_t write_mask;
+      write_mask.all = 0;
+      
+      if(framebuffer.surfaces[0].memory.offset != 0) {
+	const uint32_t format_color = format & NV30_3D_RT_FORMAT_COLOR__MASK;
+	switch(format_color) {
+	case NV30_3D_RT_FORMAT_COLOR_R5G6B5:
+	case NV30_3D_RT_FORMAT_COLOR_X8R8G8B8:
+	case NV30_3D_RT_FORMAT_COLOR_X8B8G8R8:
+	  write_mask.parts.r = 1;
+	  write_mask.parts.g = 1;
+	  write_mask.parts.b = 1;
+	  write_mask.parts.a = 0;
+	  break;
+	case NV30_3D_RT_FORMAT_COLOR_A8R8G8B8:
+	case NV30_3D_RT_FORMAT_COLOR_A8B8G8R8:
+	case NV30_3D_RT_FORMAT_COLOR_A16B16G16R16_FLOAT:
+	case NV30_3D_RT_FORMAT_COLOR_A32B32G32R32_FLOAT:
+	  write_mask.parts.r = 1;
+	  write_mask.parts.g = 1;
+	  write_mask.parts.b = 1;
+	  write_mask.parts.a = 1;
+	  break;
+	case NV30_3D_RT_FORMAT_COLOR_B8:
+	case NV30_3D_RT_FORMAT_COLOR_R32_FLOAT:
+	  write_mask.parts.r = 1;
+	  write_mask.parts.g = 0;
+	  write_mask.parts.b = 0;
+	  write_mask.parts.a = 0;
+	  break;
+	};
+      }
+      
+      if(framebuffer.surfaces[4].memory.offset != 0) {
+	const uint32_t format_depth = format & NV30_3D_RT_FORMAT_ZETA__MASK;
+	switch(format_depth) {
+	case NV30_3D_RT_FORMAT_ZETA_Z16:
+	  write_mask.parts.depth = 1;
+	  write_mask.parts.stencil = 0;
+	  break;
+	case NV30_3D_RT_FORMAT_ZETA_Z24S8:
+	  write_mask.parts.depth = 1;
+	  write_mask.parts.stencil = 1;
+	  break;
+	};
+      }
+      
+      framebuffer.write_mask = write_mask;
     }
     else {
     }
@@ -708,12 +779,18 @@ rsxgl_draw_framebuffer_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
   gcmContextData * context = ctx -> gcm_context();
 
   if(ctx -> state.invalid.parts.draw_framebuffer) {
-    uint16_t enabled = 0, format = 0, w = 0, h = 0;
-
     framebuffer_t & framebuffer = ctx -> framebuffer_binding[RSXGL_DRAW_FRAMEBUFFER];
 
     rsxgl_framebuffer_validate(ctx,framebuffer,timestamp);
 
+    if(framebuffer.is_default) {
+      rsxgl_emit_surface(context,0,framebuffer.surfaces[ctx -> base.draw -> buffer]);
+      rsxgl_emit_surface(context,4,framebuffer.surfaces[4]);
+    }
+    else {
+    }
+
+#if 0
     // no FBO is bound - use the window system's:
     if(ctx -> framebuffer_binding.names[RSXGL_DRAW_FRAMEBUFFER] == 0) {
       surface_t const & surface = ctx -> color_surfaces[ctx -> draw_buffer];
@@ -730,12 +807,17 @@ rsxgl_draw_framebuffer_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
     else {
       
     }
+#endif
 
     {
+      const uint32_t format = framebuffer.format;
+      const uint32_t enabled = framebuffer.enabled;
+      const uint16_t w = framebuffer.size[0], h = framebuffer.size[1];
+
       uint32_t * buffer = gcm_reserve(context,9);
       
       gcm_emit_method_at(buffer,0,NV30_3D_RT_FORMAT,1);
-      gcm_emit_at(buffer,1,(uint32_t)format | ((31 - __builtin_clz(w)) << NV30_3D_RT_FORMAT_LOG2_WIDTH__SHIFT) | ((31 - __builtin_clz(h)) << NV30_3D_RT_FORMAT_LOG2_HEIGHT__SHIFT));
+      gcm_emit_at(buffer,1,format | ((31 - __builtin_clz(w)) << NV30_3D_RT_FORMAT_LOG2_WIDTH__SHIFT) | ((31 - __builtin_clz(h)) << NV30_3D_RT_FORMAT_LOG2_HEIGHT__SHIFT));
       
       gcm_emit_method_at(buffer,2,NV30_3D_RT_HORIZ,2);
       gcm_emit_at(buffer,3,w << 16);

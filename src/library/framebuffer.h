@@ -48,18 +48,14 @@ enum rsxgl_renderbuffer_formats {
   RSXGL_RENDERBUFFER_FORMAT_DEPTH16 = 10
 };
 
-struct surface_t {
-  typedef boost::uint_value_t< RSXGL_MAX_RENDERBUFFER_SIZE - 1 >::least dimension_size_type;
+typedef boost::uint_value_t< RSXGL_MAX_RENDERBUFFER_SIZE - 1 >::least framebuffer_dimension_size_type;
 
-  uint8_t format;
-  dimension_size_type size[2];
+struct surface_t {
   uint32_t pitch;
   memory_t memory;
 
   surface_t()
-    : format(~0), pitch(0) {
-    size[0] = 0;
-    size[1] = 0;
+    : pitch(0) {
   }
 };
 
@@ -77,10 +73,10 @@ struct renderbuffer_t {
   uint32_t deleted:1, timestamp:31;
   uint32_t ref_count;
 
-  memory_arena_t::name_type arena;
-  uint8_t samples;
-
+  uint8_t format, samples;
+  framebuffer_dimension_size_type size[2];
   surface_t surface;
+  memory_arena_t::name_type arena;
 
   renderbuffer_t();
   ~renderbuffer_t();
@@ -128,8 +124,9 @@ struct framebuffer_t {
 
   uint8_t is_default:1, invalid:1;
 
+  uint32_t format, enabled;
+  framebuffer_dimension_size_type size[2];
   surface_t surfaces[RSXGL_MAX_ATTACHMENTS];
-  uint32_t fmt;
 
   framebuffer_t();
   ~framebuffer_t();
