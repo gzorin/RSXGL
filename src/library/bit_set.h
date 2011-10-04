@@ -134,6 +134,40 @@ public:
   word_type as_integer() const {
     return base_type::impl.values[0];
   }
+
+  template< typename Function >
+  static void for_each(bit_set const & bits,Function const & fn) {
+    for(size_t i = 0,j = 0;i < base_type::num_words && j < N;++i) {
+      word_type word = bits.impl.values[i];
+      for(size_t k = 0;k < base_type::word_bits && j < N;++k,++j,word >>= 1) {
+	fn(j,(word & 0x1));
+      }
+    }
+  }
+
+  template< typename Function >
+  static void for_each_set(bit_set const & bits,Function const & fn) {
+    for(size_t i = 0,j = 0;i < base_type::num_words && j < N;++i) {
+      word_type word = bits.impl.values[i];
+      for(size_t k = 0;k < base_type::word_bits && j < N;++k,++j,word >>= 1) {
+	if((word & 0x1)) {
+	  fn(j);
+	}
+      }
+    }
+  }
+
+  template< typename Function >
+  static void for_each_not_set(bit_set const & bits,Function const & fn) {
+    for(size_t i = 0,j = 0;i < base_type::num_words && j < N;++i) {
+      word_type word = bits.impl.values[i];
+      for(size_t k = 0;k < base_type::word_bits && j < N;++k,++j,word >>= 1) {
+	if(!(word & 0x1)) {
+	  fn(j);
+	}
+      }
+    }
+  }
 };
 
 #endif

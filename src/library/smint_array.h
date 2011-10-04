@@ -59,7 +59,8 @@ public:
   impl_type impl;
   typedef typename impl_type::word_type word_type;
   static const word_type value_mask = boost::low_bits_mask_t< value_bits >::sig_bits;
-  static const size_t values_per_word = std::numeric_limits< typename impl_type::word_type >::digits / value_bits;
+  static const size_t word_bits = std::numeric_limits< typename impl_type::word_type >::digits;
+  static const size_t values_per_word = word_bits / value_bits;
   static const size_t num_words = impl_type::num_words;
 
   smint_array() {
@@ -106,6 +107,17 @@ public:
     const size_t jj = i % values_per_word;
     const size_t shift_bits = jj * value_bits;
     return (value_type)((impl.values[ii] >> shift_bits) & value_mask);
+  }
+
+  template< typename Function >
+  static void for_each(smint_array const & array,Function const & fn) {
+    for(size_t i = 0,j = 0;i < num_words && j < N;++i) {
+      word_type word = array.impl.values[i];
+      for(size_t k = 0;k < values_per_word && j < N;++k,++j,word >>= value_bits) {
+	const value_type value = word & value_mask;
+	fn(j,value);
+      }
+    }
   }
 };
 
