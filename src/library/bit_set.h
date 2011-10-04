@@ -19,7 +19,7 @@ struct bit_set : public smint_array< 1, N, MaxType >
 public:
 
   typedef smint_array< 1, N, MaxType > base_type;
-  typedef typename base_type::impl_type::storage_type storage_type;
+  typedef typename base_type::word_type word_type;
 
   bit_set() {
   }
@@ -34,7 +34,7 @@ public:
   }
 
   bit_set & set() {
-    for(size_t i = 0;i < base_type::word_size;++i) {
+    for(size_t i = 0;i < base_type::num_words;++i) {
       base_type::impl.values[i] = ~0;
     }
     return *this;
@@ -46,7 +46,7 @@ public:
   }
 
   bit_set & reset() {
-    for(size_t i = 0;i < base_type::word_size;++i) {
+    for(size_t i = 0;i < base_type::num_words;++i) {
       base_type::impl.values[i] = 0;
     }
     return *this;
@@ -68,7 +68,7 @@ public:
   }
 
   bit_set & flip() {
-    for(size_t i = 0;i < base_type::word_size;++i) {
+    for(size_t i = 0;i < base_type::num_words;++i) {
       base_type::impl.values[i] = ~base_type::impl.values[i];
     }
     return *this;
@@ -80,14 +80,14 @@ public:
   }
 
   bool any() const {
-    for(size_t i = 0;i < base_type::word_size;++i) {
+    for(size_t i = 0;i < base_type::num_words;++i) {
       if(base_type::impl.values[i] != 0) return true;
     }
     return false;
   }
 
   bool all() const {
-    for(size_t i = 0;i < base_type::word_size;++i) {
+    for(size_t i = 0;i < base_type::num_words;++i) {
       if(base_type::impl.values[i] != ~0) return false;
     }
     return true;
@@ -95,7 +95,7 @@ public:
 
   bit_set operator ~() const {
     bit_set r;
-    for(size_t i = 0;i < base_type::word_size;++i) {
+    for(size_t i = 0;i < base_type::num_words;++i) {
       r.base_type::impl.values[i] = ~base_type::impl.values[i];
     }
     return r;
@@ -103,14 +103,14 @@ public:
 
   bit_set operator |(const bit_set & rhs) const {
     bit_set r;
-    for(size_t i = 0;i < base_type::word_size;++i) {
+    for(size_t i = 0;i < base_type::num_words;++i) {
       r.base_type::impl.values[i] = base_type::impl.values[i] | rhs.base_type::impl.values[i];
     }
     return r;
   }
 
   bit_set & operator |=(const bit_set & rhs) {
-    for(size_t i = 0;i < base_type::word_size;++i) {
+    for(size_t i = 0;i < base_type::num_words;++i) {
       base_type::impl.values[i] |= rhs.base_type::impl.values[i];
     }
     return *this;
@@ -118,20 +118,20 @@ public:
 
   bit_set operator &(const bit_set & rhs) const {
     bit_set r;
-    for(size_t i = 0;i < base_type::word_size;++i) {
+    for(size_t i = 0;i < base_type::num_words;++i) {
       r.base_type::impl.values[i] = base_type::impl.values[i] & rhs.base_type::impl.values[i];
     }
     return r;
   }
 
   bit_set & operator &=(const bit_set & rhs) {
-    for(size_t i = 0;i < base_type::word_size;++i) {
+    for(size_t i = 0;i < base_type::num_words;++i) {
       base_type::impl.values[i] &= rhs.base_type::impl.values[i];
     }
     return *this;
   }
 
-  storage_type as_integer() const {
+  word_type as_integer() const {
     return base_type::impl.values[0];
   }
 };

@@ -286,7 +286,7 @@ glRenderbufferStorageMultisample (GLenum target, GLsizei samples, GLenum interna
 }
 
 static inline void
-rsxgl_renderbuffer_parameteriv(rsxgl_context_t * ctx,const renderbuffer_t::name_type renderbuffer_name, GLenum pname, GLint *params)
+rsxgl_get_renderbuffer_parameteriv(rsxgl_context_t * ctx,const renderbuffer_t::name_type renderbuffer_name, GLenum pname, GLint *params)
 {
   const renderbuffer_t & renderbuffer = renderbuffer_t::storage().at(renderbuffer_name);
 
@@ -341,7 +341,7 @@ glGetRenderbufferParameteriv (GLenum target, GLenum pname, GLint *params)
     RSXGL_ERROR_(GL_INVALID_OPERATION);
   }
 
-  rsxgl_renderbuffer_parameteriv(ctx,ctx -> renderbuffer_binding.names[rsx_target],pname,params);
+  rsxgl_get_renderbuffer_parameteriv(ctx,ctx -> renderbuffer_binding.names[rsx_target],pname,params);
 }
 
 // Framebuffers:
@@ -561,6 +561,7 @@ rsxgl_framebuffer_renderbuffer(rsxgl_context_t * ctx,const framebuffer_t::name_t
   if(renderbuffer_name != 0) {
     framebuffer.attachment_types.set(rsx_attachment,RSXGL_ATTACHMENT_TYPE_RENDERBUFFER);
     framebuffer.attachments[rsx_attachment] = renderbuffer_name;
+    framebuffer.invalid = 1;
   }
 
   if(ctx -> framebuffer_binding.is_bound(RSXGL_DRAW_FRAMEBUFFER,framebuffer_name)) {
@@ -591,10 +592,26 @@ glFramebufferRenderbuffer (GLenum target, GLenum attachment, GLenum renderbuffer
   rsxgl_framebuffer_renderbuffer(ctx,ctx -> framebuffer_binding.names[rsx_framebuffer_target],attachment,renderbuffertarget,renderbuffer);
 }
 
+static inline void
+rsxgl_get_framebuffer_attachment_parameteriv(rsxgl_context_t * ctx,const framebuffer_t::name_type framebuffer_name,GLenum attachment, GLenum pname, GLint *params)
+{
+  RSXGL_NOERROR_();
+}
+
 GLAPI void APIENTRY
 glGetFramebufferAttachmentParameteriv (GLenum target, GLenum attachment, GLenum pname, GLint *params)
 {
-  RSXGL_NOERROR_();
+  const uint32_t rsx_framebuffer_target = rsxgl_framebuffer_target(target);
+  if(rsx_framebuffer_target == ~0) {
+    RSXGL_ERROR_(GL_INVALID_ENUM);
+  }
+
+  rsxgl_context_t * ctx = current_ctx();
+  if(!ctx -> framebuffer_binding.is_anything_bound(rsx_framebuffer_target)) {
+    RSXGL_ERROR_(GL_INVALID_OPERATION);
+  }
+
+  rsxgl_get_framebuffer_attachment_parameteriv(ctx,ctx -> framebuffer_binding.names[rsx_framebuffer_target],attachment,pname,params);
 }
 
 GLAPI void APIENTRY
@@ -767,6 +784,10 @@ rsxgl_framebuffer_validate(rsxgl_context_t * ctx,framebuffer_t & framebuffer,con
       framebuffer.write_mask = write_mask;
     }
     else {
+      write_mask_t write_mask;
+      write_mask.all = 0;
+
+      framebuffer.write_mask = write_mask;
     }
 
     framebuffer.invalid = 0;
@@ -776,42 +797,41 @@ rsxgl_framebuffer_validate(rsxgl_context_t * ctx,framebuffer_t & framebuffer,con
 void
 rsxgl_draw_framebuffer_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
 {
-  gcmContextData * context = ctx -> gcm_context();
+  framebuffer_t & framebuffer = ctx -> framebuffer_binding[RSXGL_DRAW_FRAMEBUFFER];
+
+  rsxgl_framebuffer_validate(ctx,framebuffer,timestamp);
 
   if(ctx -> state.invalid.parts.draw_framebuffer) {
-    framebuffer_t & framebuffer = ctx -> framebuffer_binding[RSXGL_DRAW_FRAMEBUFFER];
-
-    rsxgl_framebuffer_validate(ctx,framebuffer,timestamp);
+    gcmContextData * context = ctx -> gcm_context();
 
     if(framebuffer.is_default) {
       rsxgl_emit_surface(context,0,framebuffer.surfaces[ctx -> base.draw -> buffer]);
       rsxgl_emit_surface(context,4,framebuffer.surfaces[4]);
     }
     else {
+      
     }
 
-    {
-      const uint32_t format = framebuffer.format;
-      const uint32_t enabled = framebuffer.enabled;
-      const uint16_t w = framebuffer.size[0], h = framebuffer.size[1];
-
-      uint32_t * buffer = gcm_reserve(context,9);
-      
-      gcm_emit_method_at(buffer,0,NV30_3D_RT_FORMAT,1);
-      gcm_emit_at(buffer,1,format | ((31 - __builtin_clz(w)) << NV30_3D_RT_FORMAT_LOG2_WIDTH__SHIFT) | ((31 - __builtin_clz(h)) << NV30_3D_RT_FORMAT_LOG2_HEIGHT__SHIFT));
-      
-      gcm_emit_method_at(buffer,2,NV30_3D_RT_HORIZ,2);
-      gcm_emit_at(buffer,3,w << 16);
-      gcm_emit_at(buffer,4,h << 16);
-      
-      gcm_emit_method_at(buffer,5,NV30_3D_COORD_CONVENTIONS,1);
-      gcm_emit_at(buffer,6,h | NV30_3D_COORD_CONVENTIONS_ORIGIN_NORMAL);
-      
-      gcm_emit_method_at(buffer,7,NV30_3D_RT_ENABLE,1);
-      gcm_emit_at(buffer,8,enabled);
-      
-      gcm_finish_n_commands(context,9);
-    }
+    const uint32_t format = framebuffer.format;
+    const uint32_t enabled = framebuffer.enabled;
+    const uint16_t w = framebuffer.size[0], h = framebuffer.size[1];
+    
+    uint32_t * buffer = gcm_reserve(context,9);
+    
+    gcm_emit_method_at(buffer,0,NV30_3D_RT_FORMAT,1);
+    gcm_emit_at(buffer,1,format | ((31 - __builtin_clz(w)) << NV30_3D_RT_FORMAT_LOG2_WIDTH__SHIFT) | ((31 - __builtin_clz(h)) << NV30_3D_RT_FORMAT_LOG2_HEIGHT__SHIFT));
+    
+    gcm_emit_method_at(buffer,2,NV30_3D_RT_HORIZ,2);
+    gcm_emit_at(buffer,3,w << 16);
+    gcm_emit_at(buffer,4,h << 16);
+    
+    gcm_emit_method_at(buffer,5,NV30_3D_COORD_CONVENTIONS,1);
+    gcm_emit_at(buffer,6,h | NV30_3D_COORD_CONVENTIONS_ORIGIN_NORMAL);
+    
+    gcm_emit_method_at(buffer,7,NV30_3D_RT_ENABLE,1);
+    gcm_emit_at(buffer,8,enabled);
+    
+    gcm_finish_n_commands(context,9);
 
     ctx -> state.invalid.parts.draw_framebuffer = 0;
   }
