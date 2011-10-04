@@ -124,7 +124,7 @@ struct framebuffer_t {
 
   uint8_t is_default:1, invalid:1;
 
-  uint32_t format, enabled;
+  uint16_t format, enabled;
   framebuffer_dimension_size_type size[2];
   surface_t surfaces[RSXGL_MAX_ATTACHMENTS];
 

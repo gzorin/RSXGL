@@ -55,87 +55,6 @@ rsxgl_context_t::egl_callback(struct rsxegl_context_t * egl_ctx,const uint8_t op
   rsxgl_context_t * ctx = (rsxgl_context_t *)egl_ctx;
 
   if(op == RSXEGL_MAKE_CONTEXT_CURRENT) {
-#if 0
-    // formats are unused when validating framebuffer 0 (the EGL-supplied framebuffer):
-    ctx -> color_surfaces[0].format = ~0;
-    ctx -> color_surfaces[0].size[0] = ctx -> base.draw -> width;
-    ctx -> color_surfaces[0].size[1] = ctx -> base.draw -> height;
-    ctx -> color_surfaces[0].pitch = ctx -> base.draw -> color_pitch;
-    ctx -> color_surfaces[0].memory.location = ctx -> base.draw -> color_buffer[0].location;
-    ctx -> color_surfaces[0].memory.offset = ctx -> base.draw -> color_buffer[0].offset;
-    ctx -> color_surfaces[0].memory.owner = 0;
-
-    ctx -> color_surfaces[1].format = ~0;
-    ctx -> color_surfaces[1].size[0] = ctx -> base.draw -> width;
-    ctx -> color_surfaces[1].size[1] = ctx -> base.draw -> height;
-    ctx -> color_surfaces[1].pitch = ctx -> base.draw -> color_pitch;
-    ctx -> color_surfaces[1].memory.location = ctx -> base.draw -> color_buffer[1].location;
-    ctx -> color_surfaces[1].memory.offset = ctx -> base.draw -> color_buffer[1].offset;
-    ctx -> color_surfaces[1].memory.owner = 0;
-
-    ctx -> depth_surface.format = ~0;
-    ctx -> depth_surface.size[0] = ctx -> base.draw -> width;
-    ctx -> depth_surface.size[1] = ctx -> base.draw -> height;
-    ctx -> depth_surface.pitch = ctx -> base.draw -> depth_pitch;
-    ctx -> depth_surface.memory.location = ctx -> base.draw -> depth_buffer.location;
-    ctx -> depth_surface.memory.offset = ctx -> base.draw -> depth_buffer.offset;
-    ctx -> depth_surface.memory.owner = 0;
-
-    const uint32_t surfaces_format = ctx -> base.draw -> format;
-
-    ctx -> surfaces_format = surfaces_format;
-    ctx -> draw_buffer = ctx -> base.draw -> buffer;
-
-    write_mask_t surfaces_write_mask;
-    surfaces_write_mask.all = 0;
-
-    if(ctx -> color_surfaces[0].memory.offset != 0) {
-      const uint32_t surfaces_format_color = surfaces_format & NV30_3D_RT_FORMAT_COLOR__MASK;
-      switch(surfaces_format_color) {
-      case NV30_3D_RT_FORMAT_COLOR_R5G6B5:
-      case NV30_3D_RT_FORMAT_COLOR_X8R8G8B8:
-      case NV30_3D_RT_FORMAT_COLOR_X8B8G8R8:
-	surfaces_write_mask.parts.r = 1;
-	surfaces_write_mask.parts.g = 1;
-	surfaces_write_mask.parts.b = 1;
-	surfaces_write_mask.parts.a = 0;
-	break;
-      case NV30_3D_RT_FORMAT_COLOR_A8R8G8B8:
-      case NV30_3D_RT_FORMAT_COLOR_A8B8G8R8:
-      case NV30_3D_RT_FORMAT_COLOR_A16B16G16R16_FLOAT:
-      case NV30_3D_RT_FORMAT_COLOR_A32B32G32R32_FLOAT:
-	surfaces_write_mask.parts.r = 1;
-	surfaces_write_mask.parts.g = 1;
-	surfaces_write_mask.parts.b = 1;
-	surfaces_write_mask.parts.a = 1;
-	break;
-      case NV30_3D_RT_FORMAT_COLOR_B8:
-      case NV30_3D_RT_FORMAT_COLOR_R32_FLOAT:
-	surfaces_write_mask.parts.r = 1;
-	surfaces_write_mask.parts.g = 0;
-	surfaces_write_mask.parts.b = 0;
-	surfaces_write_mask.parts.a = 0;
-	break;
-      };
-    }
-
-    if(ctx -> depth_surface.memory.offset != 0) {
-      const uint32_t surfaces_format_depth = surfaces_format & NV30_3D_RT_FORMAT_ZETA__MASK;
-      switch(surfaces_format_depth) {
-      case NV30_3D_RT_FORMAT_ZETA_Z16:
-	surfaces_write_mask.parts.depth = 1;
-	surfaces_write_mask.parts.stencil = 0;
-	break;
-      case NV30_3D_RT_FORMAT_ZETA_Z24S8:
-	surfaces_write_mask.parts.depth = 1;
-	surfaces_write_mask.parts.stencil = 1;
-	break;
-      };
-    }
-      
-    ctx -> surfaces_write_mask = surfaces_write_mask;
-#endif
-
     framebuffer_t::storage().at(0).invalid = 1;
 
     if(ctx -> state.viewport.width == 0 && ctx -> state.viewport.height == 0) {
@@ -147,10 +66,6 @@ rsxgl_context_t::egl_callback(struct rsxegl_context_t * egl_ctx,const uint8_t op
       ctx -> state.viewport.depthRange[1] = 1.0f;
     }
 
-#if 0
-    rsxgl_make_context_current(ctx);
-#endif
-
     ctx -> state.invalid.all = ~0;
     
     ctx -> invalid_attribs.set();
@@ -160,10 +75,6 @@ rsxgl_context_t::egl_callback(struct rsxegl_context_t * egl_ctx,const uint8_t op
     rsxgl_ctx = ctx;
   }
   else if(op == RSXEGL_POST_GPU_SWAP) {
-#if 0
-    ctx -> draw_buffer = ctx -> base.draw -> buffer;
-#endif
-
     rsxgl_migrate_reset(ctx -> base.gcm_context);
 
     //

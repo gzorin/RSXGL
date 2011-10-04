@@ -23,12 +23,6 @@
 struct rsxgl_context_t {
   rsxegl_context_t base;
 
-#if 0
-  surface_t color_surfaces[2], depth_surface;
-  uint32_t surfaces_format;
-  write_mask_t surfaces_write_mask;
-#endif
-
   state_t state;
 
   memory_arena_t::binding_type arena_binding;

@@ -790,25 +790,6 @@ rsxgl_draw_framebuffer_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
     else {
     }
 
-#if 0
-    // no FBO is bound - use the window system's:
-    if(ctx -> framebuffer_binding.names[RSXGL_DRAW_FRAMEBUFFER] == 0) {
-      surface_t const & surface = ctx -> color_surfaces[ctx -> draw_buffer];
-
-      rsxgl_emit_surface(context,0,surface);
-      rsxgl_emit_surface(context,4,ctx -> depth_surface);
-
-      format = (uint32_t)ctx -> surfaces_format;
-      w = surface.size[0];
-      h = surface.size[1];
-      enabled = NV30_3D_RT_ENABLE_COLOR0;
-    }
-    // do something with the attached FBO:
-    else {
-      
-    }
-#endif
-
     {
       const uint32_t format = framebuffer.format;
       const uint32_t enabled = framebuffer.enabled;
