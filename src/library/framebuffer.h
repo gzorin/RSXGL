@@ -89,8 +89,8 @@ enum rsxgl_framebuffer_target {
 };
 
 enum rsxgl_framebuffer_attachment {
-  RSXGL_COLOR_ATTACHMENT_COLOR0,
-  RSXGL_DEPTH_STENCIL_ATTACHMENT = RSXGL_COLOR_ATTACHMENT_COLOR0 + RSXGL_MAX_COLOR_ATTACHMENTS,
+  RSXGL_COLOR_ATTACHMENT0,
+  RSXGL_DEPTH_STENCIL_ATTACHMENT = RSXGL_COLOR_ATTACHMENT0 + RSXGL_MAX_COLOR_ATTACHMENTS,
   RSXGL_MAX_ATTACHMENTS = RSXGL_DEPTH_STENCIL_ATTACHMENT + 1
 };
 
@@ -99,6 +99,13 @@ enum rsxgl_framebuffer_attachment_type {
   RSXGL_ATTACHMENT_TYPE_RENDERBUFFER = 1,
   RSXGL_ATTACHMENT_TYPE_TEXTURE = 2,
   RSXGL_MAX_ATTACHMENT_TYPES = 3
+};
+
+enum rsxgl_outbuffer {
+  RSXGL_OUTBUFFER_BACK = 0,
+  RSXGL_OUTBUFFER_FRONT = 1,
+  RSXGL_OUTBUFFER_COLOR_ATTACHMENT0,
+  RSXGL_MAX_OUTBUFFERS = RSXGL_OUTBUFFER_COLOR_ATTACHMENT0 + RSXGL_MAX_COLOR_ATTACHMENTS
 };
 
 struct framebuffer_t {
@@ -121,11 +128,12 @@ struct framebuffer_t {
   attachment_types_t attachment_types;
   attachment_name_type attachments[RSXGL_MAX_ATTACHMENTS];
 
-  write_mask_t write_mask;
+  // input is a draw buffer index, output is one of rsxgl_outbuffer above:
+  smint_array< RSXGL_MAX_OUTBUFFERS, RSXGL_MAX_DRAW_BUFFERS > mapping;
 
   uint8_t is_default:1, invalid:1;
 
-  uint16_t format, enabled;
+  uint16_t format;
   framebuffer_dimension_size_type size[2];
   surface_t surfaces[RSXGL_MAX_ATTACHMENTS];
 

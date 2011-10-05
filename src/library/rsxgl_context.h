@@ -24,6 +24,7 @@ struct rsxgl_context_t {
   rsxegl_context_t base;
 
   state_t state;
+  uint8_t draw_buffer;
 
   memory_arena_t::binding_type arena_binding;
   buffer_t::binding_type buffer_binding;
@@ -39,6 +40,7 @@ struct rsxgl_context_t {
 
   renderbuffer_t::binding_type renderbuffer_binding;
   framebuffer_t::binding_type framebuffer_binding;
+  write_mask_t framebuffer_write_mask;
 
   query_t::binding_type query_binding;
   

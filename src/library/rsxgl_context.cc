@@ -22,7 +22,7 @@ rsxgl_context_create(const struct rsxegl_config_t * config,gcmContextData * gcm_
 }
 
 rsxgl_context_t::rsxgl_context_t(const struct rsxegl_config_t * config,gcmContextData * gcm_context)
-  : active_texture(0), draw_status(0), read_status(0), ref(0), timestamp_sync(0), next_timestamp(1), last_timestamp(0), cached_timestamp(0)
+  : draw_buffer(0), active_texture(0), draw_status(0), read_status(0), ref(0), timestamp_sync(0), next_timestamp(1), last_timestamp(0), cached_timestamp(0)
 {
   base.api = EGL_OPENGL_API;
   base.config = config;
@@ -37,25 +37,32 @@ rsxgl_context_t::rsxgl_context_t(const struct rsxegl_config_t * config,gcmContex
   rsxgl_sync_cpu_signal(timestamp_sync,0);
 }
 
-static inline void
-rsxgl_make_context_current(rsxgl_context_t * ctx)
-{
-  ctx -> state.invalid.all = ~0;
-  
-  ctx -> invalid_attribs.set();
-  ctx -> invalid_textures.set();
-  ctx -> invalid_samplers.set();
-
-  rsxgl_ctx = ctx;
-}
-
 void
 rsxgl_context_t::egl_callback(struct rsxegl_context_t * egl_ctx,const uint8_t op)
 {
   rsxgl_context_t * ctx = (rsxgl_context_t *)egl_ctx;
 
   if(op == RSXEGL_MAKE_CONTEXT_CURRENT) {
-    framebuffer_t::storage().at(0).invalid = 1;
+    framebuffer_t & framebuffer = framebuffer_t::storage().at(0);
+
+    framebuffer.format = ctx -> base.draw -> format;
+    framebuffer.size[0] = ctx -> base.draw -> width;
+    framebuffer.size[1] = ctx -> base.draw -> height;
+    
+    framebuffer.surfaces[0].pitch = ctx -> base.draw -> color_pitch;
+    framebuffer.surfaces[0].memory.location = ctx -> base.draw -> color_buffer[0].location;
+    framebuffer.surfaces[0].memory.offset = ctx -> base.draw -> color_buffer[0].offset;
+    framebuffer.surfaces[0].memory.owner = 0;
+    
+    framebuffer.surfaces[1].pitch = ctx -> base.draw -> color_pitch;
+    framebuffer.surfaces[1].memory.location = ctx -> base.draw -> color_buffer[1].location;
+    framebuffer.surfaces[1].memory.offset = ctx -> base.draw -> color_buffer[1].offset;
+    framebuffer.surfaces[1].memory.owner = 0;
+    
+    framebuffer.surfaces[4].pitch = ctx -> base.draw -> depth_pitch;
+    framebuffer.surfaces[4].memory.location = ctx -> base.draw -> depth_buffer.location;
+    framebuffer.surfaces[4].memory.offset = ctx -> base.draw -> depth_buffer.offset;
+    framebuffer.surfaces[4].memory.owner = 0;
 
     if(ctx -> state.viewport.width == 0 && ctx -> state.viewport.height == 0) {
       ctx -> state.viewport.x = 0;
@@ -65,6 +72,8 @@ rsxgl_context_t::egl_callback(struct rsxegl_context_t * egl_ctx,const uint8_t op
       ctx -> state.viewport.depthRange[0] = 0.0f;
       ctx -> state.viewport.depthRange[1] = 1.0f;
     }
+
+    ctx -> draw_buffer = ctx -> base.draw -> buffer;
 
     ctx -> state.invalid.all = ~0;
     
@@ -78,6 +87,8 @@ rsxgl_context_t::egl_callback(struct rsxegl_context_t * egl_ctx,const uint8_t op
     rsxgl_migrate_reset(ctx -> base.gcm_context);
 
     //
+    ctx -> draw_buffer = ctx -> base.draw -> buffer;
+
     ctx -> state.invalid.all = ~0;
     
     ctx -> invalid_attribs.set();
@@ -164,7 +175,7 @@ rsxgl_draw_status_validate(rsxgl_context_t * ctx)
     draw_status &= ctx -> program_binding.is_anything_bound(RSXGL_ACTIVE_PROGRAM) && ctx -> program_binding[RSXGL_ACTIVE_PROGRAM].linked;
 
     // Check current framebuffer vs. writemask:
-    draw_status &= (ctx -> framebuffer_binding[RSXGL_DRAW_FRAMEBUFFER].write_mask.all == ctx -> state.write_mask.all);
+    draw_status &= (ctx -> framebuffer_write_mask.all == ctx -> state.write_mask.all);
 
     ctx -> draw_status = draw_status;
     ctx -> state.invalid.parts.draw_status = 0;
@@ -205,7 +216,13 @@ rsxglSetSurface(void * context,void * surface,uint8_t buffer)
 extern "C" void
 rsxglMakeCurrent(void * context)
 {
-  rsxgl_make_context_current((rsxgl_context_t *)context);
+  ctx -> state.invalid.all = ~0;
+  
+  ctx -> invalid_attribs.set();
+  ctx -> invalid_textures.set();
+  ctx -> invalid_samplers.set();
+
+  rsxgl_ctx = ctx;  
 }
 
 extern "C" void

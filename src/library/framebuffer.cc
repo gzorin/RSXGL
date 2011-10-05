@@ -351,6 +351,8 @@ rsxgl_init_default_framebuffer(void * ptr)
   framebuffer_t::storage_type * storage = (framebuffer_t::storage_type *)ptr;
   framebuffer_t & framebuffer = storage -> at(0);
   framebuffer.is_default = 1;
+
+  framebuffer.mapping.set(0,RSXGL_OUTBUFFER_BACK);
 }
 
 framebuffer_t::storage_type & framebuffer_t::storage()
@@ -360,15 +362,18 @@ framebuffer_t::storage_type & framebuffer_t::storage()
 }
 
 framebuffer_t::framebuffer_t()
-  : is_default(0), invalid(0), format(0), enabled(0)
+  : is_default(0), invalid(0), format(0)
 {
   for(size_t i = 0;i < RSXGL_MAX_ATTACHMENTS;++i) {
     attachments[i] = 0;
   }
-  write_mask.all = 0;
 
   size[0] = 0;
   size[1] = 0;
+
+  for(size_t i = 0;i < RSXGL_MAX_DRAW_BUFFERS;++i) {
+    mapping.set(i,RSXGL_MAX_COLOR_ATTACHMENTS);
+  }
 }
 
 framebuffer_t::~framebuffer_t()
@@ -478,7 +483,7 @@ static inline uint32_t
 rsxgl_framebuffer_attachment(GLenum attachment)
 {
   if(attachment >= GL_COLOR_ATTACHMENT0 && attachment < (GL_COLOR_ATTACHMENT0 + RSXGL_MAX_COLOR_ATTACHMENTS)) {
-    return RSXGL_COLOR_ATTACHMENT_COLOR0 + (attachment - GL_COLOR_ATTACHMENT0);
+    return RSXGL_COLOR_ATTACHMENT0 + (attachment - GL_COLOR_ATTACHMENT0);
   }
   else if(attachment == GL_DEPTH_ATTACHMENT || attachment == GL_DEPTH_STENCIL_ATTACHMENT) {
     return RSXGL_DEPTH_STENCIL_ATTACHMENT;
@@ -638,6 +643,14 @@ glFramebufferTexture (GLenum target, GLenum attachment, GLuint texture, GLint le
   RSXGL_NOERROR_();
 }
 
+static inline void
+rsxgl_draw_buffers(rsxgl_context_t * ctx,const framebuffer_t::name_type framebuffer_name,GLenum buffers[RSXGL_MAX_DRAW_BUFFERS])
+{
+  
+
+  RSXGL_NOERROR_();
+}
+
 GLAPI void APIENTRY
 glDrawBuffer (GLenum mode)
 {
@@ -727,6 +740,7 @@ rsxgl_framebuffer_validate(rsxgl_context_t * ctx,framebuffer_t & framebuffer,con
   }
 
   if(framebuffer.invalid) {
+#if 0
     if(framebuffer.is_default) {
       const uint32_t format = ctx -> base.draw -> format;
       
@@ -814,6 +828,7 @@ rsxgl_framebuffer_validate(rsxgl_context_t * ctx,framebuffer_t & framebuffer,con
 
       framebuffer.write_mask = write_mask;
     }
+#endif
 
     framebuffer.invalid = 0;
   }
@@ -829,20 +844,36 @@ rsxgl_draw_framebuffer_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
   if(ctx -> state.invalid.parts.draw_framebuffer) {
     gcmContextData * context = ctx -> gcm_context();
 
+    const uint32_t format = framebuffer.format;
+    uint32_t enabled = 0;
+
     if(framebuffer.is_default) {
-      rsxgl_emit_surface(context,0,framebuffer.surfaces[ctx -> base.draw -> buffer]);
-      rsxgl_emit_surface(context,4,framebuffer.surfaces[4]);
+      surface_t * surface = 0;
+
+      if(framebuffer.mapping.get(0) == RSXGL_OUTBUFFER_BACK) {
+	surface = framebuffer.surfaces + ctx -> draw_buffer;
+      }
+      else if(framebuffer.mapping.get(0) == RSXGL_OUTBUFFER_FRONT) {
+	surface = framebuffer.surfaces + !ctx -> draw_buffer;
+      }
+
+      if(surface != 0) {
+	rsxgl_assert(surface -> memory.offset != 0);
+	rsxgl_emit_surface(context,0,*surface);
+	enabled = NV30_3D_RT_ENABLE_COLOR0;
+      }
     }
     else {
-      
     }
 
-    const uint32_t format = framebuffer.format;
-    const uint32_t enabled = framebuffer.enabled;
+    if(format & NV30_3D_RT_FORMAT_ZETA__MASK) {
+      rsxgl_assert(framebuffer.surfaces[4].memory.offset != 0);
+      rsxgl_emit_surface(context,4,framebuffer.surfaces[4]);
+    }
+
+    const uint16_t w = framebuffer.size[0], h = framebuffer.size[1];
 
     if(format != 0 && enabled != 0) {
-      const uint16_t w = framebuffer.size[0], h = framebuffer.size[1];
-
       uint32_t * buffer = gcm_reserve(context,9);
     
       gcm_emit_method_at(buffer,0,NV30_3D_RT_FORMAT,1);
@@ -860,6 +891,50 @@ rsxgl_draw_framebuffer_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
       
       gcm_finish_n_commands(context,9);
     }
+
+    // Determine the write mask supported by this framebuffer:
+    write_mask_t write_mask;
+    write_mask.all = 0;
+
+    switch(format & NV30_3D_RT_FORMAT_COLOR__MASK) {
+    case NV30_3D_RT_FORMAT_COLOR_R5G6B5:
+    case NV30_3D_RT_FORMAT_COLOR_X8R8G8B8:
+    case NV30_3D_RT_FORMAT_COLOR_X8B8G8R8:
+      write_mask.parts.r = 1;
+      write_mask.parts.g = 1;
+      write_mask.parts.b = 1;
+      write_mask.parts.a = 0;
+      break;
+    case NV30_3D_RT_FORMAT_COLOR_A8R8G8B8:
+    case NV30_3D_RT_FORMAT_COLOR_A8B8G8R8:
+    case NV30_3D_RT_FORMAT_COLOR_A16B16G16R16_FLOAT:
+    case NV30_3D_RT_FORMAT_COLOR_A32B32G32R32_FLOAT:
+      write_mask.parts.r = 1;
+      write_mask.parts.g = 1;
+      write_mask.parts.b = 1;
+      write_mask.parts.a = 1;
+      break;
+    case NV30_3D_RT_FORMAT_COLOR_B8:
+    case NV30_3D_RT_FORMAT_COLOR_R32_FLOAT:
+      write_mask.parts.r = 1;
+      write_mask.parts.g = 0;
+      write_mask.parts.b = 0;
+      write_mask.parts.a = 0;
+      break;
+    };
+
+    switch(format & NV30_3D_RT_FORMAT_ZETA__MASK) {
+    case NV30_3D_RT_FORMAT_ZETA_Z16:
+      write_mask.parts.depth = 1;
+      write_mask.parts.stencil = 0;
+      break;
+    case NV30_3D_RT_FORMAT_ZETA_Z24S8:
+      write_mask.parts.depth = 1;
+      write_mask.parts.stencil = 1;
+      break;
+    };
+
+    ctx -> framebuffer_write_mask = write_mask;
 
     ctx -> state.invalid.parts.draw_framebuffer = 0;
   }
