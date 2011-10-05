@@ -103,7 +103,7 @@ rsxgl_check_draw_arrays(struct rsxgl_context_t * ctx,GLenum mode)
 
   // OpenGL 3.1 manpages don't say if a GL error should be given without an active program.
   // Can't see much use in proceeding without one though.
-  if(ctx -> program_binding.names[RSXGL_ACTIVE_PROGRAM] == 0) {
+  if(ctx -> program_binding.names[RSXGL_ACTIVE_PROGRAM] == 0 || !ctx -> program_binding[RSXGL_ACTIVE_PROGRAM].linked) {
     return ~0U;
   }
 
@@ -112,26 +112,6 @@ rsxgl_check_draw_arrays(struct rsxgl_context_t * ctx,GLenum mode)
   RSXGL_FORWARD_ERROR(~0);
 
   return rsx_primitive_type;
-}
-
-static inline uint32_t
-rsxgl_draw_init(struct rsxgl_context_t * ctx,GLenum mode,const uint32_t start,const uint32_t length)
-{
-  const uint32_t timestamp = rsxgl_timestamp_create(ctx);
-
-  // validate everything:
-  rsxgl_draw_framebuffer_validate(ctx,timestamp);
-  rsxgl_state_validate(ctx);
-  rsxgl_program_validate(ctx,timestamp);
-  if(rsxgl_draw_status_validate(ctx)) {
-    rsxgl_attribs_validate(ctx,ctx -> program_binding[RSXGL_ACTIVE_PROGRAM].attribs_enabled,start,length,timestamp);
-    rsxgl_uniforms_validate(ctx,ctx -> program_binding[RSXGL_ACTIVE_PROGRAM]);
-    rsxgl_textures_validate(ctx,ctx -> program_binding[RSXGL_ACTIVE_PROGRAM],timestamp);
-    return timestamp;
-  }
-  else {
-    return 0;
-  }
 }
 
 static inline std::pair< uint32_t, uint32_t >
@@ -147,7 +127,7 @@ rsxgl_check_draw_elements(struct rsxgl_context_t * ctx,GLenum mode,GLenum type)
 
   // OpenGL 3.1 manpages don't say if a GL error should be given without an active program.
   // Can't see much use in proceeding without one though.
-  if(ctx -> program_binding.names[RSXGL_ACTIVE_PROGRAM] == 0) {
+  if(ctx -> program_binding.names[RSXGL_ACTIVE_PROGRAM] == 0 || !ctx -> program_binding[RSXGL_ACTIVE_PROGRAM].linked) {
     return std::make_pair(~0U, ~0U);
   }
 
@@ -158,11 +138,9 @@ rsxgl_check_draw_elements(struct rsxgl_context_t * ctx,GLenum mode,GLenum type)
   return std::make_pair(rsx_primitive_type,rsx_type);
 }
 
-#if 0
 static inline uint32_t
-rsxgl_draw_elements_init(struct rsxgl_context_t * ctx,GLenum mode,GLenum type,const uint32_t start,const uint32_t length)
+rsxgl_draw_init(struct rsxgl_context_t * ctx,GLenum mode,const uint32_t start,const uint32_t length)
 {
-  // get a timestamp:
   const uint32_t timestamp = rsxgl_timestamp_create(ctx);
 
   // validate everything:
@@ -172,10 +150,8 @@ rsxgl_draw_elements_init(struct rsxgl_context_t * ctx,GLenum mode,GLenum type,co
   rsxgl_attribs_validate(ctx,ctx -> program_binding[RSXGL_ACTIVE_PROGRAM].attribs_enabled,start,length,timestamp);
   rsxgl_uniforms_validate(ctx,ctx -> program_binding[RSXGL_ACTIVE_PROGRAM]);
   rsxgl_textures_validate(ctx,ctx -> program_binding[RSXGL_ACTIVE_PROGRAM],timestamp);
-
   return timestamp;
 }
-#endif
 
 // The bookend to the above two functions - it posts the timestamp to the command stream:
 static inline void

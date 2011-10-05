@@ -46,12 +46,10 @@ state_t::state_t()
   write_mask.parts.a = 1;
   color.clear = 0;
 
+  write_mask.parts.depth = 1;
   enable.depth_test = 0;
-  depth.write_mask = 1;
   depth.clear = 0xffff;
   depth.func = RSXGL_LESS;
-
-  write_mask.parts.depth = enable.depth_test | depth.write_mask;
 
   enable.blend = 0;
   blend.color = 0;
@@ -62,6 +60,7 @@ state_t::state_t()
   blend.dst_rgb_func = RSXGL_ZERO;
   blend.dst_alpha_func = RSXGL_ZERO;
 
+  write_mask.parts.stencil = 1;
   stencil.face[0].enable = 0;
   stencil.face[0].mask = 0xff;
   stencil.face[0].func = RSXGL_ALWAYS;
@@ -75,8 +74,6 @@ state_t::state_t()
   stencil.face[1].fail_op = RSXGL_KEEP;
   stencil.face[1].zfail_op = RSXGL_KEEP;
   stencil.face[1].pass_op = RSXGL_KEEP;
-
-  write_mask.parts.stencil = stencil.face[0].enable | stencil.face[1].enable;
 
   polygon.cullEnable = 0;
   polygon.cullFace = RSXGL_CULL_BACK;
@@ -290,16 +287,14 @@ rsxgl_state_validate(rsxgl_context_t * ctx)
     s -> invalid.parts.scissor = 0;
   }
 
-  // color write mask:
-  if(s -> invalid.parts.color_write_mask) {
-    rsxgl_emit_color_write_mask(context,s -> write_mask.parts.r,s -> write_mask.parts.g,s -> write_mask.parts.b,s -> write_mask.parts.a);
-    s -> invalid.parts.color_write_mask = 0;
-  }
+  // write masks:
+  write_mask_t write_mask;
+  write_mask.all = ctx -> framebuffer_write_mask.all & s -> write_mask.all;
 
-  // depth write mask:
-  if(s -> invalid.parts.depth_write_mask) {
-    rsxgl_emit_depth_write_mask(context,s -> depth.write_mask);
-    s -> invalid.parts.depth_write_mask = 0;
+  if(s -> invalid.parts.write_mask) {
+    rsxgl_emit_color_write_mask(context,write_mask.parts.r,write_mask.parts.g,write_mask.parts.b,write_mask.parts.a);
+    rsxgl_emit_depth_write_mask(context,write_mask.parts.depth);
+    s -> invalid.parts.write_mask = 0;
   }
 
   // TODO - Finer-grained lazy evaluation of all of the following state:
@@ -318,7 +313,7 @@ rsxgl_state_validate(rsxgl_context_t * ctx)
   buffer = gcm_reserve(context,6);
 
   gcm_emit_method(&buffer,NV30_3D_DEPTH_TEST_ENABLE,1);
-  gcm_emit(&buffer,s -> enable.depth_test);
+  gcm_emit(&buffer,write_mask.parts.depth & s -> enable.depth_test);
 
   gcm_emit_method(&buffer,NV30_3D_DEPTH_FUNC,1);
   switch(s -> depth.func) {
@@ -383,7 +378,7 @@ rsxgl_state_validate(rsxgl_context_t * ctx)
 
   // stencil:
   for(int f = 0;f < 2;++f) {
-    if(s -> stencil.face[f].enable) {
+    if(write_mask.parts.stencil && s -> stencil.face[f].enable) {
       buffer = gcm_reserve(context,9);
 
       gcm_emit_method(&buffer,NV30_3D_STENCIL_ENABLE(f),8);
@@ -593,8 +588,7 @@ glColorMask(GLboolean red,GLboolean green,GLboolean blue,GLboolean alpha)
   ctx -> state.write_mask.parts.b = blue;
   ctx -> state.write_mask.parts.a = alpha;
 
-  ctx -> state.invalid.parts.color_write_mask = 1;
-  ctx -> state.invalid.parts.draw_status = 1;
+  ctx -> state.invalid.parts.write_mask = 1;
 
   RSXGL_NOERROR_();
 }
@@ -604,11 +598,9 @@ glDepthMask (GLboolean flag)
 {
   struct rsxgl_context_t * ctx = current_ctx();
 
-  ctx -> state.depth.write_mask = flag;
-  ctx -> state.write_mask.parts.depth = ctx -> state.enable.depth_test | ctx -> state.depth.write_mask;
+  ctx -> state.write_mask.parts.depth = flag;
 
-  ctx -> state.invalid.parts.depth_write_mask = 1;
-  ctx -> state.invalid.parts.draw_status = 1;
+  ctx -> state.invalid.parts.write_mask = 1;
 
   RSXGL_NOERROR_();
 }

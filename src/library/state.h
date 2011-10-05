@@ -96,15 +96,12 @@ struct state_t {
       uint32_t viewport:1,
 	depth_range:1,
 	scissor:1,
-	color_write_mask:1,
-	depth_write_mask:1,
+	write_mask:1,
 	primitive_restart:1,
 	the_rest:1,
 	draw_framebuffer:1,
 	read_framebuffer:1,
-	program:1,
-	draw_status:1,
-	read_status:1;
+	program:1;
     } parts;
   } invalid;
 
@@ -129,7 +126,7 @@ struct state_t {
   } color;
 
   struct {
-    uint32_t write_mask:1,func:3,clear:24;
+    uint32_t func:3,clear:24;
   } depth;
 
   struct {

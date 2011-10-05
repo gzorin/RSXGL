@@ -22,7 +22,7 @@ rsxgl_context_create(const struct rsxegl_config_t * config,gcmContextData * gcm_
 }
 
 rsxgl_context_t::rsxgl_context_t(const struct rsxegl_config_t * config,gcmContextData * gcm_context)
-  : draw_buffer(0), active_texture(0), draw_status(0), read_status(0), ref(0), timestamp_sync(0), next_timestamp(1), last_timestamp(0), cached_timestamp(0)
+  : draw_buffer(0), active_texture(0), ref(0), timestamp_sync(0), next_timestamp(1), last_timestamp(0), cached_timestamp(0)
 {
   base.api = EGL_OPENGL_API;
   base.config = config;
@@ -31,6 +31,8 @@ rsxgl_context_t::rsxgl_context_t(const struct rsxegl_config_t * config,gcmContex
   base.read = 0;
   base.valid = 1;
   base.callback = rsxgl_context_t::egl_callback;
+
+  framebuffer_write_mask.all = 0;
 
   timestamp_sync = rsxgl_sync_object_allocate();
   rsxgl_assert(timestamp_sync != 0);
@@ -163,36 +165,6 @@ rsxgl_timestamp_post(rsxgl_context_t * ctx,const uint32_t timestamp)
 
   rsxgl_emit_sync_gpu_signal_write(ctx -> base.gcm_context,ctx -> timestamp_sync,timestamp);
   ctx -> last_timestamp = timestamp;
-}
-
-uint32_t
-rsxgl_draw_status_validate(rsxgl_context_t * ctx)
-{
-  if(ctx -> state.invalid.parts.draw_status) {
-    uint8_t draw_status = 1;
-
-    // Is there a valid program bound:
-    draw_status &= ctx -> program_binding.is_anything_bound(RSXGL_ACTIVE_PROGRAM) && ctx -> program_binding[RSXGL_ACTIVE_PROGRAM].linked;
-
-    // Check current framebuffer vs. writemask:
-    draw_status &= (ctx -> framebuffer_write_mask.all == ctx -> state.write_mask.all);
-
-    ctx -> draw_status = draw_status;
-    ctx -> state.invalid.parts.draw_status = 0;
-  }
-  return ctx -> draw_status;
-}
-
-uint32_t
-rsxgl_read_status_validate(rsxgl_context_t * ctx)
-{
-  if(ctx -> state.invalid.parts.read_status) {
-    uint8_t read_status = 1;
-
-    ctx -> read_status = read_status;
-    ctx -> state.invalid.parts.read_status = 0;
-  }
-  return ctx -> read_status;
 }
 
 #if 0

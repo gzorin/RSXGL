@@ -452,12 +452,11 @@ glBindFramebuffer (GLenum target, GLuint framebuffer_name)
   if(target == GL_FRAMEBUFFER || target == GL_DRAW_FRAMEBUFFER) {
     ctx -> framebuffer_binding.bind(RSXGL_DRAW_FRAMEBUFFER,framebuffer_name);
     ctx -> state.invalid.parts.draw_framebuffer = 1;
-    ctx -> state.invalid.parts.draw_status = 1;
+    ctx -> state.invalid.parts.write_mask = 1;
   }
   if(target == GL_FRAMEBUFFER || target == GL_READ_FRAMEBUFFER) {
     ctx -> framebuffer_binding.bind(RSXGL_READ_FRAMEBUFFER,framebuffer_name);
     ctx -> state.invalid.parts.read_framebuffer = 1;
-    ctx -> state.invalid.parts.read_status = 1;
   }
 
   RSXGL_NOERROR_();
@@ -571,11 +570,10 @@ rsxgl_framebuffer_renderbuffer(rsxgl_context_t * ctx,const framebuffer_t::name_t
 
   if(ctx -> framebuffer_binding.is_bound(RSXGL_DRAW_FRAMEBUFFER,framebuffer_name)) {
     ctx -> state.invalid.parts.draw_framebuffer = 1;
-    ctx -> state.invalid.parts.draw_status = 1;
+    ctx -> state.invalid.parts.write_mask = 1;
   }
   if(ctx -> framebuffer_binding.is_bound(RSXGL_READ_FRAMEBUFFER,framebuffer_name)) {
     ctx -> state.invalid.parts.read_framebuffer = 1;
-    ctx -> state.invalid.parts.read_status = 1;
   }
 
   RSXGL_NOERROR_();
@@ -740,96 +738,6 @@ rsxgl_framebuffer_validate(rsxgl_context_t * ctx,framebuffer_t & framebuffer,con
   }
 
   if(framebuffer.invalid) {
-#if 0
-    if(framebuffer.is_default) {
-      const uint32_t format = ctx -> base.draw -> format;
-      
-      framebuffer.format = format;
-      framebuffer.enabled = NV30_3D_RT_ENABLE_COLOR0;
-      framebuffer.size[0] = ctx -> base.draw -> width;
-      framebuffer.size[1] = ctx -> base.draw -> height;
-
-      framebuffer.surfaces[0].pitch = ctx -> base.draw -> color_pitch;
-      framebuffer.surfaces[0].memory.location = ctx -> base.draw -> color_buffer[0].location;
-      framebuffer.surfaces[0].memory.offset = ctx -> base.draw -> color_buffer[0].offset;
-      framebuffer.surfaces[0].memory.owner = 0;
-      
-      framebuffer.surfaces[1].pitch = ctx -> base.draw -> color_pitch;
-      framebuffer.surfaces[1].memory.location = ctx -> base.draw -> color_buffer[1].location;
-      framebuffer.surfaces[1].memory.offset = ctx -> base.draw -> color_buffer[1].offset;
-      framebuffer.surfaces[1].memory.owner = 0;
-      
-      framebuffer.surfaces[4].pitch = ctx -> base.draw -> depth_pitch;
-      framebuffer.surfaces[4].memory.location = ctx -> base.draw -> depth_buffer.location;
-      framebuffer.surfaces[4].memory.offset = ctx -> base.draw -> depth_buffer.offset;
-      framebuffer.surfaces[4].memory.owner = 0;
-
-      write_mask_t write_mask;
-      write_mask.all = 0;
-      
-      if(format & NV30_3D_RT_FORMAT_COLOR__MASK) {
-	rsxgl_assert(framebuffer.surfaces[0].memory.offset != 0);
-
-	write_mask.parts.r = 1;
-	write_mask.parts.g = 1;
-	write_mask.parts.b = 1;
-	write_mask.parts.a = 1;
-#if 0
-	const uint32_t format_color = format & NV30_3D_RT_FORMAT_COLOR__MASK;
-	switch(format_color) {
-	case NV30_3D_RT_FORMAT_COLOR_R5G6B5:
-	case NV30_3D_RT_FORMAT_COLOR_X8R8G8B8:
-	case NV30_3D_RT_FORMAT_COLOR_X8B8G8R8:
-	  write_mask.parts.r = 1;
-	  write_mask.parts.g = 1;
-	  write_mask.parts.b = 1;
-	  write_mask.parts.a = 0;
-	  break;
-	case NV30_3D_RT_FORMAT_COLOR_A8R8G8B8:
-	case NV30_3D_RT_FORMAT_COLOR_A8B8G8R8:
-	case NV30_3D_RT_FORMAT_COLOR_A16B16G16R16_FLOAT:
-	case NV30_3D_RT_FORMAT_COLOR_A32B32G32R32_FLOAT:
-	  write_mask.parts.r = 1;
-	  write_mask.parts.g = 1;
-	  write_mask.parts.b = 1;
-	  write_mask.parts.a = 1;
-	  break;
-	case NV30_3D_RT_FORMAT_COLOR_B8:
-	case NV30_3D_RT_FORMAT_COLOR_R32_FLOAT:
-	  write_mask.parts.r = 1;
-	  write_mask.parts.g = 0;
-	  write_mask.parts.b = 0;
-	  write_mask.parts.a = 0;
-	  break;
-	};
-#endif
-      }
-      
-      if(format & NV30_3D_RT_FORMAT_ZETA__MASK) {
-	rsxgl_assert(framebuffer.surfaces[4].memory.offset != 0);
-
-	write_mask.parts.depth = 1;
-	write_mask.parts.stencil = (format & NV30_3D_RT_FORMAT_ZETA__MASK) == (NV30_3D_RT_FORMAT_ZETA_Z24S8);
-      }
-      
-      framebuffer.write_mask = write_mask;
-    }
-    else {
-      for(framebuffer_t::attachment_types_t::const_iterator it = framebuffer.attachment_types.begin();!it.done();it.next(framebuffer.attachment_types)) {
-	const uint32_t type = it.value();
-	if(type == RSXGL_ATTACHMENT_TYPE_RENDERBUFFER) {
-	}
-	else if(type == RSXGL_ATTACHMENT_TYPE_TEXTURE) {
-	}
-      }
-
-      write_mask_t write_mask;
-      write_mask.all = 0;
-
-      framebuffer.write_mask = write_mask;
-    }
-#endif
-
     framebuffer.invalid = 0;
   }
 }
