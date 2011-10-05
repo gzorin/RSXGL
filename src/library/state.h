@@ -89,6 +89,13 @@ enum pixel_store_alignment {
   RSXGL_PIXEL_STORE_ALIGNMENT_8 = 3
 };
 
+union write_mask_t {
+  uint8_t all;
+  struct {
+    uint8_t r:1, g:1, b:1, a:1, depth:1, stencil:1;
+  } parts;
+};
+
 struct state_t {
   union {
     uint32_t all;

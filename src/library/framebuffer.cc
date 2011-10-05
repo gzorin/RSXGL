@@ -93,7 +93,7 @@ glIsRenderbuffer (GLuint renderbuffer)
 }
 
 static inline uint8_t
-rsxgl_renderbuffer_format(GLenum internalformat)
+rsxgl_renderbuffer_format(const GLenum internalformat)
 {
   if(internalformat == GL_RGBA) {
     return RSXGL_RENDERBUFFER_FORMAT_A8R8G8B8;
@@ -352,7 +352,7 @@ rsxgl_init_default_framebuffer(void * ptr)
   framebuffer_t & framebuffer = storage -> at(0);
   framebuffer.is_default = 1;
 
-  framebuffer.mapping.set(0,RSXGL_OUTBUFFER_BACK);
+  framebuffer.mapping.set(0,0);
 }
 
 framebuffer_t::storage_type & framebuffer_t::storage()
@@ -479,7 +479,7 @@ rsxgl_framebuffer_target(GLenum target)
 }
 
 static inline uint32_t
-rsxgl_framebuffer_attachment(GLenum attachment)
+rsxgl_framebuffer_attachment(const GLenum attachment)
 {
   if(attachment >= GL_COLOR_ATTACHMENT0 && attachment < (GL_COLOR_ATTACHMENT0 + RSXGL_MAX_COLOR_ATTACHMENTS)) {
     return RSXGL_COLOR_ATTACHMENT0 + (attachment - GL_COLOR_ATTACHMENT0);
@@ -493,7 +493,7 @@ rsxgl_framebuffer_attachment(GLenum attachment)
 }
 
 static inline uint32_t
-rsxgl_framebuffer_attachment_type(GLenum target)
+rsxgl_framebuffer_attachment_type(const GLenum target)
 {
   if(target == GL_RENDERBUFFER) {
     return RSXGL_ATTACHMENT_TYPE_RENDERBUFFER;
@@ -642,9 +642,51 @@ glFramebufferTexture (GLenum target, GLenum attachment, GLuint texture, GLint le
 }
 
 static inline void
-rsxgl_draw_buffers(rsxgl_context_t * ctx,const framebuffer_t::name_type framebuffer_name,GLenum buffers[RSXGL_MAX_DRAW_BUFFERS])
-{
-  
+rsxgl_draw_buffers(rsxgl_context_t * ctx,const framebuffer_t::name_type framebuffer_name,const GLsizei n,const GLenum buffers[RSXGL_MAX_DRAW_BUFFERS])
+{ 
+  framebuffer_t & framebuffer = framebuffer_t::storage().at(framebuffer_name);
+
+  if(framebuffer.is_default) {
+    if(buffers[0] == GL_BACK) {
+      framebuffer.mapping.set(0,0);
+    }
+    else if(buffers[0] == GL_FRONT) {
+      framebuffer.mapping.set(0,1);
+    }
+    else if(buffers[0] == GL_NONE) {
+      framebuffer.mapping.set(0,RSXGL_MAX_COLOR_ATTACHMENTS);
+    }
+    else {
+      RSXGL_ERROR_(GL_INVALID_ENUM);
+    }
+  }
+  else {
+    uint32_t rsx_buffers[RSXGL_MAX_DRAW_BUFFERS];
+
+    for(size_t i = 0;i < n;++i) {
+      uint32_t rsx_buffer = RSXGL_MAX_COLOR_ATTACHMENTS;
+
+      if(buffers[i] >= GL_COLOR_ATTACHMENT0 && buffers[i] < (GL_COLOR_ATTACHMENT0 + RSXGL_MAX_COLOR_ATTACHMENTS)) {
+	rsx_buffer = (uint32_t)buffers[i] - (uint32_t)GL_COLOR_ATTACHMENT0;
+      }
+      else if(buffers[i] == GL_NONE) {
+	rsx_buffer = RSXGL_MAX_COLOR_ATTACHMENTS;
+      }
+      else {
+	RSXGL_ERROR_(GL_INVALID_ENUM);
+      }
+
+      for(size_t j = 0;j < i;++j) {
+	if(rsx_buffers[j] == rsx_buffer) RSXGL_ERROR_(GL_INVALID_OPERATION);
+      }
+
+      rsx_buffers[i] = rsx_buffer;
+    }
+
+    for(size_t i = 0;i < n;++i) {
+      framebuffer.mapping.set(i,rsx_buffers[i]);
+    }
+  }
 
   RSXGL_NOERROR_();
 }
@@ -652,11 +694,24 @@ rsxgl_draw_buffers(rsxgl_context_t * ctx,const framebuffer_t::name_type framebuf
 GLAPI void APIENTRY
 glDrawBuffer (GLenum mode)
 {
+  GLenum buffers[RSXGL_MAX_DRAW_BUFFERS];
+  buffers[0] = mode;
+  for(size_t i = 1;i < RSXGL_MAX_DRAW_BUFFERS;++i) {
+    buffers[i] = GL_NONE;
+  }
+  rsxgl_draw_buffers(current_ctx(),current_ctx() -> framebuffer_binding.names[RSXGL_DRAW_FRAMEBUFFER],1,buffers);
 }
 
 GLAPI void APIENTRY
 glDrawBuffers(GLsizei n, const GLenum *bufs)
 {
+  if(n < 0) {
+    RSXGL_ERROR_(GL_INVALID_ENUM);
+  }
+  else if(n >= RSXGL_MAX_DRAW_BUFFERS) {
+    RSXGL_ERROR_(GL_INVALID_VALUE);
+  }
+  rsxgl_draw_buffers(current_ctx(),current_ctx() -> framebuffer_binding.names[RSXGL_DRAW_FRAMEBUFFER],n,bufs);
 }
 
 static uint32_t
@@ -721,12 +776,13 @@ rsxgl_emit_surface(gcmContextData * context,const uint8_t which,surface_t const 
 void
 rsxgl_renderbuffer_validate(rsxgl_context_t * ctx,renderbuffer_t & renderbuffer,const uint32_t timestamp)
 {
-  
 }
 
 void
 rsxgl_framebuffer_validate(rsxgl_context_t * ctx,framebuffer_t & framebuffer,const uint32_t timestamp)
 {
+  rsxgl_assert((framebuffer.is_default) ? !framebuffer.invalid : 1);
+
   for(framebuffer_t::attachment_types_t::const_iterator it = framebuffer.attachment_types.begin();!it.done();it.next(framebuffer.attachment_types)) {
     const uint32_t type = it.value();
     if(type == RSXGL_ATTACHMENT_TYPE_RENDERBUFFER) {
@@ -758,20 +814,38 @@ rsxgl_draw_framebuffer_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
     if(framebuffer.is_default) {
       surface_t * surface = 0;
 
-      if(framebuffer.mapping.get(0) == RSXGL_OUTBUFFER_BACK) {
+      if(framebuffer.mapping.get(0) == 0) {
 	surface = framebuffer.surfaces + ctx -> draw_buffer;
       }
-      else if(framebuffer.mapping.get(0) == RSXGL_OUTBUFFER_FRONT) {
+      else if(framebuffer.mapping.get(0) == 1) {
 	surface = framebuffer.surfaces + !ctx -> draw_buffer;
       }
 
       if(surface != 0) {
 	rsxgl_assert(surface -> memory.offset != 0);
 	rsxgl_emit_surface(context,0,*surface);
-	enabled = NV30_3D_RT_ENABLE_COLOR0;
+
+	enabled |= (1 << 0);
       }
     }
     else {
+      uint32_t n = 0;
+
+      for(uint32_t i = 0;i < RSXGL_MAX_DRAW_BUFFERS;++i) {
+	const uint32_t j = framebuffer.mapping.get(i);
+	if(j == RSXGL_MAX_COLOR_ATTACHMENTS) continue;
+
+	rsxgl_assert(j < RSXGL_MAX_COLOR_ATTACHMENTS);
+	if(framebuffer.attachment_types.get(j) == RSXGL_ATTACHMENT_TYPE_NONE) continue;
+
+	rsxgl_assert(framebuffer.surfaces[j].memory.offset != 0);
+	rsxgl_emit_surface(context,j,framebuffer.surfaces[j]);
+
+	enabled |= (1 << j);
+	++n;
+      }
+
+      enabled |= (n > 1) ? NV30_3D_RT_ENABLE_MRT : 0;
     }
 
     if(format & NV30_3D_RT_FORMAT_ZETA__MASK) {
@@ -779,9 +853,9 @@ rsxgl_draw_framebuffer_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
       rsxgl_emit_surface(context,4,framebuffer.surfaces[4]);
     }
 
-    const uint16_t w = framebuffer.size[0], h = framebuffer.size[1];
-
     if(format != 0 && enabled != 0) {
+      const uint16_t w = framebuffer.size[0], h = framebuffer.size[1];
+
       uint32_t * buffer = gcm_reserve(context,9);
     
       gcm_emit_method_at(buffer,0,NV30_3D_RT_FORMAT,1);

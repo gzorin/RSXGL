@@ -21,14 +21,6 @@
 #include <boost/mpl/sizeof.hpp>
 #include <boost/mpl/deref.hpp>
 
-// This serves to store both what the application wants, and what the current framebuffer provides:
-union write_mask_t {
-  uint8_t all;
-  struct {
-    uint8_t r:1, g:1, b:1, a:1, depth:1, stencil:1;
-  } parts;
-};
-
 enum rsxgl_renderbuffer_target {
   RSXGL_RENDERBUFFER = 0,
   RSXGL_MAX_RENDERBUFFER_TARGETS = 1
@@ -101,13 +93,6 @@ enum rsxgl_framebuffer_attachment_type {
   RSXGL_MAX_ATTACHMENT_TYPES = 3
 };
 
-enum rsxgl_outbuffer {
-  RSXGL_OUTBUFFER_BACK = 0,
-  RSXGL_OUTBUFFER_FRONT = 1,
-  RSXGL_OUTBUFFER_COLOR_ATTACHMENT0,
-  RSXGL_MAX_OUTBUFFERS = RSXGL_OUTBUFFER_COLOR_ATTACHMENT0 + RSXGL_MAX_COLOR_ATTACHMENTS
-};
-
 struct framebuffer_t {
   typedef bindable_gl_object< framebuffer_t, RSXGL_MAX_FRAMEBUFFERS, RSXGL_MAX_FRAMEBUFFER_TARGETS, 1 > gl_object_type;
   typedef typename gl_object_type::name_type name_type;
@@ -129,7 +114,7 @@ struct framebuffer_t {
   attachment_name_type attachments[RSXGL_MAX_ATTACHMENTS];
 
   // input is a draw buffer index, output is one of rsxgl_outbuffer above:
-  smint_array< RSXGL_MAX_OUTBUFFERS, RSXGL_MAX_DRAW_BUFFERS > mapping;
+  smint_array< RSXGL_MAX_COLOR_ATTACHMENTS, RSXGL_MAX_DRAW_BUFFERS > mapping;
 
   uint8_t is_default:1, invalid:1;
 
