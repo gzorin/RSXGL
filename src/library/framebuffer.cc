@@ -807,7 +807,6 @@ rsxgl_framebuffer_validate(rsxgl_context_t * ctx,framebuffer_t & framebuffer,con
     uint32_t color_format = 0, depth_format = 0;
 
     if(framebuffer.is_default) {
-      rsxgl_debug_printf("validating default framebuffer\n");
       const uint32_t format = ctx -> base.draw -> format;
 
       framebuffer.format = ctx -> base.draw -> format;
@@ -818,9 +817,6 @@ rsxgl_framebuffer_validate(rsxgl_context_t * ctx,framebuffer_t & framebuffer,con
 
       if(framebuffer.attachment_types.get(0) != RSXGL_ATTACHMENT_TYPE_NONE && framebuffer.mapping.get(0) < RSXGL_MAX_COLOR_ATTACHMENTS) {
 	const uint32_t buffer = (framebuffer.mapping.get(0) == 0) ? ctx -> base.draw -> buffer : !ctx -> base.draw -> buffer;
-
-	rsxgl_debug_printf("\tsystem framebuffer: %u\n",buffer);
-	
 	framebuffer.surfaces[0].pitch = ctx -> base.draw -> color_pitch;
 	framebuffer.surfaces[0].memory.location = ctx -> base.draw -> color_buffer[buffer].location;
 	framebuffer.surfaces[0].memory.offset = ctx -> base.draw -> color_buffer[buffer].offset;
@@ -923,22 +919,34 @@ rsxgl_draw_framebuffer_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
 
     rsxgl_debug_printf("format: %x enabled: %x\n",format,enabled);
 
-    uint32_t * buffer = gcm_reserve(context,9);
-    
-    gcm_emit_method_at(buffer,0,NV30_3D_RT_FORMAT,1);
-    gcm_emit_at(buffer,1,format | ((31 - __builtin_clz(w)) << NV30_3D_RT_FORMAT_LOG2_WIDTH__SHIFT) | ((31 - __builtin_clz(h)) << NV30_3D_RT_FORMAT_LOG2_HEIGHT__SHIFT));
-    
-    gcm_emit_method_at(buffer,2,NV30_3D_RT_HORIZ,2);
-    gcm_emit_at(buffer,3,w << 16);
-    gcm_emit_at(buffer,4,h << 16);
-    
-    gcm_emit_method_at(buffer,5,NV30_3D_COORD_CONVENTIONS,1);
-    gcm_emit_at(buffer,6,h | NV30_3D_COORD_CONVENTIONS_ORIGIN_NORMAL);
-    
-    gcm_emit_method_at(buffer,7,NV30_3D_RT_ENABLE,1);
-    gcm_emit_at(buffer,8,enabled);
-    
-    gcm_finish_n_commands(context,9);
+    if(enabled != 0) {
+      rsxgl_assert(format != 0);
+
+      uint32_t * buffer = gcm_reserve(context,9);
+      
+      gcm_emit_method_at(buffer,0,NV30_3D_RT_FORMAT,1);
+      gcm_emit_at(buffer,1,format | ((31 - __builtin_clz(w)) << NV30_3D_RT_FORMAT_LOG2_WIDTH__SHIFT) | ((31 - __builtin_clz(h)) << NV30_3D_RT_FORMAT_LOG2_HEIGHT__SHIFT));
+      
+      gcm_emit_method_at(buffer,2,NV30_3D_RT_HORIZ,2);
+      gcm_emit_at(buffer,3,w << 16);
+      gcm_emit_at(buffer,4,h << 16);
+      
+      gcm_emit_method_at(buffer,5,NV30_3D_COORD_CONVENTIONS,1);
+      gcm_emit_at(buffer,6,h | NV30_3D_COORD_CONVENTIONS_ORIGIN_NORMAL);
+      
+      gcm_emit_method_at(buffer,7,NV30_3D_RT_ENABLE,1);
+      gcm_emit_at(buffer,8,enabled);
+      
+      gcm_finish_n_commands(context,9);
+    }
+    else {
+      uint32_t * buffer = gcm_reserve(context,2);
+
+      gcm_emit_method_at(buffer,0,NV30_3D_RT_ENABLE,1);
+      gcm_emit_at(buffer,1,enabled);
+      
+      gcm_finish_n_commands(context,2);
+    }
 
     ctx -> state.invalid.parts.draw_framebuffer = 0;
   }
