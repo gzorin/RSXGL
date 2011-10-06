@@ -1009,7 +1009,7 @@ rsxgl_draw_framebuffer_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
       uint32_t * buffer = gcm_reserve(context,2);
 
       gcm_emit_method_at(buffer,0,NV30_3D_RT_ENABLE,1);
-      gcm_emit_at(buffer,1,enabled);
+      gcm_emit_at(buffer,1,0);
       
       gcm_finish_n_commands(context,2);
     }
