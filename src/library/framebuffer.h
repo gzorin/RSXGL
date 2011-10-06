@@ -21,23 +21,31 @@
 #include <boost/mpl/sizeof.hpp>
 #include <boost/mpl/deref.hpp>
 
+union write_mask_t {
+  uint8_t all;
+  struct {
+    uint8_t r:1, g:1, b:1, a:1, depth:1, stencil:1;
+  } parts;
+};
+
+enum rsxgl_framebuffer_formats {
+  RSXGL_FRAMEBUFFER_FORMAT_R5G6B5 = 0,
+  RSXGL_FRAMEBUFFER_FORMAT_X8R8G8B8 = 1,
+  RSXGL_FRAMEBUFFER_FORMAT_A8R8G8B8 = 2,
+  RSXGL_FRAMEBUFFER_FORMAT_B8 = 3,
+  RSXGL_FRAMEBUFFER_FORMAT_A16B16G16R16_FLOAT = 4,
+  RSXGL_FRAMEBUFFER_FORMAT_A32B32G32R32_FLOAT = 5,
+  RSXGL_FRAMEBUFFER_FORMAT_R32_FLOAT = 6,
+  RSXGL_FRAMEBUFFER_FORMAT_X8B8G8R8 = 7,
+  RSXGL_FRAMEBUFFER_FORMAT_A8B8G8R8 = 8,
+  RSXGL_FRAMEBUFFER_FORMAT_DEPTH24_D8 = 9,
+  RSXGL_FRAMEBUFFER_FORMAT_DEPTH16 = 10,
+  RSXGL_MAX_FRAMEBUFFER_FORMATS = 11
+};
+
 enum rsxgl_renderbuffer_target {
   RSXGL_RENDERBUFFER = 0,
   RSXGL_MAX_RENDERBUFFER_TARGETS = 1
-};
-
-enum rsxgl_renderbuffer_formats {
-  RSXGL_RENDERBUFFER_FORMAT_R5G6B5 = 0,
-  RSXGL_RENDERBUFFER_FORMAT_X8R8G8B8 = 1,
-  RSXGL_RENDERBUFFER_FORMAT_A8R8G8B8 = 2,
-  RSXGL_RENDERBUFFER_FORMAT_B8 = 3,
-  RSXGL_RENDERBUFFER_FORMAT_A16B16G16R16_FLOAT = 4,
-  RSXGL_RENDERBUFFER_FORMAT_A32B32G32R32_FLOAT = 5,
-  RSXGL_RENDERBUFFER_FORMAT_R32_FLOAT = 6,
-  RSXGL_RENDERBUFFER_FORMAT_X8B8G8R8 = 7,
-  RSXGL_RENDERBUFFER_FORMAT_A8B8G8R8 = 8,
-  RSXGL_RENDERBUFFER_FORMAT_DEPTH24_D8 = 9,
-  RSXGL_RENDERBUFFER_FORMAT_DEPTH16 = 10
 };
 
 typedef boost::uint_value_t< RSXGL_MAX_RENDERBUFFER_SIZE - 1 >::least framebuffer_dimension_size_type;
@@ -117,8 +125,9 @@ struct framebuffer_t {
   smint_array< RSXGL_MAX_COLOR_ATTACHMENTS, RSXGL_MAX_DRAW_BUFFERS > mapping;
 
   uint8_t is_default:1, invalid:1;
+  write_mask_t write_mask;
 
-  uint16_t format;
+  uint16_t format, enabled;
   framebuffer_dimension_size_type size[2];
   surface_t surfaces[RSXGL_MAX_ATTACHMENTS];
 

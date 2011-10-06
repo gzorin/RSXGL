@@ -289,9 +289,12 @@ rsxgl_state_validate(rsxgl_context_t * ctx)
 
   // write masks:
   write_mask_t write_mask;
-  write_mask.all = ctx -> framebuffer_write_mask.all & s -> write_mask.all;
+  write_mask.all = ctx -> framebuffer_binding[RSXGL_DRAW_FRAMEBUFFER].write_mask.all & s -> write_mask.all;
 
   if(s -> invalid.parts.write_mask) {
+    rsxgl_debug_printf("state write_mask: %x\n",(uint32_t)s -> write_mask.all);
+    rsxgl_debug_printf("final write_mask: %x\n",(uint32_t)write_mask.all);
+
     rsxgl_emit_color_write_mask(context,write_mask.parts.r,write_mask.parts.g,write_mask.parts.b,write_mask.parts.a);
     rsxgl_emit_depth_write_mask(context,write_mask.parts.depth);
     s -> invalid.parts.write_mask = 0;

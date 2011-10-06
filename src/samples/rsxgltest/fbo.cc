@@ -309,7 +309,9 @@ rsxgltest_init(int argc,const char ** argv)
   report_glerror("glBindFramebuffer");
   tcp_printf("fbo: %u is fbo: %u\n",fbo,(GLuint)glIsFramebuffer(fbo));
 
+#if 0
   glFramebufferRenderbuffer(GL_FRAMEBUFFER,GL_COLOR_ATTACHMENT0,GL_RENDERBUFFER,rbo);
+#endif
 
   glBindFramebuffer(GL_FRAMEBUFFER,0);
 }
