@@ -46,8 +46,8 @@ rsxgl_context_t::egl_callback(struct rsxegl_context_t * egl_ctx,const uint8_t op
     framebuffer_t & framebuffer = framebuffer_t::storage().at(0);
 
     if(op == RSXEGL_MAKE_CONTEXT_CURRENT) {
-      framebuffer.attachment_types.set(0,((ctx -> base.draw -> format & NV30_3D_RT_FORMAT_COLOR__MASK) != 0) ? RSXGL_ATTACHMENT_TYPE_RENDERBUFFER : RSXGL_ATTACHMENT_TYPE_NONE);
-      framebuffer.attachment_types.set(4,((ctx -> base.draw -> format & NV30_3D_RT_FORMAT_ZETA__MASK) != 0) ? RSXGL_ATTACHMENT_TYPE_RENDERBUFFER : RSXGL_ATTACHMENT_TYPE_NONE);
+      framebuffer.attachment_types.set(RSXGL_COLOR_ATTACHMENT0,((ctx -> base.draw -> format & NV30_3D_RT_FORMAT_COLOR__MASK) != 0) ? RSXGL_ATTACHMENT_TYPE_RENDERBUFFER : RSXGL_ATTACHMENT_TYPE_NONE);
+      framebuffer.attachment_types.set(RSXGL_DEPTH_STENCIL_ATTACHMENT,((ctx -> base.draw -> format & NV30_3D_RT_FORMAT_ZETA__MASK) != 0) ? RSXGL_ATTACHMENT_TYPE_RENDERBUFFER : RSXGL_ATTACHMENT_TYPE_NONE);
 
       if(ctx -> state.viewport.width == 0 && ctx -> state.viewport.height == 0) {
 	ctx -> state.viewport.x = 0;
