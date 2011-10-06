@@ -307,6 +307,10 @@ program_t::program_t()
   for(size_t i = 0;i < RSXGL_MAX_VERTEX_ATTRIBS;++i) {
     attrib_binding(i).construct();
   }
+
+  for(size_t i = 0;i < RSXGL_MAX_DRAW_BUFFERS;++i) {
+    fragout_binding(i).construct();
+  }
 }
 
 program_t::~program_t()
@@ -319,6 +323,10 @@ program_t::~program_t()
 
   for(size_t i = 0;i < RSXGL_MAX_VERTEX_ATTRIBS;++i) {
     attrib_binding(i).destruct();
+  }
+
+  for(size_t i = 0;i < RSXGL_MAX_DRAW_BUFFERS;++i) {
+    fragout_binding(i).destruct();
   }
 
   if(uniform_values != 0) free(uniform_values);
@@ -748,7 +756,7 @@ glLinkProgram (GLuint program_name)
 
   //
   std::deque< const rsxProgramAttrib * > vp_attribs, vp_texture_attribs, vp_outputs;
-  std::deque< const rsxProgramAttrib * > fp_inputs, fp_texture_attribs;
+  std::deque< const rsxProgramAttrib * > fp_inputs, fp_texture_attribs, fp_outputs;
 
   // These two get merged eventually:
   std::deque< std::pair< program_t::name_size_type, program_t::uniform_t > > uniforms, textures;
@@ -873,12 +881,18 @@ glLinkProgram (GLuint program_name)
 	fp_texture_attribs.push_back(_fp_attribs + i);
       }
       else {
-	fp_inputs.push_back(_fp_attribs + i);
+	if(!_fp_attribs -> is_output) {
+	  fp_inputs.push_back(_fp_attribs + i);
+	}
+	else {
+	  fp_outputs.push_back(_fp_attribs + i);
+	}
       }
     }
     
     std::sort(fp_texture_attribs.begin(),fp_texture_attribs.end(),fp_attrib_lt);
     std::sort(fp_inputs.begin(),fp_inputs.end(),fp_attrib_lt);
+    std::sort(fp_outputs.begin(),fp_outputs.end(),fp_attrib_lt);
   }
 
   {
@@ -1731,6 +1745,31 @@ glGetUniformLocation (GLuint program_name, const GLchar* name)
 
   std::pair< bool, program_t::uniform_size_type > tmp = program.uniform_table().find(program.names(),name);
   RSXGL_NOERROR(tmp.first ? tmp.second : -1);
+}
+
+GLAPI void APIENTRY
+glBindFragDataLocation (GLuint program_name, GLuint color, const GLchar *name)
+{
+  if(color >= RSXGL_MAX_DRAW_BUFFERS) {
+    RSXGL_ERROR_(GL_INVALID_VALUE);
+  }
+
+  if(!program_t::storage().is_object(program_name)) {
+    RSXGL_ERROR_(GL_INVALID_VALUE);
+  }
+
+  program_t & program = program_t::storage().at(program_name);
+  
+  const size_t n = strlen(name) + 1;
+  program.fragout_binding(color).resize(n);
+  program.fragout_binding(color).set(name,n);
+  
+  RSXGL_NOERROR_();
+}
+
+GLAPI GLint APIENTRY
+glGetFragDataLocation (GLuint program, const GLchar *name)
+{
 }
 
 void
