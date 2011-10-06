@@ -724,7 +724,7 @@ glDrawBuffers(GLsizei n, const GLenum *bufs)
   rsxgl_draw_buffers(current_ctx(),current_ctx() -> framebuffer_binding.names[RSXGL_DRAW_FRAMEBUFFER],n,bufs);
 }
 
-static uint32_t
+static uint16_t
 rsxgl_renderbuffer_nv40_format[] = {
     NV30_3D_RT_FORMAT_COLOR_R5G6B5,
     NV30_3D_RT_FORMAT_COLOR_X8R8G8B8,
@@ -804,14 +804,13 @@ rsxgl_framebuffer_validate(rsxgl_context_t * ctx,framebuffer_t & framebuffer,con
   }
     
   if(framebuffer.invalid) {
-    uint32_t color_format = 0, depth_format = 0;
+    uint32_t format = 0, enabled = 0,color_format = 0, depth_format = 0;
+    framebuffer_dimension_size_type w = ~0, h = ~0;
 
     if(framebuffer.is_default) {
-      const uint32_t format = ctx -> base.draw -> format;
-
-      framebuffer.format = ctx -> base.draw -> format;
-      framebuffer.size[0] = ctx -> base.draw -> width;
-      framebuffer.size[1] = ctx -> base.draw -> height;
+      format = ctx -> base.draw -> format;
+      w = ctx -> base.draw -> width;
+      h = ctx -> base.draw -> height;
 
       color_format = format & NV30_3D_RT_FORMAT_COLOR__MASK;
 
@@ -822,10 +821,10 @@ rsxgl_framebuffer_validate(rsxgl_context_t * ctx,framebuffer_t & framebuffer,con
 	framebuffer.surfaces[0].memory.offset = ctx -> base.draw -> color_buffer[buffer].offset;
 	framebuffer.surfaces[0].memory.owner = 0;
 	
-	framebuffer.enabled = NV30_3D_RT_ENABLE_COLOR0;
+	enabled = NV30_3D_RT_ENABLE_COLOR0;
       }
       else {
-	framebuffer.enabled = 0;
+	enabled = 0;
       }
 
       depth_format = format & NV30_3D_RT_FORMAT_ZETA__MASK;
@@ -838,6 +837,62 @@ rsxgl_framebuffer_validate(rsxgl_context_t * ctx,framebuffer_t & framebuffer,con
 	framebuffer.attachment_types.set(4,RSXGL_ATTACHMENT_TYPE_RENDERBUFFER);
       }
     }
+    else {
+      format = NV30_3D_RT_FORMAT_TYPE_LINEAR;
+      uint8_t rsx_format = ~0;
+
+      // Color buffers:
+      for(framebuffer_t::mapping_t::const_iterator it = framebuffer.mapping.begin();!it.done();it.next(framebuffer.mapping)) {
+	const framebuffer_t::attachment_size_type i = it.value();
+	const uint32_t type = framebuffer.attachment_types.get(i);
+	if(type == RSXGL_ATTACHMENT_TYPE_NONE) continue;
+	rsxgl_assert(framebuffer.attachments[i] != 0);
+
+	if(type == RSXGL_ATTACHMENT_TYPE_RENDERBUFFER) {
+	  renderbuffer_t & renderbuffer = renderbuffer_t::storage().at(framebuffer.attachments[i]);
+	  framebuffer.surfaces[i] = renderbuffer.surface;
+	  w = std::min(w,renderbuffer.size[0]);
+	  h = std::min(h,renderbuffer.size[1]);
+
+	  if(rsx_format == ~0) {
+	    rsx_format = renderbuffer.format;
+	  }
+
+	  enable |= (NV30_3D_RT_ENABLE_COLOR0 << i);
+	}
+	else if(type == RSXGL_ATTACHMENT_TYPE_TEXTURE) {
+
+	  enable |= (NV30_3D_RT_ENABLE_COLOR0 << i);
+	}
+      }
+
+      if(rsx_format != ~0) {
+	format |= rsxgl_renderbuffer_nv40_format[rsx_format];
+      }
+
+      // Depth buffer:
+      {
+	const uint32_t type = framebuffer.attachment_types.get(4);
+	rsxgl_assert(framebuffer.attachments[4] != 0);
+	if(type == RSXGL_ATTACHMENT_TYPE_RENDERBUFFER) {
+	  renderbuffer_t & renderbuffer = renderbuffer_t::storage().at(framebuffer.attachments[4]);
+	  framebuffer.surfaces[4] = renderbuffer.surface;
+	  w = std::min(w,renderbuffer.size[0]);
+	  h = std::min(h,renderbuffer.size[1]);
+
+	  format |= NV30_3D_RT_FORMAT_ZETA_Z16;
+	}
+	else if(type == RSXGL_ATTACHMENT_TYPE_TEXTURE) {
+
+	  format |= NV30_3D_RT_FORMAT_ZETA_Z16;
+	}
+      }
+    }
+
+    framebuffer.format = format;
+    framebuffer.enabled = enabled;
+    framebuffer.size[0] = w;
+    framebuffer.size[1] = h;
 
     write_mask_t write_mask;
     write_mask.all = 0;

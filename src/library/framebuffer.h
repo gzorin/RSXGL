@@ -119,10 +119,13 @@ struct framebuffer_t {
 
   typedef smint_array< RSXGL_MAX_ATTACHMENT_TYPES - 1, RSXGL_MAX_ATTACHMENTS > attachment_types_t;
   attachment_types_t attachment_types;
+  typedef boost::uint_value_t< RSXGL_MAX_ATTACHMENTS - 1 >::least attachment_size_type;
   attachment_name_type attachments[RSXGL_MAX_ATTACHMENTS];
 
   // input is a draw buffer index, output is one of rsxgl_outbuffer above:
-  smint_array< RSXGL_MAX_COLOR_ATTACHMENTS, RSXGL_MAX_DRAW_BUFFERS > mapping;
+  typedef smint_array< RSXGL_MAX_COLOR_ATTACHMENTS, RSXGL_MAX_DRAW_BUFFERS > mapping_t;
+  typedef mappint_t::index_type mapping_size_type;
+  mapping_t mapping;
 
   uint8_t is_default:1, invalid:1;
   write_mask_t write_mask;
