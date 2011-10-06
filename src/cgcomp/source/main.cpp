@@ -249,11 +249,17 @@ int compileFP(std::istream & in,std::ostream & out)
     n = 0;
     std::list<param> params = parser.GetParameters();
     for(std::list<param>::iterator it = params.begin();it!=params.end();it++) {
-      if(!it->is_const && !it->is_output) {
+      if(!it->is_const /*&& !it->is_output*/) {
 	it->user = lastoff + (n*sizeof(rsxProgramAttrib));
 	attribs[n].index = SWAP32(it->index);
 	attribs[n].name_off = SWAP32(0);
 	attribs[n].type = it->type;
+	attribs[n].is_output = it->is_output;
+	
+	if(it->is_output) {
+	  std::cerr << n << " is output: " << it->name << " index: " << it->index << std::endl;
+	}
+
 	n++;
       }
     }
@@ -357,6 +363,10 @@ int compileFP(std::istream & in,std::ostream & out)
       dstcodeptr[n+1] = endian_fp((SWAP32(fpi[i].data[1])));
       dstcodeptr[n+2] = endian_fp((SWAP32(fpi[i].data[2])));
       dstcodeptr[n+3] = endian_fp((SWAP32(fpi[i].data[3])));
+
+      const uint32_t opcode = (fpi[i].data[0] & NVFX_FP_OP_OPCODE_MASK) >> NVFX_FP_OP_OPCODE_SHIFT;
+      const uint32_t outreg = (fpi[i].data[0] & NVFX_FP_OP_OUT_REG_MASK) >> NVFX_FP_OP_OUT_REG_SHIFT;
+      fprintf(stderr,"%i insn: %x opcode: %x outreg: %x\n",i,fpi[i].data[0],opcode,outreg);
     }
     
     out.write((const char *)fragmentprogram,lastoff);

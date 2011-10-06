@@ -139,10 +139,17 @@ static const u32 FP_INPUTS_CNT = sizeof(fp_inputs)/sizeof(ioset);
 static ioset fp_outputs[] =
 {
 	{ "result.color", 0},
+	{ "result.color[1]", 2},
+	{ "result.color[2]", 3},
+	{ "result.color[3]", 4},
 	{ "result.depth", 1},
 	{ "COLR", 0},
 	{ "COLH", 0},
-	{ "DEPR", 1}
+	{ "DEPR", 1},
+	{ "COL", 0},
+	{ "COL1", 2},
+	{ "COL2", 3},
+	{ "COL3", 4}
 };
 static const u32 FP_OUTPUTS_CNT = sizeof(fp_outputs)/sizeof(ioset);
 
