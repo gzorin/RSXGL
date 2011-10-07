@@ -970,7 +970,7 @@ rsxgl_tex_format(GLint internalformat)
   }
 }
 
-static const uint8_t rsx_texture_formats[] = {
+static const uint8_t rsxgl_texture_nv40_format[] = {
   0x81,
   0x82,
   0x83,
@@ -1460,7 +1460,7 @@ rsxgl_tex_storage(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,G
     ((texture.cube) ? NV30_3D_TEX_FORMAT_CUBIC : 0) |
     NV30_3D_TEX_FORMAT_NO_BORDER |
     ((uint32_t)texture.dims << NV30_3D_TEX_FORMAT_DIMS__SHIFT) |
-    ((uint32_t)(rsx_texture_formats[texture.internalformat] | 0x80 | RSXGL_TEX_FORMAT_LN | (texture.rect ? RSXGL_TEX_FORMAT_UN : 0)) << NV30_3D_TEX_FORMAT_FORMAT__SHIFT) |
+    ((uint32_t)(rsxgl_texture_nv40_format[texture.internalformat] | 0x80 | RSXGL_TEX_FORMAT_LN | (texture.rect ? RSXGL_TEX_FORMAT_UN : 0)) << NV30_3D_TEX_FORMAT_FORMAT__SHIFT) |
     ((uint32_t)texture.max_level << NV40_3D_TEX_FORMAT_MIPMAP_COUNT__SHIFT)
     ;
 
@@ -1924,14 +1924,14 @@ rsxgl_texture_validate(rsxgl_context_t * ctx,texture_t & texture,const uint32_t 
 	  ((texture.cube) ? NV30_3D_TEX_FORMAT_CUBIC : 0) |
 	  NV30_3D_TEX_FORMAT_NO_BORDER |
 	  ((uint32_t)texture.dims << NV30_3D_TEX_FORMAT_DIMS__SHIFT) |
-	  ((uint32_t)(rsx_texture_formats[texture.internalformat] | 0x80 | RSXGL_TEX_FORMAT_LN | (texture.rect ? RSXGL_TEX_FORMAT_UN : 0)) << NV30_3D_TEX_FORMAT_FORMAT__SHIFT) |
+	  ((uint32_t)(rsxgl_texture_nv40_format[texture.internalformat] | 0x80 | RSXGL_TEX_FORMAT_LN | (texture.rect ? RSXGL_TEX_FORMAT_UN : 0)) << NV30_3D_TEX_FORMAT_FORMAT__SHIFT) |
 	  ((uint32_t)texture.max_level << NV40_3D_TEX_FORMAT_MIPMAP_COUNT__SHIFT)
 	  ;
 	
 #if 0	      
 	rsxgl_debug_printf("\t\tsuccess dims: %u format: %u (%x) size: %u,%u,%u bytes: %u pitch: %u max_level: %u remap: %x offset: %u\n",
 			   texture.dims,
-			   texture.internalformat,(uint32_t)rsx_texture_formats[texture.internalformat],
+			   texture.internalformat,(uint32_t)rsxgl_texture_nv40_format[texture.internalformat],
 			   texture.size[0],texture.size[1],texture.size[2],
 			   nbytes,texture.pitch,
 			   texture.max_level,
