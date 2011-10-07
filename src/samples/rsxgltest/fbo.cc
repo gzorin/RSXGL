@@ -310,7 +310,6 @@ rsxgltest_draw()
     compute_sine_wave(rgb_waves + 2,rsxgltest_elapsed_time)
   };
 
-#if 0
   glBindFramebuffer(GL_FRAMEBUFFER,fbo);
   glDepthMask(GL_FALSE);
   glDisable(GL_DEPTH_TEST);
@@ -321,7 +320,6 @@ rsxgltest_draw()
 
   glDepthMask(GL_TRUE);
   glEnable(GL_DEPTH_TEST);
-#endif
 
   glClearColor(rgb[0],rgb[1],rgb[2],1.0);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
