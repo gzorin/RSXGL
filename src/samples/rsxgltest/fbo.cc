@@ -285,8 +285,8 @@ rsxgltest_init(int argc,const char ** argv)
   glBindRenderbuffer(GL_RENDERBUFFER,rbo[0]);
   glRenderbufferStorage(GL_RENDERBUFFER,GL_RGBA,image.width,image.height);
 
-  glBindRenderbuffer(GL_RENDERBUFFER,rbo[1]);
-  glRenderbufferStorage(GL_RENDERBUFFER,GL_DEPTH_COMPONENT,image.width,image.height);
+  //glBindRenderbuffer(GL_RENDERBUFFER,rbo[1]);
+  //glRenderbufferStorage(GL_RENDERBUFFER,GL_DEPTH_COMPONENT,image.width,image.height);
 
   glBindRenderbuffer(GL_RENDERBUFFER,0);
 
@@ -341,7 +341,6 @@ rsxgltest_draw()
     glUniformMatrix4fv(TransMatrix_location,1,GL_FALSE,modelview.data());
 
     glDrawElements(GL_TRIANGLES,36,GL_UNSIGNED_INT,client_indices);
-    glFinish();
   }
 
   return 1;

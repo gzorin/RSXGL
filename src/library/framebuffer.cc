@@ -907,11 +907,17 @@ rsxgl_framebuffer_validate(rsxgl_context_t * ctx,framebuffer_t & framebuffer,con
 	    w = std::min(w,renderbuffer.size[0]);
 	    h = std::min(h,renderbuffer.size[1]);
 
+	    format |= (rsxgl_renderbuffer_nv40_format[renderbuffer.format] | NV30_3D_RT_FORMAT_TYPE_LINEAR);
+	  }
+	  else {
 	    format |= (NV30_3D_RT_FORMAT_ZETA_Z16 | NV30_3D_RT_FORMAT_TYPE_LINEAR);
 	  }
 	}
 	else if(type == RSXGL_ATTACHMENT_TYPE_TEXTURE) {
 	  //format |= (NV30_3D_RT_FORMAT_ZETA_Z16 | NV30_3D_RT_FORMAT_TYPE_LINEAR);
+	}
+	else {
+	  format |= (NV30_3D_RT_FORMAT_ZETA_Z16 | NV30_3D_RT_FORMAT_TYPE_LINEAR);
 	}
       }
     }
@@ -999,7 +1005,6 @@ rsxgl_draw_framebuffer_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
 
     for(framebuffer_t::attachment_size_type i = 0;i < RSXGL_MAX_ATTACHMENTS;++i) {
       rsxgl_debug_printf("%u: %u pitch: %u\n",(uint32_t)i,framebuffer.surfaces[i].memory.offset,framebuffer.surfaces[i].pitch);
-      if(framebuffer.surfaces[i].memory.offset == 0) continue;
       rsxgl_emit_surface(context,i,framebuffer.surfaces[i]);
     }
 

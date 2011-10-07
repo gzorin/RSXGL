@@ -287,9 +287,6 @@ rsxgl_state_validate(rsxgl_context_t * ctx)
   write_mask.all = ctx -> framebuffer_binding[RSXGL_DRAW_FRAMEBUFFER].write_mask.all & s -> write_mask.all;
 
   if(s -> invalid.parts.write_mask) {
-    rsxgl_debug_printf("state write_mask: %x\n",(uint32_t)s -> write_mask.all);
-    rsxgl_debug_printf("final write_mask: %x\n",(uint32_t)write_mask.all);
-
     rsxgl_emit_color_write_mask(context,write_mask.parts.r,write_mask.parts.g,write_mask.parts.b,write_mask.parts.a);
     rsxgl_emit_depth_write_mask(context,write_mask.parts.depth);
   }
@@ -306,7 +303,7 @@ rsxgl_state_validate(rsxgl_context_t * ctx)
   
   if(s -> invalid.parts.write_mask || s -> invalid.parts.depth) {
     buffer = gcm_reserve(context,2);
-    
+
     gcm_emit_method_at(buffer,0,NV30_3D_DEPTH_TEST_ENABLE,1);
     gcm_emit_at(buffer,1,write_mask.parts.depth && s -> enable.depth_test);
 
