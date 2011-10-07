@@ -28,6 +28,13 @@ struct rsxgl_context_t {
   memory_arena_t::binding_type arena_binding;
   buffer_t::binding_type buffer_binding;
 
+  union {
+    uint8_t all;
+    struct {
+      uint8_t draw_framebuffer:1, read_framebuffer:1, program:1;
+    } parts;
+  } invalid;
+
   bit_set< RSXGL_MAX_VERTEX_ATTRIBS > invalid_attribs;
   attribs_t::binding_type attribs_binding;
 

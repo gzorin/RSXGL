@@ -61,7 +61,7 @@ Image image;
 GLuint texture = 0;
 GLuint program = 0;
 
-GLuint fbo = 0, rbo = 0;
+GLuint fbo = 0, rbo[2] = { 0,0 };
 
 GLint ProjMatrix_location = -1, TransMatrix_location = -1, vertex_location = -1, tc_location = -1, texture_location = -1;
 
@@ -279,37 +279,23 @@ rsxgltest_init(int argc,const char ** argv)
   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
 
   // Framebuffer object:
-  glGenRenderbuffers(1,&rbo);
+  glGenRenderbuffers(2,rbo);
   report_glerror("glGenRenderbuffers");
-  tcp_printf("rbo: %u is rbo: %u\n",rbo,(GLuint)glIsRenderbuffer(rbo));
 
-  glBindRenderbuffer(GL_FRAMEBUFFER,1234);
-  report_glerror("glBindRenderbuffer");
-  glBindRenderbuffer(GL_RENDERBUFFER,1234);
-  report_glerror("glBindRenderbuffer");
-  glBindRenderbuffer(GL_RENDERBUFFER,rbo);
-  report_glerror("glBindRenderbuffer");
-  tcp_printf("rbo: %u is rbo: %u\n",rbo,(GLuint)glIsRenderbuffer(rbo));
+  glBindRenderbuffer(GL_RENDERBUFFER,rbo[0]);
+  glRenderbufferStorage(GL_RENDERBUFFER,GL_RGBA,image.width,image.height);
 
-  glRenderbufferStorage(GL_RENDERBUFFER,GL_RGBA8,image.width,image.height);
-  report_glerror("glRenderbufferStorage");
+  glBindRenderbuffer(GL_RENDERBUFFER,rbo[1]);
+  glRenderbufferStorage(GL_RENDERBUFFER,GL_DEPTH_COMPONENT,image.width,image.height);
 
   glBindRenderbuffer(GL_RENDERBUFFER,0);
-  report_glerror("glBindRenderbuffer");
 
   //
   glGenFramebuffers(1,&fbo);
-  tcp_printf("rbo: %u is rbo: %u\n",rbo,(GLuint)glIsRenderbuffer(rbo));
 
-  glBindFramebuffer(GL_FRAMEBUFFER,1234);
-  report_glerror("glBindFramebuffer");
-  glBindFramebuffer(GL_FRAMEBUFFER,rbo);
-  report_glerror("glBindFramebuffer");
   glBindFramebuffer(GL_FRAMEBUFFER,fbo);
-  report_glerror("glBindFramebuffer");
-  tcp_printf("fbo: %u is fbo: %u\n",fbo,(GLuint)glIsFramebuffer(fbo));
-
-  glFramebufferRenderbuffer(GL_FRAMEBUFFER,GL_COLOR_ATTACHMENT0,GL_RENDERBUFFER,rbo);
+  glFramebufferRenderbuffer(GL_FRAMEBUFFER,GL_COLOR_ATTACHMENT0,GL_RENDERBUFFER,rbo[0]);
+  //glFramebufferRenderbuffer(GL_FRAMEBUFFER,GL_DEPTH_ATTACHMENT,GL_RENDERBUFFER,rbo[1]);
 
   glBindFramebuffer(GL_FRAMEBUFFER,0);
 }
@@ -324,11 +310,18 @@ rsxgltest_draw()
     compute_sine_wave(rgb_waves + 2,rsxgltest_elapsed_time)
   };
 
+#if 0
   glBindFramebuffer(GL_FRAMEBUFFER,fbo);
+  glDepthMask(GL_FALSE);
+  glDisable(GL_DEPTH_TEST);
   glClearColor(1.0 - rgb[0],1.0 - rgb[1],1.0 - rgb[2],1.0);
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  glClear(GL_COLOR_BUFFER_BIT /*| GL_DEPTH_BUFFER_BIT*/);
 
   glBindFramebuffer(GL_FRAMEBUFFER,0);
+
+  glDepthMask(GL_TRUE);
+  glEnable(GL_DEPTH_TEST);
+#endif
 
   glClearColor(rgb[0],rgb[1],rgb[2],1.0);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);

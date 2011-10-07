@@ -97,11 +97,17 @@ struct state_t {
 	depth_range:1,
 	scissor:1,
 	write_mask:1,
+	clear_color:1,
+	depth:1,
+	blend:1,
+	stencil:1,
+	polygon_cull:1,
+	polygon_winding_mode:1,
+	polygon_fill_mode:1,
+	polygon_offset:1,
 	primitive_restart:1,
-	the_rest:1,
-	draw_framebuffer:1,
-	read_framebuffer:1,
-	program:1;
+	line_width:1,
+	point_size:1;
     } parts;
   } invalid;
 

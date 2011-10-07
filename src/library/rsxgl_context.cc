@@ -65,6 +65,7 @@ rsxgl_context_t::egl_callback(struct rsxegl_context_t * egl_ctx,const uint8_t op
     framebuffer.invalid = 1;
 
     ctx -> state.invalid.all = ~0;
+    ctx -> invalid.all = ~0;
     
     ctx -> invalid_attribs.set();
     ctx -> invalid_textures.set();
@@ -162,6 +163,7 @@ extern "C" void
 rsxglMakeCurrent(void * context)
 {
   ctx -> state.invalid.all = ~0;
+  ctx -> invalid.all = ~0;
   
   ctx -> invalid_attribs.set();
   ctx -> invalid_textures.set();

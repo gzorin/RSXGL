@@ -29,7 +29,7 @@ renderbuffer_t::storage_type & renderbuffer_t::storage()
 }
 
 renderbuffer_t::renderbuffer_t()
-  : deleted(0), timestamp(0), ref_count(0), arena(0), samples(0)
+  : deleted(0), timestamp(0), ref_count(0), arena(0), format(RSXGL_MAX_FRAMEBUFFER_FORMATS), samples(0)
 {
   size[0] = 0;
   size[1] = 0;
@@ -117,8 +117,20 @@ rsxgl_framebuffer_format(const GLenum internalformat)
     return RSXGL_FRAMEBUFFER_FORMAT_DEPTH24_D8;
   }
   else {
-    return ~0;
+    return RSXGL_MAX_FRAMEBUFFER_FORMATS;
   }
+}
+
+static inline bool
+rsxgl_framebuffer_rsx_format_is_color(const uint8_t rsx_format)
+{
+  return (rsx_format >= RSXGL_FRAMEBUFFER_FORMAT_R5G6B5 && rsx_format <= RSXGL_FRAMEBUFFER_FORMAT_A8B8G8R8);
+}
+
+static inline bool
+rsxgl_framebuffer_rsx_format_is_depth(const uint8_t rsx_format)
+{
+  return (rsx_format >= RSXGL_FRAMEBUFFER_FORMAT_DEPTH24_D8 && rsx_format <= RSXGL_FRAMEBUFFER_FORMAT_DEPTH16);
 }
 
 static uint8_t
@@ -174,7 +186,7 @@ rsxgl_renderbuffer_target(GLenum target)
     return RSXGL_RENDERBUFFER;
     break;
   default:
-    return ~0;
+    return RSXGL_MAX_RENDERBUFFER_TARGETS;
   };
 }
 
@@ -182,7 +194,7 @@ GLAPI void APIENTRY
 glBindRenderbuffer (GLuint target, GLuint renderbuffer_name)
 {
   const uint32_t rsx_target = rsxgl_renderbuffer_target(target);
-  if(rsx_target == ~0) {
+  if(rsx_target == RSXGL_MAX_RENDERBUFFER_TARGETS) {
     RSXGL_ERROR_(GL_INVALID_ENUM);
   }
 
@@ -208,7 +220,7 @@ rsxgl_renderbuffer_storage(rsxgl_context_t * ctx,const renderbuffer_t::name_type
   }
 
   uint8_t rsx_format = rsxgl_framebuffer_format(internalformat);
-  if(rsx_format == ~0) {
+  if(rsx_format == RSXGL_MAX_FRAMEBUFFER_FORMATS) {
     RSXGL_ERROR_(GL_INVALID_ENUM);
   }
 
@@ -251,7 +263,7 @@ GLAPI void APIENTRY
 glRenderbufferStorage (GLenum target, GLenum internalformat, GLsizei width, GLsizei height)
 {
   const uint32_t rsx_target = rsxgl_renderbuffer_target(target);
-  if(rsx_target == ~0) {
+  if(rsx_target == RSXGL_MAX_RENDERBUFFER_TARGETS) {
     RSXGL_ERROR_(GL_INVALID_ENUM);
   }
 
@@ -268,7 +280,7 @@ GLAPI void APIENTRY
 glRenderbufferStorageMultisample (GLenum target, GLsizei samples, GLenum internalformat, GLsizei width, GLsizei height)
 {
   const uint32_t rsx_target = rsxgl_renderbuffer_target(target);
-  if(rsx_target == ~0) {
+  if(rsx_target == RSXGL_MAX_RENDERBUFFER_TARGETS) {
     RSXGL_ERROR_(GL_INVALID_ENUM);
   }
 
@@ -331,7 +343,7 @@ GLAPI void APIENTRY
 glGetRenderbufferParameteriv (GLenum target, GLenum pname, GLint *params)
 {
   const uint32_t rsx_target = rsxgl_renderbuffer_target(target);
-  if(rsx_target == ~0) {
+  if(rsx_target == RSXGL_MAX_RENDERBUFFER_TARGETS) {
     RSXGL_ERROR_(GL_INVALID_ENUM);
   }
 
@@ -453,12 +465,12 @@ glBindFramebuffer (GLenum target, GLuint framebuffer_name)
 
   if(target == GL_FRAMEBUFFER || target == GL_DRAW_FRAMEBUFFER) {
     ctx -> framebuffer_binding.bind(RSXGL_DRAW_FRAMEBUFFER,framebuffer_name);
-    ctx -> state.invalid.parts.draw_framebuffer = 1;
+    ctx -> invalid.parts.draw_framebuffer = 1;
     ctx -> state.invalid.parts.write_mask = 1;
   }
   if(target == GL_FRAMEBUFFER || target == GL_READ_FRAMEBUFFER) {
     ctx -> framebuffer_binding.bind(RSXGL_READ_FRAMEBUFFER,framebuffer_name);
-    ctx -> state.invalid.parts.read_framebuffer = 1;
+    ctx -> invalid.parts.read_framebuffer = 1;
   }
 
   RSXGL_NOERROR_();
@@ -476,7 +488,7 @@ rsxgl_framebuffer_target(GLenum target)
     return RSXGL_READ_FRAMEBUFFER;
     break;
   default:
-    return ~0;
+    return RSXGL_MAX_FRAMEBUFFER_TARGETS;
   };
 }
 
@@ -490,7 +502,7 @@ rsxgl_framebuffer_attachment(const GLenum attachment)
     return RSXGL_DEPTH_STENCIL_ATTACHMENT;
   }
   else {
-    return ~0;
+    return RSXGL_MAX_ATTACHMENTS;
   }
 }
 
@@ -501,7 +513,7 @@ rsxgl_framebuffer_attachment_type(const GLenum target)
     return RSXGL_ATTACHMENT_TYPE_RENDERBUFFER;
   }
   else {
-    return ~0;
+    return RSXGL_MAX_ATTACHMENT_TYPES;
   }
 }
 
@@ -533,7 +545,7 @@ static inline void
 rsxgl_framebuffer_renderbuffer(rsxgl_context_t * ctx,const framebuffer_t::name_type framebuffer_name,const GLenum attachment, const GLenum renderbuffertarget, const GLuint renderbuffer_name)
 {
   const uint32_t rsx_attachment = rsxgl_framebuffer_attachment(attachment);
-  if(rsx_attachment == ~0) {
+  if(rsx_attachment == RSXGL_MAX_ATTACHMENTS) {
     RSXGL_NOERROR_();
   }
 
@@ -572,11 +584,11 @@ rsxgl_framebuffer_renderbuffer(rsxgl_context_t * ctx,const framebuffer_t::name_t
   framebuffer.invalid = 1;
 
   if(ctx -> framebuffer_binding.is_bound(RSXGL_DRAW_FRAMEBUFFER,framebuffer_name)) {
-    ctx -> state.invalid.parts.draw_framebuffer = 1;
+    ctx -> invalid.parts.draw_framebuffer = 1;
     ctx -> state.invalid.parts.write_mask = 1;
   }
   if(ctx -> framebuffer_binding.is_bound(RSXGL_READ_FRAMEBUFFER,framebuffer_name)) {
-    ctx -> state.invalid.parts.read_framebuffer = 1;
+    ctx -> invalid.parts.read_framebuffer = 1;
   }
 
   RSXGL_NOERROR_();
@@ -586,7 +598,7 @@ GLAPI void APIENTRY
 glFramebufferRenderbuffer (GLenum target, GLenum attachment, GLenum renderbuffertarget, GLuint renderbuffer)
 {
   const uint32_t rsx_framebuffer_target = rsxgl_framebuffer_target(target);
-  if(rsx_framebuffer_target == ~0) {
+  if(rsx_framebuffer_target == RSXGL_MAX_FRAMEBUFFER_TARGETS) {
     RSXGL_ERROR_(GL_INVALID_ENUM);
   }
 
@@ -608,7 +620,7 @@ GLAPI void APIENTRY
 glGetFramebufferAttachmentParameteriv (GLenum target, GLenum attachment, GLenum pname, GLint *params)
 {
   const uint32_t rsx_framebuffer_target = rsxgl_framebuffer_target(target);
-  if(rsx_framebuffer_target == ~0) {
+  if(rsx_framebuffer_target == RSXGL_MAX_FRAMEBUFFER_TARGETS) {
     RSXGL_ERROR_(GL_INVALID_ENUM);
   }
 
@@ -694,7 +706,7 @@ rsxgl_draw_buffers(rsxgl_context_t * ctx,const framebuffer_t::name_type framebuf
   framebuffer.invalid = 1;
 
   if(ctx -> framebuffer_binding.is_bound(RSXGL_DRAW_FRAMEBUFFER,framebuffer_name)) {
-    ctx -> state.invalid.parts.draw_framebuffer = 1;
+    ctx -> invalid.parts.draw_framebuffer = 1;
     ctx -> state.invalid.parts.write_mask = 1;
   }
 
@@ -804,7 +816,7 @@ rsxgl_framebuffer_validate(rsxgl_context_t * ctx,framebuffer_t & framebuffer,con
   }
     
   if(framebuffer.invalid) {
-    uint32_t format = 0, enabled = 0;
+    uint16_t format = 0, enabled = 0;
     framebuffer_dimension_size_type w = ~0, h = ~0;
     surface_t surfaces[RSXGL_MAX_ATTACHMENTS];
 
@@ -834,34 +846,41 @@ rsxgl_framebuffer_validate(rsxgl_context_t * ctx,framebuffer_t & framebuffer,con
       }
     }
     else {
-      uint8_t rsx_format = ~0;
+      uint8_t rsx_format = RSXGL_MAX_FRAMEBUFFER_FORMATS;
+
+      rsxgl_debug_printf("validating fbo\n");
 
       // Color buffers:
       for(framebuffer_t::mapping_t::const_iterator it = framebuffer.mapping.begin();!it.done();it.next(framebuffer.mapping)) {
 	const framebuffer_t::attachment_size_type i = it.value();
+	if(i == RSXGL_MAX_COLOR_ATTACHMENTS) continue;
+
+	rsxgl_debug_printf("\t%u:%u\n",(uint32_t)it.index(),(uint32_t)it.value());
+
 	const uint32_t type = framebuffer.attachment_types.get(i);
 	if(type == RSXGL_ATTACHMENT_TYPE_NONE) continue;
 
-	rsxgl_assert(framebuffer.attachments[i] != 0);
-
 	if(type == RSXGL_ATTACHMENT_TYPE_RENDERBUFFER) {
 	  renderbuffer_t & renderbuffer = renderbuffer_t::storage().at(framebuffer.attachments[i]);
-	  rsxgl_assert(i < RSXGL_MAX_COLOR_ATTACHMENTS);
 
-	  surfaces[i] = renderbuffer.surface;
-	  w = std::min(w,renderbuffer.size[0]);
-	  h = std::min(h,renderbuffer.size[1]);
-
+	  // 
+	  if(!rsxgl_framebuffer_rsx_format_is_color(renderbuffer.format)) {
+	    continue;
+	  }
 	  // If rsx_format hasn't been set yet, set it to this renderbuffer's format:
-	  if(rsx_format == ~0) {
+	  else if(rsx_format == RSXGL_MAX_FRAMEBUFFER_FORMATS) {
 	    rsx_format = renderbuffer.format;
 	  }
 	  // If rsx_format has been set, but it's not equal to this renderbuffer's format, then it's
 	  // a problem. Unset rsx_format & terminate the loop:
 	  else if(rsx_format != renderbuffer.format) {
-	    rsx_format = ~0;
+	    rsx_format = RSXGL_MAX_FRAMEBUFFER_FORMATS;
 	    break;
 	  }
+
+	  surfaces[i] = renderbuffer.surface;
+	  w = std::min(w,renderbuffer.size[0]);
+	  h = std::min(h,renderbuffer.size[1]);
 
 	  enabled |= (NV30_3D_RT_ENABLE_COLOR0 << i);
 	}
@@ -871,25 +890,28 @@ rsxgl_framebuffer_validate(rsxgl_context_t * ctx,framebuffer_t & framebuffer,con
 	}
       }
 
-      if(rsx_format != ~0) {
+      rsxgl_debug_printf("rsx_format: %u format: %u\n",(uint32_t)rsx_format,(uint32_t)format);
+      if(rsx_format != RSXGL_MAX_FRAMEBUFFER_FORMATS) {
 	format |= (rsxgl_renderbuffer_nv40_format[rsx_format] | NV30_3D_RT_FORMAT_TYPE_LINEAR);
       }
+      rsxgl_debug_printf("\tformat: %u\n",(uint32_t)format);
 
       // Depth buffer:
       {
 	const uint32_t type = framebuffer.attachment_types.get(4);
-	rsxgl_assert(framebuffer.attachments[4] != 0);
 	if(type == RSXGL_ATTACHMENT_TYPE_RENDERBUFFER) {
 	  renderbuffer_t & renderbuffer = renderbuffer_t::storage().at(framebuffer.attachments[4]);
-	  surfaces[4] = renderbuffer.surface;
-	  w = std::min(w,renderbuffer.size[0]);
-	  h = std::min(h,renderbuffer.size[1]);
 
-	  format |= (NV30_3D_RT_FORMAT_ZETA_Z16 | NV30_3D_RT_FORMAT_TYPE_LINEAR);
+	  if(rsxgl_framebuffer_rsx_format_is_depth(renderbuffer.format)) {
+	    surfaces[4] = renderbuffer.surface;
+	    w = std::min(w,renderbuffer.size[0]);
+	    h = std::min(h,renderbuffer.size[1]);
+
+	    format |= (NV30_3D_RT_FORMAT_ZETA_Z16 | NV30_3D_RT_FORMAT_TYPE_LINEAR);
+	  }
 	}
 	else if(type == RSXGL_ATTACHMENT_TYPE_TEXTURE) {
-
-	  format |= (NV30_3D_RT_FORMAT_ZETA_Z16 | NV30_3D_RT_FORMAT_TYPE_LINEAR);
+	  //format |= (NV30_3D_RT_FORMAT_ZETA_Z16 | NV30_3D_RT_FORMAT_TYPE_LINEAR);
 	}
       }
     }
@@ -972,10 +994,11 @@ rsxgl_draw_framebuffer_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
 
   rsxgl_framebuffer_validate(ctx,framebuffer,timestamp);
 
-  if(ctx -> state.invalid.parts.draw_framebuffer) {
+  if(ctx -> invalid.parts.draw_framebuffer) {
     gcmContextData * context = ctx -> gcm_context();
 
     for(framebuffer_t::attachment_size_type i = 0;i < RSXGL_MAX_ATTACHMENTS;++i) {
+      rsxgl_debug_printf("%u: %u pitch: %u\n",(uint32_t)i,framebuffer.surfaces[i].memory.offset,framebuffer.surfaces[i].pitch);
       if(framebuffer.surfaces[i].memory.offset == 0) continue;
       rsxgl_emit_surface(context,i,framebuffer.surfaces[i]);
     }
@@ -1014,6 +1037,6 @@ rsxgl_draw_framebuffer_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
       gcm_finish_n_commands(context,2);
     }
 
-    ctx -> state.invalid.parts.draw_framebuffer = 0;
+    ctx -> invalid.parts.draw_framebuffer = 0;
   }
 }

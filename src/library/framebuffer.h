@@ -55,7 +55,7 @@ struct surface_t {
   memory_t memory;
 
   surface_t()
-    : pitch(0) {
+    : pitch(64) {
   }
 };
 

@@ -45,7 +45,7 @@ glClearColor(GLclampf red,GLclampf green,GLclampf blue,GLclampf alpha)
     (uint32_t)(blue * 255.0f) << 0 |
     (uint32_t)(alpha * 255.0f) << 24;
 
-  ctx -> state.invalid.parts.the_rest = 1;
+  ctx -> state.invalid.parts.clear_color = 1;
 
   RSXGL_NOERROR_();
 }
@@ -66,7 +66,7 @@ glClearDepthf(GLclampf d)
     break;
   }
 
-  ctx -> state.invalid.parts.the_rest = 1;
+  ctx -> state.invalid.parts.depth = 1;
 
   RSXGL_NOERROR_();
 }
@@ -84,7 +84,7 @@ glClearStencil (GLint s)
     break;
   }
 
-  ctx -> state.invalid.parts.the_rest = 1;
+  ctx -> state.invalid.parts.stencil = 1;
 
   RSXGL_NOERROR_();
 }

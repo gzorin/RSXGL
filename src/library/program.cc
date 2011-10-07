@@ -1547,7 +1547,7 @@ glUseProgram (GLuint program_name)
 
   if(ctx -> program_binding.names[RSXGL_ACTIVE_PROGRAM] != program_name) {
     ctx -> program_binding.bind(RSXGL_ACTIVE_PROGRAM,program_name);
-    ctx -> state.invalid.parts.program = 1;
+    ctx -> invalid.parts.program = 1;
   }
 
   RSXGL_NOERROR_();
@@ -1784,7 +1784,7 @@ rsxgl_program_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
     program.timestamp = timestamp;    
   }
 
-  if(ctx -> state.invalid.parts.program == 0) return;
+  if(ctx -> invalid.parts.program == 0) return;
 
   if(ctx -> program_binding.names[RSXGL_ACTIVE_PROGRAM] != 0) {
     program_t & program = ctx -> program_binding[RSXGL_ACTIVE_PROGRAM];
