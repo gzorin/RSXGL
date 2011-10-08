@@ -208,7 +208,7 @@ rsxgltest_init(int argc,const char ** argv)
 {
   tcp_printf("%s\n",__PRETTY_FUNCTION__);
 
-  glEnable(GL_DEPTH_TEST);
+  //glEnable(GL_DEPTH_TEST);
   glDepthFunc(GL_LEQUAL);
 
   // Set up us the program:
@@ -312,7 +312,6 @@ rsxgltest_draw()
   };
 
   glBindFramebuffer(GL_FRAMEBUFFER,fbo);
-  glFinish();
 
   //glDepthMask(GL_FALSE);
   //glDisable(GL_DEPTH_TEST);
@@ -320,10 +319,9 @@ rsxgltest_draw()
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
   glBindFramebuffer(GL_FRAMEBUFFER,0);
-  glFinish();
 
-  glDepthMask(GL_TRUE);
-  glEnable(GL_DEPTH_TEST);
+  //glDepthMask(GL_TRUE);
+  //glEnable(GL_DEPTH_TEST);
 
   glClearColor(rgb[0],rgb[1],rgb[2],1.0);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
