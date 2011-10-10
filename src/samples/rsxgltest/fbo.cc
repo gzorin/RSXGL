@@ -1,5 +1,5 @@
 /*
- * rsxgltest - framebuffer object
+ * rsxgltest - framebuffer object demo. A cube within a cube, maaaaaaan!
  */
 
 #define GL3_PROTOTYPES
@@ -59,7 +59,7 @@ GLuint buffers[2] = { 0,0 };
 GLuint shaders[2] = { 0,0 };
 
 Image image;
-GLuint texture = 0;
+GLuint textures[2] = { 0,0 };
 GLuint program = 0;
 
 GLuint fbo = 0, rbo[2] = { 0,0 };
@@ -177,7 +177,11 @@ GLuint * client_indices = 0;
 #define DTOR(X) ((X)*0.01745329f)
 #define RTOD(d) ((d)*57.295788f)
 
+// Projection matrix for the outer cube:
 Eigen::Projective3f ProjMatrix(perspective(DTOR(54.3),1920.0 / 1080.0,0.1,1000.0));
+
+// Projection matrix for the inner cube - the image that gets rendered to the FBO:
+Eigen::Projective3f ProjMatrix2(perspective(DTOR(35.3),1920.0 / 1080.0,0.1,1000.0));
 
 Eigen::Affine3f ViewMatrixInv = 
   Eigen::Affine3f(Eigen::Affine3f::Identity() * 
@@ -209,7 +213,7 @@ rsxgltest_init(int argc,const char ** argv)
 {
   tcp_printf("%s\n",__PRETTY_FUNCTION__);
 
-  //glEnable(GL_DEPTH_TEST);
+  glEnable(GL_DEPTH_TEST);
   glDepthFunc(GL_LEQUAL);
 
   // Set up us the program:
@@ -246,7 +250,7 @@ rsxgltest_init(int argc,const char ** argv)
 
   glUseProgram(program);
 
-  glUniformMatrix4fv(ProjMatrix_location,1,GL_FALSE,ProjMatrix.data());
+  //glUniformMatrix4fv(ProjMatrix_location,1,GL_FALSE,ProjMatrix.data());
 
   glUniform1i(texture_location,0);
 
@@ -271,11 +275,20 @@ rsxgltest_init(int argc,const char ** argv)
   image = loadPng(nagel_bin);
   tcp_printf("image size: %u %u\n",image.width,image.height);
 
-  glGenTextures(1,&texture);
-  glBindTexture(GL_TEXTURE_2D,texture);
+  glGenTextures(2,textures);
+
+  // image asset:
+  glBindTexture(GL_TEXTURE_2D,textures[0]);
 
   glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,image.width,image.height,0,GL_BGRA,GL_UNSIGNED_BYTE,image.data);
-  //glTexStorage2D(GL_TEXTURE_2D,1,GL_RGBA,image.width,image.height);
+
+  glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+
+  // rendering surface:
+  glBindTexture(GL_TEXTURE_2D,textures[1]);
+
+  glTexStorage2D(GL_TEXTURE_2D,1,GL_RGBA,image.width,image.height);
 
   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
@@ -287,8 +300,8 @@ rsxgltest_init(int argc,const char ** argv)
   //glBindRenderbuffer(GL_RENDERBUFFER,rbo[0]);
   //glRenderbufferStorage(GL_RENDERBUFFER,GL_RGBA,image.width,image.height);
 
-  //glBindRenderbuffer(GL_RENDERBUFFER,rbo[1]);
-  //glRenderbufferStorage(GL_RENDERBUFFER,GL_DEPTH_COMPONENT,image.width,image.height);
+  glBindRenderbuffer(GL_RENDERBUFFER,rbo[1]);
+  glRenderbufferStorage(GL_RENDERBUFFER,GL_DEPTH_COMPONENT,image.width,image.height);
 
   glBindRenderbuffer(GL_RENDERBUFFER,0);
 
@@ -298,8 +311,8 @@ rsxgltest_init(int argc,const char ** argv)
   glBindFramebuffer(GL_FRAMEBUFFER,fbo);
   //glFramebufferRenderbuffer(GL_FRAMEBUFFER,GL_COLOR_ATTACHMENT0,GL_RENDERBUFFER,rbo[0]);
   //glFramebufferTexture(GL_FRAMEBUFFER,GL_COLOR_ATTACHMENT0,texture,0);
-  glFramebufferTexture2D(GL_FRAMEBUFFER,GL_COLOR_ATTACHMENT0,GL_TEXTURE_2D,texture,0);
-  //glFramebufferRenderbuffer(GL_FRAMEBUFFER,GL_DEPTH_ATTACHMENT,GL_RENDERBUFFER,rbo[1]);
+  glFramebufferTexture2D(GL_FRAMEBUFFER,GL_COLOR_ATTACHMENT0,GL_TEXTURE_2D,textures[1],0);
+  glFramebufferRenderbuffer(GL_FRAMEBUFFER,GL_DEPTH_ATTACHMENT,GL_RENDERBUFFER,rbo[1]);
 
   glBindFramebuffer(GL_FRAMEBUFFER,0);
 }
@@ -314,21 +327,6 @@ rsxgltest_draw()
     compute_sine_wave(rgb_waves + 2,rsxgltest_elapsed_time)
   };
 
-  glBindFramebuffer(GL_FRAMEBUFFER,fbo);
-
-  glDepthMask(GL_FALSE);
-  glDisable(GL_DEPTH_TEST);
-  glClearColor(1.0 - rgb[0],1.0 - rgb[1],1.0 - rgb[2],1.0);
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-  glBindFramebuffer(GL_FRAMEBUFFER,0);
-
-  glDepthMask(GL_TRUE);
-  glEnable(GL_DEPTH_TEST);
-
-  glClearColor(rgb[0],rgb[1],rgb[2],1.0);
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
   float xyz[3] = {
     compute_sine_wave(xyz_waves,rsxgltest_elapsed_time),
     compute_sine_wave(xyz_waves + 1,rsxgltest_elapsed_time),
@@ -341,7 +339,36 @@ rsxgltest_draw()
     Eigen::AngleAxisf(DTOR(xyz[1]) * 360.0f,Eigen::Vector3f::UnitY()) *
     Eigen::AngleAxisf(DTOR(xyz[0]) * 360.0f,Eigen::Vector3f::UnitX());
 
+  //
+  glBindFramebuffer(GL_FRAMEBUFFER,fbo);
+  glViewport(0,0,image.width,image.height);
+
+  glClearColor(1.0 - rgb[0],1.0 - rgb[1],1.0 - rgb[2],1.0);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+  glBindTexture(GL_TEXTURE_2D,textures[0]);
+
   {
+    glUniformMatrix4fv(ProjMatrix_location,1,GL_FALSE,ProjMatrix2.data());
+
+    Eigen::Affine3f modelview = ViewMatrixInv * (Eigen::Affine3f::Identity() * rotmat * Eigen::UniformScaling< float >(3.0));
+    glUniformMatrix4fv(TransMatrix_location,1,GL_FALSE,modelview.data());
+    
+    glDrawElements(GL_TRIANGLES,36,GL_UNSIGNED_INT,client_indices);
+  }
+
+  //
+  glBindFramebuffer(GL_FRAMEBUFFER,0);
+  glViewport(0,0,rsxgltest_width,rsxgltest_height);
+
+  glClearColor(rgb[0],rgb[1],rgb[2],1.0);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+  glBindTexture(GL_TEXTURE_2D,textures[1]);
+
+  {
+    glUniformMatrix4fv(ProjMatrix_location,1,GL_FALSE,ProjMatrix.data());
+
     Eigen::Affine3f modelview = ViewMatrixInv * (Eigen::Affine3f::Identity() * rotmat * Eigen::UniformScaling< float >(3.0));
     glUniformMatrix4fv(TransMatrix_location,1,GL_FALSE,modelview.data());
 

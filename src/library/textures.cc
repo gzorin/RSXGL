@@ -1046,7 +1046,6 @@ rsxgl_tex_bytesPerPixel[RSXGL_MAX_TEX_FORMATS] = {
   2,
   4,
   4,
-  0,
   0
 };
 
