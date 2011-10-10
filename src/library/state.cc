@@ -40,13 +40,13 @@ state_t::state_t()
   scissor.width = 4096;
   scissor.height = 4096;
 
-  write_mask.r = 1;
-  write_mask.g = 1;
-  write_mask.b = 1;
-  write_mask.a = 1;
+  write_mask.parts.r = 1;
+  write_mask.parts.g = 1;
+  write_mask.parts.b = 1;
+  write_mask.parts.a = 1;
   color.clear = 0;
 
-  write_mask.depth = 1;
+  write_mask.parts.depth = 1;
   enable.depth_test = 0;
   depth.clear = 0xffff;
   depth.func = RSXGL_LESS;
@@ -60,6 +60,7 @@ state_t::state_t()
   blend.dst_rgb_func = RSXGL_ZERO;
   blend.dst_alpha_func = RSXGL_ZERO;
 
+  write_mask.parts.stencil = 1;
   stencil.face[0].enable = 0;
   stencil.face[0].mask = 0xff;
   stencil.face[0].func = RSXGL_ALWAYS;
@@ -269,9 +270,6 @@ rsxgl_state_validate(rsxgl_context_t * ctx)
     gcm_emit(&buffer,((uint32_t)s -> viewport.cullNearFar) | ((uint32_t)s -> viewport.clampZ << 4) | ((uint32_t)s -> viewport.cullIgnoreW << 8));
 
     gcm_finish_commands(context,&buffer);
-
-    s -> invalid.parts.viewport = 0;
-    s -> invalid.parts.depth_range = 0;
   }
 
   // scissor:
@@ -282,175 +280,186 @@ rsxgl_state_validate(rsxgl_context_t * ctx)
     else {
       rsxgl_emit_scissor(context,0,0,4096,4096);
     }
-
-    s -> invalid.parts.scissor = 0;
   }
 
-  // color write mask:
-  if(s -> invalid.parts.color_write_mask) {
-    rsxgl_emit_color_write_mask(context,s -> write_mask.r,s -> write_mask.g,s -> write_mask.b,s -> write_mask.a);
-    s -> invalid.parts.color_write_mask = 0;
+  // write masks:
+  write_mask_t write_mask;
+  write_mask.all = ctx -> framebuffer_binding[RSXGL_DRAW_FRAMEBUFFER].write_mask.all & s -> write_mask.all;
+
+  if(s -> invalid.parts.write_mask) {
+    rsxgl_emit_color_write_mask(context,write_mask.parts.r,write_mask.parts.g,write_mask.parts.b,write_mask.parts.a);
+    rsxgl_emit_depth_write_mask(context,write_mask.parts.depth);
   }
 
-  // depth write mask:
-  if(s -> invalid.parts.depth_write_mask) {
-    rsxgl_emit_depth_write_mask(context,s -> write_mask.depth);
-    s -> invalid.parts.depth_write_mask = 0;
+  if(s -> invalid.parts.clear_color) {
+    // clear color:
+    buffer = gcm_reserve(context,2);
+    
+    gcm_emit_method(&buffer,NV30_3D_CLEAR_COLOR_VALUE,1);
+    gcm_emit(&buffer,s -> color.clear);
+    
+    gcm_finish_commands(context,&buffer);
   }
-
-  // TODO - Finer-grained lazy evaluation of all of the following state:
-  //
-  if(s -> invalid.parts.the_rest == 0) return;
-
-  // clear color:
-  buffer = gcm_reserve(context,2);
   
-  gcm_emit_method(&buffer,NV30_3D_CLEAR_COLOR_VALUE,1);
-  gcm_emit(&buffer,s -> color.clear);
-
-  gcm_finish_commands(context,&buffer);
-
-  // depth-related:
-  buffer = gcm_reserve(context,6);
-
-  gcm_emit_method(&buffer,NV30_3D_DEPTH_TEST_ENABLE,1);
-  gcm_emit(&buffer,s -> enable.depth_test);
-
-  gcm_emit_method(&buffer,NV30_3D_DEPTH_FUNC,1);
-  switch(s -> depth.func) {
-  case RSXGL_NEVER:
-    gcm_emit(&buffer,NV30_3D_DEPTH_FUNC_NEVER);
-    break;
-  case RSXGL_LESS:
-    gcm_emit(&buffer,NV30_3D_DEPTH_FUNC_LESS);
-    break;
-  case RSXGL_EQUAL:
-    gcm_emit(&buffer,NV30_3D_DEPTH_FUNC_EQUAL);
-    break;
-  case RSXGL_LEQUAL:
-    gcm_emit(&buffer,NV30_3D_DEPTH_FUNC_LEQUAL);
-    break;
-  case RSXGL_GREATER:
-    gcm_emit(&buffer,NV30_3D_DEPTH_FUNC_GREATER);
-    break;
-  case RSXGL_NOTEQUAL:
-    gcm_emit(&buffer,NV30_3D_DEPTH_FUNC_NOTEQUAL);
-    break;
-  case RSXGL_GEQUAL:
-    gcm_emit(&buffer,NV30_3D_DEPTH_FUNC_GEQUAL);
-    break;
-  case RSXGL_ALWAYS:
-    gcm_emit(&buffer,NV30_3D_DEPTH_FUNC_ALWAYS);
-    break;
-  };
-
-  gcm_emit_method(&buffer,NV30_3D_CLEAR_DEPTH_VALUE,1);
-  gcm_emit(&buffer,s -> depth.clear);
-
-  gcm_finish_commands(context,&buffer);
-
-  // blending:
-  if(s -> enable.blend) {
-    buffer = gcm_reserve(context,9);
-
-    gcm_emit_method(&buffer,NV30_3D_BLEND_FUNC_ENABLE,1);
-    gcm_emit(&buffer,1);
-
-    gcm_emit_method(&buffer,NV30_3D_BLEND_COLOR,1);
-    gcm_emit(&buffer,s -> blend.color);
-
-    gcm_emit_method(&buffer,NV30_3D_BLEND_FUNC_SRC,2);
-
-    gcm_emit(&buffer,nv40_blend_func(s -> blend.src_rgb_func) | nv40_blend_func(s -> blend.src_alpha_func) << NV30_3D_BLEND_FUNC_SRC_ALPHA__SHIFT);
-    gcm_emit(&buffer,nv40_blend_func(s -> blend.dst_rgb_func) | nv40_blend_func(s -> blend.dst_alpha_func) << NV30_3D_BLEND_FUNC_SRC_ALPHA__SHIFT);
-
-    gcm_emit_method(&buffer,NV40_3D_BLEND_EQUATION,1);
-
-    gcm_emit(&buffer,nv40_blend_equation(s -> blend.rgb_equation) | nv40_blend_equation(s -> blend.alpha_equation) << NV40_3D_BLEND_EQUATION_ALPHA__SHIFT);
-  }
-  else {
+  if(s -> invalid.parts.write_mask || s -> invalid.parts.depth) {
     buffer = gcm_reserve(context,2);
 
-    gcm_emit_method(&buffer,NV30_3D_BLEND_FUNC_ENABLE,1);
-    gcm_emit(&buffer,0);
+    gcm_emit_method_at(buffer,0,NV30_3D_DEPTH_TEST_ENABLE,1);
+    gcm_emit_at(buffer,1,write_mask.parts.depth && s -> enable.depth_test);
+
+    gcm_finish_n_commands(context,2);
   }
 
-  gcm_finish_commands(context,&buffer);
-
-  // stencil:
-  for(int f = 0;f < 2;++f) {
-    if(s -> stencil.face[f].enable) {
+  if(s -> invalid.parts.depth) {
+    // depth-related:
+    buffer = gcm_reserve(context,4);
+    
+    gcm_emit_method(&buffer,NV30_3D_DEPTH_FUNC,1);
+    switch(s -> depth.func) {
+    case RSXGL_NEVER:
+      gcm_emit(&buffer,NV30_3D_DEPTH_FUNC_NEVER);
+      break;
+    case RSXGL_LESS:
+      gcm_emit(&buffer,NV30_3D_DEPTH_FUNC_LESS);
+      break;
+    case RSXGL_EQUAL:
+      gcm_emit(&buffer,NV30_3D_DEPTH_FUNC_EQUAL);
+      break;
+    case RSXGL_LEQUAL:
+      gcm_emit(&buffer,NV30_3D_DEPTH_FUNC_LEQUAL);
+      break;
+    case RSXGL_GREATER:
+      gcm_emit(&buffer,NV30_3D_DEPTH_FUNC_GREATER);
+      break;
+    case RSXGL_NOTEQUAL:
+      gcm_emit(&buffer,NV30_3D_DEPTH_FUNC_NOTEQUAL);
+      break;
+    case RSXGL_GEQUAL:
+      gcm_emit(&buffer,NV30_3D_DEPTH_FUNC_GEQUAL);
+      break;
+    case RSXGL_ALWAYS:
+      gcm_emit(&buffer,NV30_3D_DEPTH_FUNC_ALWAYS);
+      break;
+    };
+    
+    gcm_emit_method(&buffer,NV30_3D_CLEAR_DEPTH_VALUE,1);
+    gcm_emit(&buffer,s -> depth.clear);
+    
+    gcm_finish_commands(context,&buffer);
+  }
+    
+  // blending:
+  if(s -> invalid.parts.blend) {
+    if(s -> enable.blend) {
       buffer = gcm_reserve(context,9);
-
-      gcm_emit_method(&buffer,NV30_3D_STENCIL_ENABLE(f),8);
+      
+      gcm_emit_method(&buffer,NV30_3D_BLEND_FUNC_ENABLE,1);
       gcm_emit(&buffer,1);
-      gcm_emit(&buffer,s -> stencil.face[f].writemask);
-      gcm_emit(&buffer,s -> stencil.face[f].func);
-      gcm_emit(&buffer,s -> stencil.face[f].ref);
-      gcm_emit(&buffer,s -> stencil.face[f].mask);
-      gcm_emit(&buffer,s -> stencil.face[f].fail_op);
-      gcm_emit(&buffer,s -> stencil.face[f].zfail_op);
-      gcm_emit(&buffer,s -> stencil.face[f].pass_op);
+      
+      gcm_emit_method(&buffer,NV30_3D_BLEND_COLOR,1);
+      gcm_emit(&buffer,s -> blend.color);
+      
+      gcm_emit_method(&buffer,NV30_3D_BLEND_FUNC_SRC,2);
+      
+      gcm_emit(&buffer,nv40_blend_func(s -> blend.src_rgb_func) | nv40_blend_func(s -> blend.src_alpha_func) << NV30_3D_BLEND_FUNC_SRC_ALPHA__SHIFT);
+      gcm_emit(&buffer,nv40_blend_func(s -> blend.dst_rgb_func) | nv40_blend_func(s -> blend.dst_alpha_func) << NV30_3D_BLEND_FUNC_SRC_ALPHA__SHIFT);
+      
+      gcm_emit_method(&buffer,NV40_3D_BLEND_EQUATION,1);
+      
+      gcm_emit(&buffer,nv40_blend_equation(s -> blend.rgb_equation) | nv40_blend_equation(s -> blend.alpha_equation) << NV40_3D_BLEND_EQUATION_ALPHA__SHIFT);
     }
     else {
       buffer = gcm_reserve(context,2);
-
-      gcm_emit_method(&buffer,NV30_3D_STENCIL_ENABLE(f),1);
+      
+      gcm_emit_method(&buffer,NV30_3D_BLEND_FUNC_ENABLE,1);
       gcm_emit(&buffer,0);
     }
-
+    
     gcm_finish_commands(context,&buffer);
   }
-
-  // polygon culling:
-  if(s -> polygon.cullEnable) {
+    
+  // stencil:
+  if(s -> invalid.parts.write_mask || s -> invalid.parts.stencil) {
     buffer = gcm_reserve(context,4);
 
-    gcm_emit_method(&buffer,NV30_3D_CULL_FACE_ENABLE,1);
-    gcm_emit(&buffer,1);
+    gcm_emit_method_at(buffer,0,NV30_3D_STENCIL_ENABLE(0),1);
+    gcm_emit_at(buffer,1,write_mask.parts.stencil && s -> stencil.face[0].enable);
+    gcm_emit_method_at(buffer,2,NV30_3D_STENCIL_ENABLE(1),1);
+    gcm_emit_at(buffer,3,write_mask.parts.stencil && s -> stencil.face[1].enable);
 
-    gcm_emit_method(&buffer,NV30_3D_CULL_FACE,1);
-    switch(s -> polygon.cullFace) {
-    case RSXGL_CULL_FRONT:
-      gcm_emit(&buffer,NV30_3D_CULL_FACE_FRONT);
-      break;
-    case RSXGL_CULL_BACK:
-      gcm_emit(&buffer,NV30_3D_CULL_FACE_BACK);
-      break;
-    case RSXGL_CULL_FRONT_AND_BACK:
-      gcm_emit(&buffer,NV30_3D_CULL_FACE_FRONT_AND_BACK);
-      break;
-    };
-
-    gcm_finish_commands(context,&buffer);
-  }
-  else {
-    buffer = gcm_reserve(context,2);
-
-    gcm_emit_method(&buffer,NV30_3D_CULL_FACE_ENABLE,1);
-    gcm_emit(&buffer,0);
-
-    gcm_finish_commands(context,&buffer);
+    gcm_finish_n_commands(context,4);
   }
 
+  if(s -> invalid.parts.stencil) {
+    for(int f = 0;f < 2;++f) {
+      if(write_mask.parts.stencil && s -> stencil.face[f].enable) {
+	buffer = gcm_reserve(context,8);
+	
+	gcm_emit_method_at(buffer,0,NV30_3D_STENCIL_MASK(f),7);
+	gcm_emit_at(buffer,1,s -> stencil.face[f].writemask);
+	gcm_emit_at(buffer,2,s -> stencil.face[f].func);
+	gcm_emit_at(buffer,3,s -> stencil.face[f].ref);
+	gcm_emit_at(buffer,4,s -> stencil.face[f].mask);
+	gcm_emit_at(buffer,5,s -> stencil.face[f].fail_op);
+	gcm_emit_at(buffer,6,s -> stencil.face[f].zfail_op);
+	gcm_emit_at(buffer,7,s -> stencil.face[f].pass_op);
+
+	gcm_finish_n_commands(context,8);
+      }
+    }
+  }
+    
+  // polygon culling:
+  if(s -> invalid.parts.polygon_cull) {
+    if(s -> polygon.cullEnable) {
+      buffer = gcm_reserve(context,4);
+      
+      gcm_emit_method(&buffer,NV30_3D_CULL_FACE_ENABLE,1);
+      gcm_emit(&buffer,1);
+      
+      gcm_emit_method(&buffer,NV30_3D_CULL_FACE,1);
+      switch(s -> polygon.cullFace) {
+      case RSXGL_CULL_FRONT:
+	gcm_emit(&buffer,NV30_3D_CULL_FACE_FRONT);
+	break;
+      case RSXGL_CULL_BACK:
+	gcm_emit(&buffer,NV30_3D_CULL_FACE_BACK);
+	break;
+      case RSXGL_CULL_FRONT_AND_BACK:
+	gcm_emit(&buffer,NV30_3D_CULL_FACE_FRONT_AND_BACK);
+	break;
+      };
+      
+      gcm_finish_commands(context,&buffer);
+    }
+    else {
+      buffer = gcm_reserve(context,2);
+      
+      gcm_emit_method(&buffer,NV30_3D_CULL_FACE_ENABLE,1);
+      gcm_emit(&buffer,0);
+      
+      gcm_finish_commands(context,&buffer);
+    }
+  }
+    
   // other polygon attributes:
   //
   // polygon winding mode:
-  {
+  if(s -> invalid.parts.polygon_winding_mode) {
     buffer = gcm_reserve(context,2);
-
+      
     gcm_emit_method_at(buffer,0,NV30_3D_FRONT_FACE,1);
     gcm_emit_at(buffer,1,s -> polygon.frontFace == RSXGL_FACE_CW ? NV30_3D_FRONT_FACE_CW : NV30_3D_FRONT_FACE_CCW);
-
+    
     gcm_finish_commands(context,&buffer);
   }
-
-  // polygon fill mode:
-  {
+    
+    // polygon fill mode:
+  if(s -> invalid.parts.polygon_fill_mode) {
     buffer = gcm_reserve(context,3);
-
+    
     gcm_emit_method_at(buffer,0,NV30_3D_POLYGON_MODE_FRONT,2);
-
+    
     switch(s -> polygon.frontMode) {
     case RSXGL_POLYGON_MODE_POINT:
       gcm_emit_at(buffer,1,NV30_3D_POLYGON_MODE_FRONT_POINT);
@@ -462,7 +471,7 @@ rsxgl_state_validate(rsxgl_context_t * ctx)
       gcm_emit_at(buffer,1,NV30_3D_POLYGON_MODE_FRONT_FILL);
       break;
     };
-
+    
     switch(s -> polygon.backMode) {
     case RSXGL_POLYGON_MODE_POINT:
       gcm_emit_at(buffer,2,NV30_3D_POLYGON_MODE_FRONT_POINT);
@@ -474,32 +483,32 @@ rsxgl_state_validate(rsxgl_context_t * ctx)
       gcm_emit_at(buffer,2,NV30_3D_POLYGON_MODE_FRONT_FILL);
       break;
     };
-
+    
     gcm_finish_n_commands(context,3);
   }
-
+    
   // polygon offset:
-  {
+  if(s -> invalid.parts.polygon_offset) {
     buffer = gcm_reserve(context,3);
-
+    
     gcm_emit_method_at(buffer,0,NV30_3D_POLYGON_OFFSET_FACTOR,2);
     gcm_emit_at(buffer,1,_ieee32_t(s -> polygon.offsetFactor).u);
     gcm_emit_at(buffer,2,_ieee32_t(s -> polygon.offsetUnits).u);
-
+    
     gcm_finish_n_commands(context,3);
   }
-
+  
   // primitive restart:
-  {
+  if(s -> invalid.parts.primitive_restart) {
     if(s -> enable.primitive_restart) {
       buffer = gcm_reserve(context,4);
-
+      
       gcm_emit_method_at(buffer,0,0x1dac,1);
       gcm_emit_at(buffer,1,1);
-
+      
       gcm_emit_method_at(buffer,2,0x1db0,1);
       gcm_emit_at(buffer,3,s -> primitiveRestartIndex);
-
+      
       gcm_finish_n_commands(context,4);
     }
     else {
@@ -509,31 +518,31 @@ rsxgl_state_validate(rsxgl_context_t * ctx)
       gcm_finish_n_commands(context,2);
     }
   }
-
+  
   // line width
-  {
+  if(s -> invalid.parts.line_width) {
     buffer = gcm_reserve(context,2);
-
+    
     // fixed-point:
     const uint32_t lineWidth = (uint32_t)(s -> lineWidth * (1 << 3)) & ((1 << 9) - 1);
-
+    
     gcm_emit_method_at(buffer,0,NV30_3D_LINE_WIDTH,1);
     gcm_emit_at(buffer,1,lineWidth);
     
     gcm_finish_n_commands(context,2);
   }
-
+    
   // point size
-  {
+  if(s -> invalid.parts.point_size) {
     buffer = gcm_reserve(context,2);
-
+    
     gcm_emit_method_at(buffer,0,NV30_3D_POINT_SIZE,1);
     gcm_emit_at(buffer,1,_ieee32_t(s -> pointSize).u);
     
     gcm_finish_n_commands(context,2);
   }
 
-  s -> invalid.parts.the_rest = 0;
+  s -> invalid.all = 0;
 }
 
 //
@@ -584,12 +593,12 @@ glColorMask(GLboolean red,GLboolean green,GLboolean blue,GLboolean alpha)
 {
   struct rsxgl_context_t * ctx = current_ctx();
 
-  ctx -> state.write_mask.r = red;
-  ctx -> state.write_mask.g = green;
-  ctx -> state.write_mask.b = blue;
-  ctx -> state.write_mask.a = alpha;
+  ctx -> state.write_mask.parts.r = red;
+  ctx -> state.write_mask.parts.g = green;
+  ctx -> state.write_mask.parts.b = blue;
+  ctx -> state.write_mask.parts.a = alpha;
 
-  ctx -> state.invalid.parts.color_write_mask = 1;
+  ctx -> state.invalid.parts.write_mask = 1;
 
   RSXGL_NOERROR_();
 }
@@ -599,9 +608,9 @@ glDepthMask (GLboolean flag)
 {
   struct rsxgl_context_t * ctx = current_ctx();
 
-  ctx -> state.write_mask.depth = flag;
+  ctx -> state.write_mask.parts.depth = flag;
 
-  ctx -> state.invalid.parts.depth_write_mask = 1;
+  ctx -> state.invalid.parts.write_mask = 1;
 
   RSXGL_NOERROR_();
 }
@@ -655,7 +664,7 @@ glDepthFunc (GLenum func)
     RSXGL_ERROR_(GL_INVALID_ENUM);
   };
   
-  ctx -> state.invalid.parts.the_rest = 1;
+  ctx -> state.invalid.parts.depth = 1;
 
   RSXGL_NOERROR_();
 }
@@ -671,7 +680,7 @@ glBlendColor (GLclampf green, GLclampf blue, GLclampf alpha, GLclampf red)
     (uint32_t)(blue * 255.0f) << NV30_3D_BLEND_COLOR_B__SHIFT |
     (uint32_t)(alpha * 255.0f) << NV30_3D_BLEND_COLOR_A__SHIFT;
 
-  ctx -> state.invalid.parts.the_rest = 1;
+  ctx -> state.invalid.parts.blend = 1;
 
   RSXGL_NOERROR_();
 }
@@ -706,7 +715,7 @@ glBlendEquation ( GLenum mode )
     RSXGL_ERROR_(GL_INVALID_ENUM);
   };
 
-  ctx -> state.invalid.parts.the_rest = 1;
+  ctx -> state.invalid.parts.blend = 1;
 
   RSXGL_NOERROR_();
 }
@@ -756,7 +765,7 @@ glBlendEquationSeparate (GLenum modeRGB, GLenum modeAlpha)
     RSXGL_ERROR_(GL_INVALID_ENUM);
   };
 
-  ctx -> state.invalid.parts.the_rest = 1;
+  ctx -> state.invalid.parts.blend = 1;
 
   RSXGL_NOERROR_();
 }
@@ -901,7 +910,7 @@ glBlendFunc (GLenum _sfactor, GLenum _dfactor)
     RSXGL_ERROR_(GL_INVALID_ENUM);
   };
 
-  ctx -> state.invalid.parts.the_rest = 1;
+  ctx -> state.invalid.parts.blend = 1;
 
   RSXGL_NOERROR_();
 }
@@ -1124,7 +1133,7 @@ glBlendFuncSeparate (GLenum srcRGB, GLenum dstRGB, GLenum srcAlpha, GLenum dstAl
     RSXGL_ERROR_(GL_INVALID_ENUM);
   };
 
-  ctx -> state.invalid.parts.the_rest = 1;
+  ctx -> state.invalid.parts.blend = 1;
 
   RSXGL_NOERROR_();
 }
@@ -1187,7 +1196,7 @@ glStencilFuncSeparate (GLenum face, GLenum func, GLint ref, GLuint mask)
     ctx -> state.stencil.face[1].mask = mask;
   }
 
-  ctx -> state.invalid.parts.the_rest = 1;
+  ctx -> state.invalid.parts.stencil = 1;
 
   RSXGL_NOERROR_();
 }
@@ -1216,7 +1225,7 @@ glStencilMaskSeparate (GLenum face, GLuint mask)
     ctx -> state.stencil.face[1].writemask = mask;
   }
 
-  ctx -> state.invalid.parts.the_rest = 1;
+  ctx -> state.invalid.parts.stencil = 1;
 
   RSXGL_NOERROR_();
 }
@@ -1271,7 +1280,7 @@ glStencilOpSeparate (GLenum face, GLenum fail, GLenum zfail, GLenum zpass)
     RSXGL_ERROR_(GL_INVALID_ENUM);
   }
 
-  ctx -> state.invalid.parts.the_rest = 1;
+  ctx -> state.invalid.parts.stencil = 1;
 
   RSXGL_NOERROR_();
 }
@@ -1301,7 +1310,7 @@ glCullFace (GLenum mode)
     RSXGL_ERROR_(GL_INVALID_ENUM);
   };
 
-  ctx -> state.invalid.parts.the_rest = 1;
+  ctx -> state.invalid.parts.polygon_cull = 1;
 }
 
 GLAPI void APIENTRY
@@ -1320,7 +1329,7 @@ glFrontFace (GLenum mode)
     RSXGL_ERROR_(GL_INVALID_ENUM);
   };
 
-  ctx -> state.invalid.parts.the_rest = 1;
+  ctx -> state.invalid.parts.polygon_winding_mode = 1;
 }
 
 GLAPI void APIENTRY
@@ -1328,7 +1337,7 @@ glLineWidth (GLfloat width)
 {
   struct rsxgl_context_t * ctx = current_ctx();
   ctx -> state.lineWidth = width;
-  ctx -> state.invalid.parts.the_rest = 1;
+  ctx -> state.invalid.parts.line_width = 1;
 }
 
 GLAPI void APIENTRY
@@ -1336,7 +1345,7 @@ glPointSize (GLfloat size)
 {
   struct rsxgl_context_t * ctx = current_ctx();
   ctx -> state.pointSize = size;
-  ctx -> state.invalid.parts.the_rest = 1;
+  ctx -> state.invalid.parts.point_size = 1;
 }
 
 GLAPI void APIENTRY
@@ -1365,7 +1374,7 @@ glPolygonMode (GLenum face, GLenum mode)
     RSXGL_ERROR_(GL_INVALID_ENUM);
   };
 
-  ctx -> state.invalid.parts.the_rest = 1;
+  ctx -> state.invalid.parts.polygon_fill_mode = 1;
 }
 
 GLAPI void APIENTRY
@@ -1376,7 +1385,7 @@ glPolygonOffset (GLfloat factor, GLfloat units)
   ctx -> state.polygon.offsetFactor = factor;
   ctx -> state.polygon.offsetUnits = units;
 
-  ctx -> state.invalid.parts.the_rest = 1;
+  ctx -> state.invalid.parts.polygon_offset = 1;
 }
 
 

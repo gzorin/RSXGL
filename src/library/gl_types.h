@@ -15,6 +15,7 @@
 extern "C" {
 #endif
 
+#if 0
 struct surface_t {
   uint8_t surface, location;
   uint16_t pitch;
@@ -26,6 +27,7 @@ struct format_t {
   uint16_t format;
   uint16_t width,height;
 };
+#endif
 
 #ifdef __cplusplus
 }

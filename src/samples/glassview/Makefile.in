@@ -32,7 +32,7 @@ POST_INSTALL = :
 NORMAL_UNINSTALL = :
 PRE_UNINSTALL = :
 POST_UNINSTALL = :
-DIST_COMMON = $(srcdir)/../samples.am $(srcdir)/Makefile.am \
+DIST_COMMON = README $(srcdir)/../samples.am $(srcdir)/Makefile.am \
 	$(srcdir)/Makefile.in
 noinst_PROGRAMS = glassview.elf$(EXEEXT)
 subdir = src/samples/glassview
@@ -52,7 +52,7 @@ am_glassview_elf_OBJECTS = glassview_elf-main.$(OBJEXT) \
 	glassview_elf-math3d.$(OBJEXT) \
 	glassview_elf-sine_wave.$(OBJEXT) $(am__objects_2)
 glassview_elf_OBJECTS = $(am_glassview_elf_OBJECTS)
-am__DEPENDENCIES_1 = teapot_obj.o teddy_obj.o crab_obj.o
+am__DEPENDENCIES_1 = teapot_obj.o teddy_obj.o crab_obj.o yamato_obj.o
 am__DEPENDENCIES_2 = $(am__DEPENDENCIES_1)
 am__DEPENDENCIES_3 = $(call shader_objs,$(shaders)) \
 	$(am__DEPENDENCIES_2)
@@ -210,7 +210,7 @@ SFOXML := $(PSL1GHT_BIN)/sfo.xml
 ICON0 := $(PSL1GHT_BIN)/ICON0.PNG
 SUFFIXES = .bin _bin.o _bin.h .vcg .fcg .vert .frag _vpo.o _fpo.o \
 	_vpo.h _fpo.h .vpo .fpo .obj _obj.o _obj.h
-objs = teapot.obj teddy.obj crab.obj
+objs = teapot.obj teddy.obj crab.obj yamato.obj
 objs_H = $(objs:.obj=_obj.h)
 objs_OBJS = $(objs:.obj=_obj.o)
 vertex_shaders = $(filter %.vert,$(notdir $(1)))

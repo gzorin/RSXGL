@@ -11,7 +11,7 @@
 #include "gl_constants.h"
 #include "gl_types.h"
 #include "rsxgl_context.h"
-#include "program.h"
+#include "framebuffer.h"
 
 #include <cstddef>
 #include <bitset>
@@ -90,20 +90,24 @@ enum pixel_store_alignment {
 };
 
 struct state_t {
-  struct surface_t colorSurface, depthSurface;
-  struct format_t format;
-
   union {
     uint32_t all;
     struct {
       uint32_t viewport:1,
 	depth_range:1,
 	scissor:1,
-	color_write_mask:1,
-	depth_write_mask:1,
+	write_mask:1,
+	clear_color:1,
+	depth:1,
+	blend:1,
+	stencil:1,
+	polygon_cull:1,
+	polygon_winding_mode:1,
+	polygon_fill_mode:1,
+	polygon_offset:1,
 	primitive_restart:1,
-	the_rest:1,
-	program:1;
+	line_width:1,
+	point_size:1;
     } parts;
   } invalid;
 
@@ -121,9 +125,7 @@ struct state_t {
     uint64_t x:16,y:16,width:16,height:16;
   } scissor;
 
-  struct {
-    uint8_t r:1, g:1, b:1, a:1, depth:1;
-  } write_mask;
+  write_mask_t write_mask;
 
   struct {
     uint32_t clear;

@@ -146,11 +146,8 @@ glDeleteVertexArrays (GLsizei n, const GLuint *arrays)
 
     // Free resources used by this object:
     if(attribs_t::storage().is_object(attribs_name)) {
-      const attribs_t & attribs = attribs_t::storage().at(attribs_name);
-      
       // If this attribs_name is bound to any attribs_name targets, unbind it from them:
       ctx -> attribs_binding.unbind_from_all(attribs_name);
-
       attribs_t::storage().destroy(attribs_name);
     }
     else if(attribs_t::storage().is_name(attribs_name)) {

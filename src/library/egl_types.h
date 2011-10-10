@@ -11,6 +11,10 @@
 extern "C" {
 #endif
 
+struct rsxegl_memory_t {
+  uint32_t location:1, offset:30, owner:1;
+};
+
 struct rsxegl_config_t {
   //
   EGLint egl_config_id;
@@ -41,9 +45,7 @@ struct rsxegl_surface_t {
   uint32_t color_pixel_size, depth_pixel_size;
 
   // Address in RSX memory of the color and depth buffers:
-  uint32_t color_addr[2], depth_addr;
-
-  rsx_ptr_t _color_addr[2], _depth_addr;
+  struct rsxegl_memory_t color_buffer[2], depth_buffer;
 };
 
 enum rsxegl_context_callbacks {
@@ -60,6 +62,7 @@ struct rsxegl_context_t {
   
   const struct rsxegl_config_t * config;
   const struct rsxegl_surface_t * draw, * read;
+
   gcmContextData * gcm_context;
 
   void (*callback)(struct rsxegl_context_t *,const uint8_t);

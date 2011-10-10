@@ -21,11 +21,19 @@
 #include <stddef.h>
 
 struct rsxgl_context_t {
-  struct rsxegl_context_t base;
-  struct state_t state;
+  rsxegl_context_t base;
+
+  state_t state;
 
   memory_arena_t::binding_type arena_binding;
   buffer_t::binding_type buffer_binding;
+
+  union {
+    uint8_t all;
+    struct {
+      uint8_t draw_framebuffer:1, read_framebuffer:1, program:1;
+    } parts;
+  } invalid;
 
   bit_set< RSXGL_MAX_VERTEX_ATTRIBS > invalid_attribs;
   attribs_t::binding_type attribs_binding;
@@ -45,9 +53,6 @@ struct rsxgl_context_t {
 
   // Used by glFinish():
   uint32_t ref;
-
-  // Back (0) or front (1)
-  uint8_t buffer;
 
   uint8_t timestamp_sync;
 

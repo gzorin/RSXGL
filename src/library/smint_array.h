@@ -27,85 +27,142 @@ struct smint_array
 {
 public:
 
-  static const size_t element_bits = boost::static_log2< M >::value + 1;
+  static const size_t value_bits = boost::static_log2< M >::value + 1;
 
   // Total number of bits required:
-  static const size_t total_bits = element_bits * N;
+  static const size_t total_bits = value_bits * N;
 
   // Maximum number of bits stored in an integer:
   static const size_t max_bits = std::numeric_limits< MaxType >::digits;
 
-  typedef typename boost::uint_t< element_bits >::least value_type;
+  typedef typename boost::uint_t< value_bits >::least value_type;
 
   // Everything fits into a single integer:
   struct scalar_impl {
-    typedef typename boost::uint_t< total_bits >::least storage_type;
-    static const size_t size = 1;
+    typedef typename boost::uint_t< total_bits >::least word_type;
+    static const size_t num_words = 1;
 
-    storage_type values[1];
+    word_type values[1];
   };
 
   // 
   struct array_impl {
-    typedef MaxType storage_type;
-    static const size_t size = (total_bits / max_bits) + ((total_bits % max_bits) ? 1 : 0);
+    typedef MaxType word_type;
+    static const size_t num_words = (total_bits / max_bits) + ((total_bits % max_bits) ? 1 : 0);
 
-    storage_type values[size];
+    word_type values[num_words];
   };
 
   // If total_bits exceeds max_bits, need an array
   typedef typename boost::mpl::if_< boost::mpl::less_equal< boost::mpl::int_< total_bits >, boost::mpl::int_< max_bits > >, scalar_impl, array_impl >::type impl_type;
 
   impl_type impl;
-  typedef typename impl_type::storage_type impl_storage_type;
-  static const impl_storage_type storage_mask = boost::low_bits_mask_t< element_bits >::sig_bits;
-  static const size_t width = std::numeric_limits< typename impl_type::storage_type >::digits / element_bits;
-  static const size_t word_size = impl_type::size;
+  typedef typename impl_type::word_type word_type;
+  static const word_type value_mask = boost::low_bits_mask_t< value_bits >::sig_bits;
+  static const size_t word_bits = std::numeric_limits< typename impl_type::word_type >::digits;
+  static const size_t values_per_word = word_bits / value_bits;
+  static const size_t num_words = impl_type::num_words;
+
+  typedef typename boost::uint_value_t< N >::least index_type;
+  typedef typename boost::uint_value_t< num_words >::least word_index_type;
+  typedef typename boost::uint_value_t< values_per_word >::least value_index_type;
 
   smint_array() {
-    for(size_t i = 0;i < impl_type::size;++i) {
+    for(word_index_type i = 0;i < num_words;++i) {
       impl.values[i] = 0;
     }
   }
 
-  smint_array(const smint_array & rhs) {
-    for(size_t i = 0;i < impl_type::size;++i) {
+  smint_array(smint_array const & rhs) {
+    for(word_index_type i = 0;i < num_words;++i) {
       impl.values[i] = rhs.impl.values[i];
     }
   }
 
-  smint_array & operator =(const smint_array & rhs) {
-    for(size_t i = 0;i < impl_type::size;++i) {
+  smint_array & operator =(smint_array const & rhs) {
+    for(word_index_type i = 0;i < num_words;++i) {
       impl.values[i] = rhs.impl.values[i];
     }
     return *this;
   }
 
   inline
-  void set(size_t i,value_type x) {
+  void set(const index_type i,value_type x) {
     assert(i < N);
-    const size_t ii = i / width;
-    const size_t jj = i % width;
-    const size_t shift_bits = jj * element_bits;
-    impl.values[ii] = (impl.values[ii] & ~(storage_mask << shift_bits)) | (((impl_storage_type)x & storage_mask) << shift_bits);
+    const word_index_type ii = i / values_per_word;
+    const value_index_type jj = i % values_per_word;
+    const size_t shift_bits = jj * value_bits;
+    impl.values[ii] = (impl.values[ii] & ~(value_mask << shift_bits)) | (((word_type)x & value_mask) << shift_bits);
   }
 
   inline
-  value_type get(size_t i) const {
+  value_type get(const index_type i) const {
     assert(i < N);
-    const size_t ii = i / width;
-    const size_t jj = i % width;
-    const size_t shift_bits = jj * element_bits;
-    return (value_type)((impl.values[ii] >> shift_bits) & storage_mask);
+    const word_index_type ii = i / values_per_word;
+    const value_index_type jj = i % values_per_word;
+    const size_t shift_bits = jj * value_bits;
+    return (value_type)((impl.values[ii] >> shift_bits) & value_mask);
   }
 
   inline
-  value_type operator[](size_t i) const {
+  value_type operator[](const index_type i) const {
     assert(i < N);
-    const size_t ii = i / width;
-    const size_t jj = i % width;
-    const size_t shift_bits = jj * element_bits;
-    return (value_type)((impl.values[ii] >> shift_bits) & storage_mask);
+    const word_index_type ii = i / values_per_word;
+    const value_index_type jj = i % values_per_word;
+    const size_t shift_bits = jj * value_bits;
+    return (value_type)((impl.values[ii] >> shift_bits) & value_mask);
+  }
+
+  template< typename Function >
+  static void for_each(smint_array const & array,Function const & fn) {
+    index_type j = 0;
+    for(word_index_type i = 0;i < num_words && j < N;++i) {
+      word_type word = array.impl.values[i];
+      for(value_index_type k = 0;k < values_per_word && j < N;++k,++j,word >>= value_bits) {
+	fn(j,(value_type)(word & value_mask));
+      }
+    }
+  }
+
+  struct const_iterator {
+    word_index_type i;
+    index_type j;
+    value_index_type k;
+    word_type word;
+
+    const_iterator(const word_index_type _i,const index_type _j,const value_index_type _k,const word_type _word)
+      : i(_i), j(_j), k(_k), word(_word) {
+    }
+
+    index_type index() const {
+      return j;
+    }
+
+    value_type value() const {
+      return (value_type)(word & value_mask);
+    }
+
+    void next(smint_array const & array) {
+      ++j;
+      if(j < N) {
+	++k;
+	if(k < values_per_word) {
+	  word >>= value_bits;
+	}
+	else {
+	  word = array.impl.values[++i];
+	  k = 0;
+	}
+      }
+    }
+
+    bool done() const {
+      return !(j < N);
+    }
+  };
+
+  const_iterator begin() const {
+    return const_iterator(0,0,0,impl.values[0]);
   }
 };
 

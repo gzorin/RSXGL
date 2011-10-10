@@ -29,6 +29,13 @@ struct sine_wave_t rgb_waves[3] = {
   }
 };
 
+struct padData;
+
+void
+rsxgltest_pad(unsigned int ipad,const struct padData * paddata)
+{
+}
+
 void
 rsxgltest_init(int argc,const char ** argv)
 {

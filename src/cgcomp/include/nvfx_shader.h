@@ -179,6 +179,10 @@
 #define NVFX_FP_OP_OUT_REG_SHIFT        1
 #define NV30_FP_OP_OUT_REG_MASK          (31 << 1)  /* uncertain */
 #define NV40_FP_OP_OUT_REG_MASK          (63 << 1)
+
+/* gzorin 20111005 - hopefully this can be used to determine which buffer FP outputs are sent to. */
+#define NVFX_FP_OP_OUT_REG_MASK (0x1f << NVFX_FP_OP_OUT_REG_SHIFT)
+
 /* Needs to be set when writing outputs to get expected result.. */
 #define NVFX_FP_OP_OUT_REG_HALF          (1 << 7)
 #define NVFX_FP_OP_COND_WRITE_ENABLE        (1 << 8)

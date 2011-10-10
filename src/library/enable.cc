@@ -26,17 +26,20 @@ glEnable (GLenum cap)
     break;
   case GL_DEPTH_TEST:
     ctx -> state.enable.depth_test = 1;
+    ctx -> state.invalid.parts.depth = 1;
     break;
   case GL_BLEND:
     ctx -> state.enable.blend = 1;
+    ctx -> state.invalid.parts.blend = 1;
     break;
   case GL_CULL_FACE:
     ctx -> state.polygon.cullEnable = 1;
-    ctx -> state.invalid.parts.the_rest = 1;
+    ctx -> state.invalid.parts.polygon_cull = 1;
     break;
   case GL_STENCIL_TEST:
     ctx -> state.stencil.face[0].enable = 1;
     ctx -> state.stencil.face[1].enable = 1;
+    ctx -> state.invalid.parts.stencil = 1;
     break;
   case GL_PRIMITIVE_RESTART:
     ctx -> state.enable.primitive_restart = 1;
@@ -46,8 +49,6 @@ glEnable (GLenum cap)
   default:
     RSXGL_ERROR_(GL_INVALID_ENUM);
   };
-
-  ctx -> state.invalid.parts.the_rest = 1;
 
   RSXGL_NOERROR_();
 }
@@ -63,17 +64,20 @@ glDisable (GLenum cap)
     break;
   case GL_DEPTH_TEST:
     ctx -> state.enable.depth_test = 0;
+    ctx -> state.invalid.parts.depth = 1;
     break;
   case GL_BLEND:
     ctx -> state.enable.blend = 0;
+    ctx -> state.invalid.parts.blend = 1;
     break;
   case GL_CULL_FACE:
     ctx -> state.polygon.cullEnable = 0;
-    ctx -> state.invalid.parts.the_rest = 1;
+    ctx -> state.invalid.parts.polygon_cull = 1;
     break;
   case GL_STENCIL_TEST:
     ctx -> state.stencil.face[0].enable = 0;
     ctx -> state.stencil.face[1].enable = 0;
+    ctx -> state.invalid.parts.stencil = 1;
     break;
   case GL_PRIMITIVE_RESTART:
     ctx -> state.enable.primitive_restart = 0;
@@ -83,8 +87,6 @@ glDisable (GLenum cap)
   default:
     RSXGL_ERROR_(GL_INVALID_ENUM);
   };
-
-  ctx -> state.invalid.parts.the_rest = 1;
 
   RSXGL_NOERROR_();
 }

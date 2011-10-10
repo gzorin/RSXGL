@@ -93,7 +93,7 @@ enum rsxgl_texture_formats {
   RSXGL_TEX_FORMAT_Y16_X16_FLOAT = 24,
   RSXGL_TEX_FORMAT_COMPRESSED_B8R8_G8R8 = 25,
   RSXGL_TEX_FORMAT_COMPRESSED_R8B8_R8G8 = 26,
-  RSXGL_TEX_FORMAT_INVALID = 31,
+  RSXGL_MAX_TEX_FORMATS = 27,
 
   RSXGL_TEX_FORMAT_SZ = 0,
   RSXGL_TEX_FORMAT_LN = 0x20,
@@ -131,9 +131,10 @@ struct texture_t {
   binding_bitfield_type binding_bitfield;
 
   uint32_t deleted:1, timestamp:31;
+  uint32_t ref_count;
 
   texture_t();
-  void destroy();
+  ~texture_t();
 
   static const boost::static_log2_argument_type max_levels = boost::static_log2< RSXGL_MAX_TEXTURE_SIZE >::value + 1;
   typedef boost::uint_value_t< max_levels - 1 >::least level_size_type;
@@ -152,7 +153,7 @@ struct texture_t {
     ~level_t();
   } levels[max_levels];
 
-  uint16_t invalid_storage:1,valid:1,immutable:1,internalformat:5, cube:1, rect:1, max_level:4, dims:2;
+  uint16_t invalid:1,valid:1,immutable:1,internalformat:5, cube:1, rect:1, max_level:4, dims:2;
 
   // --- Hot:
   uint32_t format;
@@ -168,6 +169,7 @@ struct texture_t {
 
 struct rsxgl_context_t;
 
+void rsxgl_texture_validate(rsxgl_context_t *,texture_t &,const uint32_t);
 void rsxgl_textures_validate(rsxgl_context_t *,program_t &,const uint32_t);
 
 #endif

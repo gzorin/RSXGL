@@ -395,7 +395,7 @@ main(int argc, const char ** argv)
 
 	      rsxgltest_last_time = rsxgltest_elapsed_time;
 
-	      result = eglMakeCurrent(dpy,surface,surface,ctx);
+	      //result = eglMakeCurrent(dpy,surface,surface,ctx);
 
 	      ioPadGetInfo(&padinfo);
 	      for(size_t i = 0;i < MAX_PADS;++i) {

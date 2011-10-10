@@ -1,6 +1,5 @@
 #include "debug.h"
 #include "rsxgl_context.h"
-#include "egl_types.h"
 #include "framebuffer.h"
 #include "migrate.h"
 #include "nv40.h"
@@ -23,7 +22,7 @@ rsxgl_context_create(const struct rsxegl_config_t * config,gcmContextData * gcm_
 }
 
 rsxgl_context_t::rsxgl_context_t(const struct rsxegl_config_t * config,gcmContextData * gcm_context)
-  : active_texture(0), ref(0), buffer(0), timestamp_sync(0), next_timestamp(1), last_timestamp(0), cached_timestamp(0)
+  : active_texture(0), ref(0), timestamp_sync(0), next_timestamp(1), last_timestamp(0), cached_timestamp(0)
 {
   base.api = EGL_OPENGL_API;
   base.config = config;
@@ -38,65 +37,39 @@ rsxgl_context_t::rsxgl_context_t(const struct rsxegl_config_t * config,gcmContex
   rsxgl_sync_cpu_signal(timestamp_sync,0);
 }
 
-static inline void
-rsxgl_make_context_current(rsxgl_context_t * ctx)
-{
-  ctx -> state.invalid.all = ~0;
-  
-  ctx -> invalid_attribs.set();
-  ctx -> invalid_textures.set();
-  ctx -> invalid_samplers.set();
-
-  rsxgl_ctx = ctx;
-}
-
 void
 rsxgl_context_t::egl_callback(struct rsxegl_context_t * egl_ctx,const uint8_t op)
 {
   rsxgl_context_t * ctx = (rsxgl_context_t *)egl_ctx;
 
-  if(op == RSXEGL_MAKE_CONTEXT_CURRENT) {
-    ctx -> state.colorSurface.surface = 0;
-    ctx -> state.colorSurface.location = 0;
-    ctx -> state.colorSurface.offset = ctx -> base.draw -> color_addr[ctx -> base.draw -> buffer];
-    ctx -> state.colorSurface.pitch = ctx -> base.draw -> color_pitch;
-    
-    ctx -> state.depthSurface.surface = 4;
-    ctx -> state.depthSurface.location = 0;
-    ctx -> state.depthSurface.offset = ctx -> base.draw -> depth_addr;
-    ctx -> state.depthSurface.pitch = ctx -> base.draw -> depth_pitch;
-    
-    ctx -> state.format.enabled = NV30_3D_RT_ENABLE_COLOR0;
-    ctx -> state.format.format = ctx -> base.draw -> format;
-    ctx -> state.format.width = ctx -> base.draw -> width;
-    ctx -> state.format.height = ctx -> base.draw -> height;
-    
-    if(ctx -> state.viewport.width == 0 && ctx -> state.viewport.height == 0) {
-      ctx -> state.viewport.x = 0;
-      ctx -> state.viewport.y = 0;
-      ctx -> state.viewport.width = ctx -> base.draw -> width;
-      ctx -> state.viewport.height = ctx -> base.draw -> height;
-      ctx -> state.viewport.depthRange[0] = 0.0f;
-      ctx -> state.viewport.depthRange[1] = 1.0f;
-    }
-    
-    //
-    rsxgl_surface_emit(ctx -> base.gcm_context,&ctx -> state.colorSurface);
-    rsxgl_surface_emit(ctx -> base.gcm_context,&ctx -> state.depthSurface);
-    rsxgl_format_emit(ctx -> base.gcm_context,&ctx -> state.format);
+  if(op == RSXEGL_MAKE_CONTEXT_CURRENT || op == RSXEGL_POST_GPU_SWAP) {
+    framebuffer_t & framebuffer = framebuffer_t::storage().at(0);
 
-    rsxgl_make_context_current(ctx);
-  }
-  else if(op == RSXEGL_POST_GPU_SWAP) {
-    rsxgl_migrate_reset(ctx -> base.gcm_context);
-#if 0
+    if(op == RSXEGL_MAKE_CONTEXT_CURRENT) {
+      framebuffer.attachment_types.set(RSXGL_COLOR_ATTACHMENT0,((ctx -> base.draw -> format & NV30_3D_RT_FORMAT_COLOR__MASK) != 0) ? RSXGL_ATTACHMENT_TYPE_RENDERBUFFER : RSXGL_ATTACHMENT_TYPE_NONE);
+      framebuffer.attachment_types.set(RSXGL_DEPTH_STENCIL_ATTACHMENT,((ctx -> base.draw -> format & NV30_3D_RT_FORMAT_ZETA__MASK) != 0) ? RSXGL_ATTACHMENT_TYPE_RENDERBUFFER : RSXGL_ATTACHMENT_TYPE_NONE);
+
+      if(ctx -> state.viewport.width == 0 && ctx -> state.viewport.height == 0) {
+	ctx -> state.viewport.x = 0;
+	ctx -> state.viewport.y = 0;
+	ctx -> state.viewport.width = ctx -> base.draw -> width;
+	ctx -> state.viewport.height = ctx -> base.draw -> height;
+	ctx -> state.viewport.depthRange[0] = 0.0f;
+	ctx -> state.viewport.depthRange[1] = 1.0f;
+      }
+
+      rsxgl_ctx = ctx;
+    }
+
     //
+    framebuffer.invalid = 1;
+
     ctx -> state.invalid.all = ~0;
+    ctx -> invalid.all = ~0;
     
     ctx -> invalid_attribs.set();
     ctx -> invalid_textures.set();
     ctx -> invalid_samplers.set();
-#endif
   }
   else if(op == RSXEGL_DESTROY_CONTEXT) {
     ctx -> base.valid = 0;
@@ -189,7 +162,14 @@ rsxglSetSurface(void * context,void * surface,uint8_t buffer)
 extern "C" void
 rsxglMakeCurrent(void * context)
 {
-  rsxgl_make_context_current((rsxgl_context_t *)context);
+  ctx -> state.invalid.all = ~0;
+  ctx -> invalid.all = ~0;
+  
+  ctx -> invalid_attribs.set();
+  ctx -> invalid_textures.set();
+  ctx -> invalid_samplers.set();
+
+  rsxgl_ctx = ctx;  
 }
 
 extern "C" void

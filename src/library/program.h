@@ -19,8 +19,6 @@
 #include <cassert>
 
 #include <boost/integer.hpp>
-#include <boost/scoped_array.hpp>
-#include <boost/mpl/min_max.hpp>
 
 enum rsxgl_program_target {
   RSXGL_ACTIVE_PROGRAM = 0,
@@ -231,6 +229,14 @@ struct program_t {
 
   attrib_binding_type::type attrib_binding(size_t i) { assert(i < RSXGL_MAX_VERTEX_ATTRIBS); return attrib_binding_type::type(attrib_binding_data[i],attrib_binding_size[i]); }
   attrib_binding_type::const_type attrib_binding(size_t i) const { assert(i < RSXGL_MAX_VERTEX_ATTRIBS); return attrib_binding_type::const_type(attrib_binding_data[i],attrib_binding_size[i]); }
+
+  // Fragment output bindings requested by glBindFragDataLocation(). A string for each possible output:
+  typedef array< char, uint32_t > fragout_binding_type;
+  fragout_binding_type::size_type fragout_binding_size[RSXGL_MAX_DRAW_BUFFERS];
+  fragout_binding_type::pointer_type fragout_binding_data[RSXGL_MAX_DRAW_BUFFERS];
+
+  fragout_binding_type::type fragout_binding(size_t i) { assert(i < RSXGL_MAX_DRAW_BUFFERS); return fragout_binding_type::type(fragout_binding_data[i],fragout_binding_size[i]); }
+  fragout_binding_type::const_type fragout_binding(size_t i) const { assert(i < RSXGL_MAX_DRAW_BUFFERS); return fragout_binding_type::const_type(fragout_binding_data[i],fragout_binding_size[i]); }
 
   // --- hot:
   //
