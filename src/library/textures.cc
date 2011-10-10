@@ -577,7 +577,7 @@ texture_t::storage_type & texture_t::storage()
 }
 
 texture_t::texture_t()
-  : deleted(0), timestamp(0), ref_count(0), invalid(0), valid(0), immutable(0), internalformat(RSXGL_TEX_FORMAT_INVALID), cube(0), rect(0), max_level(0), dims(0), format(0), pitch(0), remap(0)
+  : deleted(0), timestamp(0), ref_count(0), invalid(0), valid(0), immutable(0), internalformat(RSXGL_MAX_TEX_FORMATS), cube(0), rect(0), max_level(0), dims(0), format(0), pitch(0), remap(0)
 {
   size[0] = 0;
   size[1] = 0;
@@ -592,7 +592,7 @@ texture_t::~texture_t()
 }
 
 texture_t::level_t::level_t()
-  : invalid_contents(0), internalformat(RSXGL_TEX_FORMAT_INVALID), dims(0), data(0)
+  : invalid_contents(0), internalformat(RSXGL_MAX_TEX_FORMATS), dims(0), data(0)
 {
   size[0] = 0;
   size[1] = 0;
@@ -687,6 +687,24 @@ glBindTexture (GLenum target, GLuint texture_name)
 
   if(texture_name != 0 && !texture_t::storage().is_object(texture_name)) {
     texture_t::storage().create_object(texture_name);
+
+    // Set the dimensions of texture object the first time it's bound to a target.
+    // I don't think the spec calls for this.
+    if(target == GL_TEXTURE_2D ||
+       target == GL_TEXTURE_2D_ARRAY ||
+       target == GL_TEXTURE_RECTANGLE ||
+       target == GL_TEXTURE_CUBE_MAP ||
+       target == GL_TEXTURE_2D_MULTISAMPLE ||
+       target == GL_TEXTURE_2D_MULTISAMPLE_ARRAY) {
+      texture_t::storage().at(texture_name).dims = 2;
+    }
+    else if(target == GL_TEXTURE_1D ||
+	    target == GL_TEXTURE_1D_ARRAY) {
+      texture_t::storage().at(texture_name).dims = 1;
+    }
+    else if(target == GL_TEXTURE_2D) {
+      texture_t::storage().at(texture_name).dims = 3;
+    }
   }
 
   rsxgl_context_t * ctx = current_ctx();
@@ -966,11 +984,11 @@ rsxgl_tex_format(GLint internalformat)
     return RSXGL_TEX_FORMAT_DEPTH24_D8_FLOAT;
   }
   else {
-    return RSXGL_TEX_FORMAT_INVALID;
+    return RSXGL_MAX_TEX_FORMATS;
   }
 }
 
-static const uint8_t rsxgl_texture_nv40_format[] = {
+static const uint8_t rsxgl_texture_nv40_format[RSXGL_MAX_TEX_FORMATS] = {
   0x81,
   0x82,
   0x83,
@@ -1001,7 +1019,7 @@ static const uint8_t rsxgl_texture_nv40_format[] = {
 };
 
 static const uint8_t
-rsxgl_tex_bytesPerPixel[] = {
+rsxgl_tex_bytesPerPixel[RSXGL_MAX_TEX_FORMATS] = {
   1,
   2,
   2,
@@ -1131,9 +1149,15 @@ rsxgl_tex_internalformat(GLenum format,GLenum type)
   }
   else if(format == GL_BGRA) {
     if(type == GL_UNSIGNED_BYTE || type == GL_BYTE) {
+      return RSXGL_TEX_FORMAT_A8R8G8B8;
+    }
+  }
+  else if(format == GL_BGR) {
+    if(type == GL_UNSIGNED_BYTE || type == GL_BYTE) {
       return RSXGL_TEX_FORMAT_D8R8G8B8;
     }
   }
+  return RSXGL_MAX_TEX_FORMATS;
 }
 
 static inline void
@@ -1285,7 +1309,7 @@ rsxgl_tex_image(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,GLi
     RSXGL_ERROR_(GL_INVALID_VALUE);
   }
 
-  if(internalformat == RSXGL_TEX_FORMAT_INVALID) {
+  if(internalformat == RSXGL_MAX_TEX_FORMATS) {
     RSXGL_ERROR_(GL_INVALID_VALUE);
   }
 
@@ -1314,7 +1338,6 @@ rsxgl_tex_image(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,GLi
   // set the texture's invalid & valid bits:
   texture.invalid = 1;
   texture.valid = 0;
-  texture.dims = 0;
 
   // set the size for the mipmap level
   texture.levels[level].internalformat = internalformat;
@@ -1390,7 +1413,7 @@ rsxgl_tex_storage(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,G
     RSXGL_ERROR_(GL_INVALID_VALUE);
   }
 
-  if(internalformat == RSXGL_TEX_FORMAT_INVALID) {
+  if(internalformat == RSXGL_MAX_TEX_FORMATS) {
     RSXGL_ERROR_(GL_INVALID_ENUM);
   }
 
@@ -1431,7 +1454,6 @@ rsxgl_tex_storage(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,G
   texture.cube = 0;
   texture.rect = 0;
   texture.max_level = levels;
-  texture.dims = dims;
 
   texture.format;
 
@@ -1494,7 +1516,7 @@ rsxgl_tex_subimage(rsxgl_context_t * ctx,texture_t & texture,GLint level,GLint x
   }
 
   texture_t::dimension_size_type size[3] = { 0,0,0 };
-  uint8_t internalformat = RSXGL_TEX_FORMAT_INVALID;
+  uint8_t internalformat = RSXGL_MAX_TEX_FORMATS;
   uint32_t bytesPerPixel = 0, pitch = 0;
 
   memory_t srcmem, dstmem;
@@ -1527,7 +1549,7 @@ rsxgl_tex_subimage(rsxgl_context_t * ctx,texture_t & texture,GLint level,GLint x
   }
   // rsxgl_tex_image was called to request that a texture level be allocated, but that hasn't been done yet
   // allocate the temporary buffer for that level if it hasn't been already
-  else if(texture.invalid && texture.levels[level].internalformat != RSXGL_TEX_FORMAT_INVALID) {
+  else if(texture.invalid && texture.levels[level].internalformat != RSXGL_MAX_TEX_FORMATS) {
     // there is a pixel buffer object attached - obtain pointer to it, then memcpy:
     if(ctx -> buffer_binding.names[RSXGL_PIXEL_UNPACK_BUFFER] != 0) {
       srcaddress = rsxgl_arena_address(memory_arena_t::storage().at(ctx -> buffer_binding[RSXGL_PIXEL_UNPACK_BUFFER].arena),
@@ -1853,7 +1875,7 @@ rsxgl_texture_validate(rsxgl_context_t * ctx,texture_t & texture,const uint32_t 
       texture.memory = memory_t();
     }
     
-    uint32_t nbytes = 0, bytesPerPixel = 0,pitch = 0, format = RSXGL_TEX_FORMAT_INVALID;
+    uint32_t nbytes = 0, bytesPerPixel = 0,pitch = 0, format = RSXGL_MAX_TEX_FORMATS;
     memory_arena_t::name_type arena = 0;
     
     uint8_t dims = 0;
@@ -1867,7 +1889,7 @@ rsxgl_texture_validate(rsxgl_context_t * ctx,texture_t & texture,const uint32_t 
 			 plevel -> internalformat,
 			 plevel -> size[0],plevel -> size[1],plevel -> size[2]);
 #endif
-      if(plevel -> internalformat == RSXGL_TEX_FORMAT_INVALID && plevel -> dims == 0) break;
+      if(plevel -> internalformat == RSXGL_MAX_TEX_FORMATS && plevel -> dims == 0) break;
       
       // is the size what we expected? if not, fail:
       if(levels > 0 && (plevel -> internalformat != format ||
@@ -1912,7 +1934,6 @@ rsxgl_texture_validate(rsxgl_context_t * ctx,texture_t & texture,const uint32_t 
 	texture.valid = 1;
 	texture.internalformat = format;
 	texture.max_level = levels;
-	texture.dims = dims;
 	texture.size[0] = texture.levels[0].size[0];
 	texture.size[1] = texture.levels[0].size[1];
 	texture.size[2] = texture.levels[0].size[2];

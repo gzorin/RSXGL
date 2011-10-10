@@ -21,6 +21,115 @@
 #endif
 #define GLAPI extern "C"
 
+// Tables indexed by rsxgl_framebuffer_formats:
+static uint8_t
+rsxgl_renderbuffer_bytesPerPixel[RSXGL_MAX_FRAMEBUFFER_FORMATS] = {
+  2,
+  4,
+  4,
+  1,
+  4 * sizeof(float) / 2,
+  4 * sizeof(float),
+  sizeof(float),
+  4,
+  4,
+  4,
+  2
+};
+
+static GLenum
+rsxgl_renderbuffer_gl_format[RSXGL_MAX_FRAMEBUFFER_FORMATS] = {
+  GL_RGB,
+  GL_RGB,
+  GL_RGBA,
+  GL_RED,
+  GL_NONE,
+  GL_NONE,
+  GL_NONE,
+  GL_BGR,
+  GL_BGRA,
+  GL_DEPTH_STENCIL,
+  GL_DEPTH_COMPONENT
+};
+
+#if 0
+static GLenum
+rsxgl_renderbuffer_gl_component_type[RSXGL_MAX_FRAMEBUFFER_FORMATS] = {
+  GL_RGB,
+  GL_RGB,
+  GL_RGBA,
+  GL_RED,
+  GL_NONE,
+  GL_NONE,
+  GL_NONE,
+  GL_BGR,
+  GL_BGRA,
+  GL_DEPTH_STENCIL,
+  GL_DEPTH_COMPONENT
+};
+#endif
+
+// red, green, blue, alpha, depth, stencil
+static uint32_t
+rsxgl_renderbuffer_bit_depth[RSXGL_MAX_FRAMEBUFFER_FORMATS][6] = {
+  { 5, 6, 5, 0, 0, 0 },
+  { 8, 8, 8, 0, 0, 0 },
+  { 8, 8, 8, 8, 0, 0 },
+  { 8, 0, 0, 0, 0, 0 },
+  { 16, 16, 16, 16, 0, 0 },
+  { 32, 32, 32, 32, 0, 0 },
+  { 8, 8, 8, 0, 0, 0 },
+  { 8, 8, 8, 8, 0, 0 },
+  { 0, 0, 0, 0, 24, 8 },
+  { 0, 0, 0, 0, 16, 0 }
+};
+
+static uint16_t
+rsxgl_framebuffer_nv40_format[RSXGL_MAX_FRAMEBUFFER_FORMATS] = {
+    NV30_3D_RT_FORMAT_COLOR_R5G6B5,
+    NV30_3D_RT_FORMAT_COLOR_X8R8G8B8,
+    NV30_3D_RT_FORMAT_COLOR_A8R8G8B8,
+    NV30_3D_RT_FORMAT_COLOR_B8,
+    NV30_3D_RT_FORMAT_COLOR_A16B16G16R16_FLOAT,
+    NV30_3D_RT_FORMAT_COLOR_A32B32G32R32_FLOAT,
+    NV30_3D_RT_FORMAT_COLOR_R32_FLOAT,
+    NV30_3D_RT_FORMAT_COLOR_X8B8G8R8,
+    NV30_3D_RT_FORMAT_COLOR_A8B8G8R8,
+    NV30_3D_RT_FORMAT_ZETA_Z24S8,
+    NV30_3D_RT_FORMAT_ZETA_Z16
+};
+
+static uint16_t
+rsxgl_texture_framebuffer_format[RSXGL_MAX_TEX_FORMATS] = {
+  RSXGL_FRAMEBUFFER_FORMAT_B8, // RSXGL_TEX_FORMAT_B8
+  RSXGL_MAX_FRAMEBUFFER_FORMATS, // RSXGL_TEX_FORMAT_A1R5G5B5
+  RSXGL_MAX_FRAMEBUFFER_FORMATS, // RSXGL_TEX_FORMAT_A4R4G4B4
+  RSXGL_FRAMEBUFFER_FORMAT_R5G6B5, // RSXGL_TEX_FORMAT_R5G6B5
+  RSXGL_FRAMEBUFFER_FORMAT_A8R8G8B8, // RSXGL_TEX_FORMAT_A8R8G8B8
+  RSXGL_MAX_FRAMEBUFFER_FORMATS, // RSXGL_TEX_FORMAT_COMPRESSED_DXT1
+  RSXGL_MAX_FRAMEBUFFER_FORMATS, // RSXGL_TEX_FORMAT_COMPRESSED_DXT23
+  RSXGL_MAX_FRAMEBUFFER_FORMATS, // RSXGL_TEX_FORMAT_COMPRESSED_DXT45
+  RSXGL_MAX_FRAMEBUFFER_FORMATS, // RSXGL_TEX_FORMAT_G8B8
+  RSXGL_MAX_FRAMEBUFFER_FORMATS, // RSXGL_TEX_FORMAT_R6G5B5
+  RSXGL_FRAMEBUFFER_FORMAT_DEPTH24_D8, // RSXGL_TEX_FORMAT_DEPTH24_D8
+  RSXGL_MAX_FRAMEBUFFER_FORMATS, // RSXGL_TEX_FORMAT_DEPTH24_D8_FLOAT
+  RSXGL_FRAMEBUFFER_FORMAT_DEPTH16, // RSXGL_TEX_FORMAT_DEPTH16
+  RSXGL_MAX_FRAMEBUFFER_FORMATS, // RSXGL_TEX_FORMAT_DEPTH16_FLOAT
+  RSXGL_MAX_FRAMEBUFFER_FORMATS, // RSXGL_TEX_FORMAT_X16
+  RSXGL_MAX_FRAMEBUFFER_FORMATS, // RSXGL_TEX_FORMAT_Y16_X16
+  RSXGL_MAX_FRAMEBUFFER_FORMATS, // RSXGL_TEX_FORMAT_R5G5B5A1
+  RSXGL_MAX_FRAMEBUFFER_FORMATS, // RSXGL_TEX_FORMAT_COMPRESSED_HILO8
+  RSXGL_MAX_FRAMEBUFFER_FORMATS, // RSXGL_TEX_FORMAT_COMPRESSED_HILO_S8
+  RSXGL_FRAMEBUFFER_FORMAT_A16B16G16R16_FLOAT, // RSXGL_TEX_FORMAT_W16_Z16_Y16_X16_FLOAT
+  RSXGL_FRAMEBUFFER_FORMAT_A32B32G32R32_FLOAT, // RSXGL_TEX_FORMAT_W32_Z32_Y32_X32_FLOAT
+  RSXGL_FRAMEBUFFER_FORMAT_R32_FLOAT, // RSXGL_TEX_FORMAT_X32_FLOAT
+  RSXGL_MAX_FRAMEBUFFER_FORMATS, // RSXGL_TEX_FORMAT_D1R5G5B5
+  RSXGL_FRAMEBUFFER_FORMAT_X8R8G8B8, // RSXGL_TEX_FORMAT_D8R8G8B8
+  RSXGL_MAX_FRAMEBUFFER_FORMATS, // RSXGL_TEX_FORMAT_Y16_X16_FLOAT
+  RSXGL_MAX_FRAMEBUFFER_FORMATS, // RSXGL_TEX_FORMAT_COMPRESSED_B8R8_G8R8
+  RSXGL_MAX_FRAMEBUFFER_FORMATS // RSXGL_TEX_FORMAT_COMPRESSED_R8B8_R8G8
+};
+
 // Renderbuffers:
 renderbuffer_t::storage_type & renderbuffer_t::storage()
 {
@@ -133,51 +242,6 @@ rsxgl_framebuffer_rsx_format_is_depth(const uint8_t rsx_format)
   return (rsx_format >= RSXGL_FRAMEBUFFER_FORMAT_DEPTH24_D8 && rsx_format <= RSXGL_FRAMEBUFFER_FORMAT_DEPTH16);
 }
 
-static uint8_t
-rsxgl_renderbuffer_bytesPerPixel[] = {
-  2,
-  4,
-  4,
-  1,
-  4 * sizeof(float) / 2,
-  4 * sizeof(float),
-  sizeof(float),
-  4,
-  4,
-  4,
-  2
-};
-
-static GLenum
-rsxgl_renderbuffer_gl_format[] = {
-  GL_RGB,
-  GL_RGB,
-  GL_RGBA,
-  GL_RED,
-  GL_NONE,
-  GL_NONE,
-  GL_NONE,
-  GL_BGR,
-  GL_BGRA,
-  GL_DEPTH_STENCIL,
-  GL_DEPTH_COMPONENT
-};
-
-// red, green, blue, alpha, depth, stencil
-static uint32_t
-rsxgl_renderbuffer_bit_depth[][6] = {
-  { 5, 6, 5, 0, 0, 0 },
-  { 8, 8, 8, 0, 0, 0 },
-  { 8, 8, 8, 8, 0, 0 },
-  { 8, 0, 0, 0, 0, 0 },
-  { 16, 16, 16, 16, 0, 0 },
-  { 32, 32, 32, 32, 0, 0 },
-  { 8, 8, 8, 0, 0, 0 },
-  { 8, 8, 8, 8, 0, 0 },
-  { 0, 0, 0, 0, 24, 8 },
-  { 0, 0, 0, 0, 16, 0 }
-};
-
 static inline uint32_t
 rsxgl_renderbuffer_target(GLenum target)
 {
@@ -242,9 +306,6 @@ rsxgl_renderbuffer_storage(rsxgl_context_t * ctx,const renderbuffer_t::name_type
 
   const uint32_t pitch = align_pot< uint32_t, 64 >(width * rsxgl_renderbuffer_bytesPerPixel[rsx_format]);
   const uint32_t nbytes = pitch * height;
-
-  rsxgl_debug_printf("\t%ux%u pitch: %u bytes: %u\n",
-		     width,height,pitch,nbytes);
 
   surface.memory = rsxgl_arena_allocate(memory_arena_t::storage().at(arena),128,nbytes);
   if(surface.memory.offset == 0) {
@@ -375,8 +436,10 @@ framebuffer_t::framebuffer_t()
   : is_default(0), invalid(0), format(0), enabled(0)
 {
   for(size_t i = 0;i < RSXGL_MAX_ATTACHMENTS;++i) {
-    attachments[i] = 0;
     attachment_types.set(i,RSXGL_ATTACHMENT_TYPE_NONE);
+    attachments[i] = 0;
+    attachment_layers[i] = 0;
+    attachment_levels[i] = 0;
   }
 
   size[0] = 0;
@@ -421,6 +484,8 @@ rsxgl_framebuffer_detach(framebuffer_t & framebuffer,const uint32_t rsx_attachme
     }
     framebuffer.attachment_types.set(rsx_attachment,RSXGL_ATTACHMENT_TYPE_NONE);
     framebuffer.attachments[rsx_attachment] = 0;
+    framebuffer.attachment_layers[rsx_attachment] = 0;
+    framebuffer.attachment_levels[rsx_attachment] = 0;
   }
 }
 
@@ -513,7 +578,7 @@ rsxgl_framebuffer_renderbuffer(rsxgl_context_t * ctx,const framebuffer_t::name_t
 }
 
 static inline void
-rsxgl_framebuffer_texture(rsxgl_context_t * ctx,const framebuffer_t::name_type framebuffer_name,const GLenum attachment,const texture_t::name_type texture_name)
+rsxgl_framebuffer_texture(rsxgl_context_t * ctx,const framebuffer_t::name_type framebuffer_name,const GLenum attachment,const uint8_t dims,const texture_t::name_type texture_name,const texture_t::dimension_size_type layer,const texture_t::level_size_type level)
 {
   const uint32_t rsx_attachment = rsxgl_framebuffer_attachment(attachment);
   if(rsx_attachment == RSXGL_MAX_ATTACHMENTS) {
@@ -521,6 +586,14 @@ rsxgl_framebuffer_texture(rsxgl_context_t * ctx,const framebuffer_t::name_type f
   }
 
   if(texture_name != 0 && !texture_t::storage().is_object(texture_name)) {
+    RSXGL_ERROR_(GL_INVALID_OPERATION);
+  }
+
+  if(texture_name != 0 && (layer < 0 || level < 0)) {
+    RSXGL_ERROR_(GL_INVALID_VALUE);
+  }
+
+  if(dims != 0 && dims != texture_t::storage().at(texture_name).dims) {
     RSXGL_ERROR_(GL_INVALID_OPERATION);
   }
 
@@ -532,6 +605,8 @@ rsxgl_framebuffer_texture(rsxgl_context_t * ctx,const framebuffer_t::name_type f
   if(texture_name != 0) {
     framebuffer.attachment_types.set(rsx_attachment,RSXGL_ATTACHMENT_TYPE_TEXTURE);
     framebuffer.attachments[rsx_attachment] = texture_name;
+    framebuffer.attachment_layers[rsx_attachment] = layer;
+    framebuffer.attachment_levels[rsx_attachment] = level;
   }
 
   rsxgl_framebuffer_invalidate(ctx,framebuffer_name,framebuffer);
@@ -616,19 +691,63 @@ glCheckFramebufferStatus (GLenum target)
 GLAPI void APIENTRY
 glFramebufferTexture1D (GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level)
 {
-  RSXGL_NOERROR_();
+  const uint32_t rsx_framebuffer_target = rsxgl_framebuffer_target(target);
+  if(rsx_framebuffer_target == RSXGL_MAX_FRAMEBUFFER_TARGETS) {
+    RSXGL_ERROR_(GL_INVALID_ENUM);
+  }
+
+  if(texture != 0 && !(textarget == GL_TEXTURE_1D)) {
+    RSXGL_ERROR_(GL_INVALID_ENUM);
+  }
+
+  rsxgl_context_t * ctx = current_ctx();
+  if(!ctx -> framebuffer_binding.is_anything_bound(rsx_framebuffer_target)) {
+    RSXGL_ERROR_(GL_INVALID_OPERATION);
+  }
+
+  rsxgl_framebuffer_texture(ctx,ctx -> framebuffer_binding.names[rsx_framebuffer_target],attachment,1,texture,0,level);
 }
 
 GLAPI void APIENTRY
 glFramebufferTexture2D (GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level)
 {
-  RSXGL_NOERROR_();
+  const uint32_t rsx_framebuffer_target = rsxgl_framebuffer_target(target);
+  if(rsx_framebuffer_target == RSXGL_MAX_FRAMEBUFFER_TARGETS) {
+    RSXGL_ERROR_(GL_INVALID_ENUM);
+  }
+
+  if(texture != 0 && !(textarget == GL_TEXTURE_2D ||
+		       textarget == GL_TEXTURE_CUBE_MAP ||
+		       textarget == GL_TEXTURE_RECTANGLE)) {
+    RSXGL_ERROR_(GL_INVALID_ENUM);
+  }
+
+  rsxgl_context_t * ctx = current_ctx();
+  if(!ctx -> framebuffer_binding.is_anything_bound(rsx_framebuffer_target)) {
+    RSXGL_ERROR_(GL_INVALID_OPERATION);
+  }
+
+  rsxgl_framebuffer_texture(ctx,ctx -> framebuffer_binding.names[rsx_framebuffer_target],attachment,2,texture,0,level);
 }
 
 GLAPI void APIENTRY
 glFramebufferTexture3D (GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level, GLint zoffset)
 {
-  RSXGL_NOERROR_();
+  const uint32_t rsx_framebuffer_target = rsxgl_framebuffer_target(target);
+  if(rsx_framebuffer_target == RSXGL_MAX_FRAMEBUFFER_TARGETS) {
+    RSXGL_ERROR_(GL_INVALID_ENUM);
+  }
+
+  if(texture != 0 && !(textarget == GL_TEXTURE_3D)) {
+    RSXGL_ERROR_(GL_INVALID_ENUM);
+  }
+
+  rsxgl_context_t * ctx = current_ctx();
+  if(!ctx -> framebuffer_binding.is_anything_bound(rsx_framebuffer_target)) {
+    RSXGL_ERROR_(GL_INVALID_OPERATION);
+  }
+
+  rsxgl_framebuffer_texture(ctx,ctx -> framebuffer_binding.names[rsx_framebuffer_target],attachment,3,texture,zoffset,level);
 }
 
 GLAPI void APIENTRY
@@ -650,6 +769,110 @@ glFramebufferRenderbuffer (GLenum target, GLenum attachment, GLenum renderbuffer
 static inline void
 rsxgl_get_framebuffer_attachment_parameteriv(rsxgl_context_t * ctx,const framebuffer_t::name_type framebuffer_name,GLenum attachment, GLenum pname, GLint *params)
 {
+  const framebuffer_t & framebuffer = framebuffer_t::storage().at(framebuffer_name);
+
+  const uint32_t rsx_attachment = rsxgl_framebuffer_attachment(attachment);
+  if(rsx_attachment == RSXGL_MAX_ATTACHMENTS) {
+    RSXGL_NOERROR_();
+  }
+
+  const uint32_t attachment_type = framebuffer.attachment_types.get(rsx_attachment);
+
+  if(pname == GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE) {
+    if(attachment_type == RSXGL_ATTACHMENT_TYPE_NONE) {
+      *params = GL_NONE;
+    }
+    else if(attachment_type == RSXGL_ATTACHMENT_TYPE_RENDERBUFFER) {
+      *params = GL_RENDERBUFFER;
+    }
+    else if(attachment_type == RSXGL_ATTACHMENT_TYPE_TEXTURE) {
+      *params = GL_TEXTURE;
+    }
+  }
+  else if(attachment_type == RSXGL_ATTACHMENT_TYPE_RENDERBUFFER) {
+    if(pname == GL_FRAMEBUFFER_ATTACHMENT_OBJECT_NAME) {
+      *params = framebuffer.attachments[rsx_attachment];
+    }
+
+    else if(pname == GL_RENDERBUFFER_RED_SIZE) { 
+      *params = rsxgl_renderbuffer_bit_depth[renderbuffer_t::storage().at(framebuffer.attachments[rsx_attachment]).format][0];
+    }
+    else if(pname == GL_RENDERBUFFER_BLUE_SIZE) {
+      *params = rsxgl_renderbuffer_bit_depth[renderbuffer_t::storage().at(framebuffer.attachments[rsx_attachment]).format][1];
+    }
+    else if(pname == GL_RENDERBUFFER_GREEN_SIZE) {
+      *params = rsxgl_renderbuffer_bit_depth[renderbuffer_t::storage().at(framebuffer.attachments[rsx_attachment]).format][2];
+    }
+    else if(pname == GL_RENDERBUFFER_ALPHA_SIZE) {
+      *params = rsxgl_renderbuffer_bit_depth[renderbuffer_t::storage().at(framebuffer.attachments[rsx_attachment]).format][3];
+    }
+    else if(pname == GL_RENDERBUFFER_DEPTH_SIZE) {
+      *params = rsxgl_renderbuffer_bit_depth[renderbuffer_t::storage().at(framebuffer.attachments[rsx_attachment]).format][4];
+    }
+    else if(pname == GL_RENDERBUFFER_STENCIL_SIZE) {
+      *params = rsxgl_renderbuffer_bit_depth[renderbuffer_t::storage().at(framebuffer.attachments[rsx_attachment]).format][5];
+    }
+    else if(pname == GL_FRAMEBUFFER_ATTACHMENT_COMPONENT_TYPE) {
+      // TODO - I actually don't understand this
+    }
+    else if(pname == GL_FRAMEBUFFER_ATTACHMENT_COLOR_ENCODING) {
+      // TODO
+    }
+
+    else {
+      RSXGL_ERROR_(GL_INVALID_ENUM);
+    }
+  }
+  else if(attachment_type == RSXGL_ATTACHMENT_TYPE_TEXTURE) {
+    if(pname == GL_FRAMEBUFFER_ATTACHMENT_OBJECT_NAME) {
+      *params = framebuffer.attachments[rsx_attachment];
+    }
+    else if(pname == GL_FRAMEBUFFER_ATTACHMENT_TEXTURE_LEVEL) {
+      *params = framebuffer.attachment_levels[rsx_attachment];
+    }
+    else if(pname == GL_FRAMEBUFFER_ATTACHMENT_TEXTURE_CUBE_MAP_FACE) {
+      // TODO
+    }
+    else if(pname == GL_FRAMEBUFFER_ATTACHMENT_TEXTURE_LAYER) {
+      *params = framebuffer.attachment_layers[rsx_attachment];
+    }
+    else if(pname == GL_FRAMEBUFFER_ATTACHMENT_LAYERED) {
+      // TODO
+    }
+
+    else if(pname == GL_RENDERBUFFER_RED_SIZE) { 
+      // TODO
+    }
+    else if(pname == GL_RENDERBUFFER_BLUE_SIZE) {
+      // TODO
+    }
+    else if(pname == GL_RENDERBUFFER_GREEN_SIZE) {
+      // TODO
+    }
+    else if(pname == GL_RENDERBUFFER_ALPHA_SIZE) {
+      // TODO
+    }
+    else if(pname == GL_RENDERBUFFER_DEPTH_SIZE) {
+      // TODO
+    }
+    else if(pname == GL_RENDERBUFFER_STENCIL_SIZE) {
+      // TODO
+    }
+    else if(pname == GL_FRAMEBUFFER_ATTACHMENT_COMPONENT_TYPE) {
+      // TODO - I actually don't understand this
+    }
+    else if(pname == GL_FRAMEBUFFER_ATTACHMENT_COLOR_ENCODING) {
+      // TODO
+    }
+
+    else {
+      RSXGL_ERROR_(GL_INVALID_ENUM);
+    }
+  }
+  else {
+    RSXGL_ERROR_(GL_INVALID_VALUE);
+  }
+
   RSXGL_NOERROR_();
 }
 
@@ -684,7 +907,17 @@ glBlitFramebuffer (GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1, GLint dst
 GLAPI void APIENTRY
 glFramebufferTextureLayer (GLenum target, GLenum attachment, GLuint texture, GLint level, GLint layer)
 {
-  RSXGL_NOERROR_();
+  const uint32_t rsx_framebuffer_target = rsxgl_framebuffer_target(target);
+  if(rsx_framebuffer_target == RSXGL_MAX_FRAMEBUFFER_TARGETS) {
+    RSXGL_ERROR_(GL_INVALID_ENUM);
+  }
+
+  rsxgl_context_t * ctx = current_ctx();
+  if(!ctx -> framebuffer_binding.is_anything_bound(rsx_framebuffer_target)) {
+    RSXGL_ERROR_(GL_INVALID_OPERATION);
+  }
+
+  rsxgl_framebuffer_texture(ctx,ctx -> framebuffer_binding.names[rsx_framebuffer_target],attachment,0,texture,0,level);
 }
 
 GLAPI void APIENTRY
@@ -700,7 +933,7 @@ glFramebufferTexture (GLenum target, GLenum attachment, GLuint texture, GLint le
     RSXGL_ERROR_(GL_INVALID_OPERATION);
   }
 
-  rsxgl_framebuffer_texture(ctx,ctx -> framebuffer_binding.names[rsx_framebuffer_target],attachment,texture);
+  rsxgl_framebuffer_texture(ctx,ctx -> framebuffer_binding.names[rsx_framebuffer_target],attachment,0,texture,0,level);
 }
 
 static inline void
@@ -783,82 +1016,36 @@ glDrawBuffers(GLsizei n, const GLenum *bufs)
   rsxgl_draw_buffers(current_ctx(),current_ctx() -> framebuffer_binding.names[RSXGL_DRAW_FRAMEBUFFER],n,bufs);
 }
 
-static uint16_t
-rsxgl_framebuffer_nv40_format[] = {
-    NV30_3D_RT_FORMAT_COLOR_R5G6B5,
-    NV30_3D_RT_FORMAT_COLOR_X8R8G8B8,
-    NV30_3D_RT_FORMAT_COLOR_A8R8G8B8,
-    NV30_3D_RT_FORMAT_COLOR_B8,
-    NV30_3D_RT_FORMAT_COLOR_A16B16G16R16_FLOAT,
-    NV30_3D_RT_FORMAT_COLOR_A32B32G32R32_FLOAT,
-    NV30_3D_RT_FORMAT_COLOR_R32_FLOAT,
-    NV30_3D_RT_FORMAT_COLOR_X8B8G8R8,
-    NV30_3D_RT_FORMAT_COLOR_A8B8G8R8,
-    NV30_3D_RT_FORMAT_ZETA_Z24S8,
-    NV30_3D_RT_FORMAT_ZETA_Z16
-};
-
-static uint16_t
-rsxgl_texture_framebuffer_format[] = {
-  RSXGL_MAX_FRAMEBUFFER_FORMATS, // RSXGL_TEX_FORMAT_B8
-  RSXGL_MAX_FRAMEBUFFER_FORMATS, // RSXGL_TEX_FORMAT_A1R5G5B5
-  RSXGL_MAX_FRAMEBUFFER_FORMATS, // RSXGL_TEX_FORMAT_A4R4G4B4
-  RSXGL_MAX_FRAMEBUFFER_FORMATS, // RSXGL_TEX_FORMAT_R5G6B5
-  RSXGL_MAX_FRAMEBUFFER_FORMATS, // RSXGL_TEX_FORMAT_A8R8G8B8
-  RSXGL_MAX_FRAMEBUFFER_FORMATS, // RSXGL_TEX_FORMAT_COMPRESSED_DXT1
-  RSXGL_MAX_FRAMEBUFFER_FORMATS, // RSXGL_TEX_FORMAT_COMPRESSED_DXT23
-  RSXGL_MAX_FRAMEBUFFER_FORMATS, // RSXGL_TEX_FORMAT_COMPRESSED_DXT45
-  RSXGL_MAX_FRAMEBUFFER_FORMATS, // RSXGL_TEX_FORMAT_G8B8
-  RSXGL_MAX_FRAMEBUFFER_FORMATS, // RSXGL_TEX_FORMAT_R6G5B5
-  RSXGL_MAX_FRAMEBUFFER_FORMATS, // RSXGL_TEX_FORMAT_DEPTH24_D8
-  RSXGL_MAX_FRAMEBUFFER_FORMATS, // RSXGL_TEX_FORMAT_DEPTH24_D8_FLOAT
-  RSXGL_MAX_FRAMEBUFFER_FORMATS, // RSXGL_TEX_FORMAT_DEPTH16
-  RSXGL_MAX_FRAMEBUFFER_FORMATS, // RSXGL_TEX_FORMAT_DEPTH16_FLOAT
-  RSXGL_MAX_FRAMEBUFFER_FORMATS, // RSXGL_TEX_FORMAT_X16
-  RSXGL_MAX_FRAMEBUFFER_FORMATS, // RSXGL_TEX_FORMAT_Y16_X16
-  RSXGL_MAX_FRAMEBUFFER_FORMATS, // RSXGL_TEX_FORMAT_R5G5B5A1
-  RSXGL_MAX_FRAMEBUFFER_FORMATS, // RSXGL_TEX_FORMAT_COMPRESSED_HILO8
-  RSXGL_MAX_FRAMEBUFFER_FORMATS, // RSXGL_TEX_FORMAT_COMPRESSED_HILO_S8
-  RSXGL_MAX_FRAMEBUFFER_FORMATS, // RSXGL_TEX_FORMAT_W16_Z16_Y16_X16_FLOAT
-  RSXGL_MAX_FRAMEBUFFER_FORMATS, // RSXGL_TEX_FORMAT_W32_Z32_Y32_X32_FLOAT
-  RSXGL_MAX_FRAMEBUFFER_FORMATS, // RSXGL_TEX_FORMAT_X32_FLOAT
-  RSXGL_MAX_FRAMEBUFFER_FORMATS, // RSXGL_TEX_FORMAT_D1R5G5B5
-  RSXGL_MAX_FRAMEBUFFER_FORMATS, // RSXGL_TEX_FORMAT_D8R8G8B8
-  RSXGL_MAX_FRAMEBUFFER_FORMATS, // RSXGL_TEX_FORMAT_Y16_X16_FLOAT
-  RSXGL_MAX_FRAMEBUFFER_FORMATS, // RSXGL_TEX_FORMAT_COMPRESSED_B8R8_G8R8
-  RSXGL_MAX_FRAMEBUFFER_FORMATS // RSXGL_TEX_FORMAT_COMPRESSED_R8B8_R8G8
-};
-
-static const uint32_t
-rsxgl_dma_methods[] = {
-  NV30_3D_DMA_COLOR0,
-  NV30_3D_DMA_COLOR1,
-  NV40_3D_DMA_COLOR2,
-  NV40_3D_DMA_COLOR3,
-  NV30_3D_DMA_ZETA
-};
-
-static const uint32_t
-rsxgl_offset_methods[] = {
-  NV30_3D_COLOR0_OFFSET,
-  NV30_3D_COLOR1_OFFSET,
-  NV40_3D_COLOR2_OFFSET,
-  NV40_3D_COLOR3_OFFSET,
-  NV30_3D_ZETA_OFFSET
-};
-
-static const uint32_t
-rsxgl_pitch_methods[] = {
-  NV30_3D_COLOR0_PITCH,
-  NV30_3D_COLOR1_PITCH,
-  NV40_3D_COLOR2_PITCH,
-  NV40_3D_COLOR3_PITCH,
-  NV40_3D_ZETA_PITCH
-};
-
 static inline void
 rsxgl_emit_surface(gcmContextData * context,const uint8_t which,surface_t const & surface)
 {
+  static const uint32_t
+    rsxgl_dma_methods[] = {
+    NV30_3D_DMA_COLOR0,
+    NV30_3D_DMA_COLOR1,
+    NV40_3D_DMA_COLOR2,
+    NV40_3D_DMA_COLOR3,
+    NV30_3D_DMA_ZETA
+  };
+  
+  static const uint32_t
+    rsxgl_offset_methods[] = {
+    NV30_3D_COLOR0_OFFSET,
+    NV30_3D_COLOR1_OFFSET,
+    NV40_3D_COLOR2_OFFSET,
+    NV40_3D_COLOR3_OFFSET,
+    NV30_3D_ZETA_OFFSET
+  };
+  
+  static const uint32_t
+    rsxgl_pitch_methods[] = {
+    NV30_3D_COLOR0_PITCH,
+    NV30_3D_COLOR1_PITCH,
+    NV40_3D_COLOR2_PITCH,
+    NV40_3D_COLOR3_PITCH,
+    NV40_3D_ZETA_PITCH
+  };
+
   uint32_t * buffer = gcm_reserve(context,6);
 	
   gcm_emit_method_at(buffer,0,rsxgl_dma_methods[which],1);
@@ -894,15 +1081,15 @@ rsxgl_framebuffer_validate(rsxgl_context_t * ctx,framebuffer_t & framebuffer,con
   }
     
   if(framebuffer.invalid) {
-    rsxgl_debug_printf("validating fbo: %u\n",(uint32_t)framebuffer.is_default);
+    //rsxgl_debug_printf("%s %u\n",__PRETTY_FUNCTION__,(uint32_t)framebuffer.is_default);
 
     uint16_t color_format = 0, depth_format = 0, enabled = 0;
     framebuffer_dimension_size_type w = ~0, h = ~0;
     surface_t surfaces[RSXGL_MAX_ATTACHMENTS];
 
     if(framebuffer.is_default) {
-      color_format = ctx -> base.draw -> format & NV30_3D_RT_FORMAT_COLOR__MASK;
-      depth_format = ctx -> base.draw -> format & NV30_3D_RT_FORMAT_ZETA__MASK;
+      color_format = (uint16_t)ctx -> base.draw -> format & (uint16_t)NV30_3D_RT_FORMAT_COLOR__MASK;
+      depth_format = (uint16_t)ctx -> base.draw -> format & (uint16_t)NV30_3D_RT_FORMAT_ZETA__MASK;
 
       w = ctx -> base.draw -> width;
       h = ctx -> base.draw -> height;
@@ -935,8 +1122,6 @@ rsxgl_framebuffer_validate(rsxgl_context_t * ctx,framebuffer_t & framebuffer,con
 	const framebuffer_t::attachment_size_type i = it.value();
 	if(i == RSXGL_MAX_COLOR_ATTACHMENTS) continue;
 
-	rsxgl_debug_printf("\t%u:%u\n",(uint32_t)it.index(),(uint32_t)it.value());
-
 	const uint32_t type = framebuffer.attachment_types.get(i);
 	if(type == RSXGL_ATTACHMENT_TYPE_NONE) continue;
 
@@ -954,18 +1139,34 @@ rsxgl_framebuffer_validate(rsxgl_context_t * ctx,framebuffer_t & framebuffer,con
 	    break;
 	  }
 
-	  rsxgl_debug_printf("\tsurface %u is a renderbuffer:\n",(uint32_t)i);
-
 	  surfaces[i] = renderbuffer.surface;
 	  w = std::min(w,renderbuffer.size[0]);
 	  h = std::min(h,renderbuffer.size[1]);
 
 	  enabled |= (NV30_3D_RT_ENABLE_COLOR0 << i);
 	}
-	else if(type == RSXGL_ATTACHMENT_TYPE_TEXTURE) {
-	  rsxgl_debug_printf("\tattachment is a texture:\n");
+	else if(type == RSXGL_ATTACHMENT_TYPE_TEXTURE && rsxgl_framebuffer_rsx_format_is_color(rsxgl_texture_framebuffer_format[texture_t::storage().at(framebuffer.attachments[i]).internalformat])) {
+	  texture_t & texture = texture_t::storage().at(framebuffer.attachments[i]);
 
-	  //enabled |= (NV30_3D_RT_ENABLE_COLOR0 << i);
+	  // If rsx_format hasn't been set yet, set it to this texture's format:
+	  if(rsx_format == RSXGL_MAX_FRAMEBUFFER_FORMATS) {
+	    rsx_format = rsxgl_texture_framebuffer_format[texture.internalformat];
+	  }
+	  // If rsx_format has been set, but it's not equal to this texture's format, then it's
+	  // a problem. Unset rsx_format & terminate the loop:
+	  else if(rsx_format != rsxgl_texture_framebuffer_format[texture.internalformat]) {
+	    rsx_format = RSXGL_MAX_FRAMEBUFFER_FORMATS;
+	    break;
+	  }
+
+	  // TODO - Do something with level and layer settings.
+
+	  surfaces[i].pitch = texture.pitch;
+	  surfaces[i].memory = texture.memory;
+	  w = std::min(w,texture.size[0]);
+	  h = std::min(h,texture.size[1]);
+
+	  enabled |= (NV30_3D_RT_ENABLE_COLOR0 << i);
 	}
       }
 
@@ -977,8 +1178,6 @@ rsxgl_framebuffer_validate(rsxgl_context_t * ctx,framebuffer_t & framebuffer,con
       {
 	const uint32_t type = framebuffer.attachment_types.get(4);
 	if(type == RSXGL_ATTACHMENT_TYPE_RENDERBUFFER && rsxgl_framebuffer_rsx_format_is_depth(renderbuffer_t::storage().at(framebuffer.attachments[4]).format)) {
-	  rsxgl_debug_printf("\tsurface 4 is a renderbuffer\n");
-
 	  renderbuffer_t & renderbuffer = renderbuffer_t::storage().at(framebuffer.attachments[4]);
 
 	  surfaces[4] = renderbuffer.surface;
@@ -987,13 +1186,20 @@ rsxgl_framebuffer_validate(rsxgl_context_t * ctx,framebuffer_t & framebuffer,con
 	  
 	  depth_format = rsxgl_framebuffer_nv40_format[renderbuffer.format];
 	}
-	else if(type == RSXGL_ATTACHMENT_TYPE_TEXTURE) {
-	  rsxgl_debug_printf("\tsurface 4 is a texture\n");
+	else if(type == RSXGL_ATTACHMENT_TYPE_TEXTURE && rsxgl_framebuffer_rsx_format_is_depth(rsxgl_texture_framebuffer_format[texture_t::storage().at(framebuffer.attachments[4]).internalformat])) {
+	  texture_t & texture = texture_t::storage().at(framebuffer.attachments[4]);
 
-	  //depth_format = (NV30_3D_RT_FORMAT_ZETA_Z16 | NV30_3D_RT_FORMAT_TYPE_LINEAR);
+	  surfaces[4].pitch = texture.pitch;
+	  surfaces[4].memory = texture.memory;
+	  w = std::min(w,texture.size[0]);
+	  h = std::min(h,texture.size[1]);
+
+	  depth_format = rsxgl_framebuffer_nv40_format[rsxgl_texture_framebuffer_format[texture_t::storage().at(framebuffer.attachments[4]).internalformat]];
 	}
       }
     }
+
+    //rsxgl_debug_printf("\tcolor_format: %u depth_format: %u\n",(uint32_t)color_format,(uint32_t)depth_format);
 
     framebuffer.format = (color_format != 0 ? color_format : (uint16_t)NV30_3D_RT_FORMAT_COLOR_A8R8G8B8) | (depth_format != 0 ? depth_format : (uint16_t)NV30_3D_RT_FORMAT_ZETA_Z16) | (uint16_t)NV30_3D_RT_FORMAT_TYPE_LINEAR;
     framebuffer.enabled = (enabled != 0 ? enabled : (uint16_t)NV30_3D_RT_ENABLE_COLOR0);
@@ -1068,8 +1274,6 @@ rsxgl_framebuffer_validate(rsxgl_context_t * ctx,framebuffer_t & framebuffer,con
       write_mask.parts.stencil = 0;
     }
       
-    rsxgl_debug_printf("framebuffer write_mask: %x\n",(uint32_t)write_mask.all);
-
     framebuffer.write_mask.all = write_mask.all;
     framebuffer.invalid = 0;
   }
@@ -1085,8 +1289,9 @@ rsxgl_draw_framebuffer_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
   if(ctx -> invalid.parts.draw_framebuffer) {
     gcmContextData * context = ctx -> gcm_context();
 
+    //rsxgl_debug_printf("%s %u format: %x enabled: %x\n",__PRETTY_FUNCTION__,(uint32_t)framebuffer.is_default,(uint32_t)framebuffer.format,(uint32_t)framebuffer.enabled);
     for(framebuffer_t::attachment_size_type i = 0;i < RSXGL_MAX_ATTACHMENTS;++i) {
-      rsxgl_debug_printf("%u: %u pitch: %u\n",(uint32_t)i,framebuffer.surfaces[i].memory.offset,framebuffer.surfaces[i].pitch);
+      //rsxgl_debug_printf("\t%u: %u %u\n",(uint32_t)i,framebuffer.surfaces[i].memory.offset,framebuffer.surfaces[i].pitch);
       rsxgl_emit_surface(context,i,framebuffer.surfaces[i]);
     }
 
@@ -1095,8 +1300,6 @@ rsxgl_draw_framebuffer_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
     if(format != 0) {
       const uint32_t enabled = framebuffer.enabled;
       const uint16_t w = framebuffer.size[0], h = framebuffer.size[1];
-
-      rsxgl_debug_printf("format: %x enabled: %x size: %ux%u\n",format,enabled,(uint32_t)w,(uint32_t)h);
 
       uint32_t * buffer = gcm_reserve(context,9);
       

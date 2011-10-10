@@ -4,6 +4,7 @@
 
 #define GL3_PROTOTYPES
 #include <GL3/gl3.h>
+#include <GL3/gl3ext.h>
 
 #include "rsxgltest.h"
 #include "math3d.h"
@@ -274,6 +275,7 @@ rsxgltest_init(int argc,const char ** argv)
   glBindTexture(GL_TEXTURE_2D,texture);
 
   glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,image.width,image.height,0,GL_BGRA,GL_UNSIGNED_BYTE,image.data);
+  //glTexStorage2D(GL_TEXTURE_2D,1,GL_RGBA,image.width,image.height);
 
   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
@@ -282,11 +284,11 @@ rsxgltest_init(int argc,const char ** argv)
   glGenRenderbuffers(2,rbo);
   report_glerror("glGenRenderbuffers");
 
-  glBindRenderbuffer(GL_RENDERBUFFER,rbo[0]);
-  glRenderbufferStorage(GL_RENDERBUFFER,GL_RGBA,image.width,image.height);
+  //glBindRenderbuffer(GL_RENDERBUFFER,rbo[0]);
+  //glRenderbufferStorage(GL_RENDERBUFFER,GL_RGBA,image.width,image.height);
 
-  glBindRenderbuffer(GL_RENDERBUFFER,rbo[1]);
-  glRenderbufferStorage(GL_RENDERBUFFER,GL_DEPTH_COMPONENT,image.width,image.height);
+  //glBindRenderbuffer(GL_RENDERBUFFER,rbo[1]);
+  //glRenderbufferStorage(GL_RENDERBUFFER,GL_DEPTH_COMPONENT,image.width,image.height);
 
   glBindRenderbuffer(GL_RENDERBUFFER,0);
 
@@ -295,8 +297,9 @@ rsxgltest_init(int argc,const char ** argv)
 
   glBindFramebuffer(GL_FRAMEBUFFER,fbo);
   //glFramebufferRenderbuffer(GL_FRAMEBUFFER,GL_COLOR_ATTACHMENT0,GL_RENDERBUFFER,rbo[0]);
-  glFramebufferRenderbuffer(GL_FRAMEBUFFER,GL_DEPTH_ATTACHMENT,GL_RENDERBUFFER,rbo[1]);
   //glFramebufferTexture(GL_FRAMEBUFFER,GL_COLOR_ATTACHMENT0,texture,0);
+  glFramebufferTexture2D(GL_FRAMEBUFFER,GL_COLOR_ATTACHMENT0,GL_TEXTURE_2D,texture,0);
+  //glFramebufferRenderbuffer(GL_FRAMEBUFFER,GL_DEPTH_ATTACHMENT,GL_RENDERBUFFER,rbo[1]);
 
   glBindFramebuffer(GL_FRAMEBUFFER,0);
 }
@@ -313,15 +316,15 @@ rsxgltest_draw()
 
   glBindFramebuffer(GL_FRAMEBUFFER,fbo);
 
-  //glDepthMask(GL_FALSE);
-  //glDisable(GL_DEPTH_TEST);
+  glDepthMask(GL_FALSE);
+  glDisable(GL_DEPTH_TEST);
   glClearColor(1.0 - rgb[0],1.0 - rgb[1],1.0 - rgb[2],1.0);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
   glBindFramebuffer(GL_FRAMEBUFFER,0);
 
-  //glDepthMask(GL_TRUE);
-  //glEnable(GL_DEPTH_TEST);
+  glDepthMask(GL_TRUE);
+  glEnable(GL_DEPTH_TEST);
 
   glClearColor(rgb[0],rgb[1],rgb[2],1.0);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);

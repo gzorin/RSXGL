@@ -122,6 +122,9 @@ struct framebuffer_t {
   typedef boost::uint_value_t< RSXGL_MAX_ATTACHMENTS - 1 >::least attachment_size_type;
   attachment_name_type attachments[RSXGL_MAX_ATTACHMENTS];
 
+  texture_t::dimension_size_type attachment_layers[RSXGL_MAX_ATTACHMENTS];
+  texture_t::level_size_type attachment_levels[RSXGL_MAX_ATTACHMENTS];
+
   typedef smint_array< RSXGL_MAX_COLOR_ATTACHMENTS, RSXGL_MAX_DRAW_BUFFERS > mapping_t;
   typedef mapping_t::index_type mapping_size_type;
   mapping_t mapping;
