@@ -844,13 +844,14 @@ glLinkProgram (GLuint program_name)
   {
     const rsxProgramAttrib * _vp_attribs = rsxVertexProgramGetAttribs(const_cast< rsxVertexProgram * >(vp));
     for(program_t::attrib_size_type i = 0,n = vp -> num_attrib;i < n;++i,++_vp_attribs) {
+      if(_vp_attribs -> index == -1) continue;
+
       const uint8_t type = _vp_attribs -> type;
-      if(type != RSXGL_DATA_TYPE_SAMPLER1D &&
-	 type != RSXGL_DATA_TYPE_SAMPLER2D &&
-	 type != RSXGL_DATA_TYPE_SAMPLER3D &&
-	 type != RSXGL_DATA_TYPE_SAMPLERCUBE &&
-	 type != RSXGL_DATA_TYPE_SAMPLERRECT &&
-	 (int)_vp_attribs -> index != -1) {
+      if(!(type == RSXGL_DATA_TYPE_SAMPLER1D ||
+	   type == RSXGL_DATA_TYPE_SAMPLER2D ||
+	   type == RSXGL_DATA_TYPE_SAMPLER3D ||
+	   type == RSXGL_DATA_TYPE_SAMPLERCUBE ||
+	   type == RSXGL_DATA_TYPE_SAMPLERRECT)) {
 	if(!_vp_attribs -> is_output) {
 	  vp_attribs.push_back(_vp_attribs);
 	}
@@ -872,6 +873,8 @@ glLinkProgram (GLuint program_name)
   {
     const rsxProgramAttrib * _fp_attribs = rsxFragmentProgramGetAttribs(const_cast< rsxFragmentProgram * >(fp));
     for(program_t::attrib_size_type i = 0,n = fp -> num_attrib;i < n;++i) {
+      if(_fp_attribs -> index == -1) continue;
+
       const uint8_t type = (_fp_attribs + i) -> type;
       if(type == RSXGL_DATA_TYPE_SAMPLER1D ||
 	 type == RSXGL_DATA_TYPE_SAMPLER2D ||
@@ -969,6 +972,8 @@ glLinkProgram (GLuint program_name)
     {
       const rsxProgramConst * _vp_const = rsxVertexProgramGetConsts(const_cast< rsxVertexProgram * >(vp));
       for(size_t i = 0,n = vp -> num_const;i < n;++i,++_vp_const) {
+	if(_vp_const -> index == -1) continue;
+
 	if(!_vp_const -> is_internal &&
 	   (_vp_const -> type == RSXGL_DATA_TYPE_FLOAT ||
 	    _vp_const -> type == RSXGL_DATA_TYPE_FLOAT2 ||
@@ -998,6 +1003,8 @@ glLinkProgram (GLuint program_name)
     {
       const rsxProgramConst * _fp_const = rsxFragmentProgramGetConsts(const_cast< rsxFragmentProgram * >(fp));
       for(size_t i = 0,n = fp -> num_const;i < n;++i,++_fp_const) {
+	if(_fp_const -> index == -1) continue;
+
 	if(!_fp_const -> is_internal &&
 	   (_fp_const -> type == RSXGL_DATA_TYPE_FLOAT ||
 	    _fp_const -> type == RSXGL_DATA_TYPE_FLOAT2 ||
@@ -1567,6 +1574,7 @@ glBindAttribLocation (GLuint program_name, GLuint index, const GLchar* name)
   program_t & program = program_t::storage().at(program_name);
   
   const size_t n = strlen(name) + 1;
+
   program.attrib_binding(index).resize(n);
   program.attrib_binding(index).set(name,n);
   
