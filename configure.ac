@@ -123,6 +123,10 @@ AC_SUBST([RSXGL_CONFIG_samples_host_port])
 AC_PATH_PROG([CGC],[cgc])
 AC_MSG_NOTICE([path to the cgc compiler is ${CGC}])
 
+# Find lftp
+AC_PATH_PROG([LFTP],[lftp])
+AC_MSG_NOTICE([path to the lftp utility is ${LFTP}])
+
 # Where is PSL1GHT?
 AC_ARG_WITH([psl1ght],AS_HELP_STRING([--with-psl1ght],[location of compiled PSL1GHT]),[PSL1GHT=$withval],[])
 

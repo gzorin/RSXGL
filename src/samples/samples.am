@@ -21,6 +21,7 @@ PKG			:= $(PSL1GHT_BIN)/pkg.py
 SPRX		:= $(PSL1GHT_BIN)/sprxlinker
 CGCOMP          ?= $(PSL1GHT_BIN)/cgcomp
 CGC		:= @CGC@
+LFTP		:= @LFTP@
 
 SFOXML		:= $(PSL1GHT_BIN)/sfo.xml
 ICON0		:= $(PSL1GHT_BIN)/ICON0.PNG
@@ -80,3 +81,6 @@ SUFFIXES = .bin _bin.o _bin.h .vcg .fcg .vert .frag _vpo.o _fpo.o _vpo.h _fpo.h 
 
 %_fpo.h: %_fpo.o
 	@echo "$<"
+
+transfer: pkg
+	@if test -n "$(RSXGL_TARGET_IP)" -a -n "$(LFTP)" -a -f "$(abs_builddir)/pkg/USRDIR/EBOOT.BIN"; then echo "Transferring to $(RSXGL_TARGET_IP)";$(LFTP) -e "cd /dev_hdd0/game/$(APPID)/USRDIR/;put $(abs_builddir)/pkg/USRDIR/EBOOT.BIN;exit;" -u root,openbox $(RSXGL_TARGET_IP); fi
