@@ -99,6 +99,7 @@ INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 LDFLAGS = @LDFLAGS@
+LFTP := @LFTP@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
 LTLIBOBJS = @LTLIBOBJS@
@@ -210,7 +211,7 @@ BUILT_SOURCES = textures_vpo.h textures_fpo.h \
 	cube_vpo.h cube_fpo.h \
 	manypoints_vpo.h manypoints_fpo.h \
 	texcube_vpo.h texcube_fpo.h \
-	fbo_vpo.h fbo_fpo.h
+	fbo_inner_vpo.h fbo_inner_fpo.h
 
 CLEANFILES = draw_vpo.h draw_fpo.h draw_vpo.o draw_fpo.o \
 	textures_vpo.h textures_fpo.h textures_vpo.o textures_fpo.o \
@@ -237,8 +238,8 @@ manycubestream_objects = cube_vpo.o cube_fpo.o
 manycubestream_sources = manycubestream.cc cube.vcg cube.fcg
 texcube_objects = texcube_vpo.o texcube_fpo.o nagel_bin.o
 texcube_sources = texcube.cc texture.c texcube.vcg texcube.fcg nagel.bin
-fbo_objects = fbo_vpo.o fbo_fpo.o nagel_bin.o
-fbo_sources = fbo.cc texture.c fbo.vcg fbo.fcg nagel.bin
+fbo_objects = fbo_inner_vpo.o fbo_inner_fpo.o nagel_bin.o
+fbo_sources = fbo.cc texture.c fbo_inner.vert fbo_inner.frag nagel.bin
 objects = $(fbo_objects)
 sources = $(fbo_sources)
 rsxgltest_elf_DEPENDENCIES = $(top_builddir)/src/library/libEGL.a $(top_builddir)/src/library/libGL.a	\
@@ -671,6 +672,9 @@ CGCOMP          ?= $(PSL1GHT_BIN)/cgcomp
 
 %_fpo.h: %_fpo.o
 	@echo "$<"
+
+transfer: pkg
+	@if test -n "$(RSXGL_TARGET_IP)" -a -n "$(LFTP)" -a -f "$(abs_builddir)/pkg/USRDIR/EBOOT.BIN"; then echo "Transferring to $(RSXGL_TARGET_IP)";$(LFTP) -e "cd /dev_hdd0/game/$(APPID)/USRDIR/;put $(abs_builddir)/pkg/USRDIR/EBOOT.BIN;exit;" -u root,openbox $(RSXGL_TARGET_IP); fi
 override ICON0		:=	$(srcdir)/../brewcrab.png
 
 pkg: rsxgltest.pkg
