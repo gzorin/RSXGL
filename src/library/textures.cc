@@ -1323,7 +1323,9 @@ rsxgl_tex_image(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,con
     texture.rect = rect;
   }
   else if(texture.dims != dims ||
-	  texture.internalformat != internalformat) {
+	  texture.internalformat != internalformat ||
+	  texture.cube != cube ||
+	  texture.rect != rect) {
     // TODO - Provide an error, or something, I don't think this is standard behavior.
     return;
   }
@@ -1926,7 +1928,6 @@ rsxgl_texture_validate(rsxgl_context_t * ctx,texture_t & texture,const uint32_t 
       
       if(texture.memory) {
 	texture.valid = 1;
-	texture.internalformat = format;
 	texture.max_level = levels;
 	texture.size[0] = texture.levels[0].size[0];
 	texture.size[1] = texture.levels[0].size[1];
