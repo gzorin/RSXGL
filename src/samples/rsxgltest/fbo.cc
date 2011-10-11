@@ -11,8 +11,8 @@
 #include "sine_wave.h"
 
 #include <stddef.h>
-#include "fbo_vpo.h"
-#include "fbo_fpo.h"
+#include "fbo_inner_vpo.h"
+#include "fbo_inner_fpo.h"
 
 #include <io/pad.h>
 
@@ -56,7 +56,6 @@ struct sine_wave_t xyz_waves[3] = {
 
 GLuint vao = 0;
 GLuint buffers[2] = { 0,0 };
-GLuint shaders[2] = { 0,0 };
 
 Image image;
 GLuint textures[2] = { 0,0 };
@@ -64,85 +63,111 @@ GLuint program = 0;
 
 GLuint fbo = 0, rbo[2] = { 0,0 };
 
-GLint ProjMatrix_location = -1, TransMatrix_location = -1, vertex_location = -1, tc_location = -1, texture_location = -1;
+GLint ProjMatrix_location = -1, TransMatrix_location = -1, NormalMatrix_location = -1,
+  vertex_location = 0, normal_location = 1, tc_location = 2,
+  light_location = -1;
 
 const float geometry[] = {
     // -X
     -0.5,-0.5,-0.5,
+    -1.0,0.0,0.0,
     0,0,
 
     -0.5,0.5,-0.5,
+    -1.0,0.0,0.0,
     1,0,
 
     -0.5,0.5,0.5,
+    -1.0,0.0,0.0,
     1,1,
 
     -0.5,-0.5,0.5,
+    -1.0,0.0,0.0,
     0,1,
 
     // +X
     0.5,-0.5,-0.5,
+    1.0,0.0,0.0,
     0,0,
 
     0.5,-0.5,0.5,
+    1.0,0.0,0.0,
     1,0,
 
     0.5,0.5,0.5,
+    1.0,0.0,0.0,
     1,1,
 
     0.5,0.5,-0.5,
+    1.0,0.0,0.0,
     0,1,
 
     // -Y
     -0.5,-0.5,-0.5,
+    0.0,-1.0,0.0,
     0,0,
 
     -0.5,-0.5,0.5,
+    0.0,-1.0,0.0,
     1,0,
 
     0.5,-0.5,0.5,
+    0.0,-1.0,0.0,
     1,1,
 
     0.5,-0.5,-0.5,
+    0.0,-1.0,0.0,
     0,1,
 
     // +Y
     -0.5,0.5,-0.5,
+    0.0,1.0,0.0,
     0,0,
 
     0.5,0.5,-0.5,
+    0.0,1.0,0.0,
     1,0,
 
     0.5,0.5,0.5,
+    0.0,1.0,0.0,
     1,1,
 
     -0.5,0.5,0.5,
+    0.0,1.0,0.0,
     0,1,
 
     // -Z
     -0.5,-0.5,-0.5,
+    0.0,0.0,-1.0,
     0,0,
 
     -0.5,0.5,-0.5,
+    0.0,0.0,-1.0,
     1,0,
 
     0.5,0.5,-0.5,
+    0.0,0.0,-1.0,
     1,1,
 
     0.5,-0.5,-0.5,
+    0.0,0.0,-1.0,
     0,1,
 
     // +Z
     -0.5,-0.5,0.5,
+    0.0,0.0,1.0,
     0,0,
 
     -0.5,0.5,0.5,
+    0.0,0.0,1.0,
     1,0,
 
     0.5,0.5,0.5,
+    0.0,0.0,1.0,
     1,1,
 
     0.5,-0.5,0.5,
+    0.0,0.0,1.0,
     0,1
   };
 
@@ -195,6 +220,8 @@ Eigen::Affine3f ViewMatrixInv =
 		   )
 		  ).inverse();
 
+const GLfloat light[4] = { 10.0f, 10.0f, 10.0f, 1.0f };
+
 extern "C"
 void
 rsxgltest_pad(unsigned int,const padData * paddata)
@@ -217,53 +244,71 @@ rsxgltest_init(int argc,const char ** argv)
   glDepthFunc(GL_LEQUAL);
 
   // Set up us the program:
-  shaders[0] = glCreateShader(GL_VERTEX_SHADER);
-  shaders[1] = glCreateShader(GL_FRAGMENT_SHADER);
+  GLuint shaders[2] = { 0,0 };
 
-  program = glCreateProgram();
+  {
+    shaders[0] = glCreateShader(GL_VERTEX_SHADER);
+    shaders[1] = glCreateShader(GL_FRAGMENT_SHADER);
+    
+    program = glCreateProgram();
+    
+    glAttachShader(program,shaders[0]);
+    glAttachShader(program,shaders[1]);
+    
+    // Supply shader binaries:
+    glShaderBinary(1,shaders,0,fbo_inner_vpo,fbo_inner_vpo_size);
+    glShaderBinary(1,shaders + 1,0,fbo_inner_fpo,fbo_inner_fpo_size);
 
-  glAttachShader(program,shaders[0]);
-  glAttachShader(program,shaders[1]);
-
-  // Supply shader binaries:
-  glShaderBinary(1,shaders,0,fbo_vpo,fbo_vpo_size);
-  glShaderBinary(1,shaders + 1,0,fbo_fpo,fbo_fpo_size);
-
-  // Link the program for real:
-  glLinkProgram(program);
-  glValidateProgram(program);
+    //glBindAttribLocation(program,vertex_location,"vertex");
+    //glBindAttribLocation(program,normal_location,"normal");
+    //glBindAttribLocation(program,tc_location,"uv");
+    
+    // Link the program for real:
+    glLinkProgram(program);
+    glValidateProgram(program);
   
-  summarize_program("draw",program);
+    summarize_program("draw",program);
 
-  vertex_location = glGetAttribLocation(program,"inputvertex.vertex");
-  tc_location = glGetAttribLocation(program,"inputvertex.tc");
+    vertex_location = glGetAttribLocation(program,"vertex");
+    normal_location = glGetAttribLocation(program,"normal");
+    tc_location = glGetAttribLocation(program,"uv");
 
-  ProjMatrix_location = glGetUniformLocation(program,"ProjMatrix");
-  TransMatrix_location = glGetUniformLocation(program,"TransMatrix");
-  texture_location = glGetUniformLocation(program,"texture");
+    tcp_printf("attrib locations: %i %i %i\n",
+	       glGetAttribLocation(program,"vertex"),
+	       glGetAttribLocation(program,"normal"),
+	       glGetAttribLocation(program,"uv"));
 
-  tcp_printf("vertex_location: %i\n",vertex_location);
-  tcp_printf("tc_location: %i\n",tc_location);
-  tcp_printf("ProjMatrix_location: %i TransMatrix_location: %i\n",
-	     ProjMatrix_location,TransMatrix_location);
-  tcp_printf("texture_location: %i\n",texture_location);
+    ProjMatrix_location = glGetUniformLocation(program,"ProjMatrix");
+    TransMatrix_location = glGetUniformLocation(program,"TransMatrix");
+    NormalMatrix_location = glGetUniformLocation(program,"NormalMatrix");
+    GLint texture_location = glGetUniformLocation(program,"texture");
+    light_location = glGetUniformLocation(program,"light");
 
-  glUseProgram(program);
+    tcp_printf("vertex_location: %i\n",vertex_location);
+    tcp_printf("normal_location: %i\n",normal_location);
+    tcp_printf("tc_location: %i\n",tc_location);
+    tcp_printf("ProjMatrix_location: %i TransMatrix_location: %i\n",
+	       ProjMatrix_location,TransMatrix_location);
+    tcp_printf("texture_location: %i\n",texture_location);
 
-  //glUniformMatrix4fv(ProjMatrix_location,1,GL_FALSE,ProjMatrix.data());
-
-  glUniform1i(texture_location,0);
+    glUseProgram(program);
+    
+    glUniform1i(texture_location,0);
+    glUniform4fv(light_location,1,light);
+  }
 
   // Set up us the vertex data:
   glGenBuffers(2,buffers);
 
   glBindBuffer(GL_ARRAY_BUFFER,buffers[0]);
 
-  glBufferData(GL_ARRAY_BUFFER,sizeof(float) * 6 * 4 * 5,geometry,GL_STATIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER,sizeof(float) * 6 * 4 * 8,geometry,GL_STATIC_DRAW);
   glEnableVertexAttribArray(vertex_location);
+  glEnableVertexAttribArray(normal_location);
   glEnableVertexAttribArray(tc_location);
-  glVertexAttribPointer(vertex_location,3,GL_FLOAT,GL_FALSE,sizeof(float) * 5,0);
-  glVertexAttribPointer(tc_location,2,GL_FLOAT,GL_FALSE,sizeof(float) * 5,(const GLvoid *)(sizeof(float) * 3));
+  glVertexAttribPointer(vertex_location,3,GL_FLOAT,GL_FALSE,sizeof(float) * 8,0);
+  glVertexAttribPointer(normal_location,3,GL_FLOAT,GL_FALSE,sizeof(float) * 8,(const GLvoid *)(sizeof(float) * 3));
+  glVertexAttribPointer(tc_location,2,GL_FLOAT,GL_FALSE,sizeof(float) * 8,(const GLvoid *)(sizeof(float) * 6));
 
   //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,buffers[1]);
   //glBufferData(GL_ELEMENT_ARRAY_BUFFER,sizeof(GLuint) * 6 * 2 * 3,indices,GL_STATIC_DRAW);
@@ -339,6 +384,16 @@ rsxgltest_draw()
     Eigen::AngleAxisf(DTOR(xyz[1]) * 360.0f,Eigen::Vector3f::UnitY()) *
     Eigen::AngleAxisf(DTOR(xyz[0]) * 360.0f,Eigen::Vector3f::UnitX());
 
+  //Eigen::Affine3f modelview = ViewMatrixInv * (Eigen::Affine3f::Identity() * rotmat * Eigen::UniformScaling< float >(3.0));
+
+  Transform3f modelview = ViewMatrixInv * (Transform3f::Identity() * rotmat * Eigen::UniformScaling< float >(3.0));
+
+  glUniformMatrix4fv(TransMatrix_location,1,GL_FALSE,modelview.data());
+  
+  Eigen::Affine3f normal = Eigen::Affine3f::Identity();
+  normal.linear() = modelview.linear().inverse().transpose();
+  glUniformMatrix4fv(NormalMatrix_location,1,GL_FALSE,normal.data());
+
   //
   glBindFramebuffer(GL_FRAMEBUFFER,fbo);
   glViewport(0,0,image.width,image.height);
@@ -350,10 +405,6 @@ rsxgltest_draw()
 
   {
     glUniformMatrix4fv(ProjMatrix_location,1,GL_FALSE,ProjMatrix2.data());
-
-    Eigen::Affine3f modelview = ViewMatrixInv * (Eigen::Affine3f::Identity() * rotmat * Eigen::UniformScaling< float >(3.0));
-    glUniformMatrix4fv(TransMatrix_location,1,GL_FALSE,modelview.data());
-    
     glDrawElements(GL_TRIANGLES,36,GL_UNSIGNED_INT,client_indices);
   }
 
@@ -368,10 +419,6 @@ rsxgltest_draw()
 
   {
     glUniformMatrix4fv(ProjMatrix_location,1,GL_FALSE,ProjMatrix.data());
-
-    Eigen::Affine3f modelview = ViewMatrixInv * (Eigen::Affine3f::Identity() * rotmat * Eigen::UniformScaling< float >(3.0));
-    glUniformMatrix4fv(TransMatrix_location,1,GL_FALSE,modelview.data());
-
     glDrawElements(GL_TRIANGLES,36,GL_UNSIGNED_INT,client_indices);
   }
 
@@ -385,11 +432,10 @@ rsxgltest_exit()
   glBindBuffer(GL_ARRAY_BUFFER,0);
 
   glVertexAttribPointer(vertex_location,3,GL_FLOAT,GL_FALSE,0,0);
+  glVertexAttribPointer(normal_location,3,GL_FLOAT,GL_FALSE,0,0);
   glVertexAttribPointer(tc_location,2,GL_FLOAT,GL_FALSE,0,0);
 
   glDeleteBuffers(2,buffers);
 
-  glDeleteShader(shaders[0]);
   glDeleteProgram(program);
-  glDeleteShader(shaders[1]);
 }
