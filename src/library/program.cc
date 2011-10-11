@@ -843,6 +843,7 @@ glLinkProgram (GLuint program_name)
   // Gather VP attributes:
   {
     const rsxProgramAttrib * _vp_attribs = rsxVertexProgramGetAttribs(const_cast< rsxVertexProgram * >(vp));
+
     for(program_t::attrib_size_type i = 0,n = vp -> num_attrib;i < n;++i,++_vp_attribs) {
       if(_vp_attribs -> index == -1) continue;
 
@@ -872,23 +873,24 @@ glLinkProgram (GLuint program_name)
   // Gather FP attributes:
   {
     const rsxProgramAttrib * _fp_attribs = rsxFragmentProgramGetAttribs(const_cast< rsxFragmentProgram * >(fp));
-    for(program_t::attrib_size_type i = 0,n = fp -> num_attrib;i < n;++i) {
+
+    for(program_t::attrib_size_type i = 0,n = fp -> num_attrib;i < n;++i,++_fp_attribs) {
       if(_fp_attribs -> index == -1) continue;
 
-      const uint8_t type = (_fp_attribs + i) -> type;
+      const uint8_t type = _fp_attribs -> type;
       if(type == RSXGL_DATA_TYPE_SAMPLER1D ||
 	 type == RSXGL_DATA_TYPE_SAMPLER2D ||
 	 type == RSXGL_DATA_TYPE_SAMPLER3D ||
 	 type == RSXGL_DATA_TYPE_SAMPLERCUBE ||
 	 type == RSXGL_DATA_TYPE_SAMPLERRECT) {
-	fp_texture_attribs.push_back(_fp_attribs + i);
+	fp_texture_attribs.push_back(_fp_attribs);
       }
       else {
 	if(!_fp_attribs -> is_output) {
-	  fp_inputs.push_back(_fp_attribs + i);
+	  fp_inputs.push_back(_fp_attribs);
 	}
 	else {
-	  fp_outputs.push_back(_fp_attribs + i);
+	  fp_outputs.push_back(_fp_attribs);
 	}
       }
     }
@@ -1326,7 +1328,8 @@ glLinkProgram (GLuint program_name)
     // Map FP input indices to VP outputs:
     program_t::attrib_size_type linked_vp_index[RSXGL_MAX_VERTEX_ATTRIBS];
     for(program_t::attrib_size_type src = 0;src < RSXGL_MAX_VERTEX_ATTRIBS;++src) {
-      linked_vp_index[src] = src;
+      //linked_vp_index[src] = src;
+      linked_vp_index[src] = 0;
     }
 
     // Passing these following two types, which are declared in block scope, as template arguments is a C++0x feature, I believe.
@@ -1382,6 +1385,7 @@ glLinkProgram (GLuint program_name)
 
     set_intersection2(vp_outputs.begin(),vp_outputs.end(),fp_inputs.begin(),fp_inputs.end(),visitor(linked_vp_index),compare(vp,fp));
 
+#if 0
     // Check to see if there are unresolved links between the VP and the FP:
     int unresolved_vp_outputs = 0;
     for(std::deque< const rsxProgramAttrib * >::const_iterator it = fp_inputs.begin(),it_end = fp_inputs.end();it != it_end;++it) {
@@ -1395,6 +1399,7 @@ glLinkProgram (GLuint program_name)
       // TODO - Add an error message
       goto fail;
     }
+#endif
 
     // Patch VP microcode to send VP outputs to correct FP input registers:
     uint32_t vp_output_mask = 0;
@@ -1421,26 +1426,36 @@ glLinkProgram (GLuint program_name)
 	//
 	else {
 	  const uint32_t linked_index = linked_vp_index[original_index];
-	  if(linked_index < 1) continue;
-	  vp_ucode -> dwords[3] = (dword3 & ~NV40_VP_INST_DEST_MASK) | ((linked_index << NV40_VP_INST_DEST_SHIFT) & NV40_VP_INST_DEST_MASK);
 
-	  if(linked_index == NV40_VP_INST_DEST_COL0) {
-	    vp_output_mask |= (1 << 0);
+	  // This instruction outputs to a register that isn't consumed by the fragment program. So
+	  // replace the instruction with a NOP.
+	  if(linked_index == 0) {
+	    vp_ucode -> dwords[0] = 0;
+	    vp_ucode -> dwords[1] = 0;
+	    vp_ucode -> dwords[2] = 0;
+	    vp_ucode -> dwords[3] = 0;
 	  }
-	  else if(linked_index == NV40_VP_INST_DEST_COL1) {
-	    vp_output_mask |= (1 << 1);
-	  }
-	  else if(linked_index == NV40_VP_INST_DEST_BFC0) {
-	    vp_output_mask |= (1 << 2);
-	  }
-	  else if(linked_index == NV40_VP_INST_DEST_BFC1) {
-	    vp_output_mask |= (1 << 3);
-	  }
-	  else if(linked_index == NV40_VP_INST_DEST_FOGC) {
-	    vp_output_mask |= (1 << 4);
-	  }
-	  else if(linked_index >= NV40_VP_INST_DEST_TC(0) && linked_index <= NV40_VP_INST_DEST_TC(7)) {
-	    vp_output_mask |= (1 << (linked_index - NV40_VP_INST_DEST_TC0 + 14));
+	  else {
+	    vp_ucode -> dwords[3] = (dword3 & ~NV40_VP_INST_DEST_MASK) | ((linked_index << NV40_VP_INST_DEST_SHIFT) & NV40_VP_INST_DEST_MASK);
+
+	    if(linked_index == NV40_VP_INST_DEST_COL0) {
+	      vp_output_mask |= (1 << 0);
+	    }
+	    else if(linked_index == NV40_VP_INST_DEST_COL1) {
+	      vp_output_mask |= (1 << 1);
+	    }
+	    else if(linked_index == NV40_VP_INST_DEST_BFC0) {
+	      vp_output_mask |= (1 << 2);
+	    }
+	    else if(linked_index == NV40_VP_INST_DEST_BFC1) {
+	      vp_output_mask |= (1 << 3);
+	    }
+	    else if(linked_index == NV40_VP_INST_DEST_FOGC) {
+	      vp_output_mask |= (1 << 4);
+	    }
+	    else if(linked_index >= NV40_VP_INST_DEST_TC(0) && linked_index <= NV40_VP_INST_DEST_TC(7)) {
+	      vp_output_mask |= (1 << (linked_index - NV40_VP_INST_DEST_TC0 + 14));
+	    }
 	  }
 	}
       }
@@ -1477,23 +1492,6 @@ glLinkProgram (GLuint program_name)
   program.program_offsets = (program_t::instruction_size_type *)memalign(RSXGL_CACHE_LINE_SIZE,sizeof(program_t::instruction_size_type) * program_offsets.size());
   std::copy(program_offsets.begin(),program_offsets.end(),program.program_offsets);  
 
-#if 0
-  // Summarize:
-  // Uniform variables:
-  rsxgl_debug_printf("%u uniforms, %u uniform values\n",program.uniforms_size,program.uniform_values_size);
-  for(program_t::uniform_size_type i = 0;i < program.uniforms_size;++i) {
-    const char * name = program.names_data + program.uniform_table_values[i].first;
-    const program_t::uniform_t & uniform = program.uniforms_data[program.uniform_table_values[i].second];
-
-    rsxgl_debug_printf("\t%u:%s %u values_index: %u program indices:%u,%u\n",
-	       i,
-	       name,
-	       uniform.count,
-	       uniform.values_index,
-	       uniform.vp_index,uniform.program_offsets_index);
-  }
-#endif
-
   program.linked = GL_TRUE;
 
   // Move attached shaders to linked shaders:
@@ -1506,11 +1504,11 @@ glLinkProgram (GLuint program_name)
     program.attached_shaders.bind(i,0);
   }
 
-  rsxgl_debug_printf("%s finished normally\n",__PRETTY_FUNCTION__);
+  //rsxgl_debug_printf("%s finished normally\n",__PRETTY_FUNCTION__);
 
  fail:
 
-  rsxgl_debug_printf("%s finishing\n",__PRETTY_FUNCTION__);
+  //rsxgl_debug_printf("%s finishing\n",__PRETTY_FUNCTION__);
 
   if(info.length() > 0) {
     const size_t n = info.length() + 1;

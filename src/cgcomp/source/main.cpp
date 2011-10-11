@@ -255,11 +255,6 @@ int compileFP(std::istream & in,std::ostream & out)
 	attribs[n].name_off = SWAP32(0);
 	attribs[n].type = it->type;
 	attribs[n].is_output = it->is_output;
-	
-	if(it->is_output) {
-	  std::cerr << n << " is output: " << it->name << " index: " << it->index << std::endl;
-	}
-
 	n++;
       }
     }
@@ -366,7 +361,6 @@ int compileFP(std::istream & in,std::ostream & out)
 
       const uint32_t opcode = (fpi[i].data[0] & NVFX_FP_OP_OPCODE_MASK) >> NVFX_FP_OP_OPCODE_SHIFT;
       const uint32_t outreg = (fpi[i].data[0] & NVFX_FP_OP_OUT_REG_MASK) >> NVFX_FP_OP_OUT_REG_SHIFT;
-      fprintf(stderr,"%i insn: %x opcode: %x outreg: %x\n",i,fpi[i].data[0],opcode,outreg);
     }
     
     out.write((const char *)fragmentprogram,lastoff);
