@@ -333,7 +333,8 @@ rsxgltest_init(int argc,const char ** argv)
   // rendering surface:
   glBindTexture(GL_TEXTURE_2D,textures[1]);
 
-  glTexStorage2D(GL_TEXTURE_2D,1,GL_RGBA,image.width,image.height);
+  //glTexStorage2D(GL_TEXTURE_2D,1,GL_RGBA,image.width,image.height);
+  glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,image.width,image.height,0,GL_BGRA,GL_UNSIGNED_BYTE,0);
 
   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
