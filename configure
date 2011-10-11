@@ -579,6 +579,7 @@ PORTLIBS
 PSL1GHT_PPU_LDFLAGS
 PSL1GHT_PPU_CPPFLAGS
 PSL1GHT
+LFTP
 CGC
 RSXGL_CONFIG_samples_host_port
 RSXGL_CONFIG_samples_host_ip
@@ -4029,6 +4030,50 @@ fi
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: path to the cgc compiler is ${CGC}" >&5
 $as_echo "$as_me: path to the cgc compiler is ${CGC}" >&6;}
+
+# Find lftp
+# Extract the first word of "lftp", so it can be a program name with args.
+set dummy lftp; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_path_LFTP+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $LFTP in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_LFTP="$LFTP" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_test_x "$as_dir/$ac_word$ac_exec_ext"; }; then
+    ac_cv_path_LFTP="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+LFTP=$ac_cv_path_LFTP
+if test -n "$LFTP"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $LFTP" >&5
+$as_echo "$LFTP" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: path to the lftp utility is ${LFTP}" >&5
+$as_echo "$as_me: path to the lftp utility is ${LFTP}" >&6;}
 
 # Where is PSL1GHT?
 
