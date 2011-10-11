@@ -687,24 +687,6 @@ glBindTexture (GLenum target, GLuint texture_name)
 
   if(texture_name != 0 && !texture_t::storage().is_object(texture_name)) {
     texture_t::storage().create_object(texture_name);
-
-    // Set the dimensions of texture object the first time it's bound to a target.
-    // I don't think the spec calls for this.
-    if(target == GL_TEXTURE_2D ||
-       target == GL_TEXTURE_2D_ARRAY ||
-       target == GL_TEXTURE_RECTANGLE ||
-       target == GL_TEXTURE_CUBE_MAP ||
-       target == GL_TEXTURE_2D_MULTISAMPLE ||
-       target == GL_TEXTURE_2D_MULTISAMPLE_ARRAY) {
-      texture_t::storage().at(texture_name).dims = 2;
-    }
-    else if(target == GL_TEXTURE_1D ||
-	    target == GL_TEXTURE_1D_ARRAY) {
-      texture_t::storage().at(texture_name).dims = 1;
-    }
-    else if(target == GL_TEXTURE_2D) {
-      texture_t::storage().at(texture_name).dims = 3;
-    }
   }
 
   rsxgl_context_t * ctx = current_ctx();
@@ -1296,7 +1278,7 @@ rsxgl_tex_pixel_offset(const texture_t & texture,size_t level,uint32_t x,uint32_
 }
 
 static inline void
-rsxgl_tex_image(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,GLint level,uint8_t internalformat,GLsizei width,GLsizei height,GLsizei depth,
+rsxgl_tex_image(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,const bool cube,const bool rect,GLint level,uint8_t internalformat,GLsizei width,GLsizei height,GLsizei depth,
 		GLenum format,GLenum type,const GLvoid * data)
 {
   rsxgl_assert(dims > 0);
@@ -1333,6 +1315,18 @@ rsxgl_tex_image(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,GLi
     texture.timestamp = 0;
   }
 #endif
+
+  if(texture.dims == 0) {
+    texture.dims = dims;
+    texture.internalformat = internalformat;
+    texture.cube = cube;
+    texture.rect = rect;
+  }
+  else if(texture.dims != dims ||
+	  texture.internalformat != internalformat) {
+    // TODO - Provide an error, or something, I don't think this is standard behavior.
+    return;
+  }
 
   // set the texture's invalid & valid bits:
   texture.invalid = 1;
@@ -1392,7 +1386,7 @@ rsxgl_tex_image(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,GLi
 }
 
 static inline void
-rsxgl_tex_storage(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,GLsizei levels,uint8_t internalformat,GLsizei width,GLsizei height,GLsizei depth)
+rsxgl_tex_storage(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,const bool cube,const bool rect,GLsizei levels,uint8_t internalformat,GLsizei width,GLsizei height,GLsizei depth)
 {
   rsxgl_assert(dims > 0);
   rsxgl_assert(width > 0);
@@ -1446,12 +1440,13 @@ rsxgl_tex_storage(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,G
     }
   }
 
+  texture.dims = dims;
   texture.invalid = 0;
   texture.valid = 1;
   texture.immutable = 1;
   texture.internalformat = internalformat;
-  texture.cube = 0;
-  texture.rect = 0;
+  texture.cube = cube;
+  texture.rect = rect;
   texture.max_level = levels;
 
   texture.format;
@@ -1609,7 +1604,7 @@ glTexImage1D (GLenum target, GLint level, GLint internalformat, GLsizei width, G
   texture_t & texture = ctx -> texture_binding[ctx -> active_texture];
 
   uint8_t rsx_format = rsxgl_tex_format(internalformat);
-  rsxgl_tex_image(ctx,texture,1,level,rsx_format,std::max(width,1),1,1,format,type,pixels);
+  rsxgl_tex_image(ctx,texture,1,false,false,level,rsx_format,std::max(width,1),1,1,format,type,pixels);
 }
 
 GLAPI void APIENTRY
@@ -1626,7 +1621,7 @@ glTexImage2D (GLenum target, GLint level, GLint internalformat, GLsizei width, G
   texture_t & texture = ctx -> texture_binding[ctx -> active_texture];
 
   uint8_t rsx_format = rsxgl_tex_format(internalformat);
-  rsxgl_tex_image(ctx,texture,2,level,rsx_format,std::max(width,1),std::max(height,1),1,format,type,pixels);
+  rsxgl_tex_image(ctx,texture,2,target == GL_TEXTURE_CUBE_MAP, target == GL_TEXTURE_RECTANGLE,level,rsx_format,std::max(width,1),std::max(height,1),1,format,type,pixels);
 }
 
 GLAPI void APIENTRY
@@ -1641,7 +1636,7 @@ glTexImage3D (GLenum target, GLint level, GLint internalformat, GLsizei width, G
   texture_t & texture = ctx -> texture_binding[ctx -> active_texture];
 
   uint8_t rsx_format = rsxgl_tex_format(internalformat);
-  rsxgl_tex_image(ctx,texture,3,level,rsx_format,std::max(width,1),std::max(height,1),std::max(depth,1),format,type,pixels);
+  rsxgl_tex_image(ctx,texture,3,false,false,level,rsx_format,std::max(width,1),std::max(height,1),std::max(depth,1),format,type,pixels);
 }
 
 GLAPI void APIENTRY
@@ -1655,7 +1650,7 @@ glTexStorage1D(GLenum target, GLsizei levels,GLenum internalformat,GLsizei width
   texture_t & texture = ctx -> texture_binding[ctx -> active_texture];
 
   uint8_t rsx_format = rsxgl_tex_format(internalformat);
-  rsxgl_tex_storage(ctx,texture,1,levels,rsx_format,std::max(width,1),1,1);
+  rsxgl_tex_storage(ctx,texture,1,false,false,levels,rsx_format,std::max(width,1),1,1);
 }
 
 GLAPI void APIENTRY
@@ -1672,7 +1667,7 @@ glTexStorage2D(GLenum target, GLsizei levels,GLenum internalformat,GLsizei width
   texture_t & texture = ctx -> texture_binding[ctx -> active_texture];
 
   uint8_t rsx_format = rsxgl_tex_format(internalformat);
-  rsxgl_tex_storage(ctx,texture,2,levels,rsx_format,std::max(width,1),std::max(height,1),1);
+  rsxgl_tex_storage(ctx,texture,2,target == GL_TEXTURE_CUBE_MAP,target == GL_TEXTURE_RECTANGLE,levels,rsx_format,std::max(width,1),std::max(height,1),1);
 }
 
 GLAPI void APIENTRY
@@ -1687,7 +1682,7 @@ glTexStorage3D(GLenum target, GLsizei levels,GLenum internalformat,GLsizei width
   texture_t & texture = ctx -> texture_binding[ctx -> active_texture];
 
   uint8_t rsx_format = rsxgl_tex_format(internalformat);
-  rsxgl_tex_storage(ctx,texture,3,levels,rsx_format,std::max(width,1),std::max(height,1),std::max(depth,1));
+  rsxgl_tex_storage(ctx,texture,3,false,false,levels,rsx_format,std::max(width,1),std::max(height,1),std::max(depth,1));
 }
 
 GLAPI void APIENTRY
