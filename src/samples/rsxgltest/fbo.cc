@@ -310,8 +310,8 @@ rsxgltest_init(int argc,const char ** argv)
   glVertexAttribPointer(normal_location,3,GL_FLOAT,GL_FALSE,sizeof(float) * 8,(const GLvoid *)(sizeof(float) * 3));
   glVertexAttribPointer(tc_location,2,GL_FLOAT,GL_FALSE,sizeof(float) * 8,(const GLvoid *)(sizeof(float) * 6));
 
-  //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,buffers[1]);
-  //glBufferData(GL_ELEMENT_ARRAY_BUFFER,sizeof(GLuint) * 6 * 2 * 3,indices,GL_STATIC_DRAW);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,buffers[1]);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER,sizeof(GLuint) * 6 * 2 * 3,indices,GL_STATIC_DRAW);
 
   client_indices = (GLuint *)malloc(sizeof(GLuint) * 6 * 2 * 3);
   memcpy(client_indices,indices,sizeof(GLuint) * 6 * 2 * 3);
@@ -406,7 +406,7 @@ rsxgltest_draw()
 
   {
     glUniformMatrix4fv(ProjMatrix_location,1,GL_FALSE,ProjMatrix2.data());
-    glDrawElements(GL_TRIANGLES,36,GL_UNSIGNED_INT,client_indices);
+    glDrawElements(GL_TRIANGLES,36,GL_UNSIGNED_INT,0 /*client_indices*/);
   }
 
   //
@@ -420,7 +420,7 @@ rsxgltest_draw()
 
   {
     glUniformMatrix4fv(ProjMatrix_location,1,GL_FALSE,ProjMatrix.data());
-    glDrawElements(GL_TRIANGLES,36,GL_UNSIGNED_INT,client_indices);
+    glDrawElements(GL_TRIANGLES,36,GL_UNSIGNED_INT,0 /*client_indices*/);
   }
 
   return 1;

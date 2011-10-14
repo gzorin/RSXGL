@@ -15,6 +15,7 @@
 
 //typedef void * rsx_ptr_t ATTRIBUTE_PRXPTR;
 typedef void * rsx_ptr_t;
+typedef void const * const_rsx_ptr_t;
 
 typedef uint32_t rsx_size_t;
 
