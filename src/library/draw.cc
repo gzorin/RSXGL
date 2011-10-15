@@ -234,7 +234,7 @@ rsxgl_draw_elements_exit(struct rsxgl_context_t * ctx,rsxgl_draw_elements_info_t
   }
 
   uint32_t * buffer = gcm_reserve(context,2);
-  gcm_emit_method_at(buffer,0,0x1738,1);
+  gcm_emit_method_at(buffer,0,0x173c,1);
   gcm_emit_at(buffer,1,0);
   gcm_finish_n_commands(context,2);
 }
@@ -591,7 +591,7 @@ rsxgl_draw_array_elements(gcmContextData * context,const uint32_t rsx_primitive_
 {
   {
     uint32_t * buffer = gcm_reserve(context,2);
-    gcm_emit_method_at(buffer,0,0x1738,1);
+    gcm_emit_method_at(buffer,0,0x173c,1);
     gcm_emit_at(buffer,1,base);
     gcm_finish_n_commands(context,2);
   }
@@ -736,7 +736,9 @@ glDrawElementsBaseVertex (GLenum mode, GLsizei count, GLenum type, const GLvoid 
   const uint32_t timestamp = rsxgl_draw_init(ctx,mode,0,0);
 
   if(timestamp > 0) {
-    
+    const rsxgl_draw_elements_info_t info = rsxgl_draw_elements_init(ctx,count,rsx_type,indices,timestamp);
+    rsxgl_draw_array_elements(context,rsx_primitive_type,count,basevertex);
+    rsxgl_draw_elements_exit(ctx,info);
   }
 
   rsxgl_draw_exit(ctx,timestamp);
@@ -895,7 +897,7 @@ glMultiDrawElements (const GLenum mode, const GLsizei *count, GLenum type, const
     }
 
     uint32_t * buffer = gcm_reserve(context,2);
-    gcm_emit_method_at(buffer,0,0x1738,1);
+    gcm_emit_method_at(buffer,0,0x173c,1);
     gcm_emit_at(buffer,1,0);
     gcm_finish_n_commands(context,2);
   }
@@ -986,7 +988,7 @@ glMultiDrawElementsBaseVertex (GLenum mode, const GLsizei *count, GLenum type, c
     }
 
     uint32_t * buffer = gcm_reserve(context,2);
-    gcm_emit_method_at(buffer,0,0x1738,1);
+    gcm_emit_method_at(buffer,0,0x173c,1);
     gcm_emit_at(buffer,1,0);
     gcm_finish_n_commands(context,2);
   }
