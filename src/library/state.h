@@ -107,7 +107,8 @@ struct state_t {
 	polygon_offset:1,
 	primitive_restart:1,
 	line_width:1,
-	point_size:1;
+	point_size:1,
+	point_parameters:1;
     } parts;
   } invalid;
 

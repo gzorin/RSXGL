@@ -26,7 +26,7 @@ LFTP		:= @LFTP@
 SFOXML		:= $(PSL1GHT_BIN)/sfo.xml
 ICON0		:= $(PSL1GHT_BIN)/ICON0.PNG
 
-SUFFIXES = .bin _bin.o _bin.h .vcg .fcg .vert .frag _vpo.o _fpo.o _vpo.h _fpo.h .vpo .fpo
+SUFFIXES = .bin _bin.o _bin.h .png _png.o _png.h .vcg .fcg .vert .frag _vpo.o _fpo.o _vpo.h _fpo.h .vpo .fpo
 
 %.vpo: %.vcg
 	@echo "[Compiling Cg vertex program] $(notdir $<)"
@@ -66,6 +66,13 @@ SUFFIXES = .bin _bin.o _bin.h .vcg .fcg .vert .frag _vpo.o _fpo.o _vpo.h _fpo.h 
 	@$(bin2o)
 
 %_bin.h: %_bin.o
+	@echo "$<"
+
+%_png.o: %.png
+	@echo "[bin2o]: $<"
+	@$(bin2o)
+
+%_png.h: %_png.o
 	@echo "$<"
 
 %_vpo.o: %.vpo

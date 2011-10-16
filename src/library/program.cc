@@ -295,7 +295,7 @@ program_t::program_t()
     attrib_name_max_length(0), uniform_name_max_length(0),
     vp_ucode_offset(~0), fp_ucode_offset(~0), vp_num_insn(0), fp_num_insn(0), 
     vp_input_mask(0), vp_output_mask(0), vp_num_internal_const(0),
-    fp_control(0), fp_num_regs(0),
+    fp_control(0), fp_num_regs(0), point_sprite_control(0),
     uniform_values(0), program_offsets(0)
 {
   info().construct();
@@ -837,6 +837,20 @@ glLinkProgram (GLuint program_name)
       program.fp_num_insn = fp -> num_insn;
       program.fp_control = fp -> fp_control;
       program.fp_num_regs = fp -> num_regs;
+
+      uint16_t
+	texcoords = fp -> texcoords,
+	texcoord2D = fp -> texcoord2D,
+	texcoord3D = fp -> texcoord3D;
+      for(size_t i = 0;i < RSXGL_MAX_TEXTURE_COORDS;++i) {
+	if(texcoords & 1) program.fp_texcoords.set(i);
+	if(texcoord2D & 1) program.fp_texcoord2D.set(i);
+	if(texcoord3D & 1) program.fp_texcoord3D.set(i);
+
+	texcoords >>= 1;
+	texcoord2D >>= 1;
+	texcoord3D >>= 1;
+      }
     }
   }
 
@@ -1494,6 +1508,22 @@ glLinkProgram (GLuint program_name)
 
   program.linked = GL_TRUE;
 
+  // Resolve gl_PointCoord in fragment program:
+  {
+    rsx_program_member_eq< rsxFragmentProgram, &rsxFragmentProgram::attrib_off, rsxProgramAttrib, &rsxProgramAttrib::name_off > eq((const uint8_t *)fp);
+    std::deque< const rsxProgramAttrib * >::iterator it = binary_find(fp_inputs.begin(),fp_inputs.end(),"gl_PointCoord",fp_attrib_lt,eq);
+    if(it != fp_inputs.end()) {
+      const uint32_t index = ((*it) -> index) - 4;
+      rsxgl_assert(index < 8);
+
+      program.point_sprite_control = (1 << (8 + index)) | 1;
+      program.vp_output_mask |= (1 << (index + 14));
+    }
+    else {
+      program.point_sprite_control = 0;
+    }
+  }
+
   // Move attached shaders to linked shaders:
   for(size_t i = 0;i < RSXGL_MAX_SHADER_TYPES;++i) {
     program.linked_shaders.bind(i,program.attached_shaders.names[i]);
@@ -1504,11 +1534,11 @@ glLinkProgram (GLuint program_name)
     program.attached_shaders.bind(i,0);
   }
 
-  //rsxgl_debug_printf("%s finished normally\n",__PRETTY_FUNCTION__);
+  rsxgl_debug_printf("%s finished normally\n",__PRETTY_FUNCTION__);
 
  fail:
 
-  //rsxgl_debug_printf("%s finishing\n",__PRETTY_FUNCTION__);
+  rsxgl_debug_printf("%s finishing\n",__PRETTY_FUNCTION__);
 
   if(info.length() > 0) {
     const size_t n = info.length() + 1;
@@ -1846,15 +1876,57 @@ rsxgl_program_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
     
     // load the fragment program:
     {
-      uint32_t * buffer = gcm_reserve(context,4);
+      uint32_t i = 0;
+      const uint32_t n = 4 + (2 * RSXGL_MAX_TEXTURE_COORDS);
+
+      uint32_t * buffer = gcm_reserve(context,n);
       
-      gcm_emit_method(&buffer,NV30_3D_FP_ACTIVE_PROGRAM,1);
-      gcm_emit(&buffer,rsxgl_rsx_ucode_offset(program.fp_ucode_offset) | NV30_3D_FP_ACTIVE_PROGRAM_DMA0);
-      
-      gcm_emit_method(&buffer,NV30_3D_FP_CONTROL,1);
-      gcm_emit(&buffer,program.fp_control | (program.fp_num_regs << NV40_3D_FP_CONTROL_TEMP_COUNT__SHIFT));
-      
-      gcm_finish_commands(context,&buffer);
+      gcm_emit_method_at(buffer,i++,NV30_3D_FP_ACTIVE_PROGRAM,1);
+      gcm_emit_at(buffer,i++,rsxgl_rsx_ucode_offset(program.fp_ucode_offset) | NV30_3D_FP_ACTIVE_PROGRAM_DMA0);
+
+      // Texcoord control:
+#define  NV40TCL_TEX_COORD_CONTROL(x)                                   (0x00000b40+((x)*4))
+      bit_set< RSXGL_MAX_TEXTURE_COORDS >::const_iterator it = program.fp_texcoords.begin(),
+	it2D = program.fp_texcoord2D.begin(),
+	it3D = program.fp_texcoord3D.begin();
+      uint32_t reg = 0xb40;
+      for(uint32_t j = 0;j < RSXGL_MAX_TEXTURE_COORDS;++j,i += 2) {
+#if 0
+	const uint32_t cmds[2] = {
+	  //NV40TCL_TEX_COORD_CONTROL(j),
+	  reg,
+	  it.test() ? 
+	  ((it3D.test() ? (1 << 4) : 0) | (it2D.test() ? 1 : 0)) :
+	  (0)
+	};
+	
+	rsxgl_debug_printf("%u %u, %u %u %u: %x %x\n",
+			   j,i,
+			   (uint32_t)it.test(),
+			   (uint32_t)it2D.test(),
+			   (uint32_t)it3D.test(),
+			   cmds[0],cmds[1]);
+
+	gcm_emit_method_at(buffer,i,cmds[0],1);
+	gcm_emit_at(buffer,i + 1,cmds[1]);
+#endif
+
+	gcm_emit_method_at(buffer,i,reg,1);
+	gcm_emit_at(buffer,i + 1,
+		    it.test() ? 
+		    ((it3D.test() ? (1 << 4) : 0) | (it2D.test() ? 1 : 0)) :
+		    (0));
+	
+	it.next(program.fp_texcoords);
+	it2D.next(program.fp_texcoord2D);
+	it3D.next(program.fp_texcoord3D);
+	reg += 4;
+      }
+
+      gcm_emit_method_at(buffer,i++,NV30_3D_FP_CONTROL,1);
+      gcm_emit_at(buffer,i++,program.fp_control | (program.fp_num_regs << NV40_3D_FP_CONTROL_TEMP_COUNT__SHIFT));
+
+      gcm_finish_n_commands(context,n);
     }
 
     // invalidate vertex program uniforms:
@@ -1900,6 +1972,31 @@ rsxgl_program_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
 	}
 
 	gcm_finish_n_commands(context,nbuffer);
+      }
+    }
+
+    // Set point sprite behavior:
+    {
+      if(program.point_sprite_control == 0) {
+	uint32_t * buffer = gcm_reserve(context,2);
+
+	gcm_emit_method_at(buffer,0,NV30_3D_POINT_PARAMETERS_ENABLE,1);
+	gcm_emit_at(buffer,1,0);
+
+	gcm_finish_n_commands(context,2);
+      }
+      else {
+	//rsxgl_debug_printf("point sprite control: %x\n",program.point_sprite_control);
+
+	uint32_t * buffer = gcm_reserve(context,4);
+
+	gcm_emit_method_at(buffer,0,NV30_3D_POINT_PARAMETERS_ENABLE,1);
+	gcm_emit_at(buffer,1,1);
+
+	gcm_emit_method_at(buffer,2,NV30_3D_POINT_SPRITE,1);
+	gcm_emit_at(buffer,3,program.point_sprite_control);
+
+	gcm_finish_n_commands(context,4);
       }
     }
   }
