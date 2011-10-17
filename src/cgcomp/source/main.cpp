@@ -198,6 +198,9 @@ int compileVP(std::istream & in,std::ostream & out)
       dstcodeptr[n+1] = SWAP32(vpi[i].data[1]);
       dstcodeptr[n+2] = SWAP32(vpi[i].data[2]);
       dstcodeptr[n+3] = SWAP32(vpi[i].data[3]);
+
+      fprintf(stderr,"%04u %x %x %x %x\n",i,
+	      vpi[i].data[0],vpi[i].data[1],vpi[i].data[2],vpi[i].data[3]);
     }
 
     out.write((const char *)vertexprogram,lastoff);

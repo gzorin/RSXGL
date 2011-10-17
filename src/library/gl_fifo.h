@@ -74,6 +74,24 @@ gcm_finish_n_commands(gcmContextData * context,uint32_t n)
   context -> current += n;
 }
 
+static inline uint32_t
+gcm_jump_cmd(const uint32_t offset)
+{
+  return 0x20000000 | offset;
+}
+
+static inline uint32_t
+gcm_call_cmd(const uint32_t offset)
+{
+  return 0x00000002 | offset;
+}
+
+static inline uint32_t
+gcm_return_cmd()
+{
+  return 0x00020000;
+}
+
 #ifdef __cplusplus
 }
 #endif

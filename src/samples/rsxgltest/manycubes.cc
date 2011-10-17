@@ -58,7 +58,7 @@ GLuint buffers[2] = { 0,0 };
 GLuint shaders[2] = { 0,0 };
 GLuint program = 0;
 
-GLint ProjMatrix_location = -1, TransMatrix_location = -1, color_location = -1;
+GLint ProjMatrix_location = -1, TransMatrix_location = -1, color_location = -1, gl_InstanceID_location = -1;
 
 GLuint * client_indices = 0;
 
@@ -79,7 +79,7 @@ Eigen::Affine3f ViewMatrixInv =
 		   )
 		  ).inverse();
 
-const GLuint ncubes = 1000;
+const GLuint ncubes = 100;
 
 float * cube_translations = 0;
 
@@ -124,17 +124,18 @@ rsxgltest_init(int argc,const char ** argv)
   summarize_program("draw",program);
 
   GLint 
-    vertex_location = glGetAttribLocation(program,"inputvertex.vertex");
+    vertex_location = glGetAttribLocation(program,"position");
 
-  color_location = glGetAttribLocation(program,"inputvertex.color");
+  color_location = glGetAttribLocation(program,"color");
 
   ProjMatrix_location = glGetUniformLocation(program,"ProjMatrix");
   TransMatrix_location = glGetUniformLocation(program,"TransMatrix");
+  gl_InstanceID_location = glGetUniformLocation(program,"rsxgl_InstanceID");
 
   tcp_printf("vertex_location: %i\n",vertex_location);
   tcp_printf("color_location: %i\n",color_location);
-  tcp_printf("ProjMatrix_location: %i TransMatrix_location: %i\n",
-	     ProjMatrix_location,TransMatrix_location);
+  tcp_printf("ProjMatrix_location: %i TransMatrix_location: %i gl_InstanceID_location: %i\n",
+	     ProjMatrix_location,TransMatrix_location,gl_InstanceID_location);
 
   glUseProgram(program);
 
@@ -270,9 +271,9 @@ rsxgltest_init(int argc,const char ** argv)
   float * pcube_translation = cube_translations;
 
   for(size_t i = 0;i < ncubes;++i,pcube_translation += 3) {
-    pcube_translation[0] = (drand48() * 10.0) - 5.0;
-    pcube_translation[1] = (drand48() * 10.0) - 5.0;
-    pcube_translation[2] = (drand48() * 10.0) - 5.0;
+    pcube_translation[0] = (drand48() * 5.0) - 2.5;
+    pcube_translation[1] = (drand48() * 5.0) - 2.5;
+    pcube_translation[2] = (drand48() * 5.0) - 2.5;
   }
 }
 
@@ -303,21 +304,24 @@ rsxgltest_draw()
 
   float const * pcube_translation = cube_translations;
 
+  Eigen::Affine3f modelview = ViewMatrixInv * (Eigen::Affine3f::Identity() * rotmat);
+  glUniformMatrix4fv(TransMatrix_location,1,GL_FALSE,modelview.data());
+  glDrawElementsInstanced(GL_TRIANGLES,36,GL_UNSIGNED_INT,0,ncubes);
+  
+#if 0
   //Eigen::Affine3f modelview = ViewMatrixInv * (Eigen::Affine3f::Identity() * rotmat);
   //glUniformMatrix4fv(TransMatrix_location,1,GL_FALSE,modelview.data());
 
   for(size_t i = 0;i < ncubes;++i,pcube_translation += 3) {
-    Eigen::Affine3f modelview = ViewMatrixInv * (Eigen::Affine3f::Identity() * Eigen::Translation3f(pcube_translation[0],pcube_translation[1],pcube_translation[2]) * rotmat);
+    //Eigen::Affine3f modelview = ViewMatrixInv * (Eigen::Affine3f::Identity() * Eigen::Translation3f(pcube_translation[0],pcube_translation[1],pcube_translation[2]) * rotmat);
+    Eigen::Affine3f modelview = ViewMatrixInv * (Eigen::Affine3f::Identity() * rotmat);
     glUniformMatrix4fv(TransMatrix_location,1,GL_FALSE,modelview.data());
 
+    glUniform1f(gl_InstanceID_location,(float)i);
     glDrawElements(GL_TRIANGLES,36,GL_UNSIGNED_INT,0);
     //glDrawElements(GL_TRIANGLES,36,GL_UNSIGNED_INT,client_indices);
-
-    // Flushing the buffer periodically helps it to not crash upon exit - probably need something like this within the glDraw* implementations.
-    if((i % 200) == 0) {
-      glFlush();
-    }
   }
+#endif
 
   return 1;
 }

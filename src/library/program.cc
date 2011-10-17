@@ -295,7 +295,7 @@ program_t::program_t()
     attrib_name_max_length(0), uniform_name_max_length(0),
     vp_ucode_offset(~0), fp_ucode_offset(~0), vp_num_insn(0), fp_num_insn(0), 
     vp_input_mask(0), vp_output_mask(0), vp_num_internal_const(0),
-    fp_control(0), fp_num_regs(0), point_sprite_control(0),
+    fp_control(0), fp_num_regs(0), instanceid_index(~0), point_sprite_control(0),
     uniform_values(0), program_offsets(0)
 {
   info().construct();
@@ -757,6 +757,7 @@ glLinkProgram (GLuint program_name)
   //
   std::deque< const rsxProgramAttrib * > vp_attribs, vp_texture_attribs, vp_outputs;
   std::deque< const rsxProgramAttrib * > fp_inputs, fp_texture_attribs, fp_outputs;
+  std::deque< const rsxProgramConst * > vp_consts, fp_consts;
 
   // These two get merged eventually:
   std::deque< std::pair< program_t::name_size_type, program_t::uniform_t > > uniforms, textures;
@@ -983,8 +984,7 @@ glLinkProgram (GLuint program_name)
 
   // Uniform variable table:
   {
-    // Sorted lists of vp and fp constants:
-    std::deque< const rsxProgramConst * > vp_consts, fp_consts;
+    // Sorted lists of vp and fp constants:    
     {
       const rsxProgramConst * _vp_const = rsxVertexProgramGetConsts(const_cast< rsxVertexProgram * >(vp));
       for(size_t i = 0,n = vp -> num_const;i < n;++i,++_vp_const) {
@@ -1507,6 +1507,21 @@ glLinkProgram (GLuint program_name)
   std::copy(program_offsets.begin(),program_offsets.end(),program.program_offsets);  
 
   program.linked = GL_TRUE;
+
+  // Resolve rsxgl_InstanceID in vertex program:
+  {
+    std::deque< const rsxProgramConst * >::iterator it = binary_find(vp_consts.begin(),vp_consts.end(),"rsxgl_InstanceID",
+								     rsx_program_member_lt< rsxVertexProgram, &rsxVertexProgram::const_off, rsxProgramConst, &rsxProgramConst::name_off >(vp),
+								     rsx_program_member_eq< rsxVertexProgram, &rsxVertexProgram::const_off, rsxProgramConst, &rsxProgramConst::name_off >(vp));
+    if(it != vp_consts.end()) {
+      rsxgl_debug_printf("rsxgl_InstanceID index: %u\n",(uint32_t)(*it) -> index);
+
+      program.instanceid_index = (*it) -> index;
+    }
+    else {
+      program.instanceid_index = ~0;
+    }
+  }
 
   // Resolve gl_PointCoord in fragment program:
   {

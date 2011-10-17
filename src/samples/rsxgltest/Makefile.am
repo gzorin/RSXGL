@@ -15,16 +15,16 @@ noinst_PROGRAMS = rsxgltest.elf
 
 BUILT_SOURCES = textures_vpo.h textures_fpo.h \
 	dice_bin.h nagel_bin.h face_png.h \
-	cube_vpo.h cube_fpo.h \
 	manypoints_vpo.h manypoints_fpo.h \
 	points_vpo.h points_fpo.h \
+	cube_vpo.h cube_fpo.h \
 	texcube_vpo.h texcube_fpo.h \
 	fbo_inner_vpo.h fbo_inner_fpo.h
 CLEANFILES = draw_vpo.h draw_fpo.h draw_vpo.o draw_fpo.o \
 	textures_vpo.h textures_fpo.h textures_vpo.o textures_fpo.o \
-	cube_vpo.h cube_fpo.h cube_vpo.o cube_fpo.o \
 	manypoints_vpo.h manypoints_fpo.h manypoints_vpo.o manypoints_fpo.o \
 	points_vpo.h points_fpo.h points_vpo.o points_fpo.o \
+	cube_vpo.h cube_fpo.h cube_vpo.o cube_fpo.o \
 	texcube_vpo.h texcube_fpo.h texcube_vpo.o texcube_fpo.o \
 	fbo_vpo.h fbo_fpo.h fbo_vpo.o fbo_fpo.o \
 	dice_bin.o dice_bin.h \
@@ -45,10 +45,7 @@ manypoints_objects = points_vpo.o points_fpo.o face_png.o
 manypoints_sources = manypoints.cc texture.c points.vert points.frag face.png
 
 manycubes_objects = cube_vpo.o cube_fpo.o
-manycubes_sources = manycubes.cc cube.vcg cube.fcg
-
-manycubestream_objects = cube_vpo.o cube_fpo.o
-manycubestream_sources = manycubestream.cc cube.vcg cube.fcg
+manycubes_sources = manycubes.cc cube.vert cube.frag
 
 texcube_objects = texcube_vpo.o texcube_fpo.o nagel_bin.o
 texcube_sources = texcube.cc texture.c texcube.vcg texcube.fcg nagel.bin
@@ -56,8 +53,8 @@ texcube_sources = texcube.cc texture.c texcube.vcg texcube.fcg nagel.bin
 fbo_objects = fbo_inner_vpo.o fbo_inner_fpo.o nagel_bin.o
 fbo_sources = fbo.cc texture.c fbo_inner.vert fbo_inner.frag nagel.bin
 
-objects = $(manypoints_objects)
-sources = $(manypoints_sources)
+objects = $(manycubes_objects)
+sources = $(manycubes_sources)
 
 rsxgltest_elf_DEPENDENCIES = $(top_builddir)/src/library/libEGL.a $(top_builddir)/src/library/libGL.a	\
 	$(objects)
