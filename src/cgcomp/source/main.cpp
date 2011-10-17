@@ -124,6 +124,9 @@ int compileVP(std::istream & in,std::ostream & out)
     std::list<param> params = parser.GetParameters();
     for(std::list<param>::iterator it = params.begin();it!=params.end();it++) {
       if(!it->is_const) {
+	fprintf(stderr,"%s index: %u type: %u\n",
+		it->name.c_str(),(unsigned int)it->index,(unsigned int)it->type);
+
 	it->user = lastoff + (n*sizeof(rsxProgramAttrib));
 	attribs[n].index = SWAP32(it->index);
 	attribs[n].name_off = SWAP32(0);
@@ -199,7 +202,10 @@ int compileVP(std::istream & in,std::ostream & out)
       dstcodeptr[n+2] = SWAP32(vpi[i].data[2]);
       dstcodeptr[n+3] = SWAP32(vpi[i].data[3]);
 
+      const uint32_t opcode = (vpi[i].data[1] & NV40_VP_INST_VEC_OPCODE_MASK) >> NV40_VP_INST_VEC_OPCODE_SHIFT;
+
       fprintf(stderr,"%04u %x %x %x %x\n",i,
+	      opcode,
 	      vpi[i].data[0],vpi[i].data[1],vpi[i].data[2],vpi[i].data[3]);
     }
 

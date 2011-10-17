@@ -88,6 +88,34 @@ void CCompiler::Prepare(CParser *pParser)
 	}
 }
 
+void dump_reg(struct nvfx_reg * reg)
+{
+  fprintf(stderr,"reg type: %i index: %i is_fp16: %u",
+	  (int)reg -> type,(int)reg -> index,(unsigned int)reg -> is_fp16);
+}
+
+void dump_src(struct nvfx_src * src)
+{
+  dump_reg(&src -> reg);
+  fprintf(stderr,"\n");
+}
+
+void dump_insn(struct nvfx_insn * insn)
+{
+  fprintf(stderr,"op: %x scale: %i unit: %i mask: %i precision: %i swz: %i %i %i %i\n",
+	  (unsigned int)insn -> op,
+	  (int)insn -> scale,
+	  (int)insn -> unit,
+	  (unsigned int)insn -> mask,
+	  (unsigned int)insn -> precision,
+	  (unsigned int)insn -> cc_swz[0],(unsigned int)insn -> cc_swz[1],(unsigned int)insn -> cc_swz[2],(unsigned int)insn -> cc_swz[3]);
+
+  dump_reg(&insn -> dst); fprintf(stderr,"\n");
+  dump_src(&insn -> src[0]);
+  dump_src(&insn -> src[1]);
+  dump_src(&insn -> src[2]);
+}
+
 void CCompiler::Compile(CParser *pParser)
 {
 	struct nvfx_src tmp;
@@ -245,6 +273,11 @@ void CCompiler::Compile(CParser *pParser)
 				tmp_insn = arith_ctor(insn,insn->dst,insn->src[0],none,neg(insn->src[2]));
 				emit_insn(gen_op(ADD,VEC),&tmp_insn);
 				break;
+		case OPCODE_TEX:
+		  fprintf(stderr,"encountered TEX instruction\n");
+		  dump_insn(insn);
+		  emit_insn(gen_op(TXL,VEC),insn);
+		  break;
 			case OPCODE_END:
 				if(m_nInstructions) m_pInstructions[m_nCurInstruction].data[3] |= NVFX_VP_INST_LAST;
 				else {
@@ -392,8 +425,8 @@ void CCompiler::emit_src(u32 *hw, u8 pos, struct nvfx_src *src)
 
 	switch(src->reg.type) {
 		case NVFXSR_TEMP:
-			sr |= (NVFX_VP(SRC_REG_TYPE_TEMP) << NVFX_VP(SRC_REG_TYPE_SHIFT));
-			sr |= (src->reg.index << NVFX_VP(SRC_TEMP_SRC_SHIFT));
+		  sr |= (NVFX_VP(SRC_REG_TYPE_TEMP) << NVFX_VP(SRC_REG_TYPE_SHIFT));
+		  sr |= (src->reg.index << NVFX_VP(SRC_TEMP_SRC_SHIFT));
 			break;
 		case NVFXSR_INPUT:
 			sr |= (NVFX_VP(SRC_REG_TYPE_INPUT) <<
@@ -412,6 +445,11 @@ void CCompiler::emit_src(u32 *hw, u8 pos, struct nvfx_src *src)
 			sr |= (NVFX_VP(SRC_REG_TYPE_INPUT) <<
 				   NVFX_VP(SRC_REG_TYPE_SHIFT));
 			break;
+
+	case NVFXSR_VPTEXINPUT:
+	  sr |= (NVFX_VP(SRC_REG_TYPE_INPUT) << NVFX_VP(SRC_REG_TYPE_SHIFT));
+	  sr |= (src->reg.index << NVFX_VP(SRC_TEMP_SRC_SHIFT));
+	  break;
 	}
 
 	if (src->negate)
@@ -441,6 +479,7 @@ void CCompiler::emit_src(u32 *hw, u8 pos, struct nvfx_src *src)
 			hw[2] |= ((sr & NVFX_VP(SRC0_LOW_MASK)) << NVFX_VP(INST_SRC0L_SHIFT));
 			break;
 		case 1:
+		  
 			hw[2] |= (sr << NVFX_VP(INST_SRC1_SHIFT));
 			break;
 		case 2:

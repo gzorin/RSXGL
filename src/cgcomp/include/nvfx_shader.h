@@ -68,7 +68,7 @@
 #define NVFX_VP_INST_VEC_OP_ARR 0x17
 #define NVFX_VP_INST_VEC_OP_ARA 0x18
 
-#define NV40_VP_INST_VEC_OP_TXL 0x19
+#define NVFX_VP_INST_VEC_OP_TXL 0x19
 
 /* DWORD 3 */
 #define NVFX_VP_INST_LAST                           (1 << 0)
@@ -385,6 +385,7 @@
 #define NVFXSR_CONST	5
 #define NVFXSR_IMM	6
 #define NVFXSR_RELOCATED	7
+#define NVFXSR_VPTEXINPUT 8
 
 #define NVFX_COND_FL  0
 #define NVFX_COND_LT  1
@@ -553,6 +554,7 @@ struct nvfx_insn
 	u8 mask;
 	u8 precision;
 	u8 cc_swz[4];
+  u8 textarget;
 
 	u8 sat : 1;
 	u8 cc_update : 1;
