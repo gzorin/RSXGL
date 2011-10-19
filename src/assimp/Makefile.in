@@ -1,5 +1,7 @@
 # This makefile builds a static library out of the assimp sources,
 # which should be located elsewhere.
+#
+# It also builds an OpenGL utility library called libglassimp.a
 
 CC = @PPU_CC@
 CXX = @PPU_CXX@
@@ -7,7 +9,6 @@ AR = @PPU_AR@
 ARFLAGS = cru
 
 libassimp_TARGET = libassimp.a
-
 libglassimp_TARGET = libglassimp.a
 
 TARGETS = $(libassimp_TARGET) $(libglassimp_TARGET)
@@ -18,12 +19,10 @@ srcdir = @srcdir@
 top_srcdir = @top_srcdir@
 builddir = @builddir@
 DEPDIR = $(builddir)/deps
-DEPCOMP = @top_srcdir@/config/depcomp
+DEPCOMP = $(top_srcdir)/config/depcomp
 PPU_CFLAGS = @PPU_CFLAGS@
 PPU_CPPFLAGS = @PPU_CPPFLAGS@
 PPU_CXXFLAGS = @PPU_CXXFLAGS@
-
-#SUFFIXES += .Po
 
 #
 assimp_SOURCE_LOCATION = @assimp_SOURCE_LOCATION@
@@ -579,6 +578,7 @@ all_libassimp_SOURCES = $(Core_SRCS)				\
 	$(PSL1GHT_port_SRCS)
 
 # I suspect the static initialization order fiasco is happening - disabling importers that have static variables.
+# The following list of sources is therefore a subset, which actually gets built, of the full assimp sources list.
 libassimp_SOURCES = $(Core_SRCS)				\
 	$(Common_SRCS)				\
 	$(Logging_SRCS)				\
@@ -619,12 +619,7 @@ libassimp_SOURCES = $(Core_SRCS)				\
 	$(COMPILER_HEADERS)			\
 	$(PSL1GHT_port_SRCS)
 
-C_SOURCES = $(filter %.c,$(notdir $(SOURCES)))
-CXX_SOURCES = $(filter %.cpp,$(notdir $(SOURCES)))
-HEADERS = $(filter %.h %.hpp,$(SOURCES))
-
 DEPFILES = $(addprefix $(DEPDIR)/,$(SOURCES:.c=.Po)) $(addprefix $(DEPDIR)/,$(SOURCES:.cpp=.Po))
-#libassimp_OBJS = $(C_SOURCES:.c=.o) $(CXX_SOURCES:.cpp=.o)
 
 libglassimp_SOURCES = $(srcdir)/glassimp.cc
 libglassimp_OBJS = $(libglassimp_SOURCES:.cc=.o)

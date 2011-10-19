@@ -1,3 +1,9 @@
+// RSXGL - Graphics library for the PS3 GPU.
+//
+// Copyright (c) 2011 Alexander Betts (alex.betts@gmail.com)
+//
+// glassimp.cc - Functions to facilitate loading assimp meshes into OpenGL vertex arrays.
+
 #include "glassimp.h"
 
 #include <aiMesh.h>
@@ -25,7 +31,8 @@ glassimpTrianglesCount(struct aiMesh const * mesh)
 	break;
       case 4:
 	++nQuad;
-	nTriangles += 2;
+	// TODO - Triangulate quads elsewhere:
+	//nTriangles += 2;
 	break;
       default:
 	++nNSided;
@@ -252,6 +259,43 @@ glassimpTrianglesFormat(struct aiMesh const * mesh,const GLboolean interleaved,c
     }
   }
   
+  return stride * sizeof(float);
+}
+
+extern "C" GLuint
+glassimpTrianglesVertexSize(struct aiMesh const * mesh,const GLsizei n,GLenum const * attribs,GLuint const * indices,GLint const * sizes,GLenum * types)
+{
+  GLuint stride = 0;
+
+  for(GLsizei i = 0;i < n;++i) {
+    const GLenum attrib = *attribs;
+    const GLenum type = *types;
+    GLint size_out = 0;
+
+    if(attrib == GLASSIMP_VERTEX_ARRAY && type == GL_FLOAT) {
+      size_out = std::min(*sizes,(GLint)3);
+    }
+    else if(attrib == GLASSIMP_NORMAL_ARRAY && mesh -> HasNormals() && type == GL_FLOAT) {
+      size_out = std::min(*sizes,(GLint)3);
+    }
+    else if(attrib == GLASSIMP_TEXTURE_COORD_ARRAY && mesh -> HasTextureCoords(*indices) && type == GL_FLOAT) {
+      size_out = std::min(*sizes,(GLint)mesh -> mNumUVComponents[*indices]);
+    }
+    else if(attrib == GLASSIMP_COLOR_ARRAY && mesh -> HasVertexColors(*indices) && type == GL_FLOAT) {
+      size_out = std::min(*sizes,(GLint)4);
+    }
+    else {
+      size_out = 0;
+    }
+
+    stride += size_out;
+
+    ++attribs;
+    ++indices;
+    ++sizes;
+    ++types;
+  }
+
   return stride * sizeof(float);
 }
 

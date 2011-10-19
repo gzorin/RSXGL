@@ -1,3 +1,10 @@
+//-*-C-*-
+// RSXGL - Graphics library for the PS3 GPU.
+//
+// Copyright (c) 2011 Alexander Betts (alex.betts@gmail.com)
+//
+// glassimp.h - Functions to facilitate loading assimp meshes into OpenGL vertex arrays.
+
 #ifndef glassimp_H
 #define glassimp_H
 
@@ -22,6 +29,7 @@ GLuint glassimpTrianglesLoadArray(struct aiMesh const * mesh,const GLenum attrib
 GLuint glassimpTrianglesLoadArrayElements(struct aiMesh const * mesh,const GLenum type,GLvoid * pointer);
 GLuint glassimpTrianglesCopyArray(struct aiMesh const * mesh,const GLenum attrib,const GLuint index,const GLint size,const GLenum type,const GLsizei stride,GLvoid * pointer);
 GLuint glassimpTrianglesFormat(struct aiMesh const * mesh,const GLboolean,const GLsizei n,GLenum const * attribs,GLuint const * indices,GLint const * sizes,GLenum * types,GLvoid * pointer,GLint * sizes_out,GLsizei * strides_out,GLvoid ** pointers_out);
+GLuint glassimpTrianglesVertexSize(struct aiMesh const * mesh,const GLsizei n,GLenum const * attribs,GLuint const * indices,GLint const * sizes,GLenum * types);
 GLvoid glassimpTrianglesLoadArrays(struct aiMesh const * mesh,const GLboolean,const GLsizei n,GLenum const * attribs,GLuint const * indices,GLint const * sizes,GLenum * types,GLvoid * pointer);
 GLvoid glassimpTrianglesSetPointers(struct aiMesh const * mesh,const GLint * locations,const GLboolean,const GLsizei n,GLenum const * attribs,GLuint const * indices,GLint const * sizes,GLenum * types,GLvoid * pointer);
 
