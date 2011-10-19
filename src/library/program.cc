@@ -29,8 +29,9 @@
 #define FIXED12  0x2
 #define INLINE __inline
 #define boolean char
-#include "cgcomp/nv30_vertprog.h"
-#include "cgcomp/nv40_vertprog.h"
+#include "nv30_vertprog.h"
+#include "nv40_vertprog.h"
+#include "nvfx_shader.h"
 #undef FLOAT32
 #undef FLOAT16
 #undef FIXED12
@@ -1288,9 +1289,15 @@ glLinkProgram (GLuint program_name)
     // TODO - Detect references to textures in the vertex program code. Currently unimplemented, since cgcomp doesn't emit TEX instructions in vertex programs:
     {
       program_t::vp_instruction_type * vp_ucode = (program_t::vp_instruction_type *)rsxVertexProgramGetUCode(const_cast< rsxVertexProgram * >(vp));
-      program_t::instruction_size_type offset = 0;
-      for(uint32_t n = vp -> num_insn;n > 0;--n,++vp_ucode,++offset) {
-	
+      program_t::instruction_size_type i_insn = 0;
+      for(uint32_t n = vp -> num_insn;n > 0;--n,++vp_ucode,++i_insn) {
+	const uint32_t opcode = (vp_ucode -> dwords[1] & NV40_VP_INST_VEC_OPCODE_MASK) >> NV40_VP_INST_VEC_OPCODE_SHIFT;
+	if(opcode == NVFX_VP_INST_VEC_OP_TXL) {
+	  const uint32_t src = (vp_ucode -> dwords[2] & NV40_VP_INST_SRC1_MASK) >> NV40_VP_INST_SRC1_SHIFT;
+	  const uint32_t unit = (src & NV40_VP_SRC_TEMP_SRC_MASK) >> NV40_VP_SRC_TEMP_SRC_SHIFT;
+	  rsxgl_debug_printf("vp instruction %u: tex %u\n",(unsigned int)i_insn,(unsigned int)unit);
+	  vp_texture_program_offsets[unit].push_back(i_insn);
+	}
       }
     }
     

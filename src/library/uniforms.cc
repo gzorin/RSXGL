@@ -121,7 +121,7 @@ rsxgl_uniform(rsxgl_context_t * ctx,
     RSXGL_ERROR_(GL_INVALID_OPERATION);
   }
 
-  if(location == -1) {
+  if(location == -1) {    
     RSXGL_NOERROR_();
   }
 
@@ -618,10 +618,10 @@ rsxgl_uniforms_validate(rsxgl_context_t * ctx,program_t & program)
       const program_t::uniform_size_type count = uniform.count;
 
       if(uniform.invalid.any()) {
-	//rsxgl_debug_printf("\t%u:%s ",i,names + puniform -> first);
+	//rsxgl_debug_printf("\t%u invalid\n",i);
 
 	if(uniform.invalid.test(RSXGL_VERTEX_SHADER)) {
-	  //	  rsxgl_debug_printf("vp ");
+	  //rsxgl_debug_printf("\t\tvp is_texture: %u\n",(unsigned int)is_texture);
 	  
 	  const ieee32_t * pvalues = values + uniform.values_index;
 
@@ -647,7 +647,8 @@ rsxgl_uniforms_validate(rsxgl_context_t * ctx,program_t & program)
 	    gcm_finish_commands(context,&buffer);
 	  }
 	  else {
-	    
+	    const program_t::instruction_size_type * pfp_offsets = program.program_offsets + uniform.program_offsets_index;
+	    rsxgl_debug_printf("sampler uniform: %u vp offsets\n",(unsigned int)*pfp_offsets);
 	  }
 	}
 	
@@ -655,10 +656,9 @@ rsxgl_uniforms_validate(rsxgl_context_t * ctx,program_t & program)
 	  //rsxgl_debug_printf("fp ");
 
 	  const ieee32_t * pvalues = values + uniform.values_index;
+	  const program_t::instruction_size_type * pfp_offsets = program.program_offsets + uniform.program_offsets_index;
 
 	  if(!is_texture) {
-	    const program_t::instruction_size_type * pfp_offsets = program.program_offsets + uniform.program_offsets_index;
-
 	    for(program_t::uniform_size_type j = 0;j < count;++j,pvalues += width) {
 	      for(program_t::instruction_size_type offsets_count = *pfp_offsets++;offsets_count > 0;--offsets_count,++pfp_offsets) {
 		rsxgl_inline_transfer(context,rsxgl_rsx_ucode_offset(program.fp_ucode_offset + *pfp_offsets++),width,pvalues);
@@ -666,7 +666,6 @@ rsxgl_uniforms_validate(rsxgl_context_t * ctx,program_t & program)
 	    }
 	  }
 	  else {
-	    const program_t::instruction_size_type * pfp_offsets = program.program_offsets + uniform.program_offsets_index;
 	    pfp_offsets += (1 + *pfp_offsets);
 
 	    //rsxgl_debug_printf("invalid uniform sampler: %u %u %u\n",(uint32_t)count,(uint32_t)uniform.program_offsets_index,(uint32_t)*pfp_offsets);

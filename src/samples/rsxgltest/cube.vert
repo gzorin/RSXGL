@@ -16,7 +16,7 @@ main(void)
   gl_Position = ProjMatrix * (TransMatrix * vec4(p,1));
 
   //gl_Position = ProjMatrix * (TransMatrix * vec4(position,1));
-  c = color;
+  //c = color;
 
-  //c = texture1D(texture,rsxgl_InstanceID).rgb;
+  c = texture1D(texture,rsxgl_InstanceID).rgb;
 }

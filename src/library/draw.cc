@@ -36,6 +36,18 @@
 #endif
 #define GLAPI extern "C"
 
+static GLenum rsxgl_saved_error = GL_NO_ERROR;
+
+#define RSXGL_FORWARD_ERROR_BEGIN() \
+  {rsxgl_saved_error = rsxgl_error; rsxgl_error = GL_NO_ERROR; }
+
+#define RSXGL_FORWARD_ERROR(RETURN)			\
+  {if(RSXGL_IS_ERROR()) return (RETURN); }
+
+#define RSXGL_FORWARD_ERROR_END()					\
+  {if(RSXGL_IS_ERROR()) { return; }					\
+   else {rsxgl_error = rsxgl_saved_error; rsxgl_saved_error = GL_NO_ERROR;} }
+
 static inline uint32_t
 rsxgl_draw_mode(GLenum mode)
 {
@@ -443,14 +455,6 @@ struct rsxgl_draw_array_operations {
   // nbatchremainder - size of one additional vertex batch (nbatchremainder vertices)
   inline void
   begin(gcmContextData * context,const uint32_t ninvoc,const uint32_t ninvocremainder,const uint32_t nbatchremainder) const {
-#if 0
-    const uint32_t nmethods = 1 + ninvoc + (ninvocremainder ? 1 : 0);
-    const uint32_t nargs = 1 + (ninvoc * RSXGL_VERTEX_BATCH_MAX_FIFO_METHOD_ARGS) + ninvocremainder;
-    const uint32_t nwords = nmethods + nargs + 4 + 6;
-    
-    buffer = gcm_reserve(context,nwords);
-#endif
-
     buffer = gcm_reserve(context,count(ninvoc,ninvocremainder,nbatchremainder));
 
     current = 0;
@@ -592,14 +596,6 @@ struct rsxgl_draw_array_elements_operations {
   
   inline void
   begin(gcmContextData * context,const uint32_t ninvoc,const uint32_t ninvocremainder,const uint32_t nbatchremainder) const {
-#if 0
-    const uint32_t nmethods = 1 + ninvoc + (ninvocremainder ? 1 : 0);
-    const uint32_t nargs = 1 + (ninvoc * RSXGL_INDEX_BATCH_MAX_FIFO_METHOD_ARGS) + ninvocremainder;
-    const uint32_t nwords = nmethods + nargs + 4;
-    
-    buffer = gcm_reserve(context,nwords);
-#endif
-
     buffer = gcm_reserve(context,count(ninvoc,ninvocremainder,nbatchremainder));
 
     gcm_emit_method_at(buffer,0,NV30_3D_VERTEX_BEGIN_END,1);
@@ -713,8 +709,9 @@ glDrawArrays (GLenum mode, GLint first, GLsizei count)
   struct rsxgl_context_t * ctx = current_ctx();
   gcmContextData * context = ctx -> base.gcm_context;
 
+  RSXGL_FORWARD_ERROR_BEGIN();
   const uint32_t rsx_primitive_type = rsxgl_check_draw_arrays(ctx,mode);
-  RSXGL_FORWARD_ERROR_();
+  RSXGL_FORWARD_ERROR_END();
 
   if(count < 0) {
     RSXGL_ERROR_(GL_INVALID_VALUE);
@@ -734,8 +731,9 @@ glMultiDrawArrays (GLenum mode, const GLint *first, const GLsizei *count, const 
   struct rsxgl_context_t * ctx = current_ctx();
   gcmContextData * context = ctx -> base.gcm_context;
 
+  RSXGL_FORWARD_ERROR_BEGIN();
   const uint32_t rsx_primitive_type = rsxgl_check_draw_arrays(ctx,mode);
-  RSXGL_FORWARD_ERROR_();
+  RSXGL_FORWARD_ERROR_END();
 
   if(primcount < 0) {
     RSXGL_ERROR_(GL_INVALID_VALUE);
@@ -763,9 +761,10 @@ glDrawElements (GLenum mode, GLsizei count, GLenum type, const GLvoid* indices)
 { 
   struct rsxgl_context_t * ctx = current_ctx();
 
+  RSXGL_FORWARD_ERROR_BEGIN();
   uint32_t rsx_primitive_type = 0, rsx_type = 0;
   std::tie(rsx_primitive_type,rsx_type) = rsxgl_check_draw_elements(ctx,mode,type);
-  RSXGL_FORWARD_ERROR_();
+  RSXGL_FORWARD_ERROR_END();
 
   if(!(type == GL_UNSIGNED_BYTE || type == GL_UNSIGNED_SHORT || type == GL_UNSIGNED_INT)) {
     RSXGL_ERROR_(GL_INVALID_ENUM);
@@ -801,9 +800,10 @@ glDrawElementsBaseVertex (GLenum mode, GLsizei count, GLenum type, const GLvoid 
 {
   struct rsxgl_context_t * ctx = current_ctx();
 
+  RSXGL_FORWARD_ERROR_BEGIN();
   uint32_t rsx_primitive_type = 0, rsx_type = 0;
   std::tie(rsx_primitive_type,rsx_type) = rsxgl_check_draw_elements(ctx,mode,type);
-  RSXGL_FORWARD_ERROR_();
+  RSXGL_FORWARD_ERROR_END();
 
   if(count < 0) {
     RSXGL_ERROR_(GL_INVALID_VALUE);
@@ -833,9 +833,10 @@ glDrawRangeElements (GLenum mode, GLuint start, GLuint end, GLsizei count, GLenu
 {
   struct rsxgl_context_t * ctx = current_ctx();
 
+  RSXGL_FORWARD_ERROR_BEGIN();
   uint32_t rsx_primitive_type = 0, rsx_type = 0;
   std::tie(rsx_primitive_type,rsx_type) = rsxgl_check_draw_elements(ctx,mode,type);
-  RSXGL_FORWARD_ERROR_();
+  RSXGL_FORWARD_ERROR_END();
 
   if(count < 0) {
     RSXGL_ERROR_(GL_INVALID_VALUE);
@@ -870,9 +871,10 @@ glDrawRangeElementsBaseVertex (GLenum mode, GLuint start, GLuint end, GLsizei co
 {
   struct rsxgl_context_t * ctx = current_ctx();
 
+  RSXGL_FORWARD_ERROR_BEGIN();
   uint32_t rsx_primitive_type = 0, rsx_type = 0;
   std::tie(rsx_primitive_type,rsx_type) = rsxgl_check_draw_elements(ctx,mode,type);
-  RSXGL_FORWARD_ERROR_();
+  RSXGL_FORWARD_ERROR_END();
 
   if(count < 0) {
     RSXGL_ERROR_(GL_INVALID_VALUE);
@@ -906,9 +908,10 @@ glMultiDrawElements (const GLenum mode, const GLsizei *count, GLenum type, const
 {
   struct rsxgl_context_t * ctx = current_ctx();
 
+  RSXGL_FORWARD_ERROR_BEGIN();
   uint32_t rsx_primitive_type = 0, rsx_type = 0;
   std::tie(rsx_primitive_type,rsx_type) = rsxgl_check_draw_elements(ctx,mode,type);
-  RSXGL_FORWARD_ERROR_();
+  RSXGL_FORWARD_ERROR_END();
 
   if(primcount < 0) {
     RSXGL_ERROR_(GL_INVALID_VALUE);
@@ -992,9 +995,10 @@ glMultiDrawElementsBaseVertex (GLenum mode, const GLsizei *count, GLenum type, c
 {
   struct rsxgl_context_t * ctx = current_ctx();
 
+  RSXGL_FORWARD_ERROR_BEGIN();
   uint32_t rsx_primitive_type = 0, rsx_type = 0;
   std::tie(rsx_primitive_type,rsx_type) = rsxgl_check_draw_elements(ctx,mode,type);
-  RSXGL_FORWARD_ERROR_();
+  RSXGL_FORWARD_ERROR_END();
 
   if(primcount < 0) {
     RSXGL_ERROR_(GL_INVALID_VALUE);
@@ -1158,8 +1162,9 @@ glDrawArraysInstanced (GLenum mode, GLint first, GLsizei count, GLsizei primcoun
   struct rsxgl_context_t * ctx = current_ctx();
   gcmContextData * context = ctx -> base.gcm_context;
 
+  RSXGL_FORWARD_ERROR_BEGIN();
   const uint32_t rsx_primitive_type = rsxgl_check_draw_arrays(ctx,mode);
-  RSXGL_FORWARD_ERROR_();
+  RSXGL_FORWARD_ERROR_END();
 
   if(count < 0) {
     RSXGL_ERROR_(GL_INVALID_VALUE);
@@ -1189,9 +1194,10 @@ glDrawElementsInstanced (const GLenum mode, const GLsizei count, const GLenum ty
 {
   struct rsxgl_context_t * ctx = current_ctx();
 
+  RSXGL_FORWARD_ERROR_BEGIN();
   uint32_t rsx_primitive_type = 0, rsx_type = 0;
   std::tie(rsx_primitive_type,rsx_type) = rsxgl_check_draw_elements(ctx,mode,type);
-  RSXGL_FORWARD_ERROR_();
+  RSXGL_FORWARD_ERROR_END();
 
   if(count < 0) {
     RSXGL_ERROR_(GL_INVALID_VALUE);
@@ -1226,9 +1232,10 @@ glDrawElementsInstancedBaseVertex (GLenum mode, GLsizei count, GLenum type, cons
 {
   struct rsxgl_context_t * ctx = current_ctx();
 
+  RSXGL_FORWARD_ERROR_BEGIN();
   uint32_t rsx_primitive_type = 0, rsx_type = 0;
   std::tie(rsx_primitive_type,rsx_type) = rsxgl_check_draw_elements(ctx,mode,type);
-  RSXGL_FORWARD_ERROR_();
+  RSXGL_FORWARD_ERROR_END();
 
   if(count < 0) {
     RSXGL_ERROR_(GL_INVALID_VALUE);

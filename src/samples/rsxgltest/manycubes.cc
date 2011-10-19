@@ -55,10 +55,12 @@ struct sine_wave_t xyz_waves[3] = {
 };
 
 GLuint buffers[2] = { 0,0 };
+GLuint texture = 0;
+
 GLuint shaders[2] = { 0,0 };
 GLuint program = 0;
 
-GLint ProjMatrix_location = -1, TransMatrix_location = -1, color_location = -1, gl_InstanceID_location = -1;
+GLint ProjMatrix_location = -1, TransMatrix_location = -1, color_location = -1, gl_InstanceID_location = -1, texture_location = -1;
 
 GLuint * client_indices = 0;
 
@@ -79,7 +81,7 @@ Eigen::Affine3f ViewMatrixInv =
 		   )
 		  ).inverse();
 
-const GLuint ncubes = 100;
+const GLuint ncubes = 256;
 
 float * cube_translations = 0;
 
@@ -131,15 +133,18 @@ rsxgltest_init(int argc,const char ** argv)
   ProjMatrix_location = glGetUniformLocation(program,"ProjMatrix");
   TransMatrix_location = glGetUniformLocation(program,"TransMatrix");
   gl_InstanceID_location = glGetUniformLocation(program,"rsxgl_InstanceID");
+  texture_location = glGetUniformLocation(program,"texture");
 
   tcp_printf("vertex_location: %i\n",vertex_location);
   tcp_printf("color_location: %i\n",color_location);
-  tcp_printf("ProjMatrix_location: %i TransMatrix_location: %i gl_InstanceID_location: %i\n",
-	     ProjMatrix_location,TransMatrix_location,gl_InstanceID_location);
+  tcp_printf("ProjMatrix_location: %i TransMatrix_location: %i gl_InstanceID_location: %i texture_location: %i\n",
+	     ProjMatrix_location,TransMatrix_location,gl_InstanceID_location,texture_location);
 
   glUseProgram(program);
 
   glUniformMatrix4fv(ProjMatrix_location,1,GL_FALSE,ProjMatrix.data());
+
+  glUniform1i(texture_location,0);
 
   // Set up us the vertex data:
   const float geometry[] = {
@@ -275,6 +280,15 @@ rsxgltest_init(int argc,const char ** argv)
     pcube_translation[1] = (drand48() * 5.0) - 2.5;
     pcube_translation[2] = (drand48() * 5.0) - 2.5;
   }
+
+  // the texture:
+  glGenTextures(1,&texture);
+  glBindTexture(GL_TEXTURE_1D,texture);
+
+  //glTexStorage1D(GL_TEXTURE_1D,0,GL_RGBA,ncubes,1);
+
+  glTexParameteri(GL_TEXTURE_1D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_1D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
 }
 
 extern "C"
