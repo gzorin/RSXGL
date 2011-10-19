@@ -1,5 +1,7 @@
 #include "glassimp.h"
 
+#include <aiMesh.h>
+
 #include <stdint.h>
 #include <algorithm>
 
@@ -59,11 +61,11 @@ struct copy_vector {
 };
 
 template < typename _Type >
-struct copy_array {
+struct load_array {
   GLuint operator()(struct aiMesh const * mesh,const GLint size,const GLsizei stride,_Type const * vectors,GLvoid * pointer,const float w) const {
     uint8_t * array = (uint8_t *)pointer;
     
-    GLuint n = 0;
+    GLuint nVertices = 0;
     copy_vector op;
   
     aiFace const * face = mesh -> mFaces;
@@ -75,11 +77,11 @@ struct copy_array {
 	const unsigned int index = *indices;
 	op(array,vectors[index],size,w);
 	array += stride;
-	++n;
+	++nVertices;
       }
     }
 
-    return n;
+    return nVertices;
   }
 };
 
@@ -88,7 +90,7 @@ struct load_elements {
   GLuint operator()(struct aiMesh const * mesh,GLvoid * pointer) const {
     _Type * array = (_Type *)pointer;
     
-    GLuint n = 0;
+    GLuint nElements = 0;
     copy_vector op;
   
     aiFace const * face = mesh -> mFaces;
@@ -98,16 +100,74 @@ struct load_elements {
       unsigned int const * indices = face -> mIndices;
       for(unsigned int j = 0,m = face -> mNumIndices;j < m;++j,++array,++indices) {
 	*array = (_Type)*indices;
-	++n;
+	++nElements;
       }
     }
 
-    return n;
+    return nElements;
   }
 };
 
 extern "C" GLuint
-glassimpTrianglesLoadArray(struct aiMesh const * mesh,GLenum attrib,GLuint index,GLint size,GLenum type,GLsizei stride,GLvoid * pointer)
+glassimpTrianglesLoadArray(struct aiMesh const * mesh,const GLenum attrib,const GLuint index,const GLint size,const GLenum type,const GLsizei stride,GLvoid * pointer)
+{
+  if(size < 0 || size > 4) return 0;
+  if(type != GL_FLOAT) return 0;
+
+  if(attrib == GLASSIMP_VERTEX_ARRAY) {
+    return load_array< aiVector3D >()(mesh,size,stride,mesh -> mVertices,pointer,1.0f);
+  }
+  else if(attrib == GLASSIMP_NORMAL_ARRAY && mesh -> HasNormals()) {
+    return load_array< aiVector3D >()(mesh,size,stride,mesh -> mNormals,pointer,0.0f);
+  }
+  else if(attrib == GLASSIMP_TEXTURE_COORD_ARRAY && mesh -> HasTextureCoords(index)) {
+    return load_array< aiVector3D >()(mesh,std::min(size,(GLint)mesh -> mNumUVComponents[index]),stride,mesh -> mTextureCoords[index],pointer,0.0f);
+  }
+  else if(attrib == GLASSIMP_COLOR_ARRAY && mesh -> HasVertexColors(index)) {
+    return load_array< aiColor4D >()(mesh,size,stride,mesh -> mColors[index],pointer,0.0f);
+  }
+  else {
+    return 0;
+  }
+}
+
+extern "C" GLuint
+glassimpTrianglesLoadArrayElements(struct aiMesh const * mesh,const GLenum type,GLvoid * pointer)
+{
+  if(type == GL_UNSIGNED_BYTE) {
+    return load_elements< uint8_t >()(mesh,pointer);
+  }
+  else if(type == GL_UNSIGNED_SHORT) {
+    return load_elements< uint16_t >()(mesh,pointer);
+  }
+  else if(type == GL_UNSIGNED_INT) {
+    return load_elements< uint32_t >()(mesh,pointer);
+  }
+  else {
+    return 0;
+  }
+}
+
+template < typename _Type >
+struct copy_array {
+  GLuint operator()(struct aiMesh const * mesh,const GLint size,const GLsizei stride,_Type const * vectors,GLvoid * pointer,const float w) const {
+    uint8_t * array = (uint8_t *)pointer;
+    
+    GLuint nVertices = 0;
+    copy_vector op;
+
+    for(unsigned int i = 0,n = mesh -> mNumVertices;i < n;++i) {
+      op(array,vectors[i],size,w);
+      array += stride;
+      ++nVertices;
+    }
+
+    return nVertices;
+  }
+};
+
+extern "C" GLuint
+glassimpTrianglesCopyArray(struct aiMesh const * mesh,const GLenum attrib,const GLuint index,const GLint size,const GLenum type,const GLsizei stride,GLvoid * pointer)
 {
   if(size < 0 || size > 4) return 0;
   if(type != GL_FLOAT) return 0;
@@ -130,26 +190,8 @@ glassimpTrianglesLoadArray(struct aiMesh const * mesh,GLenum attrib,GLuint index
 }
 
 extern "C" GLuint
-glassimpTrianglesLoadArrayElements(struct aiMesh const * mesh,GLenum type,GLvoid * pointer)
+glassimpTrianglesFormat(struct aiMesh const * mesh,const GLboolean interleaved,const GLsizei n,GLenum const * attribs,GLuint const * indices,GLint const * sizes,GLenum * types,GLvoid * pointer,GLint * sizes_out,GLsizei * strides_out,GLvoid ** pointers_out)
 {
-  if(type == GL_UNSIGNED_BYTE) {
-    return load_elements< uint8_t >()(mesh,pointer);
-  }
-  else if(type == GL_UNSIGNED_SHORT) {
-    return load_elements< uint16_t >()(mesh,pointer);
-  }
-  else if(type == GL_UNSIGNED_INT) {
-    return load_elements< uint32_t >()(mesh,pointer);
-  }
-  else {
-    return 0;
-  }
-}
-
-extern "C" GLuint
-glassimpTrianglesFormat(struct aiMesh const * mesh,GLboolean interleaved,const GLsizei n,GLenum const * attribs,GLuint const * indices,GLint const * sizes,GLenum * types,GLvoid * pointer,GLint * sizes_out,GLsizei * strides_out,GLvoid ** pointers_out)
-{
-  uint8_t * _pointer = (uint8_t *)pointer;
   GLuint stride = 0;
   GLint * psizes_out = sizes_out;
 
@@ -161,13 +203,13 @@ glassimpTrianglesFormat(struct aiMesh const * mesh,GLboolean interleaved,const G
     if(attrib == GLASSIMP_VERTEX_ARRAY && type == GL_FLOAT) {
       size_out = std::min(*sizes,(GLint)3);
     }
-    else if(attrib == GLASSIMP_NORMAL_ARRAY && mesh -> HasNormals()) {
+    else if(attrib == GLASSIMP_NORMAL_ARRAY && mesh -> HasNormals() && type == GL_FLOAT) {
       size_out = std::min(*sizes,(GLint)3);
     }
-    else if(attrib == GLASSIMP_TEXTURE_COORD_ARRAY && mesh -> HasTextureCoords(*indices)) {
+    else if(attrib == GLASSIMP_TEXTURE_COORD_ARRAY && mesh -> HasTextureCoords(*indices) && type == GL_FLOAT) {
       size_out = std::min(*sizes,(GLint)mesh -> mNumUVComponents[*indices]);
     }
-    else if(attrib == GLASSIMP_COLOR_ARRAY && mesh -> HasVertexColors(*indices)) {
+    else if(attrib == GLASSIMP_COLOR_ARRAY && mesh -> HasVertexColors(*indices) && type == GL_FLOAT) {
       size_out = std::min(*sizes,(GLint)4);
     }
     else {
@@ -175,45 +217,81 @@ glassimpTrianglesFormat(struct aiMesh const * mesh,GLboolean interleaved,const G
     }
 
     stride += size_out;
+
     *psizes_out = size_out;
+    ++psizes_out;
 
     ++attribs;
     ++indices;
     ++sizes;
     ++types;
-
-    ++psizes_out;
   }
 
+  uint8_t * p_pointer = (uint8_t *)pointer;
   if(interleaved) {
     for(GLsizei i = 0;i < n;++i) {
       *strides_out = stride * sizeof(float);
-      *pointers_out = _pointer + sizeof(float) * sizes_out[i];
-
       ++strides_out;
+
+      *pointers_out = p_pointer;
       ++pointers_out;
+
+      p_pointer += sizeof(float) * sizes_out[i];
     }
   }
   else {
     const GLuint nVertices = glassimpTrianglesCount(mesh) * 3;
-    uint8_t * p_pointer = _pointer;
-
     for(GLsizei i = 0;i < n;++i) {
       *strides_out = 0;
+      ++strides_out;
+
       *pointers_out = p_pointer;
+      ++pointers_out;
 
       p_pointer += sizeof(float) * sizes_out[i] * nVertices;
-
-      ++strides_out;
-      ++pointers_out;
     }
   }
   
   return stride * sizeof(float);
 }
 
-int
-main(int argc, char ** argv)
+extern "C" GLvoid
+glassimpTrianglesLoadArrays(struct aiMesh const * mesh,const GLboolean interleaved,const GLsizei n,GLenum const * attribs,GLuint const * indices,GLint const * sizes,GLenum * types,GLvoid * pointer)
 {
-  glassimpTrianglesCount(0);
+  GLint sizes_out[n];
+  GLsizei strides_out[n];
+  GLvoid * pointers_out[n];
+
+  glassimpTrianglesFormat(mesh,interleaved,n,attribs,indices,sizes,types,pointer,sizes_out,strides_out,pointers_out);
+
+  for(GLsizei i = 0;i < n;++i) {
+    if(sizes_out[i] == 0) continue;
+
+    glassimpTrianglesLoadArray(mesh,attribs[i],indices[i],sizes_out[i],types[i],strides_out[i],pointers_out[i]);
+  }
+}
+
+extern "C" GLvoid
+glassimpTrianglesSetPointers(struct aiMesh const * mesh,const GLint * locations,const GLboolean interleaved,const GLsizei n,GLenum const * attribs,GLuint const * indices,GLint const * sizes,GLenum * types,GLvoid * pointer)
+{
+  GLint sizes_out[n];
+  GLsizei strides_out[n];
+  GLvoid * pointers_out[n];
+
+  glassimpTrianglesFormat(mesh,interleaved,n,attribs,indices,sizes,types,pointer,sizes_out,strides_out,pointers_out);
+
+  GLint * psizes_out = sizes_out;
+  GLsizei * pstrides_out = strides_out;
+  GLvoid ** ppointers_out = pointers_out;
+  for(GLsizei i = 0;i < n;++i,++locations,++psizes_out,++types,++pstrides_out,++ppointers_out) {
+    if(*psizes_out == 0 || *locations < 0) {
+      if(*locations >= 0) {
+	glDisableVertexAttribArray(*locations);
+      }
+    }
+    else {
+      glEnableVertexAttribArray(*locations);
+      glVertexAttribPointer(*locations,*psizes_out,*types,GL_FALSE,*pstrides_out,*ppointers_out);
+    }
+  }
 }
