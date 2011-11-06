@@ -11,7 +11,6 @@
 #include "gl_constants.h"
 #include "gl_object_storage.h"
 #include "array.h"
-#include "smint_array.h"
 
 #include <nv40prog.h>
 
@@ -205,14 +204,23 @@ struct program_t {
     uniform_size_type values_index, count, vp_index, program_offsets_index;
   };
 
+  struct texture_t {
+    uint8_t type;
+    boost::uint_value_t< RSXGL_MAX_VERTEX_TEXTURE_IMAGE_UNITS >::least vp_index;
+    boost::uint_value_t< RSXGL_MAX_TEXTURE_IMAGE_UNITS >::least fp_index;
+  };
+
   typedef table< attrib_t, attrib_size_type > attrib_table_type;
   typedef table< uniform_t, uniform_size_type > uniform_table_type;
+  typedef table< texture_t, texture_size_type > texture_table_type;
 
   attrib_table_type::size_type attrib_table_size;
   uniform_table_type::size_type uniform_table_size;
+  texture_table_type::size_type texture_table_size;
   
   attrib_table_type::pointer_type attrib_table_values;
   uniform_table_type::pointer_type uniform_table_values;
+  texture_table_type::pointer_type texture_table_values;
 
   name_size_type attrib_name_max_length, uniform_name_max_length;
 
@@ -221,6 +229,9 @@ struct program_t {
 
   uniform_table_type::type uniform_table() { return uniform_table_type::type(uniform_table_values,uniform_table_size); }
   uniform_table_type::const_type uniform_table() const { return uniform_table_type::const_type(uniform_table_values,uniform_table_size); }
+
+  texture_table_type::type texture_table() { return texture_table_type::type(texture_table_values,texture_table_size); }
+  texture_table_type::const_type texture_table() const { return texture_table_type::const_type(texture_table_values,texture_table_size); }
 
   // Attribute bindings requested by glBindAttribLocation(). A string for each possible vertex attribute:
   typedef array< char, uint32_t > attrib_binding_type;
@@ -269,6 +280,9 @@ struct program_t {
 
   // Textures that are enabled:
   bit_set< RSXGL_MAX_COMBINED_TEXTURE_IMAGE_UNITS > textures_enabled;
+
+  smint_array< RSXGL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, RSXGL_MAX_TEXTURE_IMAGE_UNITS > fp_texture_assignments;
+  smint_array< RSXGL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, RSXGL_MAX_VERTEX_TEXTURE_IMAGE_UNITS > vp_texture_assignments;
 
   // Storage for uniform variable values:
   ieee32_t * uniform_values;

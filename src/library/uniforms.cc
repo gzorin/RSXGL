@@ -225,17 +225,20 @@ rsxgl_uniform_sampler(rsxgl_context_t * ctx,
 
   program_t & program = program_t::storage().at(program_name);
 
-  if(location >= program.uniform_table_size) {
+  const GLint texture_location = location - program.uniform_table_size;
+
+  if(texture_location < 0 || texture_location >= program.texture_table_size) {
     RSXGL_ERROR_(GL_INVALID_OPERATION);
   }
 
-  program_t::uniform_t & uniform = program.uniform_table_values[location].second;
+  program_t::texture_t & texture = program.texture_table_values[texture_location].second;
 
-  if(!(uniform.type == RSXGL_DATA_TYPE_SAMPLER1D ||
-       uniform.type == RSXGL_DATA_TYPE_SAMPLER2D ||
-       uniform.type == RSXGL_DATA_TYPE_SAMPLER3D ||
-       uniform.type == RSXGL_DATA_TYPE_SAMPLERCUBE ||
-       uniform.type == RSXGL_DATA_TYPE_SAMPLERRECT)) {
+#if 0
+  if(!(texture.type == RSXGL_DATA_TYPE_SAMPLER1D ||
+       texture.type == RSXGL_DATA_TYPE_SAMPLER2D ||
+       texture.type == RSXGL_DATA_TYPE_SAMPLER3D ||
+       texture.type == RSXGL_DATA_TYPE_SAMPLERCUBE ||
+       texture.type == RSXGL_DATA_TYPE_SAMPLERRECT)) {
     RSXGL_ERROR_(GL_INVALID_OPERATION);
   }
 
@@ -244,6 +247,7 @@ rsxgl_uniform_sampler(rsxgl_context_t * ctx,
 
   ieee32_t * values = program.uniform_values + uniform.values_index;
   set(values[0],v0);
+#endif
 
   RSXGL_NOERROR_();
 }

@@ -304,6 +304,7 @@ program_t::program_t()
 
   attrib_table().construct();
   uniform_table().construct();
+  texture_table().construct();
 
   for(size_t i = 0;i < RSXGL_MAX_VERTEX_ATTRIBS;++i) {
     attrib_binding(i).construct();
@@ -321,6 +322,7 @@ program_t::~program_t()
 
   attrib_table().destruct();
   uniform_table().destruct();
+  texture_table().destruct();
 
   for(size_t i = 0;i < RSXGL_MAX_VERTEX_ATTRIBS;++i) {
     attrib_binding(i).destruct();
@@ -492,7 +494,7 @@ glGetProgramiv (GLuint program_name, GLenum pname, GLint *params)
   }
   else if(pname == GL_ACTIVE_UNIFORMS) {
     if(program.linked) {
-      *params = program.uniform_table_size;
+      *params = program.uniform_table_size + program.texture_table_size;
     }
     else {
       *params = 0;
@@ -760,8 +762,8 @@ glLinkProgram (GLuint program_name)
   std::deque< const rsxProgramAttrib * > fp_inputs, fp_texture_attribs, fp_outputs;
   std::deque< const rsxProgramConst * > vp_consts, fp_consts;
 
-  // These two get merged eventually:
-  std::deque< std::pair< program_t::name_size_type, program_t::uniform_t > > uniforms, textures;
+  std::deque< std::pair< program_t::name_size_type, program_t::uniform_t > > uniforms;
+  std::deque< std::pair< program_t::name_size_type, program_t::texture_t > > textures;
 
   // VP internal constants:
   std::deque< const rsxProgramConst * > vp_internal_consts;
@@ -1174,6 +1176,10 @@ glLinkProgram (GLuint program_name)
 	mode = 3;
       }
     }
+
+    // Fill in uniforms table:
+    program.uniform_table().resize(uniforms.size());
+    std::copy(uniforms.begin(),uniforms.end(),program.uniform_table_values);
   }
 
   // Texture table:
@@ -1182,17 +1188,13 @@ glLinkProgram (GLuint program_name)
       vp_it0 = vp_texture_attribs.begin(), vp_it1 = vp_texture_attribs.end(),
       fp_it0 = fp_texture_attribs.begin(), fp_it1 = fp_texture_attribs.end();
     
-    std::deque< std::pair< program_t::texture_size_type, program_t::texture_size_type > > texture_units;
-    
     int mode = (vp_texture_attribs.size() > 0 && fp_texture_attribs.size() > 0) ? 0 : ((vp_texture_attribs.size() > 0) ? 1 : ((fp_texture_attribs.size() > 0) ? 2 : 3));
     while(mode < 3) {
       const char * name = 0;
-      program_t::uniform_t texture;
+      program_t::texture_t texture;
       const rsxProgramAttrib * the_attrib = 0;
       int c = 0;
-      std::pair< program_t::texture_size_type, program_t::texture_size_type > units;
       
-      // Do this if comparing vp and fp constants:
       if(mode == 0) {
 	const char * vp_name = reinterpret_cast< const char * >(vp) + (*vp_it0) -> name_off;
 	const char * fp_name = reinterpret_cast< const char * >(fp) + (*fp_it0) -> name_off;
@@ -1208,8 +1210,8 @@ glLinkProgram (GLuint program_name)
 	name = (c <= 0) ? vp_name : fp_name;
 	the_attrib = (c <= 0) ? *vp_it0 : *fp_it0;
 	
-	units.first = (uint32_t)(*vp_it0) -> index;
-	units.second = (uint32_t)(*fp_it0) -> index;
+	texture.vp_index = (*vp_it0) -> index;
+	texture.fp_index = (*fp_it0) -> index;
 	
 	if(c <= 0) ++vp_it0;
 	if(c >= 0) ++fp_it0;
@@ -1218,42 +1220,23 @@ glLinkProgram (GLuint program_name)
       else if(mode == 1) {
 	name = reinterpret_cast< const char * >(vp) + (*vp_it0) -> name_off;
 	the_attrib = *(vp_it0++);
-	
-	units.first = the_attrib -> index;
-	units.second = ~0;
+
+	texture.vp_index = the_attrib -> index;
+	texture.fp_index = ~0;
       }
       // 
       else if(mode == 2) {
 	name = reinterpret_cast< const char * >(fp) + (*fp_it0) -> name_off;
 	the_attrib = *(fp_it0++);
 	
-	units.first = ~0;
-	units.second = the_attrib -> index;
+	texture.vp_index = ~0;
+	texture.fp_index = the_attrib -> index;
       }
-      
+
       texture.type = the_attrib -> type;
-      texture.count = 1;
-      
-      // 
-      texture.values_index = uniform_values.size();
-      std::fill_n(std::back_inserter(uniform_values),1,ieee32_t());
-      
-      // Unused by textures:
-      texture.vp_index = 0;
-      
-      if((mode == 0 && c <= 0) || (mode == 1)) {
-	texture.enabled.set(RSXGL_VERTEX_SHADER);
-      }
-      if((mode == 0 && c >= 0) || (mode == 2)) {
-	texture.enabled.set(RSXGL_FRAGMENT_SHADER);
-      }
-      
-      // This gets filled-in later:
-      texture.program_offsets_index = 0;
-      
+
       // Always do this:
       textures.push_back(std::make_pair(names_offset,texture));
-      texture_units.push_back(units);
       
       program_t::name_size_type name_length = strlen(name);
       program.uniform_name_max_length = std::max(program.uniform_name_max_length,name_length);
@@ -1280,67 +1263,10 @@ glLinkProgram (GLuint program_name)
 	mode = 3;
       }
     }
-    
-    
-    // Figure out where texture units are referenced in the microcode. They get stored in a map, indexed by the unit number:
-    std::map< program_t::texture_size_type, program_offsets_type > vp_texture_program_offsets, fp_texture_program_offsets;
-    
-    // Vertex program:
-    // TODO - Detect references to textures in the vertex program code. Currently unimplemented, since cgcomp doesn't emit TEX instructions in vertex programs:
-    {
-      program_t::vp_instruction_type * vp_ucode = (program_t::vp_instruction_type *)rsxVertexProgramGetUCode(const_cast< rsxVertexProgram * >(vp));
-      program_t::instruction_size_type i_insn = 0;
-      for(uint32_t n = vp -> num_insn;n > 0;--n,++vp_ucode,++i_insn) {
-	const uint32_t opcode = (vp_ucode -> dwords[1] & NV40_VP_INST_VEC_OPCODE_MASK) >> NV40_VP_INST_VEC_OPCODE_SHIFT;
-	if(opcode == NVFX_VP_INST_VEC_OP_TXL) {
-	  const uint32_t src = (vp_ucode -> dwords[2] & NV40_VP_INST_SRC1_MASK) >> NV40_VP_INST_SRC1_SHIFT;
-	  const uint32_t unit = (src & NV40_VP_SRC_TEMP_SRC_MASK) >> NV40_VP_SRC_TEMP_SRC_SHIFT;
-	  rsxgl_debug_printf("vp instruction %u: tex %u\n",(unsigned int)i_insn,(unsigned int)unit);
-	  vp_texture_program_offsets[unit].push_back(i_insn);
-	}
-      }
-    }
-    
-    // Fragment program:
-    {
-      uint32_t unused;
-      program_t::fp_instruction_type * fp_ucode = (program_t::fp_instruction_type *)rsxFragmentProgramGetUCode(const_cast< rsxFragmentProgram * >(fp),&unused);
-      program_t::instruction_size_type i_insn = 0;
-      for(uint32_t n = fp -> num_insn;n > 0;--n,++fp_ucode,++i_insn) {
-	// FP words need to have their hi & lo bytes swizzled:
-	const uint32_t dword0 = (fp_ucode -> dwords[0] << 16) | (fp_ucode -> dwords[0] >> 16);
-	const uint32_t opcode = (dword0 & NVFX_FP_OP_OPCODE_MASK) >> NVFX_FP_OP_OPCODE_SHIFT;
-	if(opcode == NVFX_FP_OP_OPCODE_TEX) {
-	  const uint32_t unit = (dword0 & NVFX_FP_OP_TEX_UNIT_MASK) >> NVFX_FP_OP_TEX_UNIT_SHIFT;
-	  fp_texture_program_offsets[unit].push_back(i_insn);
-	}
-      }
-    }
-    
-    // Iterate over texture units, gather program offsets:
-    for(program_t::texture_size_type i = 0,n = textures.size();i < n;++i) {
-      program_t::uniform_t & texture = textures[i].second;
-      const std::pair< program_t::texture_size_type, program_t::texture_size_type > & units = texture_units[i];
-      texture.program_offsets_index = program_offsets.size();
-      
-      if(units.first != ~0) {
-	const program_offsets_type & texture_program_offsets = vp_texture_program_offsets[units.first];
-	program_offsets.push_back(texture_program_offsets.size());
-	std::copy(texture_program_offsets.begin(),texture_program_offsets.end(),std::back_inserter(program_offsets));
-      }
-      else {
-	program_offsets.push_back(0);
-      }
-      
-      if(units.second != ~0) {
-	const program_offsets_type & texture_program_offsets = fp_texture_program_offsets[units.second];
-	program_offsets.push_back(texture_program_offsets.size());
-	std::copy(texture_program_offsets.begin(),texture_program_offsets.end(),std::back_inserter(program_offsets));
-      }
-      else {
-	program_offsets.push_back(0);
-      }
-    }
+
+    // Fill in textures table:
+    program.texture_table().resize(textures.size());
+    std::copy(textures.begin(),textures.end(),program.texture_table_values);
   }
 
   // Link VP outputs to FP inputs (by patching VP microcode) (GLSL varying variables):
@@ -1492,13 +1418,6 @@ glLinkProgram (GLuint program_name)
     memcpy(program.names_data + names_offset,it0 -> second,it0 -> first + 1);
     names_offset += it0 -> first + 1;
   }
-
-  // Merge the sorted uniforms and the sorted texture deques:
-  program.uniform_table().resize(uniforms.size() + textures.size());
-  std::merge(uniforms.begin(),uniforms.end(),
-	     textures.begin(),textures.end(),
-	     program.uniform_table_values,
-	     uniform_lt(program.names_data));
 
   // Allocate space for uniform values:
   if(program.uniform_values != 0) free(program.uniform_values);
@@ -1728,15 +1647,23 @@ glGetActiveUniform (GLuint program_name, GLuint index, GLsizei bufSize, GLsizei 
     RSXGL_NOERROR_();
   }
 
-  if(index >= (program.uniform_table_size)) {
+  if(index >= (program.uniform_table_size + program.texture_table_size)) {
     RSXGL_ERROR_(GL_INVALID_VALUE);
   }
 
   const char * uniform_name = "";
   uint8_t uniform_type = ~0;
 
-  uniform_name = program.names_data + program.uniform_table_values[index].first;
-  uniform_type = program.uniform_table_values[index].second.type;
+  if(index < program.uniform_table_size) {
+    uniform_name = program.names_data + program.uniform_table_values[index].first;
+    uniform_type = program.uniform_table_values[index].second.type;
+  }
+  else {
+    const GLuint texture_index = index - program.uniform_table_size;
+
+    uniform_name = program.names_data + program.texture_table_values[texture_index].first;
+    uniform_type = program.texture_table_values[texture_index].second.type;
+  }
 
   size_t n = std::min((size_t)bufSize - 1,(size_t)strlen(uniform_name));
   strncpy(name,uniform_name,n);
@@ -1747,22 +1674,27 @@ glGetActiveUniform (GLuint program_name, GLuint index, GLsizei bufSize, GLsizei 
   switch(uniform_type) {
   case RSXGL_DATA_TYPE_FLOAT:
     *type = GL_FLOAT;
+    rsxgl_assert(index < program.uniform_table_size);
     *size = program.uniform_table_values[index].second.count;
     break;
   case RSXGL_DATA_TYPE_FLOAT2:
     *type = GL_FLOAT_VEC2;
+    rsxgl_assert(index < program.uniform_table_size);
     *size = program.uniform_table_values[index].second.count;
     break;
   case RSXGL_DATA_TYPE_FLOAT3:
     *type = GL_FLOAT_VEC3;
+    rsxgl_assert(index < program.uniform_table_size);
     *size = program.uniform_table_values[index].second.count;
     break;
   case RSXGL_DATA_TYPE_FLOAT4:
     *type = GL_FLOAT_VEC4;
+    rsxgl_assert(index < program.uniform_table_size);
     *size = program.uniform_table_values[index].second.count;
     break;
   case RSXGL_DATA_TYPE_FLOAT4x4:
     *type = GL_FLOAT_MAT4;
+    rsxgl_assert(index < program.uniform_table_size);
     *size = program.uniform_table_values[index].second.count;
     break;
   case RSXGL_DATA_TYPE_SAMPLER1D:
@@ -1801,8 +1733,14 @@ glGetUniformLocation (GLuint program_name, const GLchar* name)
     RSXGL_NOERROR(-1);
   }
 
-  std::pair< bool, program_t::uniform_size_type > tmp = program.uniform_table().find(program.names(),name);
-  RSXGL_NOERROR(tmp.first ? tmp.second : -1);
+  const std::pair< bool, program_t::uniform_size_type > tmp = program.uniform_table().find(program.names(),name);
+  if(tmp.first) {
+    RSXGL_NOERROR(tmp.second);
+  }
+  else {
+    const std::pair< bool, program_t::texture_size_type > tmp = program.texture_table().find(program.names(),name);
+    RSXGL_NOERROR(tmp.first ? program.uniform_table_size + tmp.second : -1);
+  }
 }
 
 GLAPI void APIENTRY

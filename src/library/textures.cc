@@ -2007,6 +2007,23 @@ rsxgl_textures_validate(rsxgl_context_t * ctx,program_t & program,const uint32_t
 {
   gcmContextData * context = ctx -> base.gcm_context;
 
+  // 0-20 texture units - these are API indices
+  // 0-4 vp textures, 0-16 fp textures - these are program indices
+  //
+  // walk through assignments
+  // - if the program index is used:
+  //   - map program index to API index
+  //   - see if texture for the API has changed
+  //   - if the assignment for that program index has changed, or if the texture for that API index has changed, then:
+  //     - send commands for the texture
+  //   - if the assignment for that program index has changed, or if the sampler for that API index has changed, then:
+  //     - send commands for the sampler
+  // if any used vp textures changed, then invalidate the caches
+  // if any used fp textures changed, then invalidate the caches
+  //
+  // How to validate textures themselves?
+  // Where/how are changed texture assignments stored? Preferably in a temporary (the changed bits)
+
   const bit_set< RSXGL_MAX_COMBINED_TEXTURE_IMAGE_UNITS > program_textures = program.textures_enabled;
 
   const bit_set< RSXGL_MAX_COMBINED_TEXTURE_IMAGE_UNITS >
