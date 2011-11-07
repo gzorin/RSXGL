@@ -210,7 +210,7 @@ rsxgl_uniform(rsxgl_context_t * ctx,
 }
 
 static inline void
-rsxgl_uniform_sampler(rsxgl_context_t * ctx,
+rsxgl_sampler_uniform(rsxgl_context_t * ctx,
 		      program_t::name_type program_name,
 		      GLint location,
 		      const GLint & v0 = 0)
@@ -227,27 +227,24 @@ rsxgl_uniform_sampler(rsxgl_context_t * ctx,
 
   const GLint texture_location = location - program.uniform_table_size;
 
-  if(texture_location < 0 || texture_location >= program.texture_table_size) {
+  if(texture_location < 0 || texture_location >= program.sampler_uniform_table_size) {
     RSXGL_ERROR_(GL_INVALID_OPERATION);
   }
 
-  program_t::texture_t & texture = program.texture_table_values[texture_location].second;
+  program_t::sampler_uniform_t & texture = program.sampler_uniform_table_values[texture_location].second;
 
-#if 0
-  if(!(texture.type == RSXGL_DATA_TYPE_SAMPLER1D ||
-       texture.type == RSXGL_DATA_TYPE_SAMPLER2D ||
-       texture.type == RSXGL_DATA_TYPE_SAMPLER3D ||
-       texture.type == RSXGL_DATA_TYPE_SAMPLERCUBE ||
-       texture.type == RSXGL_DATA_TYPE_SAMPLERRECT)) {
-    RSXGL_ERROR_(GL_INVALID_OPERATION);
+  if(texture.vp_index != RSXGL_MAX_COMBINED_TEXTURE_IMAGE_UNITS) {
+    rsxgl_assert(program.textures_enabled.test(texture.vp_index));
+
+    program.texture_assignments.set(texture.vp_index,v0);
+    if(ctx -> program_binding.is_bound(RSXGL_ACTIVE_PROGRAM,program_name)) ctx -> invalid_texture_assignments.set(texture.vp_index);
   }
+  if(texture.fp_index != RSXGL_MAX_COMBINED_TEXTURE_IMAGE_UNITS) {
+    rsxgl_assert(program.textures_enabled.test(RSXGL_MAX_VERTEX_TEXTURE_IMAGE_UNITS + texture.fp_index));
 
-  program.invalid_uniforms = 1;
-  uniform.invalid = uniform.enabled;
-
-  ieee32_t * values = program.uniform_values + uniform.values_index;
-  set(values[0],v0);
-#endif
+    program.texture_assignments.set(RSXGL_MAX_VERTEX_TEXTURE_IMAGE_UNITS + texture.fp_index,v0);
+    if(ctx -> program_binding.is_bound(RSXGL_ACTIVE_PROGRAM,program_name)) ctx -> invalid_texture_assignments.set(RSXGL_MAX_VERTEX_TEXTURE_IMAGE_UNITS + texture.fp_index);
+  }
 
   RSXGL_NOERROR_();
 }
@@ -270,14 +267,14 @@ GLAPI void APIENTRY
 glUniform1i (GLint location, GLint x)
 {
   rsxgl_context_t * ctx = current_ctx();
-  rsxgl_uniform_sampler(ctx,ctx -> program_binding.names[RSXGL_ACTIVE_PROGRAM],location,x);
+  rsxgl_sampler_uniform(ctx,ctx -> program_binding.names[RSXGL_ACTIVE_PROGRAM],location,x);
 }
 
 GLAPI void APIENTRY
 glUniform1iv (GLint location, GLsizei count, const GLint* v)
 {
   rsxgl_context_t * ctx = current_ctx();
-  rsxgl_uniform_sampler(ctx,ctx -> program_binding.names[RSXGL_ACTIVE_PROGRAM],location,*v);
+  rsxgl_sampler_uniform(ctx,ctx -> program_binding.names[RSXGL_ACTIVE_PROGRAM],location,*v);
 }
 
 GLAPI void APIENTRY
@@ -579,33 +576,25 @@ rsxgl_uniforms_validate(rsxgl_context_t * ctx,program_t & program)
 
     program_t::uniform_size_type n_validated_fp_uniforms = 0;
 
-    program.textures_enabled.reset();
-
     for(program_t::uniform_size_type i = 0,n = program.uniform_table_size;i < n;++i,++puniform) {
       program_t::uniform_t & uniform = puniform -> second;
 
       program_t::uniform_size_type width = 0;
-      bool is_texture = false;
       switch(uniform.type) {
       case RSXGL_DATA_TYPE_FLOAT:
 	width = 1;
-	is_texture = false;
 	break;
       case RSXGL_DATA_TYPE_FLOAT2:
 	width = 2;
-	is_texture = false;
 	break;
       case RSXGL_DATA_TYPE_FLOAT3:
 	width = 3;
-	is_texture = false;
 	break;
       case RSXGL_DATA_TYPE_FLOAT4:
 	width = 4;
-	is_texture = false;
 	break;
       case RSXGL_DATA_TYPE_FLOAT4x4:
 	width = 4;
-	is_texture = false;
 	break;
       case RSXGL_DATA_TYPE_SAMPLER1D:
       case RSXGL_DATA_TYPE_SAMPLER2D:
@@ -613,7 +602,6 @@ rsxgl_uniforms_validate(rsxgl_context_t * ctx,program_t & program)
       case RSXGL_DATA_TYPE_SAMPLERCUBE:
       case RSXGL_DATA_TYPE_SAMPLERRECT:
 	width = 1;
-	is_texture = true;
       default:
 	width = 0;
 	break;
@@ -625,35 +613,27 @@ rsxgl_uniforms_validate(rsxgl_context_t * ctx,program_t & program)
 	//rsxgl_debug_printf("\t%u invalid\n",i);
 
 	if(uniform.invalid.test(RSXGL_VERTEX_SHADER)) {
-	  //rsxgl_debug_printf("\t\tvp is_texture: %u\n",(unsigned int)is_texture);
-	  
 	  const ieee32_t * pvalues = values + uniform.values_index;
 
-	  if(!is_texture) {
-	    program_t::uniform_size_type index = uniform.vp_index;
-	    uint32_t * buffer = gcm_reserve(context,6 * count);
+	  program_t::uniform_size_type index = uniform.vp_index;
+	  uint32_t * buffer = gcm_reserve(context,6 * count);
 	    
-	    for(program_t::uniform_size_type j = 0;j < count;++j,++index,pvalues += width) {
-	      //rsxgl_debug_printf("%u/%u %u: %u: %f %f %f %f\n",
-	      //	 j,count,width,
-	      //	 pvalues - values,
-	      //	 pvalues[0].f,pvalues[1].f,pvalues[2].f,pvalues[3].f);
-	      
-	      gcm_emit_method(&buffer,NV30_3D_VP_UPLOAD_CONST_ID,5);
-	      gcm_emit(&buffer,index);
-	      
-	      gcm_emit(&buffer,width > 0 ? pvalues[0].u : 0);
-	      gcm_emit(&buffer,width > 1 ? pvalues[1].u : 0);
-	      gcm_emit(&buffer,width > 2 ? pvalues[2].u : 0);
-	      gcm_emit(&buffer,width > 3 ? pvalues[3].u : 0);
-	    }
-
-	    gcm_finish_commands(context,&buffer);
+	  for(program_t::uniform_size_type j = 0;j < count;++j,++index,pvalues += width) {
+	    //rsxgl_debug_printf("%u/%u %u: %u: %f %f %f %f\n",
+	    //	 j,count,width,
+	    //	 pvalues - values,
+	    //	 pvalues[0].f,pvalues[1].f,pvalues[2].f,pvalues[3].f);
+	    
+	    gcm_emit_method(&buffer,NV30_3D_VP_UPLOAD_CONST_ID,5);
+	    gcm_emit(&buffer,index);
+	    
+	    gcm_emit(&buffer,width > 0 ? pvalues[0].u : 0);
+	    gcm_emit(&buffer,width > 1 ? pvalues[1].u : 0);
+	    gcm_emit(&buffer,width > 2 ? pvalues[2].u : 0);
+	    gcm_emit(&buffer,width > 3 ? pvalues[3].u : 0);
 	  }
-	  else {
-	    const program_t::instruction_size_type * pfp_offsets = program.program_offsets + uniform.program_offsets_index;
-	    rsxgl_debug_printf("sampler uniform: %u vp offsets\n",(unsigned int)*pfp_offsets);
-	  }
+	  
+	  gcm_finish_commands(context,&buffer);
 	}
 	
 	if(uniform.invalid.test(RSXGL_FRAGMENT_SHADER)) {
@@ -662,26 +642,9 @@ rsxgl_uniforms_validate(rsxgl_context_t * ctx,program_t & program)
 	  const ieee32_t * pvalues = values + uniform.values_index;
 	  const program_t::instruction_size_type * pfp_offsets = program.program_offsets + uniform.program_offsets_index;
 
-	  if(!is_texture) {
-	    for(program_t::uniform_size_type j = 0;j < count;++j,pvalues += width) {
-	      for(program_t::instruction_size_type offsets_count = *pfp_offsets++;offsets_count > 0;--offsets_count,++pfp_offsets) {
-		rsxgl_inline_transfer(context,rsxgl_rsx_ucode_offset(program.fp_ucode_offset + *pfp_offsets++),width,pvalues);
-	      }
-	    }
-	  }
-	  else {
-	    pfp_offsets += (1 + *pfp_offsets);
-
-	    //rsxgl_debug_printf("invalid uniform sampler: %u %u %u\n",(uint32_t)count,(uint32_t)uniform.program_offsets_index,(uint32_t)*pfp_offsets);
-	    for(program_t::uniform_size_type j = 0;j < count;++j,pvalues += width) {
-	      // FP offsets:
-	      for(program_t::instruction_size_type offsets_count = *pfp_offsets++;offsets_count > 0;--offsets_count,++pfp_offsets) {
-		const program_t::instruction_size_type i_insn = *pfp_offsets++;
-		const program_t::fp_instruction_type * fp_ucode = rsxgl_rsx_ucode_address(program.fp_ucode_offset);
-		ieee32_t dword0;
-		dword0.u = ((fp_ucode[i_insn].dwords[0] << 16) | (fp_ucode[i_insn].dwords[0] >> 16)) & (~(uint32_t)NVFX_FP_OP_TEX_UNIT_MASK) | (pvalues -> u << NVFX_FP_OP_TEX_UNIT_SHIFT);
-		rsxgl_inline_transfer(context,rsxgl_rsx_ucode_offset(program.fp_ucode_offset + (i_insn * sizeof(program_t::fp_instruction_type))),width,&dword0);
-	      }
+	  for(program_t::uniform_size_type j = 0;j < count;++j,pvalues += width) {
+	    for(program_t::instruction_size_type offsets_count = *pfp_offsets++;offsets_count > 0;--offsets_count,++pfp_offsets) {
+	      rsxgl_inline_transfer(context,rsxgl_rsx_ucode_offset(program.fp_ucode_offset + *pfp_offsets++),width,pvalues);
 	    }
 	  }
 
@@ -691,13 +654,6 @@ rsxgl_uniforms_validate(rsxgl_context_t * ctx,program_t & program)
 	//rsxgl_debug_printf("\n");
 
 	uniform.invalid.reset();
-      }
-
-      if(is_texture) {
-	const ieee32_t * pvalues = values + uniform.values_index;
-	for(program_t::uniform_size_type j = 0;j < count;++j,++pvalues) {
-	  program.textures_enabled.set(pvalues -> u);
-	}
       }
     }
 

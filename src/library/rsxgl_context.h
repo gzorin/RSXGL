@@ -50,6 +50,7 @@ struct rsxgl_context_t {
   query_t::binding_type query_binding;
   
   program_t::binding_type program_binding;
+  program_t::texture_assignments_bitfield_type invalid_texture_assignments;
 
   // Used by glFinish():
   uint32_t ref;

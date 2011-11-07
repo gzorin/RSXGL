@@ -228,8 +228,8 @@ rsxgltest_init(int argc,const char ** argv)
   
   summarize_program("draw",program);
 
-  vertex_location = glGetAttribLocation(program,"inputvertex.vertex");
-  tc_location = glGetAttribLocation(program,"inputvertex.tc");
+  vertex_location = glGetAttribLocation(program,"vertex");
+  tc_location = glGetAttribLocation(program,"uv");
 
   ProjMatrix_location = glGetUniformLocation(program,"ProjMatrix");
   TransMatrix_location = glGetUniformLocation(program,"TransMatrix");

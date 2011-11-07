@@ -304,7 +304,7 @@ program_t::program_t()
 
   attrib_table().construct();
   uniform_table().construct();
-  texture_table().construct();
+  sampler_uniform_table().construct();
 
   for(size_t i = 0;i < RSXGL_MAX_VERTEX_ATTRIBS;++i) {
     attrib_binding(i).construct();
@@ -322,7 +322,7 @@ program_t::~program_t()
 
   attrib_table().destruct();
   uniform_table().destruct();
-  texture_table().destruct();
+  sampler_uniform_table().destruct();
 
   for(size_t i = 0;i < RSXGL_MAX_VERTEX_ATTRIBS;++i) {
     attrib_binding(i).destruct();
@@ -494,7 +494,7 @@ glGetProgramiv (GLuint program_name, GLenum pname, GLint *params)
   }
   else if(pname == GL_ACTIVE_UNIFORMS) {
     if(program.linked) {
-      *params = program.uniform_table_size + program.texture_table_size;
+      *params = program.uniform_table_size + program.sampler_uniform_table_size;
     }
     else {
       *params = 0;
@@ -735,7 +735,7 @@ glLinkProgram (GLuint program_name)
 
   static const std::string kNewline("\n");
 
-  //rsxgl_debug_printf("%s\n",__PRETTY_FUNCTION__);
+  rsxgl_debug_printf("%s\n",__PRETTY_FUNCTION__);
 
   // Some error checking - are there shaders attached, and do they have program binaries?
   for(size_t i = 0;i < RSXGL_MAX_SHADER_TYPES;++i) {
@@ -763,7 +763,7 @@ glLinkProgram (GLuint program_name)
   std::deque< const rsxProgramConst * > vp_consts, fp_consts;
 
   std::deque< std::pair< program_t::name_size_type, program_t::uniform_t > > uniforms;
-  std::deque< std::pair< program_t::name_size_type, program_t::texture_t > > textures;
+  std::deque< std::pair< program_t::name_size_type, program_t::sampler_uniform_t > > textures;
 
   // VP internal constants:
   std::deque< const rsxProgramConst * > vp_internal_consts;
@@ -974,13 +974,13 @@ glLinkProgram (GLuint program_name)
 
     program_t::vp_instruction_type * vp_ucode = rsxgl_main_ucode_address(program.vp_ucode_offset);
     for(program_t::instruction_size_type i = 0,n = vp -> num_insn;i < n;++i,++vp_ucode) {
-      uint32_t src_type = (vp_ucode -> dwords[2] >> NVFX_VP(INST_SRC0L_SHIFT)) & NVFX_VP(SRC_REG_TYPE_MASK);
+      uint32_t src_type = (vp_ucode -> words[2] >> NVFX_VP(INST_SRC0L_SHIFT)) & NVFX_VP(SRC_REG_TYPE_MASK);
 
       if(src_type == NVFX_VP(SRC_REG_TYPE_INPUT)) {
-	const uint32_t src_index = (vp_ucode -> dwords[1] & NVFX_VP(INST_INPUT_SRC_MASK)) >> NVFX_VP(INST_INPUT_SRC_SHIFT);
+	const uint32_t src_index = (vp_ucode -> words[1] & NVFX_VP(INST_INPUT_SRC_MASK)) >> NVFX_VP(INST_INPUT_SRC_SHIFT);
 	const uint32_t dst_index = attrib_binding[src_index];
-	vp_ucode -> dwords[1] &= ~NVFX_VP(INST_INPUT_SRC_MASK);
-	vp_ucode -> dwords[1] |= (dst_index << NVFX_VP(INST_INPUT_SRC_SHIFT)) & NVFX_VP(INST_INPUT_SRC_MASK);
+	vp_ucode -> words[1] &= ~NVFX_VP(INST_INPUT_SRC_MASK);
+	vp_ucode -> words[1] |= (dst_index << NVFX_VP(INST_INPUT_SRC_SHIFT)) & NVFX_VP(INST_INPUT_SRC_MASK);
       }
     }
   }
@@ -1184,6 +1184,10 @@ glLinkProgram (GLuint program_name)
 
   // Texture table:
   {
+    rsxgl_debug_printf("\ttexture table: %u vp textures, %u fp textures\n",vp_texture_attribs.size(),fp_texture_attribs.size());
+
+    program.textures_enabled.reset();
+
     std::deque< const rsxProgramAttrib * >::const_iterator
       vp_it0 = vp_texture_attribs.begin(), vp_it1 = vp_texture_attribs.end(),
       fp_it0 = fp_texture_attribs.begin(), fp_it1 = fp_texture_attribs.end();
@@ -1191,7 +1195,7 @@ glLinkProgram (GLuint program_name)
     int mode = (vp_texture_attribs.size() > 0 && fp_texture_attribs.size() > 0) ? 0 : ((vp_texture_attribs.size() > 0) ? 1 : ((fp_texture_attribs.size() > 0) ? 2 : 3));
     while(mode < 3) {
       const char * name = 0;
-      program_t::texture_t texture;
+      program_t::sampler_uniform_t texture;
       const rsxProgramAttrib * the_attrib = 0;
       int c = 0;
       
@@ -1212,6 +1216,9 @@ glLinkProgram (GLuint program_name)
 	
 	texture.vp_index = (*vp_it0) -> index;
 	texture.fp_index = (*fp_it0) -> index;
+
+	program.textures_enabled.set((*vp_it0) -> index);
+	program.textures_enabled.set(RSXGL_MAX_VERTEX_TEXTURE_IMAGE_UNITS + (*fp_it0) -> index);
 	
 	if(c <= 0) ++vp_it0;
 	if(c >= 0) ++fp_it0;
@@ -1222,15 +1229,19 @@ glLinkProgram (GLuint program_name)
 	the_attrib = *(vp_it0++);
 
 	texture.vp_index = the_attrib -> index;
-	texture.fp_index = ~0;
+	texture.fp_index = RSXGL_MAX_COMBINED_TEXTURE_IMAGE_UNITS;
+
+	program.textures_enabled.set(the_attrib -> index);
       }
       // 
       else if(mode == 2) {
 	name = reinterpret_cast< const char * >(fp) + (*fp_it0) -> name_off;
 	the_attrib = *(fp_it0++);
 	
-	texture.vp_index = ~0;
+	texture.vp_index = RSXGL_MAX_COMBINED_TEXTURE_IMAGE_UNITS;
 	texture.fp_index = the_attrib -> index;
+
+	program.textures_enabled.set(RSXGL_MAX_VERTEX_TEXTURE_IMAGE_UNITS + the_attrib -> index);
       }
 
       texture.type = the_attrib -> type;
@@ -1265,8 +1276,12 @@ glLinkProgram (GLuint program_name)
     }
 
     // Fill in textures table:
-    program.texture_table().resize(textures.size());
-    std::copy(textures.begin(),textures.end(),program.texture_table_values);
+    rsxgl_debug_printf("\ttotal of %u textures\n",textures.size());
+
+    program.sampler_uniform_table().resize(textures.size());
+    std::copy(textures.begin(),textures.end(),program.sampler_uniform_table_values);
+
+    rsxgl_debug_printf("\tdone with texture table\n");
   }
 
   // Link VP outputs to FP inputs (by patching VP microcode) (GLSL varying variables):
@@ -1353,7 +1368,7 @@ glLinkProgram (GLuint program_name)
 
     program_t::vp_instruction_type * vp_ucode = rsxgl_main_ucode_address(program.vp_ucode_offset);
     for(program_t::instruction_size_type i = 0,n = vp -> num_insn;i < n;++i,++vp_ucode) {
-      const uint32_t dword3 = vp_ucode -> dwords[3];
+      const uint32_t dword3 = vp_ucode -> words[3];
       uint32_t original_index = (dword3 & NV40_VP_INST_DEST_MASK);
 
       // Does this instruction write to some output register?
@@ -1377,13 +1392,13 @@ glLinkProgram (GLuint program_name)
 	  // This instruction outputs to a register that isn't consumed by the fragment program. So
 	  // replace the instruction with a NOP.
 	  if(linked_index == 0) {
-	    vp_ucode -> dwords[0] = 0;
-	    vp_ucode -> dwords[1] = 0;
-	    vp_ucode -> dwords[2] = 0;
-	    vp_ucode -> dwords[3] = 0;
+	    vp_ucode -> words[0] = 0;
+	    vp_ucode -> words[1] = 0;
+	    vp_ucode -> words[2] = 0;
+	    vp_ucode -> words[3] = 0;
 	  }
 	  else {
-	    vp_ucode -> dwords[3] = (dword3 & ~NV40_VP_INST_DEST_MASK) | ((linked_index << NV40_VP_INST_DEST_SHIFT) & NV40_VP_INST_DEST_MASK);
+	    vp_ucode -> words[3] = (dword3 & ~NV40_VP_INST_DEST_MASK) | ((linked_index << NV40_VP_INST_DEST_SHIFT) & NV40_VP_INST_DEST_MASK);
 
 	    if(linked_index == NV40_VP_INST_DEST_COL0) {
 	      vp_output_mask |= (1 << 0);
@@ -1522,8 +1537,31 @@ glUseProgram (GLuint program_name)
   }
 
   if(ctx -> program_binding.names[RSXGL_ACTIVE_PROGRAM] != program_name) {
+    const program_t::name_type prev_program_name = ctx -> program_binding.names[RSXGL_ACTIVE_PROGRAM];
+
     ctx -> program_binding.bind(RSXGL_ACTIVE_PROGRAM,program_name);
     ctx -> invalid.parts.program = 1;
+
+    if(prev_program_name != 0) {
+      const program_t::texture_assignments_bitfield_type
+	textures_enabled = program_t::storage().at(prev_program_name).textures_enabled;
+      const program_t::texture_assignments_type
+	prev_assignments = program_t::storage().at(prev_program_name).texture_assignments,
+	assignments = program_t::storage().at(program_name).texture_assignments;
+
+      program_t::texture_assignments_bitfield_type::const_iterator
+	enabled_it = textures_enabled.begin();
+      program_t::texture_assignments_type::const_iterator
+	prev_it = prev_assignments.begin(),
+	it = assignments.begin();
+
+      for(program_t::texture_size_type i = 0;i < program_t::texture_assignments_bitfield_type::size;++i,enabled_it.next(textures_enabled),prev_it.next(prev_assignments),it.next(assignments)) {
+	ctx -> invalid_texture_assignments.set(enabled_it.test() && (prev_it.value() != it.value()));
+      }
+    }
+    else {
+      ctx -> invalid_texture_assignments = ctx -> program_binding[RSXGL_ACTIVE_PROGRAM].textures_enabled;
+    }
   }
 
   RSXGL_NOERROR_();
@@ -1647,7 +1685,7 @@ glGetActiveUniform (GLuint program_name, GLuint index, GLsizei bufSize, GLsizei 
     RSXGL_NOERROR_();
   }
 
-  if(index >= (program.uniform_table_size + program.texture_table_size)) {
+  if(index >= (program.uniform_table_size + program.sampler_uniform_table_size)) {
     RSXGL_ERROR_(GL_INVALID_VALUE);
   }
 
@@ -1661,8 +1699,8 @@ glGetActiveUniform (GLuint program_name, GLuint index, GLsizei bufSize, GLsizei 
   else {
     const GLuint texture_index = index - program.uniform_table_size;
 
-    uniform_name = program.names_data + program.texture_table_values[texture_index].first;
-    uniform_type = program.texture_table_values[texture_index].second.type;
+    uniform_name = program.names_data + program.sampler_uniform_table_values[texture_index].first;
+    uniform_type = program.sampler_uniform_table_values[texture_index].second.type;
   }
 
   size_t n = std::min((size_t)bufSize - 1,(size_t)strlen(uniform_name));
@@ -1738,7 +1776,7 @@ glGetUniformLocation (GLuint program_name, const GLchar* name)
     RSXGL_NOERROR(tmp.second);
   }
   else {
-    const std::pair< bool, program_t::texture_size_type > tmp = program.texture_table().find(program.names(),name);
+    const std::pair< bool, program_t::texture_size_type > tmp = program.sampler_uniform_table().find(program.names(),name);
     RSXGL_NOERROR(tmp.first ? program.uniform_table_size + tmp.second : -1);
   }
 }
@@ -1795,10 +1833,10 @@ rsxgl_program_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
       const program_t::vp_instruction_type * ucode = rsxgl_main_ucode_address(program.vp_ucode_offset);
       for(size_t i = 0,n = program.vp_num_insn;i < n;++i,++ucode) {
 	gcm_emit_method(&buffer,NV30_3D_VP_UPLOAD_INST(0),4);
-	gcm_emit(&buffer,ucode -> dwords[0]);
-	gcm_emit(&buffer,ucode -> dwords[1]);
-	gcm_emit(&buffer,ucode -> dwords[2]);
-	gcm_emit(&buffer,ucode -> dwords[3]);
+	gcm_emit(&buffer,ucode -> words[0]);
+	gcm_emit(&buffer,ucode -> words[1]);
+	gcm_emit(&buffer,ucode -> words[2]);
+	gcm_emit(&buffer,ucode -> words[3]);
       }
       
       gcm_emit_method(&buffer,NV30_3D_VP_START_FROM_ID,1);

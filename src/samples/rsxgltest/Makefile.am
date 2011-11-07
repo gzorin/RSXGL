@@ -48,13 +48,13 @@ manycubes_objects = cube_vpo.o cube_fpo.o
 manycubes_sources = manycubes.cc cube.vert cube.frag
 
 texcube_objects = texcube_vpo.o texcube_fpo.o nagel_bin.o
-texcube_sources = texcube.cc texture.c texcube.vcg texcube.fcg nagel.bin
+texcube_sources = texcube.cc texture.c texcube.vert texcube.frag nagel.bin
 
 fbo_objects = fbo_inner_vpo.o fbo_inner_fpo.o nagel_bin.o
 fbo_sources = fbo.cc texture.c fbo_inner.vert fbo_inner.frag nagel.bin
 
-objects = $(manycubes_objects)
-sources = $(manycubes_sources)
+objects = $(texcube_objects)
+sources = $(texcube_sources)
 
 rsxgltest_elf_DEPENDENCIES = $(top_builddir)/src/library/libEGL.a $(top_builddir)/src/library/libGL.a	\
 	$(objects)

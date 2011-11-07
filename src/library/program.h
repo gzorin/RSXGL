@@ -204,7 +204,7 @@ struct program_t {
     uniform_size_type values_index, count, vp_index, program_offsets_index;
   };
 
-  struct texture_t {
+  struct sampler_uniform_t {
     uint8_t type;
     boost::uint_value_t< RSXGL_MAX_VERTEX_TEXTURE_IMAGE_UNITS >::least vp_index;
     boost::uint_value_t< RSXGL_MAX_TEXTURE_IMAGE_UNITS >::least fp_index;
@@ -212,15 +212,15 @@ struct program_t {
 
   typedef table< attrib_t, attrib_size_type > attrib_table_type;
   typedef table< uniform_t, uniform_size_type > uniform_table_type;
-  typedef table< texture_t, texture_size_type > texture_table_type;
+  typedef table< sampler_uniform_t, texture_size_type > sampler_uniform_table_type;
 
   attrib_table_type::size_type attrib_table_size;
   uniform_table_type::size_type uniform_table_size;
-  texture_table_type::size_type texture_table_size;
+  sampler_uniform_table_type::size_type sampler_uniform_table_size;
   
   attrib_table_type::pointer_type attrib_table_values;
   uniform_table_type::pointer_type uniform_table_values;
-  texture_table_type::pointer_type texture_table_values;
+  sampler_uniform_table_type::pointer_type sampler_uniform_table_values;
 
   name_size_type attrib_name_max_length, uniform_name_max_length;
 
@@ -230,8 +230,8 @@ struct program_t {
   uniform_table_type::type uniform_table() { return uniform_table_type::type(uniform_table_values,uniform_table_size); }
   uniform_table_type::const_type uniform_table() const { return uniform_table_type::const_type(uniform_table_values,uniform_table_size); }
 
-  texture_table_type::type texture_table() { return texture_table_type::type(texture_table_values,texture_table_size); }
-  texture_table_type::const_type texture_table() const { return texture_table_type::const_type(texture_table_values,texture_table_size); }
+  sampler_uniform_table_type::type sampler_uniform_table() { return sampler_uniform_table_type::type(sampler_uniform_table_values,sampler_uniform_table_size); }
+  sampler_uniform_table_type::const_type sampler_uniform_table() const { return sampler_uniform_table_type::const_type(sampler_uniform_table_values,sampler_uniform_table_size); }
 
   // Attribute bindings requested by glBindAttribLocation(). A string for each possible vertex attribute:
   typedef array< char, uint32_t > attrib_binding_type;
@@ -253,11 +253,11 @@ struct program_t {
   //
   // Type used to manipulate program instructions:
   union vp_instruction_type {
-    uint32_t dwords[4];
+    uint32_t words[4];
   };
 
   union fp_instruction_type {
-    uint32_t dwords[4];
+    uint32_t words[4];
   };
 
   // Type that can store instruction indices:
@@ -279,10 +279,11 @@ struct program_t {
   bit_set< RSXGL_MAX_VERTEX_ATTRIBS > attribs_enabled;
 
   // Textures that are enabled:
-  bit_set< RSXGL_MAX_COMBINED_TEXTURE_IMAGE_UNITS > textures_enabled;
+  typedef smint_array< RSXGL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, RSXGL_MAX_COMBINED_TEXTURE_IMAGE_UNITS > texture_assignments_type;
+  typedef bit_set< RSXGL_MAX_COMBINED_TEXTURE_IMAGE_UNITS > texture_assignments_bitfield_type;
 
-  smint_array< RSXGL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, RSXGL_MAX_TEXTURE_IMAGE_UNITS > fp_texture_assignments;
-  smint_array< RSXGL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, RSXGL_MAX_VERTEX_TEXTURE_IMAGE_UNITS > vp_texture_assignments;
+  texture_assignments_bitfield_type textures_enabled;
+  texture_assignments_type texture_assignments;
 
   // Storage for uniform variable values:
   ieee32_t * uniform_values;
