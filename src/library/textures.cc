@@ -2060,7 +2060,7 @@ rsxgl_textures_validate(rsxgl_context_t * ctx,program_t & program,const uint32_t
     validated;
 
   // Vertex program textures:
-  for(program_t::texture_size_type i = 0;i < RSXGL_MAX_VERTEX_TEXTURE_IMAGE_UNITS;++i,enabled_it.next(textures_enabled),invalid_it.next(invalid_texture_assignments),assignment_it.next(texture_assignments)) {
+  for(program_t::texture_size_type index = 0;index < RSXGL_MAX_VERTEX_TEXTURE_IMAGE_UNITS;++index,enabled_it.next(textures_enabled),invalid_it.next(invalid_texture_assignments),assignment_it.next(texture_assignments)) {
     if(!enabled_it.test()) continue;
 
     const texture_t::binding_type::size_type api_index = assignment_it.value();
@@ -2080,7 +2080,7 @@ rsxgl_textures_validate(rsxgl_context_t * ctx,program_t & program,const uint32_t
   }
 
   // Fragment program textures:
-  for(program_t::texture_size_type i = 0;i < RSXGL_MAX_TEXTURE_IMAGE_UNITS;++i,enabled_it.next(textures_enabled),invalid_it.next(invalid_texture_assignments),assignment_it.next(texture_assignments)) {
+  for(program_t::texture_size_type index = 0;index < RSXGL_MAX_TEXTURE_IMAGE_UNITS;++index,enabled_it.next(textures_enabled),invalid_it.next(invalid_texture_assignments),assignment_it.next(texture_assignments)) {
     if(!enabled_it.test()) continue;
 
     const texture_t::binding_type::size_type api_index = assignment_it.value();
@@ -2092,7 +2092,7 @@ rsxgl_textures_validate(rsxgl_context_t * ctx,program_t & program,const uint32_t
     }
 
     if(invalid_it.test() || invalid_samplers.test(api_index)) {
-      rsxgl_debug_printf("setting sampler %u from %u\n",i,api_index);
+      rsxgl_debug_printf("setting sampler %u from %u\n",index,api_index);
 
       const sampler_t & sampler = (ctx -> sampler_binding.names[api_index] != 0) ? ctx -> sampler_binding[api_index] : ctx -> texture_binding[api_index].sampler;
       
@@ -2116,10 +2116,10 @@ rsxgl_textures_validate(rsxgl_context_t * ctx,program_t & program,const uint32_t
       //
       uint32_t * buffer = gcm_reserve(context,4);
       
-      gcm_emit_method(&buffer,NV30_3D_TEX_FILTER(i),1);
+      gcm_emit_method(&buffer,NV30_3D_TEX_FILTER(index),1);
       gcm_emit(&buffer,filter);
       
-      gcm_emit_method(&buffer,NV30_3D_TEX_WRAP(i),1);
+      gcm_emit_method(&buffer,NV30_3D_TEX_WRAP(index),1);
       gcm_emit(&buffer,wrap | compare);
       
       gcm_finish_commands(context,&buffer);
@@ -2132,25 +2132,25 @@ rsxgl_textures_validate(rsxgl_context_t * ctx,program_t & program,const uint32_t
       rsxgl_texture_validate(ctx,texture,timestamp);
       
       if(texture.valid) {
-	rsxgl_debug_printf("setting texture %u from %u\n",i,api_index);
+	rsxgl_debug_printf("setting texture %u from %u\n",index,api_index);
 
 	// activate the texture:
 	uint32_t * buffer = gcm_reserve(context,11);
 	
-	gcm_emit_method(&buffer,NV30_3D_TEX_OFFSET(i),2);
+	gcm_emit_method(&buffer,NV30_3D_TEX_OFFSET(index),2);
 	gcm_emit(&buffer,texture.memory.offset);
 	gcm_emit(&buffer,texture.format);
 	
-	gcm_emit_method(&buffer,NV30_3D_TEX_ENABLE(i),1);
+	gcm_emit_method(&buffer,NV30_3D_TEX_ENABLE(index),1);
 	gcm_emit(&buffer,NV40_3D_TEX_ENABLE_ENABLE);
 	
-	gcm_emit_method(&buffer,NV30_3D_TEX_NPOT_SIZE(i),1);
+	gcm_emit_method(&buffer,NV30_3D_TEX_NPOT_SIZE(index),1);
 	gcm_emit(&buffer,((uint32_t)texture.size[0] << NV30_3D_TEX_NPOT_SIZE_W__SHIFT) | (uint32_t)texture.size[1]);
 	
-	gcm_emit_method(&buffer,NV40_3D_TEX_SIZE1(i),1);
+	gcm_emit_method(&buffer,NV40_3D_TEX_SIZE1(index),1);
 	gcm_emit(&buffer,((uint32_t)texture.size[2] << NV40_3D_TEX_SIZE1_DEPTH__SHIFT) | (uint32_t)texture.pitch);
 	
-	gcm_emit_method(&buffer,NV30_3D_TEX_SWIZZLE(i),1);
+	gcm_emit_method(&buffer,NV30_3D_TEX_SWIZZLE(index),1);
 	gcm_emit(&buffer,texture.remap);
 	
 	gcm_finish_commands(context,&buffer);
