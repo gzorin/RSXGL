@@ -4,6 +4,7 @@
 
 #define GL3_PROTOTYPES
 #include <GL3/gl3.h>
+#include <GL3/gl3ext.h>
 
 #include "rsxgltest.h"
 #include "math3d.h"
@@ -61,8 +62,6 @@ GLuint shaders[2] = { 0,0 };
 GLuint program = 0;
 
 GLint ProjMatrix_location = -1, TransMatrix_location = -1, color_location = -1, gl_InstanceID_location = -1, texture_location = -1;
-
-GLuint * client_indices = 0;
 
 #define DTOR(X) ((X)*0.01745329f)
 #define RTOD(d) ((d)*57.295788f)
@@ -268,9 +267,6 @@ rsxgltest_init(int argc,const char ** argv)
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,buffers[1]);
   glBufferData(GL_ELEMENT_ARRAY_BUFFER,sizeof(GLuint) * 6 * 2 * 3,indices,GL_STATIC_DRAW);
 
-  //client_indices = (GLuint *)malloc(sizeof(GLuint) * 6 * 2 * 3);
-  //memcpy(client_indices,indices,sizeof(GLuint) * 6 * 2 * 3);
-
   // Set up random cube positions:
   cube_translations = (float *)malloc(sizeof(float) * 3 * ncubes);
   float * pcube_translation = cube_translations;
@@ -285,7 +281,23 @@ rsxgltest_init(int argc,const char ** argv)
   glGenTextures(1,&texture);
   glBindTexture(GL_TEXTURE_1D,texture);
 
-  //glTexStorage1D(GL_TEXTURE_1D,0,GL_RGBA,ncubes,1);
+  glTexStorage1D(GL_TEXTURE_1D,1,GL_RGBA32F,ncubes);
+  
+  {
+    float * tmp = new float[ncubes * 4];
+    float * ptmp = tmp;
+
+    for(size_t i = 0;i < ncubes;++i,ptmp += 4) {
+      ptmp[0] = drand48();
+      ptmp[1] = drand48();
+      ptmp[2] = drand48();
+      ptmp[3] = 1.0f;
+    }
+
+    glTexSubImage1D(GL_TEXTURE_1D,0,0,ncubes,GL_BGRA,GL_FLOAT,tmp);
+
+    delete [] tmp;
+  }
 
   glTexParameteri(GL_TEXTURE_1D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);
   glTexParameteri(GL_TEXTURE_1D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
@@ -321,21 +333,6 @@ rsxgltest_draw()
   Eigen::Affine3f modelview = ViewMatrixInv * (Eigen::Affine3f::Identity() * rotmat);
   glUniformMatrix4fv(TransMatrix_location,1,GL_FALSE,modelview.data());
   glDrawElementsInstanced(GL_TRIANGLES,36,GL_UNSIGNED_INT,0,ncubes);
-  
-#if 0
-  //Eigen::Affine3f modelview = ViewMatrixInv * (Eigen::Affine3f::Identity() * rotmat);
-  //glUniformMatrix4fv(TransMatrix_location,1,GL_FALSE,modelview.data());
-
-  for(size_t i = 0;i < ncubes;++i,pcube_translation += 3) {
-    //Eigen::Affine3f modelview = ViewMatrixInv * (Eigen::Affine3f::Identity() * Eigen::Translation3f(pcube_translation[0],pcube_translation[1],pcube_translation[2]) * rotmat);
-    Eigen::Affine3f modelview = ViewMatrixInv * (Eigen::Affine3f::Identity() * rotmat);
-    glUniformMatrix4fv(TransMatrix_location,1,GL_FALSE,modelview.data());
-
-    glUniform1f(gl_InstanceID_location,(float)i);
-    glDrawElements(GL_TRIANGLES,36,GL_UNSIGNED_INT,0);
-    //glDrawElements(GL_TRIANGLES,36,GL_UNSIGNED_INT,client_indices);
-  }
-#endif
 
   return 1;
 }

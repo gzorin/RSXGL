@@ -965,6 +965,12 @@ rsxgl_tex_format(GLint internalformat)
   else if(internalformat == GL_DEPTH_COMPONENT32F) {
     return RSXGL_TEX_FORMAT_DEPTH24_D8_FLOAT;
   }
+  else if(internalformat == GL_RGBA32F) {
+    return RSXGL_TEX_FORMAT_W32_Z32_Y32_X32_FLOAT;
+  }
+  else if(internalformat == GL_R32F) {
+    return RSXGL_TEX_FORMAT_X32_FLOAT;
+  }
   else {
     return RSXGL_MAX_TEX_FORMATS;
   }
@@ -1478,7 +1484,7 @@ rsxgl_tex_storage(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,c
     ((texture.cube) ? NV30_3D_TEX_FORMAT_CUBIC : 0) |
     NV30_3D_TEX_FORMAT_NO_BORDER |
     ((uint32_t)texture.dims << NV30_3D_TEX_FORMAT_DIMS__SHIFT) |
-    ((uint32_t)(rsxgl_texture_nv40_format[texture.internalformat] | 0x80 | RSXGL_TEX_FORMAT_LN | (texture.rect ? RSXGL_TEX_FORMAT_UN : 0)) << NV30_3D_TEX_FORMAT_FORMAT__SHIFT) |
+    ((uint32_t)(rsxgl_texture_nv40_format[texture.internalformat] | RSXGL_TEX_FORMAT_LN | (texture.rect ? RSXGL_TEX_FORMAT_UN : 0)) << NV30_3D_TEX_FORMAT_FORMAT__SHIFT) |
     ((uint32_t)texture.max_level << NV40_3D_TEX_FORMAT_MIPMAP_COUNT__SHIFT)
     ;
 
@@ -1940,7 +1946,7 @@ rsxgl_texture_validate(rsxgl_context_t * ctx,texture_t & texture,const uint32_t 
 	  ((texture.cube) ? NV30_3D_TEX_FORMAT_CUBIC : 0) |
 	  NV30_3D_TEX_FORMAT_NO_BORDER |
 	  ((uint32_t)texture.dims << NV30_3D_TEX_FORMAT_DIMS__SHIFT) |
-	  ((uint32_t)(rsxgl_texture_nv40_format[texture.internalformat] | 0x80 | RSXGL_TEX_FORMAT_LN | (texture.rect ? RSXGL_TEX_FORMAT_UN : 0)) << NV30_3D_TEX_FORMAT_FORMAT__SHIFT) |
+	  ((uint32_t)(rsxgl_texture_nv40_format[texture.internalformat] | RSXGL_TEX_FORMAT_LN | (texture.rect ? RSXGL_TEX_FORMAT_UN : 0)) << NV30_3D_TEX_FORMAT_FORMAT__SHIFT) |
 	  ((uint32_t)texture.max_level << NV40_3D_TEX_FORMAT_MIPMAP_COUNT__SHIFT)
 	  ;
 	
@@ -2007,23 +2013,6 @@ rsxgl_textures_validate(rsxgl_context_t * ctx,program_t & program,const uint32_t
 {
   gcmContextData * context = ctx -> base.gcm_context;
 
-  // 0-20 texture units - these are API indices
-  // 0-4 vp textures, 0-16 fp textures - these are program indices
-  //
-  // walk through assignments
-  // - if the program index is used:
-  //   - map program index to API index
-  //   - see if texture for the API has changed
-  //   - if the assignment for that program index has changed, or if the texture for that API index has changed, then:
-  //     - send commands for the texture
-  //   - if the assignment for that program index has changed, or if the sampler for that API index has changed, then:
-  //     - send commands for the sampler
-  // if any used vp textures changed, then invalidate the caches
-  // if any used fp textures changed, then invalidate the caches
-  //
-  // How to validate textures themselves?
-  // Where/how are changed texture assignments stored? Preferably in a temporary (the changed bits)
-
   // Invalidate the texture cache.
   // TODO - determine when this is necessary to do, and only do it then.
   {
@@ -2073,8 +2062,55 @@ rsxgl_textures_validate(rsxgl_context_t * ctx,program_t & program,const uint32_t
 
     if(invalid_it.test() || invalid_samplers.test(api_index)) {
       validated.set(api_index);
+
+      // TODO - Set LOD min, max, bias:
     }
     if(invalid_it.test() || invalid_textures.test(api_index)) {
+      texture_t & texture = ctx -> texture_binding[api_index];
+
+      rsxgl_texture_validate(ctx,texture,timestamp);
+      
+      if(texture.valid) {
+	const uint32_t format = texture.format & (0x3 | NV30_3D_TEX_FORMAT_DIMS__MASK | NV30_3D_TEX_FORMAT_FORMAT__MASK | NV40_3D_TEX_FORMAT_MIPMAP_COUNT__MASK);
+	const uint32_t format_format = (format & NV30_3D_TEX_FORMAT_FORMAT__MASK);
+
+	static const uint32_t
+	  RGBA32F_format = (rsxgl_texture_nv40_format[RSXGL_TEX_FORMAT_W32_Z32_Y32_X32_FLOAT] << NV30_3D_TEX_FORMAT_FORMAT__SHIFT) | NV40_3D_TEX_FORMAT_LINEAR,
+	  R32F_format = (rsxgl_texture_nv40_format[RSXGL_TEX_FORMAT_X32_FLOAT] << NV30_3D_TEX_FORMAT_FORMAT__SHIFT) | NV40_3D_TEX_FORMAT_LINEAR;
+
+	if(format_format == RGBA32F_format || format_format == R32F_format) {
+	  // activate the texture:
+	  uint32_t * buffer = gcm_reserve(context,9);
+
+#define NVFX_VERTEX_TEX_OFFSET(INDEX) (0x00000900 + 0x20 * (INDEX))
+	  gcm_emit_method(&buffer,NVFX_VERTEX_TEX_OFFSET(index),2);
+	  gcm_emit(&buffer,texture.memory.offset);
+	  gcm_emit(&buffer,format);
+	  
+#define NVFX_VERTEX_TEX_ENABLE(INDEX) (0x0000090c + 0x20 * (INDEX))
+	  gcm_emit_method(&buffer,NVFX_VERTEX_TEX_ENABLE(index),1);
+	  gcm_emit(&buffer,NV40_3D_TEX_ENABLE_ENABLE);
+	  
+#define NVFX_VERTEX_TEX_NPOT_SIZE(INDEX) (0x00000918 + 0x20 * (INDEX))
+	  gcm_emit_method(&buffer,NVFX_VERTEX_TEX_NPOT_SIZE(index),1);
+	  gcm_emit(&buffer,((uint32_t)texture.size[0] << NV30_3D_TEX_NPOT_SIZE_W__SHIFT) | (uint32_t)texture.size[1]);
+	
+#define NVFX_VERTEX_TEX_SIZE1(INDEX) (0x00000910 + 0x20 * (INDEX))
+	  gcm_emit_method(&buffer,NVFX_VERTEX_TEX_SIZE1(index),1);
+	  gcm_emit(&buffer,(uint32_t)texture.pitch);
+	  
+	  gcm_finish_commands(context,&buffer);
+	}
+	else {
+	  uint32_t * buffer = gcm_reserve(context,2);
+
+	  gcm_emit_method(&buffer,NVFX_VERTEX_TEX_ENABLE(index),1);
+	  gcm_emit(&buffer,0);
+
+	  gcm_finish_commands(context,&buffer);
+	}
+      }
+
       validated.set(api_index);
     }
   }
@@ -2092,8 +2128,6 @@ rsxgl_textures_validate(rsxgl_context_t * ctx,program_t & program,const uint32_t
     }
 
     if(invalid_it.test() || invalid_samplers.test(api_index)) {
-      rsxgl_debug_printf("setting sampler %u from %u\n",index,api_index);
-
       const sampler_t & sampler = (ctx -> sampler_binding.names[api_index] != 0) ? ctx -> sampler_binding[api_index] : ctx -> texture_binding[api_index].sampler;
       
       const uint32_t wrap = 
@@ -2121,6 +2155,8 @@ rsxgl_textures_validate(rsxgl_context_t * ctx,program_t & program,const uint32_t
       
       gcm_emit_method(&buffer,NV30_3D_TEX_WRAP(index),1);
       gcm_emit(&buffer,wrap | compare);
+
+      // TODO - Set LOD min, max, bias:
       
       gcm_finish_commands(context,&buffer);
 
@@ -2132,8 +2168,6 @@ rsxgl_textures_validate(rsxgl_context_t * ctx,program_t & program,const uint32_t
       rsxgl_texture_validate(ctx,texture,timestamp);
       
       if(texture.valid) {
-	rsxgl_debug_printf("setting texture %u from %u\n",index,api_index);
-
 	// activate the texture:
 	uint32_t * buffer = gcm_reserve(context,11);
 	
@@ -2163,117 +2197,4 @@ rsxgl_textures_validate(rsxgl_context_t * ctx,program_t & program,const uint32_t
   ctx -> invalid_texture_assignments.reset();
   ctx -> invalid_samplers &= ~validated;
   ctx -> invalid_textures &= ~validated;
-
-#if 0
-  const bit_set< RSXGL_MAX_COMBINED_TEXTURE_IMAGE_UNITS > program_textures = program.textures_enabled;
-
-  const bit_set< RSXGL_MAX_COMBINED_TEXTURE_IMAGE_UNITS >
-    invalid_textures = program_textures & ctx -> invalid_textures,
-    invalid_samplers = program_textures & ctx -> invalid_samplers;
-
-  // Invalidate the texture cache.
-  // TODO - determine when this is necessary to do, and only do it then.
-  {
-    uint32_t * buffer = gcm_reserve(context,4);
-
-    // Fragment program textures:
-    gcm_emit_method_at(buffer,0,NV40_3D_TEX_CACHE_CTL,1);
-    gcm_emit_at(buffer,1,1);
-
-    // Vertex program textures:
-    gcm_emit_method_at(buffer,2,NV40_3D_TEX_CACHE_CTL,1);
-    gcm_emit_at(buffer,3,2);
-
-    gcm_finish_n_commands(context,4);
-  }
-
-  // Update texture timestamps:
-  for(size_t i = 0;i < RSXGL_MAX_COMBINED_TEXTURE_IMAGE_UNITS;++i) {
-    if(!program_textures.test(i)) continue;
-    const texture_t::name_type name = ctx -> texture_binding.names[i];
-    if(name == 0) continue;
-    texture_t & texture = ctx -> texture_binding[i];
-    rsxgl_assert(timestamp >= texture.timestamp);
-    texture.timestamp = timestamp;
-  }
-
-  if(invalid_samplers.any()) {
-    //rsxgl_debug_printf("%s: samplers\n",__PRETTY_FUNCTION__);
-    for(size_t i = 0;i < RSXGL_MAX_COMBINED_TEXTURE_IMAGE_UNITS;++i) {
-      if(invalid_samplers.test(i)) {
-	//rsxgl_debug_printf("\t%u\n",i);
-	const sampler_t & sampler = (ctx -> sampler_binding.names[i] != 0) ? ctx -> sampler_binding[i] : ctx -> texture_binding[i].sampler;
-
-	const uint32_t wrap = 
-	  ((uint32_t)(sampler.wrap_s + 1) << NV30_3D_TEX_WRAP_S__SHIFT) |
-	  ((uint32_t)(sampler.wrap_t + 1) << NV30_3D_TEX_WRAP_T__SHIFT) |
-	  ((uint32_t)(sampler.wrap_r + 1) << NV30_3D_TEX_WRAP_R__SHIFT)
-	  ;
-
-	const uint32_t compare =
-	  (uint32_t)sampler.compare_func << NV30_3D_TEX_WRAP_RCOMP__SHIFT
-	  ;
-	
-	const uint32_t filter =
-	  ((uint32_t)(sampler.filter_min + 1) << NV30_3D_TEX_FILTER_MIN__SHIFT) |
-	  ((uint32_t)(sampler.filter_mag + 1) << NV30_3D_TEX_FILTER_MAG__SHIFT) |
-	  // "convolution":
-	  ((uint32_t)1 << 13)
-	  ;
-	
-	//
-	uint32_t * buffer = gcm_reserve(context,4);
-	
-	gcm_emit_method(&buffer,NV30_3D_TEX_FILTER(i),1);
-	gcm_emit(&buffer,filter);
-	
-	gcm_emit_method(&buffer,NV30_3D_TEX_WRAP(i),1);
-	gcm_emit(&buffer,wrap | compare);
-	
-	gcm_finish_commands(context,&buffer);
-      }
-    }
-
-    ctx -> invalid_samplers &= ~invalid_samplers;
-  }
-
-  if(invalid_textures.any()) {
-    gcmContextData * context = ctx -> base.gcm_context;
-
-    //rsxgl_debug_printf("%s: textures\n",__PRETTY_FUNCTION__);
-    for(size_t i = 0;i < RSXGL_MAX_COMBINED_TEXTURE_IMAGE_UNITS;++i) {
-      if(invalid_textures.test(i)) {
-	//rsxgl_debug_printf("\t%u\n",i);
-	texture_t & texture = ctx -> texture_binding[i];
-
-	rsxgl_texture_validate(ctx,texture,timestamp);
-
-	if(texture.valid) {
-	  // activate the texture:
-	  uint32_t * buffer = gcm_reserve(context,11);
-	  
-	  gcm_emit_method(&buffer,NV30_3D_TEX_OFFSET(i),2);
-	  gcm_emit(&buffer,texture.memory.offset);
-	  gcm_emit(&buffer,texture.format);
-	  
-	  gcm_emit_method(&buffer,NV30_3D_TEX_ENABLE(i),1);
-	  gcm_emit(&buffer,NV40_3D_TEX_ENABLE_ENABLE);
-	  
-	  gcm_emit_method(&buffer,NV30_3D_TEX_NPOT_SIZE(i),1);
-	  gcm_emit(&buffer,((uint32_t)texture.size[0] << NV30_3D_TEX_NPOT_SIZE_W__SHIFT) | (uint32_t)texture.size[1]);
-	  
-	  gcm_emit_method(&buffer,NV40_3D_TEX_SIZE1(i),1);
-	  gcm_emit(&buffer,((uint32_t)texture.size[2] << NV40_3D_TEX_SIZE1_DEPTH__SHIFT) | (uint32_t)texture.pitch);
-	  
-	  gcm_emit_method(&buffer,NV30_3D_TEX_SWIZZLE(i),1);
-	  gcm_emit(&buffer,texture.remap);
-	  
-	  gcm_finish_commands(context,&buffer);
-	}
-      }
-    }
-
-    ctx -> invalid_textures &= ~invalid_textures;
-  }
-#endif
 }

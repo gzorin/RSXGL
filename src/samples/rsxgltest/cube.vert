@@ -14,9 +14,5 @@ main(void)
   float x = (rsxgl_InstanceID / 100.0) * 50.0 - 25.0;
   vec3 p = position + vec3(x,x,x);
   gl_Position = ProjMatrix * (TransMatrix * vec4(p,1));
-
-  //gl_Position = ProjMatrix * (TransMatrix * vec4(position,1));
-  //c = color;
-
-  c = texture1D(texture,rsxgl_InstanceID).rgb;
+  c = texture1D(texture,rsxgl_InstanceID / 100.0).rgb;
 }

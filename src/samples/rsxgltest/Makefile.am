@@ -55,8 +55,8 @@ texcube_sources = texcube.cc texture.c texcube.vert texcube.frag nagel.bin face.
 fbo_objects = fbo_inner_vpo.o fbo_inner_fpo.o nagel_bin.o
 fbo_sources = fbo.cc texture.c fbo_inner.vert fbo_inner.frag nagel.bin
 
-objects = $(texcube_objects)
-sources = $(texcube_sources)
+objects = $(manycubes_objects)
+sources = $(manycubes_sources)
 
 rsxgltest_elf_DEPENDENCIES = $(top_builddir)/src/library/libEGL.a $(top_builddir)/src/library/libGL.a	\
 	$(objects)
