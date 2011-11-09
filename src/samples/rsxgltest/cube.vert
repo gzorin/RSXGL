@@ -1,7 +1,7 @@
 attribute vec3 position;
 attribute vec3 color;
 
-uniform float rsxgl_InstanceID;
+uniform float rsxgl_InstanceID, ncubes;
 uniform mat4 ProjMatrix;
 uniform mat4 TransMatrix;
 uniform sampler1D texture;
@@ -11,8 +11,21 @@ varying vec3 c;
 void
 main(void)
 {
-  float x = (rsxgl_InstanceID / 100.0) * 50.0 - 25.0;
-  vec3 p = position + vec3(x,x,x);
-  gl_Position = ProjMatrix * (TransMatrix * vec4(p,1));
-  c = texture1D(texture,rsxgl_InstanceID / 100.0).rgb;
+  float _nvecs = ncubes * 4.0;
+  float _delta = 1.0 / _nvecs;
+  float _delta0 = 0.0 * _delta;
+  float _delta1 = 1.0 * _delta;
+  float _delta2 = 2.0 * _delta;
+  float _delta3 = 3.0 * _delta;
+
+  float i = (rsxgl_InstanceID * 4.0) / _nvecs;
+
+  mat4 m = mat4(texture1D(texture,i + _delta0),
+  		texture1D(texture,i + _delta1),
+  		texture1D(texture,i + _delta2),
+  		texture1D(texture,i + _delta3));
+
+  gl_Position = ProjMatrix * (TransMatrix * m * vec4(position,1));
+
+  c = vec3(0.5,0.5,0.5);
 }

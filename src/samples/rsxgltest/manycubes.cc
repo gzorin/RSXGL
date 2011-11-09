@@ -61,7 +61,7 @@ GLuint texture = 0;
 GLuint shaders[2] = { 0,0 };
 GLuint program = 0;
 
-GLint ProjMatrix_location = -1, TransMatrix_location = -1, color_location = -1, gl_InstanceID_location = -1, texture_location = -1;
+GLint ProjMatrix_location = -1, TransMatrix_location = -1, color_location = -1, ncubes_location = -1, texture_location = -1;
 
 #define DTOR(X) ((X)*0.01745329f)
 #define RTOD(d) ((d)*57.295788f)
@@ -80,9 +80,7 @@ Eigen::Affine3f ViewMatrixInv =
 		   )
 		  ).inverse();
 
-const GLuint ncubes = 256;
-
-float * cube_translations = 0;
+const GLuint ncubes = 100;
 
 extern "C"
 void
@@ -131,18 +129,19 @@ rsxgltest_init(int argc,const char ** argv)
 
   ProjMatrix_location = glGetUniformLocation(program,"ProjMatrix");
   TransMatrix_location = glGetUniformLocation(program,"TransMatrix");
-  gl_InstanceID_location = glGetUniformLocation(program,"rsxgl_InstanceID");
+  ncubes_location = glGetUniformLocation(program,"ncubes");
   texture_location = glGetUniformLocation(program,"texture");
 
   tcp_printf("vertex_location: %i\n",vertex_location);
   tcp_printf("color_location: %i\n",color_location);
-  tcp_printf("ProjMatrix_location: %i TransMatrix_location: %i gl_InstanceID_location: %i texture_location: %i\n",
-	     ProjMatrix_location,TransMatrix_location,gl_InstanceID_location,texture_location);
+  tcp_printf("ProjMatrix_location: %i TransMatrix_location: %i ncubes_location: %i texture_location: %i\n",
+	     ProjMatrix_location,TransMatrix_location,ncubes_location,texture_location);
 
   glUseProgram(program);
 
   glUniformMatrix4fv(ProjMatrix_location,1,GL_FALSE,ProjMatrix.data());
 
+  glUniform1f(ncubes_location,(float)ncubes);
   glUniform1i(texture_location,0);
 
   // Set up us the vertex data:
@@ -267,34 +266,26 @@ rsxgltest_init(int argc,const char ** argv)
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,buffers[1]);
   glBufferData(GL_ELEMENT_ARRAY_BUFFER,sizeof(GLuint) * 6 * 2 * 3,indices,GL_STATIC_DRAW);
 
-  // Set up random cube positions:
-  cube_translations = (float *)malloc(sizeof(float) * 3 * ncubes);
-  float * pcube_translation = cube_translations;
-
-  for(size_t i = 0;i < ncubes;++i,pcube_translation += 3) {
-    pcube_translation[0] = (drand48() * 5.0) - 2.5;
-    pcube_translation[1] = (drand48() * 5.0) - 2.5;
-    pcube_translation[2] = (drand48() * 5.0) - 2.5;
-  }
-
   // the texture:
   glGenTextures(1,&texture);
   glBindTexture(GL_TEXTURE_1D,texture);
 
-  glTexStorage1D(GL_TEXTURE_1D,1,GL_RGBA32F,ncubes);
+  glTexStorage1D(GL_TEXTURE_1D,1,GL_RGBA32F,ncubes * 4);
   
   {
-    float * tmp = new float[ncubes * 4];
+    float * tmp = new float[ncubes * 16];
     float * ptmp = tmp;
 
-    for(size_t i = 0;i < ncubes;++i,ptmp += 4) {
-      ptmp[0] = drand48();
-      ptmp[1] = drand48();
-      ptmp[2] = drand48();
-      ptmp[3] = 1.0f;
+    for(unsigned int i = 0;i < ncubes;++i,ptmp += 16) {
+      const float x = (float)(i % 10) / 10.0 * 30.0 - 15.0;
+      const float y = (float)(i / 10) / 10.0 * 30.0 - 15.0;
+      const float z = 0.0;
+
+      Eigen::Affine3f m = Eigen::Affine3f::Identity() * Eigen::Translation3f(x,y,z);
+      memcpy(ptmp,m.data(),sizeof(float) * 16);
     }
 
-    glTexSubImage1D(GL_TEXTURE_1D,0,0,ncubes,GL_BGRA,GL_FLOAT,tmp);
+    glTexSubImage1D(GL_TEXTURE_1D,0,0,ncubes * 4,GL_BGRA,GL_FLOAT,tmp);
 
     delete [] tmp;
   }
@@ -327,8 +318,6 @@ rsxgltest_draw()
     Eigen::AngleAxisf(DTOR(xyz[2]) * 360.0f,Eigen::Vector3f::UnitZ()) *
     Eigen::AngleAxisf(DTOR(xyz[1]) * 360.0f,Eigen::Vector3f::UnitY()) *
     Eigen::AngleAxisf(DTOR(xyz[0]) * 360.0f,Eigen::Vector3f::UnitX());
-
-  float const * pcube_translation = cube_translations;
 
   Eigen::Affine3f modelview = ViewMatrixInv * (Eigen::Affine3f::Identity() * rotmat);
   glUniformMatrix4fv(TransMatrix_location,1,GL_FALSE,modelview.data());
