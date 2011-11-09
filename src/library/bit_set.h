@@ -21,6 +21,8 @@ public:
   typedef smint_array< 1, N, MaxType > base_type;
   typedef typename base_type::word_type word_type;
 
+  static const size_t size = base_type::size;
+
   bit_set() {
   }
 

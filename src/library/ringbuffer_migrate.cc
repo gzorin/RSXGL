@@ -109,7 +109,7 @@ rsxgl_ringbuffer_migrate_memalign(gcmContextData *,const rsx_size_t align,const 
 }
 
 void
-rsxgl_ringbuffer_migrate_free(gcmContextData * context,const rsx_ptr_t ptr,const rsx_size_t size)
+rsxgl_ringbuffer_migrate_free(gcmContextData * context,const_rsx_ptr_t ptr,const rsx_size_t size)
 {
   rsxgl_assert(_rsxgl_migrate_buffer != 0);
   rsxgl_assert(rsxgl_migrate_sync != 0);

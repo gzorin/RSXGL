@@ -57,10 +57,10 @@ struct _opcode
 	{ "STR", OPCODE_STR,{ 0, 1,-1},2,false },
 	{ "SUB", OPCODE_SUB,{ 0, 2,-1},2,false },
 	{ "SWZ", OPCODE_SWZ,{ 0, 2,-1},2,false },
-	{ "TEX", OPCODE_TEX,{ 0, 1,-1},2,false },
-	{ "TXB", OPCODE_TXB,{ 0, 1,-1},2,false },
-	{ "TXL", OPCODE_TXL,{ 0, 1,-1},2,false },
-	{ "TXP", OPCODE_TXP,{ 0, 1,-1},2,false },
+	{ "TEX", OPCODE_TEX,{ 0, -1,-1},1,false },
+	{ "TXB", OPCODE_TXB,{ 0, -1,-1},1,false },
+	{ "TXL", OPCODE_TXL,{ 0, -1,-1},1,false },
+	{ "TXP", OPCODE_TXP,{ 0, -1,-1},1,false },
 	{ "XPD", OPCODE_XPD,{ 0, 1,-1},2,false },
 	// end
 	{ "END", OPCODE_END,{},0,false}
@@ -298,6 +298,18 @@ void CVPParser::ParseInstruction(struct nvfx_insn *insn,opcode *opc,const char *
 	for(i=0;i<opc->nr_src;i++) {
 		token = SkipSpaces(strtok(NULL,","));
 		ParseSwizzledSrcReg(token,&insn->src[opc->src_slots[i]]);
+	}
+
+	if(opc->opcode == OPCODE_TEX) {
+	  uint8_t unit = ~0, target = ~0;
+
+	  token = SkipSpaces(strtok(NULL,","));
+	  ParseTextureUnit(token,&unit);
+	  
+	  token = SkipSpaces(strtok(NULL,","));
+	  ParseTextureTarget(token,&target);
+
+	  insn->src[1] = nvfx_src(nvfx_reg(NVFXSR_VPTEXINPUT,unit));
 	}
 }
 

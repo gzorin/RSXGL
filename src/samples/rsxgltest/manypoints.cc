@@ -10,13 +10,16 @@
 #include "sine_wave.h"
 
 #include <stddef.h>
-#include "manypoints_vpo.h"
-#include "manypoints_fpo.h"
+#include "points_vpo.h"
+#include "points_fpo.h"
 
 #include <io/pad.h>
 
 #include <math.h>
 #include <Eigen/Geometry>
+
+#include "texture.h"
+#include "face_png.h"
 
 const char * rsxgltest_name = "manypoints";
 
@@ -58,9 +61,12 @@ GLuint buffers[2] = { 0,0 };
 GLuint shaders[2] = { 0,0 };
 GLuint program = 0;
 
-GLint ProjMatrix_location = -1, TransMatrix_location = -1, color_location = -1;
+Image image;
+GLuint texture = 0;
 
-const GLuint npoints = 1000 * 16;
+GLint ProjMatrix_location = -1, TransMatrix_location = -1, color_location = -1, texture_location = -1;
+
+const GLuint npoints = 1000;
 
 #define DTOR(X) ((X)*0.01745329f)
 #define RTOD(d) ((d)*57.295788f)
@@ -110,8 +116,8 @@ rsxgltest_init(int argc,const char ** argv)
   glAttachShader(program,shaders[1]);
 
   // Supply shader binaries:
-  glShaderBinary(1,shaders,0,manypoints_vpo,manypoints_vpo_size);
-  glShaderBinary(1,shaders + 1,0,manypoints_fpo,manypoints_fpo_size);
+  glShaderBinary(1,shaders,0,points_vpo,points_vpo_size);
+  glShaderBinary(1,shaders + 1,0,points_fpo,points_fpo_size);
 
   // Link the program for real:
   glLinkProgram(program);
@@ -120,21 +126,25 @@ rsxgltest_init(int argc,const char ** argv)
   summarize_program("draw",program);
 
   GLint 
-    vertex_location = glGetAttribLocation(program,"inputvertex.vertex");
+    vertex_location = glGetAttribLocation(program,"position");
 
-  color_location = glGetAttribLocation(program,"inputvertex.color");
+  color_location = glGetAttribLocation(program,"color");
 
   ProjMatrix_location = glGetUniformLocation(program,"ProjMatrix");
   TransMatrix_location = glGetUniformLocation(program,"TransMatrix");
+  texture_location = glGetUniformLocation(program,"texture");
 
   tcp_printf("vertex_location: %i\n",vertex_location);
   tcp_printf("color_location: %i\n",color_location);
   tcp_printf("ProjMatrix_location: %i TransMatrix_location: %i\n",
 	     ProjMatrix_location,TransMatrix_location);
+  tcp_printf("texture_location: %i\n",texture_location);
 
   glUseProgram(program);
 
   glUniformMatrix4fv(ProjMatrix_location,1,GL_FALSE,ProjMatrix.data());
+
+  glUniform1i(texture_location,0);
 
   // Set up us the vertex data:
   glGenBuffers(2,buffers);
@@ -144,7 +154,6 @@ rsxgltest_init(int argc,const char ** argv)
   glBufferData(GL_ARRAY_BUFFER,sizeof(float) * 3 * 2 * npoints,0,GL_STATIC_DRAW);
 
   float * geometry = (float *)glMapBuffer(GL_ARRAY_BUFFER,GL_WRITE_ONLY);
-  tcp_printf("geometry: %x\n",(uint32_t)((uint64_t)geometry));
 
   for(size_t i = 0;i < npoints;++i,geometry += 6) {
     geometry[0] = drand48() * 5.0 - 2.5;
@@ -157,14 +166,25 @@ rsxgltest_init(int argc,const char ** argv)
 
   glUnmapBuffer(GL_ARRAY_BUFFER);
 
-  tcp_printf("\twrote the geometry\n");
-
   glEnableVertexAttribArray(vertex_location);
-  glEnableVertexAttribArray(color_location);
+  //glEnableVertexAttribArray(color_location);
   glVertexAttribPointer(vertex_location,3,GL_FLOAT,GL_FALSE,sizeof(float) * 3 * 2,0);
-  glVertexAttribPointer(color_location,3,GL_FLOAT,GL_FALSE,sizeof(float) * 3 * 2,(const GLvoid *)(sizeof(float) * 3));
+  //glVertexAttribPointer(color_location,3,GL_FLOAT,GL_FALSE,sizeof(float) * 3 * 2,(const GLvoid *)(sizeof(float) * 3));
+  glPointSize(64);
 
   glBindBuffer(GL_ARRAY_BUFFER,0);
+
+  // Texture map:
+  image = loadPng(face_png);
+  tcp_printf("image size: %u %u\n",image.width,image.height);
+
+  glGenTextures(1,&texture);
+  glBindTexture(GL_TEXTURE_2D,texture);
+
+  glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,image.width,image.height,0,GL_BGRA,GL_UNSIGNED_BYTE,image.data);
+
+  glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
 }
 
 extern "C"
@@ -197,10 +217,7 @@ rsxgltest_draw()
     glUniformMatrix4fv(TransMatrix_location,1,GL_FALSE,modelview.data());
 
     glDrawArrays(GL_POINTS,0,npoints);
-    glFlush();
   }
-
-  //glFinish();
 
   return 1;
 }

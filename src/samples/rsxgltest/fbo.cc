@@ -310,8 +310,8 @@ rsxgltest_init(int argc,const char ** argv)
   glVertexAttribPointer(normal_location,3,GL_FLOAT,GL_FALSE,sizeof(float) * 8,(const GLvoid *)(sizeof(float) * 3));
   glVertexAttribPointer(tc_location,2,GL_FLOAT,GL_FALSE,sizeof(float) * 8,(const GLvoid *)(sizeof(float) * 6));
 
-  //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,buffers[1]);
-  //glBufferData(GL_ELEMENT_ARRAY_BUFFER,sizeof(GLuint) * 6 * 2 * 3,indices,GL_STATIC_DRAW);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,buffers[1]);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER,sizeof(GLuint) * 6 * 2 * 3,indices,GL_STATIC_DRAW);
 
   client_indices = (GLuint *)malloc(sizeof(GLuint) * 6 * 2 * 3);
   memcpy(client_indices,indices,sizeof(GLuint) * 6 * 2 * 3);
@@ -333,7 +333,8 @@ rsxgltest_init(int argc,const char ** argv)
   // rendering surface:
   glBindTexture(GL_TEXTURE_2D,textures[1]);
 
-  glTexStorage2D(GL_TEXTURE_2D,1,GL_RGBA,image.width,image.height);
+  //glTexStorage2D(GL_TEXTURE_2D,1,GL_RGBA,image.width,image.height);
+  glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,image.width,image.height,0,GL_BGRA,GL_UNSIGNED_BYTE,0);
 
   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
@@ -405,7 +406,7 @@ rsxgltest_draw()
 
   {
     glUniformMatrix4fv(ProjMatrix_location,1,GL_FALSE,ProjMatrix2.data());
-    glDrawElements(GL_TRIANGLES,36,GL_UNSIGNED_INT,client_indices);
+    glDrawElements(GL_TRIANGLES,36,GL_UNSIGNED_INT,0 /*client_indices*/);
   }
 
   //
@@ -419,7 +420,7 @@ rsxgltest_draw()
 
   {
     glUniformMatrix4fv(ProjMatrix_location,1,GL_FALSE,ProjMatrix.data());
-    glDrawElements(GL_TRIANGLES,36,GL_UNSIGNED_INT,client_indices);
+    glDrawElements(GL_TRIANGLES,36,GL_UNSIGNED_INT,0 /*client_indices*/);
   }
 
   return 1;

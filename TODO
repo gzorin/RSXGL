@@ -1,6 +1,6 @@
-- Instanced rendering
+x Instanced rendering
 
-- Framebuffer objects
+x Framebuffer objects
 
 x glMapBuffer* should block if an operation on the buffer is still pending.
 
@@ -11,6 +11,8 @@ x glMapBuffer* should block if an operation on the buffer is still pending.
 - (Finish) object "orphaning"
   - Programs orphanable
   - Disposal of orphaned objects
+
+- Flushing and orphan cleanup policy
 
 x Handle timestamp overflow
 
@@ -47,6 +49,6 @@ x Add libstdc++.a to libGL.a, so that client code doesn't need to use g++ to
 
 - oglsamples
 
-- Flushing and orphan cleanup policy
+x Vertex program textures
 
-- Vertex program textures
+- Query objects

@@ -245,6 +245,9 @@ void CCompiler::Compile(CParser *pParser)
 				tmp_insn = arith_ctor(insn,insn->dst,insn->src[0],none,neg(insn->src[2]));
 				emit_insn(gen_op(ADD,VEC),&tmp_insn);
 				break;
+		case OPCODE_TEX:
+		  emit_insn(gen_op(TXL,VEC),insn);
+		  break;
 			case OPCODE_END:
 				if(m_nInstructions) m_pInstructions[m_nCurInstruction].data[3] |= NVFX_VP_INST_LAST;
 				else {
@@ -392,8 +395,8 @@ void CCompiler::emit_src(u32 *hw, u8 pos, struct nvfx_src *src)
 
 	switch(src->reg.type) {
 		case NVFXSR_TEMP:
-			sr |= (NVFX_VP(SRC_REG_TYPE_TEMP) << NVFX_VP(SRC_REG_TYPE_SHIFT));
-			sr |= (src->reg.index << NVFX_VP(SRC_TEMP_SRC_SHIFT));
+		  sr |= (NVFX_VP(SRC_REG_TYPE_TEMP) << NVFX_VP(SRC_REG_TYPE_SHIFT));
+		  sr |= (src->reg.index << NVFX_VP(SRC_TEMP_SRC_SHIFT));
 			break;
 		case NVFXSR_INPUT:
 			sr |= (NVFX_VP(SRC_REG_TYPE_INPUT) <<
@@ -412,6 +415,11 @@ void CCompiler::emit_src(u32 *hw, u8 pos, struct nvfx_src *src)
 			sr |= (NVFX_VP(SRC_REG_TYPE_INPUT) <<
 				   NVFX_VP(SRC_REG_TYPE_SHIFT));
 			break;
+
+	case NVFXSR_VPTEXINPUT:
+	  sr |= (NVFX_VP(SRC_REG_TYPE_INPUT) << NVFX_VP(SRC_REG_TYPE_SHIFT));
+	  sr |= (src->reg.index << NVFX_VP(SRC_TEMP_SRC_SHIFT));
+	  break;
 	}
 
 	if (src->negate)
@@ -441,6 +449,7 @@ void CCompiler::emit_src(u32 *hw, u8 pos, struct nvfx_src *src)
 			hw[2] |= ((sr & NVFX_VP(SRC0_LOW_MASK)) << NVFX_VP(INST_SRC0L_SHIFT));
 			break;
 		case 1:
+		  
 			hw[2] |= (sr << NVFX_VP(INST_SRC1_SHIFT));
 			break;
 		case 2:

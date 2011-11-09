@@ -198,6 +198,8 @@ int compileVP(std::istream & in,std::ostream & out)
       dstcodeptr[n+1] = SWAP32(vpi[i].data[1]);
       dstcodeptr[n+2] = SWAP32(vpi[i].data[2]);
       dstcodeptr[n+3] = SWAP32(vpi[i].data[3]);
+
+      const uint32_t opcode = (vpi[i].data[1] & NV40_VP_INST_VEC_OPCODE_MASK) >> NV40_VP_INST_VEC_OPCODE_SHIFT;
     }
 
     out.write((const char *)vertexprogram,lastoff);
@@ -235,10 +237,11 @@ int compileFP(std::istream & in,std::ostream & out)
     fp->magic = SWAP16(magic);
     fp->num_regs = SWAP32(compiler.GetNumRegs());
     fp->fp_control = SWAP32(compiler.GetFPControl());
+
     fp->texcoords = SWAP16(compiler.GetTexcoords());
     fp->texcoord2D = SWAP16(compiler.GetTexcoord2D());
     fp->texcoord3D = SWAP16(compiler.GetTexcoord3D());
-    
+
     while(lastoff&3)
       fragmentprogram[lastoff++] = 0;
 
@@ -361,6 +364,13 @@ int compileFP(std::istream & in,std::ostream & out)
 
       const uint32_t opcode = (fpi[i].data[0] & NVFX_FP_OP_OPCODE_MASK) >> NVFX_FP_OP_OPCODE_SHIFT;
       const uint32_t outreg = (fpi[i].data[0] & NVFX_FP_OP_OUT_REG_MASK) >> NVFX_FP_OP_OUT_REG_SHIFT;
+
+      const uint32_t srcs[4] = {
+	(fpi[i].data[0] & NVFX_FP_OP_INPUT_SRC_MASK) >> NVFX_FP_OP_INPUT_SRC_SHIFT,
+	(fpi[i].data[1] & NVFX_FP_OP_INPUT_SRC_MASK) >> NVFX_FP_OP_INPUT_SRC_SHIFT,
+	(fpi[i].data[2] & NVFX_FP_OP_INPUT_SRC_MASK) >> NVFX_FP_OP_INPUT_SRC_SHIFT,
+	(fpi[i].data[3] & NVFX_FP_OP_INPUT_SRC_MASK) >> NVFX_FP_OP_INPUT_SRC_SHIFT
+      };
     }
     
     out.write((const char *)fragmentprogram,lastoff);

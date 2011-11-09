@@ -20,6 +20,8 @@
 
 #include "texture.h"
 #include "nagel_bin.h"
+#include "face_png.h"
+#include "gradient_png.h"
 
 const char * rsxgltest_name = "texcube";
 
@@ -57,11 +59,11 @@ GLuint vao = 0;
 GLuint buffers[2] = { 0,0 };
 GLuint shaders[2] = { 0,0 };
 
-Image image;
-GLuint texture = 0;
+Image nagel_image, face_image, gradient_image;
+GLuint textures[3] = { 0,0,0 };
 GLuint program = 0;
 
-GLint ProjMatrix_location = -1, TransMatrix_location = -1, vertex_location = -1, tc_location = -1, texture_location = -1;
+GLint ProjMatrix_location = -1, TransMatrix_location = -1, vertex_location = -1, tc_location = -1, image_location = -1, gradient_location = -1;
 
 const float geometry[] = {
     // -X
@@ -228,24 +230,26 @@ rsxgltest_init(int argc,const char ** argv)
   
   summarize_program("draw",program);
 
-  vertex_location = glGetAttribLocation(program,"inputvertex.vertex");
-  tc_location = glGetAttribLocation(program,"inputvertex.tc");
+  vertex_location = glGetAttribLocation(program,"vertex");
+  tc_location = glGetAttribLocation(program,"uv");
 
   ProjMatrix_location = glGetUniformLocation(program,"ProjMatrix");
   TransMatrix_location = glGetUniformLocation(program,"TransMatrix");
-  texture_location = glGetUniformLocation(program,"texture");
+  image_location = glGetUniformLocation(program,"image");
+  gradient_location = glGetUniformLocation(program,"gradient");
 
   tcp_printf("vertex_location: %i\n",vertex_location);
   tcp_printf("tc_location: %i\n",tc_location);
   tcp_printf("ProjMatrix_location: %i TransMatrix_location: %i\n",
 	     ProjMatrix_location,TransMatrix_location);
-  tcp_printf("texture_location: %i\n",texture_location);
+  tcp_printf("image_location: %i gradient_location: %i\n",image_location,gradient_location);
 
   glUseProgram(program);
 
   glUniformMatrix4fv(ProjMatrix_location,1,GL_FALSE,ProjMatrix.data());
 
-  glUniform1i(texture_location,0);
+  glUniform1i(image_location,0);
+  glUniform1i(gradient_location,2);
 
   // Set up us the vertex data:
   glGenBuffers(2,buffers);
@@ -265,13 +269,35 @@ rsxgltest_init(int argc,const char ** argv)
   memcpy(client_indices,indices,sizeof(GLuint) * 6 * 2 * 3);
 
   // Texture map:
-  image = loadPng(nagel_bin);
-  tcp_printf("image size: %u %u\n",image.width,image.height);
+  nagel_image = loadPng(nagel_bin);
+  face_image = loadPng(face_png);
+  gradient_image = loadPng(gradient_png);
 
-  glGenTextures(1,&texture);
-  glBindTexture(GL_TEXTURE_2D,texture);
+  glGenTextures(3,textures);
 
-  glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,image.width,image.height,0,GL_BGRA,GL_UNSIGNED_BYTE,image.data);
+  //
+  glActiveTexture(GL_TEXTURE0);
+
+  glBindTexture(GL_TEXTURE_2D,textures[0]);
+  glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,nagel_image.width,nagel_image.height,0,GL_BGRA,GL_UNSIGNED_BYTE,nagel_image.data);
+
+  glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+
+  //
+  glActiveTexture(GL_TEXTURE1);
+
+  glBindTexture(GL_TEXTURE_2D,textures[1]);
+  glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,face_image.width,face_image.height,0,GL_BGRA,GL_UNSIGNED_BYTE,face_image.data);
+
+  glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+
+  //
+  glActiveTexture(GL_TEXTURE2);
+
+  glBindTexture(GL_TEXTURE_2D,textures[2]);
+  glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,gradient_image.width,gradient_image.height,0,GL_BGRA,GL_UNSIGNED_BYTE,gradient_image.data);
 
   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
@@ -281,6 +307,8 @@ extern "C"
 int
 rsxgltest_draw()
 {
+  tcp_printf("%s\n",__PRETTY_FUNCTION__);
+
   float rgb[3] = {
     compute_sine_wave(rgb_waves,rsxgltest_elapsed_time),
     compute_sine_wave(rgb_waves + 1,rsxgltest_elapsed_time),
@@ -303,11 +331,25 @@ rsxgltest_draw()
     Eigen::AngleAxisf(DTOR(xyz[0]) * 360.0f,Eigen::Vector3f::UnitX());
 
   {
-    Eigen::Affine3f modelview = ViewMatrixInv * (Eigen::Affine3f::Identity() * rotmat * Eigen::UniformScaling< float >(3.0));
+    //glActiveTexture(GL_TEXTURE0);
+    //glBindTexture(GL_TEXTURE_2D,textures[0]);
+    glUniform1i(image_location,0);
+
+    Eigen::Affine3f modelview = ViewMatrixInv * (Eigen::Affine3f::Identity() * Eigen::Translation3f(-5,0,0) * rotmat * Eigen::UniformScaling< float >(3.0));
     glUniformMatrix4fv(TransMatrix_location,1,GL_FALSE,modelview.data());
 
     glDrawElements(GL_TRIANGLES,36,GL_UNSIGNED_INT,client_indices);
-    glFinish();
+  }
+
+  {
+    //glActiveTexture(GL_TEXTURE0);
+    //glBindTexture(GL_TEXTURE_2D,textures[1]);
+    glUniform1i(image_location,1);
+
+    Eigen::Affine3f modelview = ViewMatrixInv * (Eigen::Affine3f::Identity() * Eigen::Translation3f(5,0,0) * rotmat * Eigen::UniformScaling< float >(3.0));
+    glUniformMatrix4fv(TransMatrix_location,1,GL_FALSE,modelview.data());
+
+    glDrawElements(GL_TRIANGLES,36,GL_UNSIGNED_INT,client_indices);
   }
 
   return 1;

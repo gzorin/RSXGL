@@ -27,10 +27,12 @@ struct smint_array
 {
 public:
 
+  static const size_t size = N;
+
   static const size_t value_bits = boost::static_log2< M >::value + 1;
 
   // Total number of bits required:
-  static const size_t total_bits = value_bits * N;
+  static const size_t total_bits = value_bits * size;
 
   // Maximum number of bits stored in an integer:
   static const size_t max_bits = std::numeric_limits< MaxType >::digits;
@@ -63,7 +65,7 @@ public:
   static const size_t values_per_word = word_bits / value_bits;
   static const size_t num_words = impl_type::num_words;
 
-  typedef typename boost::uint_value_t< N >::least index_type;
+  typedef typename boost::uint_value_t< size >::least index_type;
   typedef typename boost::uint_value_t< num_words >::least word_index_type;
   typedef typename boost::uint_value_t< values_per_word >::least value_index_type;
 
@@ -88,7 +90,7 @@ public:
 
   inline
   void set(const index_type i,value_type x) {
-    assert(i < N);
+    assert(i < size);
     const word_index_type ii = i / values_per_word;
     const value_index_type jj = i % values_per_word;
     const size_t shift_bits = jj * value_bits;
@@ -97,7 +99,7 @@ public:
 
   inline
   value_type get(const index_type i) const {
-    assert(i < N);
+    assert(i < size);
     const word_index_type ii = i / values_per_word;
     const value_index_type jj = i % values_per_word;
     const size_t shift_bits = jj * value_bits;
@@ -106,7 +108,7 @@ public:
 
   inline
   value_type operator[](const index_type i) const {
-    assert(i < N);
+    assert(i < size);
     const word_index_type ii = i / values_per_word;
     const value_index_type jj = i % values_per_word;
     const size_t shift_bits = jj * value_bits;
@@ -116,9 +118,9 @@ public:
   template< typename Function >
   static void for_each(smint_array const & array,Function const & fn) {
     index_type j = 0;
-    for(word_index_type i = 0;i < num_words && j < N;++i) {
+    for(word_index_type i = 0;i < num_words && j < size;++i) {
       word_type word = array.impl.values[i];
-      for(value_index_type k = 0;k < values_per_word && j < N;++k,++j,word >>= value_bits) {
+      for(value_index_type k = 0;k < values_per_word && j < size;++k,++j,word >>= value_bits) {
 	fn(j,(value_type)(word & value_mask));
       }
     }
@@ -144,7 +146,7 @@ public:
 
     void next(smint_array const & array) {
       ++j;
-      if(j < N) {
+      if(j < size) {
 	++k;
 	if(k < values_per_word) {
 	  word >>= value_bits;
@@ -157,7 +159,7 @@ public:
     }
 
     bool done() const {
-      return !(j < N);
+      return !(j < size);
     }
   };
 

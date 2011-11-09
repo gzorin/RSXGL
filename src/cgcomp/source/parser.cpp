@@ -293,3 +293,34 @@ const char* CParser::ParseRegSwizzle(const char *token,struct nvfx_src *reg)
 	}
 	return token;
 }
+
+void CParser::ParseTextureUnit(const char *token,u8 *texUnit)
+{
+	char *p;
+
+	if(!token) return;
+
+	if(strncmp(token,"texture[",8)) return;
+
+	p = (char*)token + 8;
+	token = p;
+	while(isdigit(*p)) p++;
+
+	*texUnit = atoi(token);
+}
+
+void CParser::ParseTextureTarget(const char *token,u8 *texTarget)
+{
+	if(!token) return;
+
+	if(strncasecmp(token,"1D",2)==0)
+		*texTarget = TEXTURE_1D_BIT;
+	else if(strncasecmp(token,"2D",2)==0)
+		*texTarget = TEXTURE_2D_BIT;
+	else if(strncasecmp(token,"3D",2)==0)
+		*texTarget = TEXTURE_3D_BIT;
+	else if(strncasecmp(token,"CUBE",4)==0)
+		*texTarget = TEXTURE_CUBE_BIT;
+	else if(strncasecmp(token,"RECT",4)==0)
+		*texTarget = TEXTURE_RECT_BIT;
+}

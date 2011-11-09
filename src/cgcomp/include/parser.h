@@ -30,6 +30,32 @@
 #define MAX_NV_FRAGMENT_PROGRAM_WRITE_ONLYS    2
 /*@}*/
 
+/**
+ * Bit flags for each type of texture object
+ * Used for Texture.Unit[]._ReallyEnabled flags.
+ */
+/*@{*/
+#define TEXTURE_2D_ARRAY_BIT (1 << TEXTURE_2D_ARRAY_INDEX)
+#define TEXTURE_1D_ARRAY_BIT (1 << TEXTURE_1D_ARRAY_INDEX)
+#define TEXTURE_CUBE_BIT     (1 << TEXTURE_CUBE_INDEX)
+#define TEXTURE_3D_BIT       (1 << TEXTURE_3D_INDEX)
+#define TEXTURE_RECT_BIT     (1 << TEXTURE_RECT_INDEX)
+#define TEXTURE_2D_BIT       (1 << TEXTURE_2D_INDEX)
+#define TEXTURE_1D_BIT       (1 << TEXTURE_1D_INDEX)
+/*@}*/
+
+typedef enum
+{
+   TEXTURE_2D_ARRAY_INDEX,
+   TEXTURE_1D_ARRAY_INDEX,
+   TEXTURE_CUBE_INDEX,
+   TEXTURE_3D_INDEX,
+   TEXTURE_RECT_INDEX,
+   TEXTURE_2D_INDEX,
+   TEXTURE_1D_INDEX,
+   NUM_TEXTURE_TARGETS
+} texture_index;
+
 typedef struct _jmpdst
 {
 	char ident[64];
@@ -96,6 +122,9 @@ protected:
 	const char* ParseMaskedDstRegExt(const char *token,struct nvfx_insn *insn);
 	const char* ParseCond(const char *token,struct nvfx_insn *insn);
 	const char* ParseRegSwizzle(const char *token,struct nvfx_src *reg);
+
+	void ParseTextureUnit(const char *token,u8 *texUnit);
+	void ParseTextureTarget(const char *token,u8 *texTarget);
 
 	s32 GetParamType(const char *param_str);
 	virtual s32 ConvertInputReg(const char *token) = 0;

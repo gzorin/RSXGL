@@ -70,7 +70,7 @@ rsxgl_dumb_migrate_memalign(gcmContextData *,const rsx_size_t align,const rsx_si
 }
 
 void
-rsxgl_dumb_migrate_free(gcmContextData *,const rsx_ptr_t ptr,const rsx_size_t size)
+rsxgl_dumb_migrate_free(gcmContextData *,const_rsx_ptr_t ptr,const rsx_size_t size)
 {
   rsxgl_assert(_rsxgl_migrate_buffer != 0);
 

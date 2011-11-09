@@ -1,5 +1,7 @@
 # This makefile builds a static library out of the assimp sources,
 # which should be located elsewhere.
+#
+# It also builds an OpenGL utility library called libglassimp.a
 
 CC = @PPU_CC@
 CXX = @PPU_CXX@
@@ -7,24 +9,24 @@ AR = @PPU_AR@
 ARFLAGS = cru
 
 libassimp_TARGET = libassimp.a
-libassimp_obj_TARGET = libassimp_obj.a
+libglassimp_TARGET = libglassimp.a
 
-TARGETS = $(libassimp_TARGET)
+TARGETS = $(libassimp_TARGET) $(libglassimp_TARGET)
 
 all: $(TARGETS)
 
 srcdir = @srcdir@
+top_srcdir = @top_srcdir@
 builddir = @builddir@
 DEPDIR = $(builddir)/deps
-DEPCOMP = @top_srcdir@/config/depcomp
+DEPCOMP = $(top_srcdir)/config/depcomp
 PPU_CFLAGS = @PPU_CFLAGS@
 PPU_CPPFLAGS = @PPU_CPPFLAGS@
 PPU_CXXFLAGS = @PPU_CXXFLAGS@
 
-#SUFFIXES += .Po
-
 #
-assimp_code_SOURCE_LOCATION = @assimp_SOURCE_LOCATION@/code
+assimp_SOURCE_LOCATION = @assimp_SOURCE_LOCATION@
+assimp_code_SOURCE_LOCATION = $(assimp_SOURCE_LOCATION)/code
 
 # The list of sources, cribbed from assim's CMakeLists.txt:
 #
@@ -576,6 +578,7 @@ all_libassimp_SOURCES = $(Core_SRCS)				\
 	$(PSL1GHT_port_SRCS)
 
 # I suspect the static initialization order fiasco is happening - disabling importers that have static variables.
+# The following list of sources is therefore a subset, which actually gets built, of the full assimp sources list.
 libassimp_SOURCES = $(Core_SRCS)				\
 	$(Common_SRCS)				\
 	$(Logging_SRCS)				\
@@ -616,32 +619,12 @@ libassimp_SOURCES = $(Core_SRCS)				\
 	$(COMPILER_HEADERS)			\
 	$(PSL1GHT_port_SRCS)
 
-# Only OBJ:
-libassimp_obj_SOURCES = $(Core_SRCS)				\
-	$(Common_SRCS)				\
-	$(Logging_SRCS)				\
-	$(PostProcessing_SRCS)			\
-	$(MaterialSystem_SRCS)			\
-	$(Obj_SRCS)				\
-	$(Extra_SRCS)				\
-	$(ConvertUTF_SRCS)			\
-	$(unzip_SRCS)				\
-	$(PUBLIC_HEADERS)			\
-	$(COMPILER_HEADERS)			\
-	$(PSL1GHT_port_SRCS)
-
-C_SOURCES = $(filter %.c,$(notdir $(SOURCES)))
-CXX_SOURCES = $(filter %.cpp,$(notdir $(SOURCES)))
-HEADERS = $(filter %.h %.hpp,$(SOURCES))
-
 DEPFILES = $(addprefix $(DEPDIR)/,$(SOURCES:.c=.Po)) $(addprefix $(DEPDIR)/,$(SOURCES:.cpp=.Po))
-libassimp_OBJS = $(C_SOURCES:.c=.o) $(CXX_SOURCES:.cpp=.o)
 
-obj_C_SOURCES = $(filter %.c,$(notdir $(obj_C_SOURCES)))
-obj_CXX_SOURCES = $(filter %.cpp,$(notdir $(obj_CXX_SOURCES)))
-obj_OBJS = $(obj_C_SOURCES:.c=.o) $(obj_CXX_SOURCES:.cpp=.o)
+libglassimp_SOURCES = $(srcdir)/glassimp.cc
+libglassimp_OBJS = $(libglassimp_SOURCES:.cc=.o)
 
-CPPFLAGS = $(PPU_CPPFLAGS) -I@srcdir@ -I$(assimp_code_SOURCE_LOCATION) -I$(assimp_code_SOURCE_LOCATION)/BoostWorkaround -include @srcdir@/realpath.h -include strings.h -include disable_importers.h
+CPPFLAGS = $(PPU_CPPFLAGS) -I$(srcdir) -I$(top_srcdir)/include -I$(assimp_SOURCE_LOCATION)/include -I$(assimp_code_SOURCE_LOCATION) -I$(assimp_code_SOURCE_LOCATION)/BoostWorkaround -include @srcdir@/realpath.h -include strings.h -include disable_importers.h
 CFLAGS = $(PPU_CFLAGS) -std=gnu99
 CXXFLAGS = $(PPU_CXXFLAGS) -include memory 
 
@@ -660,17 +643,20 @@ define cxx
 endef
 
 c_sources = $(filter %.c,$(notdir $(1)))
-
 cxx_sources = $(filter %.cpp,$(notdir $(1)))
+cc_sources = $(filter %.cc,$(notdir $(1)))
 
 c_objs = $(1:.c=.o)
-
 cxx_objs = $(1:.cpp=.o)
+cc_objs = $(1:.cc=.o)
 
-c_cxx_objs = $(call c_objs,$(call c_sources,$(1))) $(call cxx_objs,$(call cxx_sources,$(1)))
+c_cxx_objs = $(call c_objs,$(call c_sources,$(1))) $(call cxx_objs,$(call cxx_sources,$(1))) $(call cc_objs,$(call cc_sources,$(1)))
 
 %.o : $(srcdir)/%.c
 	@$(cc)
+
+%.o : $(srcdir)/%.cc
+	@$(cxx)
 
 %.o : $(assimp_code_SOURCE_LOCATION)/%.c
 	@$(cc)
@@ -688,23 +674,22 @@ c_cxx_objs = $(call c_objs,$(call c_sources,$(1))) $(call cxx_objs,$(call cxx_so
 	@$(cxx)
 
 libassimp_OBJS = $(call c_cxx_objs,$(libassimp_SOURCES))
-libassimp_obj_OBJS = $(call c_cxx_objs,$(libassimp_obj_SOURCES))
+libglassimp_OBJS = $(call c_cxx_objs,$(libglassimp_SOURCES))
 
 dumb:
 	@echo $(libassimp_OBJS)
-	@echo $(libassimp_obj_OBJS)
 
 $(libassimp_TARGET): $(libassimp_OBJS)
 	@rm -rf $@
 	$(AR) $(ARFLAGS) $@ $^
 
-$(libassimp_obj_TARGET): $(libassimp_obj_OBJS)
+$(libglassimp_TARGET): $(libglassimp_OBJS)
 	@rm -rf $@
 	$(AR) $(ARFLAGS) $@ $^
 
 clean:
 	@echo Cleaning...
-	@rm -rf $(libassimp_TARGET) $(libassimp_OBJS) $(libassimp_obj_TARGET) $(libassimp_obj_OBJS) $(DEPDIR)
+	@rm -rf $(libassimp_TARGET) $(libassimp_OBJS) $(libglassimp_TARGET) $(libglassimp_OBJS) $(DEPDIR)
 
 .PHONY: all clean test
 

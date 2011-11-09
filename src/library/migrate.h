@@ -14,11 +14,11 @@
 #include <stdint.h>
 
 rsx_ptr_t rsxgl_ringbuffer_migrate_memalign(gcmContextData *,const rsx_size_t,const rsx_size_t);
-void rsxgl_ringbuffer_migrate_free(gcmContextData *,const rsx_ptr_t,const rsx_size_t);
+void rsxgl_ringbuffer_migrate_free(gcmContextData *,const_rsx_ptr_t,const rsx_size_t);
 void rsxgl_ringbuffer_migrate_reset(gcmContextData *);
 
 rsx_ptr_t rsxgl_dumb_migrate_memalign(gcmContextData *,const rsx_size_t,const rsx_size_t);
-void rsxgl_dumb_migrate_free(gcmContextData *,const rsx_ptr_t,const rsx_size_t);
+void rsxgl_dumb_migrate_free(gcmContextData *,const_rsx_ptr_t,const rsx_size_t);
 void rsxgl_dumb_migrate_reset(gcmContextData *);
 
 //#define rsxgl_migrate_memalign rsxgl_dumb_migrate_memalign
