@@ -271,7 +271,6 @@ void CCompilerFP::emit_dst(struct nvfx_reg *dst,bool *have_const)
 	u32 *hw = m_pInstructions[m_nCurInstruction].data;
 
 	index = dst->index;
-	fprintf(stderr,"%s dst index: %i\n",__PRETTY_FUNCTION__,index);
 
 	switch(dst->type) {
 		case NVFXSR_TEMP:
@@ -354,7 +353,6 @@ void CCompilerFP::emit_src(s32 pos,struct nvfx_src *src,bool *have_const)
 			sr |= (NVFX_FP_REG_TYPE_TEMP << NVFX_FP_REG_TYPE_SHIFT);
 			break;
 		case NVFXSR_OUTPUT:
-			fprintf(stderr,"Output register used as input.\n");
 			exit(EXIT_FAILURE);
 			return;
 	}

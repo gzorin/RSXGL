@@ -309,10 +309,7 @@ void CVPParser::ParseInstruction(struct nvfx_insn *insn,opcode *opc,const char *
 	  token = SkipSpaces(strtok(NULL,","));
 	  ParseTextureTarget(token,&target);
 
-	  //fprintf(stderr,"unit: %u target: %u\n",(uint32_t)unit,(uint32_t)target);
-
 	  insn->src[1] = nvfx_src(nvfx_reg(NVFXSR_VPTEXINPUT,unit));
-	  //insn->textarget = target;
 	}
 }
 

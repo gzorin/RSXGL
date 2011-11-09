@@ -124,9 +124,6 @@ int compileVP(std::istream & in,std::ostream & out)
     std::list<param> params = parser.GetParameters();
     for(std::list<param>::iterator it = params.begin();it!=params.end();it++) {
       if(!it->is_const) {
-	fprintf(stderr,"%s index: %u type: %u\n",
-		it->name.c_str(),(unsigned int)it->index,(unsigned int)it->type);
-
 	it->user = lastoff + (n*sizeof(rsxProgramAttrib));
 	attribs[n].index = SWAP32(it->index);
 	attribs[n].name_off = SWAP32(0);
@@ -203,10 +200,6 @@ int compileVP(std::istream & in,std::ostream & out)
       dstcodeptr[n+3] = SWAP32(vpi[i].data[3]);
 
       const uint32_t opcode = (vpi[i].data[1] & NV40_VP_INST_VEC_OPCODE_MASK) >> NV40_VP_INST_VEC_OPCODE_SHIFT;
-
-      fprintf(stderr,"%04u %x %x %x %x\n",i,
-	      opcode,
-	      vpi[i].data[0],vpi[i].data[1],vpi[i].data[2],vpi[i].data[3]);
     }
 
     out.write((const char *)vertexprogram,lastoff);
@@ -245,18 +238,10 @@ int compileFP(std::istream & in,std::ostream & out)
     fp->num_regs = SWAP32(compiler.GetNumRegs());
     fp->fp_control = SWAP32(compiler.GetFPControl());
 
-    fprintf(stderr,"num_regs: %u control: %x\n",
-	    compiler.GetNumRegs(),compiler.GetFPControl());
-
     fp->texcoords = SWAP16(compiler.GetTexcoords());
     fp->texcoord2D = SWAP16(compiler.GetTexcoord2D());
     fp->texcoord3D = SWAP16(compiler.GetTexcoord3D());
 
-    fprintf(stderr,"texcoords: %u %u %u\n",
-	    (uint32_t)compiler.GetTexcoords(),
-	    (uint32_t)compiler.GetTexcoord2D(),
-	    (uint32_t)compiler.GetTexcoord3D());
-    
     while(lastoff&3)
       fragmentprogram[lastoff++] = 0;
 
@@ -265,13 +250,9 @@ int compileFP(std::istream & in,std::ostream & out)
     rsxProgramAttrib *attribs = (rsxProgramAttrib*)(fragmentprogram + lastoff);
     
     n = 0;
-    fprintf(stderr,"fragment program attribs:\n");
     std::list<param> params = parser.GetParameters();
     for(std::list<param>::iterator it = params.begin();it!=params.end();it++) {
       if(!it->is_const /*&& !it->is_output*/) {
-	fprintf(stderr,"\t%s index:%u type:%u output:%u\n",
-		it->name.c_str(),(uint32_t)it->index,(uint32_t)it->type,(uint32_t)it->is_output);
-
 	it->user = lastoff + (n*sizeof(rsxProgramAttrib));
 	attribs[n].index = SWAP32(it->index);
 	attribs[n].name_off = SWAP32(0);
@@ -390,9 +371,6 @@ int compileFP(std::istream & in,std::ostream & out)
 	(fpi[i].data[2] & NVFX_FP_OP_INPUT_SRC_MASK) >> NVFX_FP_OP_INPUT_SRC_SHIFT,
 	(fpi[i].data[3] & NVFX_FP_OP_INPUT_SRC_MASK) >> NVFX_FP_OP_INPUT_SRC_SHIFT
       };
-
-      fprintf(stderr,"%04u opcode: %x outreg: %x src: %x %x %x %x\n",i,opcode,outreg,
-	      srcs[0],srcs[1],srcs[2],srcs[2]);
     }
     
     out.write((const char *)fragmentprogram,lastoff);
