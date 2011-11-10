@@ -39,11 +39,13 @@ struct query_t {
   /// \brief Type of query object:
   uint8_t type;
 
-  /// \brief Synchronization object index obtained from rsxgl_sync_object_allocate():
-  uint8_t index;
+  /// \brief Query object index obtained from rsxgl_query_object_allocate():
+  typedef boost::uint_value_t< RSXGL_MAX_QUERY_OBJECTS - 1 >::least index_type;
+
+  index_type index;
 
   query_t()
-    : timestamp(0), type(~0), index(0) {
+    : timestamp(0), type(RSXGL_MAX_QUERY_TARGETS), index(0) {
   }
 
   ~query_t();

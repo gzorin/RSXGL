@@ -92,8 +92,6 @@ struct rsxgl_sync_object_t {
   rsxgl_sync_object_t()
     : status(0), index(0), value(0) {
   }
-
-  void destroy() {}
 };
 
 rsxgl_sync_object_t::storage_type &
@@ -137,7 +135,7 @@ rsxgl_sync_name_to_rsx_index(const rsxgl_sync_object_t::name_type name)
 static inline rsxgl_sync_object_t::name_type
 rsxgl_rsx_index_to_sync_name(const uint8_t index)
 {
-  rsxgl_assert(index >= 64);
+  rsxgl_assert(index >= 64 && index < (64 + RSXGL_MAX_SYNC_OBJECTS));
   return (index - 64) + 1;
 }
 
@@ -149,7 +147,7 @@ rsxgl_sync_object_allocate()
 }
 
 void
-rsxgl_sync_object_free(uint8_t index)
+rsxgl_sync_object_free(const uint8_t index)
 {
   if(index >= 64) {
     rsxgl_sync_object_really_free(rsxgl_rsx_index_to_sync_name(index));

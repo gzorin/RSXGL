@@ -16,6 +16,8 @@
 #define RSXGL_MAX_FIFO_METHOD_ARGS 2047
 
 #define RSXGL_MAX_SYNC_OBJECTS 192
+#define RSXGL_MAX_QUERY_OBJECTS 2048
+
 // End hardware limits
 
 // These limits are arbitrary, but they ought to correspond to the maximum value of various
