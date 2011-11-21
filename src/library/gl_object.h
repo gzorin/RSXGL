@@ -9,7 +9,6 @@
 #define rsxgl_gl_object_H
 
 #if !defined(assert)
-//#include <cassert>
 #include "rsxgl_assert.h"
 #endif
 
@@ -23,9 +22,10 @@ template< typename ObjectT,
 	  int DefaultObject = 0 >
 struct gl_object {
   typedef ObjectT object_type;
-  typedef typename boost::uint_value_t< Max - 1 >::least name_type;
   static const bool has_default_object = DefaultObject;
-  typedef gl_object_storage< ObjectT, name_type, has_default_object > storage_type;
+
+  typedef gl_object_storage< ObjectT, Max, DefaultObject > storage_type;
+  typedef typename name_traits< Max >::name_type name_type;
 
   // Provision for objects that have reference counts - objects that can be contained by other
   // objects. Examples include buffer objects, which maybe contained by vertex array objects,

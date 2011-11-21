@@ -34,16 +34,14 @@
 #ifndef rsxgl_gl_object_storage_H
 #define rsxgl_gl_object_storage_H
 
-#if !defined(assert)
-#include <cassert>
-#endif
-
 #include "array.h"
 #include "striped_object_array.h"
+#include "name_space.h"
 
 #include <memory>
 #include <algorithm>
 #include <utility>
+#include <limits>
 #include <boost/integer.hpp>
 #include <boost/integer/integer_mask.hpp>
 #include <boost/tuple/tuple.hpp>
@@ -52,87 +50,24 @@
 #include <boost/fusion/include/at.hpp>
 #include <boost/fusion/include/for_each.hpp>
 #include <boost/fusion/include/transformation.hpp>
-#include <boost/type_traits.hpp>
-
-#define BOOST_CB_DISABLE_DEBUG
-#include <boost/circular_buffer.hpp>
-
-#include <iostream>
 
 // ObjectsT is a boost::fusion::vector of types:
 template< typename ObjectsT,
-	  typename NameT = uint32_t,
+	  size_t MaxObjects = std::numeric_limits< uint32_t >::max() + 1,
 	  int DefaultObject = 0,
 	  typename NameBitfieldT = boost::uintmax_t,
 	  size_t ObjectAlign = 128,
-	  typename NamesAlloc = std::allocator< NameBitfieldT > >
+	  typename Alloc = std::allocator< void > >
 class striped_gl_object_storage
 {
 public:
 
+  typedef name_space< MaxObjects, false, 1 > name_space_type;
+  typedef typename name_space_type::name_type name_type;
+
+  name_space_type m_name_space;
+
   typedef ObjectsT objects_type;
-  typedef NameT name_type;
-
-protected:
-
-  typedef typename NamesAlloc::template rebind< name_type >::other name_allocator;
-
-  typedef NameBitfieldT name_bitfield_type;
-  static const size_t name_bitfield_type_bits = std::numeric_limits< name_bitfield_type >::digits;
-  static const size_t name_bitfield_type_positions = name_bitfield_type_bits / 2;
-
-  typedef typename NamesAlloc::template rebind< name_bitfield_type >::other name_bitfield_allocator;
-  static const name_bitfield_type name_bitfield_mask = boost::low_bits_mask_t< 2 >::sig_bits_fast;
-  static const name_bitfield_type name_bitfield_named_mask = boost::high_bit_mask_t< 1 >::bit_position;
-  static const name_bitfield_type name_bitfield_init_mask = boost::high_bit_mask_t< 2 >::bit_position;
-
-  typedef array< name_bitfield_type, name_type, NamesAlloc > name_bitfield_array_type;
-
-  name_type m_name_bitfield_size;
-  typename name_bitfield_array_type::pointer_type m_name_bitfield;
-
-  typename name_bitfield_array_type::type name_bitfield() {
-    return typename name_bitfield_array_type::type(m_name_bitfield,m_name_bitfield_size);
-  }
-
-  typename name_bitfield_array_type::const_type name_bitfield() const {
-    return typename name_bitfield_array_type::const_type(m_name_bitfield,m_name_bitfield_size);
-  }
-
-  typedef boost::circular_buffer< name_type > name_queue_type;
-  name_queue_type m_name_queue;
-
-  //
-  static inline std::pair< size_t, size_t > 
-  name_bitfield_location(const name_type name) {
-    const size_t name_position2 = name << 1;
-    return std::pair< size_t, size_t >(name_position2 / name_bitfield_type_bits,name_position2 % name_bitfield_type_bits);
-  }
-
-  struct created_predicate {
-    typename name_bitfield_array_type::const_type m_name_bitfield;
-
-    created_predicate(typename name_bitfield_array_type::type name_bitfield)
-      : m_name_bitfield(name_bitfield) {
-    }
-
-    created_predicate(typename name_bitfield_array_type::const_type name_bitfield)
-      : m_name_bitfield(name_bitfield) {
-    }
-
-    bool operator()(name_type name) const {
-      size_t name_bitfield_index, name_bitfield_position2;
-      boost::tie(name_bitfield_index,name_bitfield_position2) = name_bitfield_location(name);
-      if((name_bitfield_index < m_name_bitfield.size) && ((m_name_bitfield[name_bitfield_index] & (name_bitfield_init_mask << name_bitfield_position2)) != 0)) {
-	return true;
-      }
-      else {
-	return false;
-      }
-    }
-  };
-
-public:
 
   typedef striped_object_array< ObjectsT, name_type, ObjectAlign > contents_type;
   typename contents_type::pointers_type m_contents, m_orphans;
@@ -146,15 +81,6 @@ public:
   static const size_type m_contents_grow = 1;
   static const size_type m_orphans_grow = 1;
 
-  // These counts may not actually be needed - the arrays that contain these objects also
-  // store a size, although those numbers represent the amount of space allocated for these and
-  // not the actual amount used. In the few cases where the library needs to iterate over all
-  // of the objects that have been named, created, or orphaned, it can use the full sizes
-  // and just check each name's properties.
-#if !defined(NDEBUG)
-  size_type m_num_names, m_num_objects;
-#endif
-
   orphan_size_type m_num_orphans;
 
   //
@@ -164,11 +90,6 @@ public:
 
   typename contents_type::const_type contents() const {
     return typename contents_type::const_type(m_contents,m_contents_size);
-  }
-
-  // Number of names that can be accommodated without growing the name array:
-  typename contents_type::size_type current_potential_size() const {
-    return m_name_bitfield_size * name_bitfield_type_positions;
   }
 
   // Number of objects that can be accommodated without growing the contents array:
@@ -191,19 +112,14 @@ public:
   }
 
   striped_gl_object_storage(const name_type initial_size = 0,void (*init_default_object)(void *) = 0)
-    : m_name_queue(initial_size)
-#if !defined(NDEBUG)
-    ,m_num_names(0), m_num_objects(0), m_num_orphans(0)
-#endif
+    : m_num_orphans(0)
   {
-    
-    name_bitfield().construct(1,0);
     contents().allocate(std::max((name_type)1,initial_size));
     orphans().allocate(std::max((typename contents_type::size_type)1,initial_size));
 
     // create object name 0:
     name_type name = create_name();
-    assert(name == 0);
+    rsxgl_assert(name == 0);
 
     if(DefaultObject) {
       create_object(name);
@@ -214,57 +130,26 @@ public:
   }
 
   ~striped_gl_object_storage() {
-    name_bitfield().destruct();
+    struct created_predicate {
+      name_space_type & name_space;
 
-    created_predicate p(name_bitfield());
+      created_predicate(name_space_type & _name_space)
+	: name_space(_name_space) {
+      }
+
+      bool operator()(const name_type name) const {
+	return name_space.template test_user_bit< 0 >(name);
+      }
+    } p(m_name_space);
+
     contents().destruct(p);
     orphans().destruct(p);
   }
 
   name_type create_name() {
-    name_type name = 0;
-
-    // No names to reclaim, create a new one:
-    if(m_name_queue.empty()) {
-      assert(name_bitfield().size > 0);
-
-      const size_t name_bitfield_index = name_bitfield().size - 1;
-      const name_bitfield_type name_bitfield_value = name_bitfield()[name_bitfield_index];
-
-      size_t name_bitfield_position = 0;
-
-      // If either created or init bits are set, skip it:
-      name_bitfield_type mask = (name_bitfield_named_mask | name_bitfield_init_mask) << (name_bitfield_position << 1);
-
-      while(((name_bitfield_value & mask) != 0) && (name_bitfield_position < name_bitfield_type_positions)) {
-	++name_bitfield_position;
-	mask <<= 2;
-      }
-
-      name = (name_bitfield_index * name_bitfield_type_positions) + name_bitfield_position;
-    }
-    // Reclaim the name from the queue:
-    else {
-      name = m_name_queue.front();
-      m_name_queue.pop_front();
-    }
-
-    // Expand the bitfield that keeps track of generated & created names:
-    size_t name_bitfield_index, name_bitfield_position2;
-    boost::tie(name_bitfield_index,name_bitfield_position2) = name_bitfield_location(name);
-    const size_t name_bitfield_size = name_bitfield_index + 1;
-    
-    if(name_bitfield_size > name_bitfield().size) {
-      name_bitfield().resize(name_bitfield_size);
-    }
-
-    name_bitfield()[name_bitfield_index] &= ~(name_bitfield_type)(name_bitfield_mask << name_bitfield_position2);
-    name_bitfield()[name_bitfield_index] |= (name_bitfield_type)(name_bitfield_named_mask << name_bitfield_position2);
-
-#if !defined(NDEBUG)
-    ++m_num_names;
-#endif
-    return name;
+    std::pair< name_type, bool > tmp = m_name_space.create_name();
+    rsxgl_assert(tmp.second);
+    return tmp.first;
   }
 
   template< typename OtherNameType >
@@ -276,158 +161,47 @@ public:
     return i;
   }
 
-private:
-
-  void destroy_name(const name_type name,const size_t name_bitfield_index,const size_t name_bitfield_position2) {
-    assert(name < current_potential_size());
-    assert(name != 0);
-
-    // Destroy the name:
-    if((name_bitfield()[name_bitfield_index] & (name_bitfield_named_mask << name_bitfield_position2)) != 0) {
-      if(m_name_queue.full()) {
-	const name_type name_queue_grow = std::max((name_type)(m_name_queue.size() / 2),(name_type)1);
-	const name_type name_queue_size = m_name_queue.size() + name_queue_grow;
-
-	name_queue_type new_name_queue(name_queue_size);
-	std::copy(m_name_queue.begin(),m_name_queue.end(),std::back_inserter(new_name_queue));
-	m_name_queue = new_name_queue;
-      }
-
-      m_name_queue.push_back(name);
-      
-      name_bitfield()[name_bitfield_index] &= ~(name_bitfield_type)(name_bitfield_named_mask << name_bitfield_position2);
-
-#if !defined(NDEBUG)
-      --m_num_names;
-#endif
-    }
-  }
-
-public:
-
-  // There are three things that can happen if a GL object is glDelete*()'d, depending upon whether
-  // or not a GL object is being used by something else. A GL object can be contained by other GL
-  // objects (e.g., buffers in vertex array objects), which means that the container holds onto
-  // a name that still expects to point to object storage; the object should be destroyed when
-  // other objects stop referring to it (these objects have a reference count embeddedin them).
-  // A GL object (actually, other resources, such as GPU memory, that the object acquires) may also
-  // have unexecuted GPU operations that depend upon it; such an object should be destroyed when
-  // those pending operations have passed.
-  //
-  // destroy() - This is for objects that are unused by anything else. The object's destructor is
-  // called and its name reclaimed immediately.
-  //
-  // detach() - This is for objects that the client wishes to delete but are being held by other
-  // objects (their reference count has not fallen to 0). It simply sets a bit to indicate that
-  // the object is no longer a valid GL object (is_object() will return false) but does not
-  // destroy the object's storage, or reclaim the object's name (is_name() will return true,
-  // and is_constructed() will still return true).
-  //
-  // orphan() - This is for use in the case that a client wants to destroy an object that holds
-  // resources that may still be used by a scheduled but still-pending GPU operation. The contents
-  // of the object are moved to another location, the orphan list. Its destructor is /not/ called
-  // at this time, but the object's name and previous storage area are reclaimed (is_object(), is_name(),
-  // and is_constructed() all return false). The object may only be accessed through the orphan_at()
-  // functions.
-
   // Destroy an object - delete its name, and call the object's destroy() function.
   void destroy(const name_type name) {
-    assert(name < current_potential_size());
-    assert(name != 0);
+    rsxgl_assert(name != 0);
 
-    size_t name_bitfield_index, name_bitfield_position2;
-    boost::tie(name_bitfield_index,name_bitfield_position2) = name_bitfield_location(name);
-
-    if(name_bitfield_index < name_bitfield().size) {
-
-      // Destroy the object:
-      if((name_bitfield()[name_bitfield_index] & (name_bitfield_init_mask << name_bitfield_position2)) != 0) {
+    if(is_name(name)) {
+      if(is_constructed(name)) {
 	contents().destruct_item(name);
-#if !defined(NDEBUG)
-	--m_num_objects;
-#endif
       }
 
-      destroy_name(name,name_bitfield_index,name_bitfield_position2);
-
-      // Clear both create and init bits:
-      name_bitfield()[name_bitfield_index] &= ~(name_bitfield_type)(name_bitfield_mask << name_bitfield_position2);
+      m_name_space.destroy_name(name);
     }
   }
-
-  template< int Named, int Constructed >
-  void checked_destroy(const name_type name) {
-    assert((Named) ? (is_name(name)) : 1);
-    assert((Constructed) ? (is_constructed(name)) : 1);
-    destroy(name);
-  }
-
-  // Detach an object:
+  
+  // Detach an object from its name. The object is not destroyed, and neither is its name
+  // reclaimed.
   void detach(const name_type name) {
-    assert(name < current_potential_size());
-    assert(name != 0);
+    rsxgl_assert(name != 0);
 
-    size_t name_bitfield_index, name_bitfield_position2;
-    boost::tie(name_bitfield_index,name_bitfield_position2) = name_bitfield_location(name);
-
-    if(name_bitfield_index < name_bitfield().size) {
-
-#if !defined(NDEBUG)
-      if((name_bitfield()[name_bitfield_index] & (name_bitfield_init_mask << name_bitfield_position2)) != 0) {
-	--m_num_objects;
-      }
-#endif
-
-      // Clear the name bit, leave the init bit intact:
-      name_bitfield()[name_bitfield_index] &= ~(name_bitfield_type)(name_bitfield_named_mask << name_bitfield_position2);
+    if(is_name(name)) {
+      m_name_space.detach_name(name);
     }
-  }
-
-  template< int Named, int Constructed >
-  void checked_detach(const name_type name) {
-    assert((Named) ? (is_name(name)) : 1);
-    assert((Constructed) ? (is_constructed(name)) : 1);
-    detach(name);
   }
 
   // Orphan the object - make a copy of the object in the orphans list. Client code
   // will later destroy any GPU resources, like memory, that the orphan still occupies.
-  orphan_size_type orphan(const name_type name) {
-    assert(name < current_potential_size());
-    assert(name != 0);
+  std::pair< orphan_size_type, bool > orphan(const name_type name) {
+    rsxgl_assert(name != 0);
 
-    size_t name_bitfield_index, name_bitfield_position2;
-    boost::tie(name_bitfield_index,name_bitfield_position2) = name_bitfield_location(name);
-
-    if(name_bitfield_index < name_bitfield().size) {
-      if((name_bitfield()[name_bitfield_index] & (name_bitfield_init_mask << name_bitfield_position2)) != 0) {
-	// Make room for another orphan:
-	if(m_num_orphans >= orphans().size) {
-	  orphans().resize(m_num_orphans + m_orphans_grow);
-	}
-
-	contents_type::move_item(orphans(),m_num_orphans,contents(),name);
-
-#if !defined(NDEBUG)
-	--m_num_objects;
-#endif
-
-	destroy_name(name,name_bitfield_index,name_bitfield_position2);
-
-	// Clear name and init bit:
-	name_bitfield()[name_bitfield_index] &= ~(name_bitfield_type)(name_bitfield_mask << name_bitfield_position2);
-
-	return m_num_orphans++;
+    if(is_name(name) && is_constructed(name)) {
+      // Make room for another orphan:
+      if(m_num_orphans >= orphans().size) {
+	orphans().resize(m_num_orphans + m_orphans_grow);
       }
-    }
-    return ~0;
-  }
+      contents_type::move_item(orphans(),m_num_orphans,contents(),name);
+      m_name_space.destroy_name(name);
 
-  template< int Named, int Constructed >
-  void checked_orphan(const name_type name) {
-    assert((Named) ? (is_name(name)) : 1);
-    assert((Constructed) ? (is_constructed(name)) : 1);
-    orphan(name);
+      return std::make_pair(m_num_orphans++,true);
+    }
+    else {
+      return std::make_pair((orphan_size_type)0,false);
+    }
   }
 
   // Destroy accumulated orphans:
@@ -439,13 +213,13 @@ public:
   }
 
   void destroy_orphan(const orphan_size_type i) {
-    assert(i < m_num_orphans);
+    rsxgl_assert(i < m_num_orphans);
     orphans().destruct_item(i);
     --m_num_orphans;
   }
 
   void create_object(const name_type name) {
-    assert(is_name(name) && !is_constructed(name));
+    rsxgl_assert(is_name(name) && !is_constructed(name));
 
     // Construct the object:
     if(name >= contents().size) {
@@ -453,17 +227,8 @@ public:
     }
 
     contents().construct_item(name);
-      
-    // Set the created bit:
-    size_t name_bitfield_index, name_bitfield_position2;
-    boost::tie(name_bitfield_index,name_bitfield_position2) = name_bitfield_location(name);
-    
-    assert(name_bitfield_index < name_bitfield().size);
-    name_bitfield()[name_bitfield_index] |= (name_bitfield_type)(name_bitfield_init_mask << name_bitfield_position2);
 
-#if !defined(NDEBUG)
-    ++m_num_objects;
-#endif
+    m_name_space.template set_user_bit< 0 >(name);
   }
 
   name_type create_name_and_object() {
@@ -472,60 +237,36 @@ public:
     return name;
   }
 
-  // Returns true if name has been allocated (but may not yet be an actual object).
+  // Returns true if name has been allocated (but may not yet be an actual object):
   bool is_name(const name_type name) const {
-    size_t name_bitfield_index, name_bitfield_position2;
-    boost::tie(name_bitfield_index,name_bitfield_position2) = name_bitfield_location(name);
-    
-    if(name_bitfield_index < name_bitfield().size) {
-      return (name_bitfield()[name_bitfield_index] & (name_bitfield_named_mask << name_bitfield_position2)) != 0;
-    }
-    else {
-      return false;
-    }
+    return m_name_space.is_name(name);
   }
 
   // Returns true if the name has been allocated and its been constructed. For use by
-  // functions like glIs*() which test to see if a GL object is fully usable.
+  // functions like glIs*() which test to see if a GL object is fully usable:
   bool is_object(const name_type name) const {
-    size_t name_bitfield_index, name_bitfield_position2;
-    boost::tie(name_bitfield_index,name_bitfield_position2) = name_bitfield_location(name);
-
-    if(name_bitfield_index < name_bitfield().size) {
-      return ((name_bitfield()[name_bitfield_index] >> name_bitfield_position2) & name_bitfield_mask) == (name_bitfield_named_mask | name_bitfield_init_mask);
-    }
-    else {
-      return false;
-    }
+    return m_name_space.is_name(name) && m_name_space.template test_user_bit< 0 >(name);
   }
 
   // For use by functions that still want to access an object's storage by name, even if it's
   // been glDelete*()'d and should no longer be accessed by other gl*() functions.
   bool is_constructed(const name_type name) const {
-    size_t name_bitfield_index, name_bitfield_position2;
-    boost::tie(name_bitfield_index,name_bitfield_position2) = name_bitfield_location(name);
-
-    if(name_bitfield_index < name_bitfield().size) {
-      return (name_bitfield()[name_bitfield_index] & (name_bitfield_init_mask << name_bitfield_position2)) != 0;
-    }
-    else {
-      return false;
-    }
+    return m_name_space.template test_user_bit< 0 >(name);
   }
 
   template< size_t I >
   typename boost::add_reference< typename boost::fusion::result_of::at_c< objects_type, I >::type >::type
   at(const name_type i) {
-    assert(is_constructed(i));
-    assert((DefaultObject == 0) ? (i != 0) : true);
+    rsxgl_assert(is_constructed(i));
+    rsxgl_assert((DefaultObject == 0) ? (i != 0) : true);
     return contents().template at< I >(i);
   }
 
   template< size_t I >
   typename boost::add_reference< typename boost::add_const< typename boost::fusion::result_of::at_c< objects_type, I >::type >::type >::type
   at(const name_type i) const {
-    assert(is_constructed(i));
-    assert((DefaultObject == 0) ? (i != 0) : true);
+    rsxgl_assert(is_constructed(i));
+    rsxgl_assert((DefaultObject == 0) ? (i != 0) : true);
     return contents().template at< I >(i);
   }
 
@@ -538,50 +279,50 @@ public:
   template< size_t I >
   typename boost::add_reference< typename boost::fusion::result_of::at_c< objects_type, I >::type >::type
   orphan_at(const orphan_size_type i) {
-    assert(i < m_num_orphans);
+    rsxgl_assert(i < m_num_orphans);
     return orphans().template at< I >(i);
   }
 
   template< size_t I >
   typename boost::add_reference< typename boost::add_const< typename boost::fusion::result_of::at_c< objects_type, I >::type >::type >::type
   orphan_at(const orphan_size_type i) const {
-    assert(i < m_num_orphans);
+    rsxgl_assert(i < m_num_orphans);
     return orphans().template at< I >(i);
   }
 };
 
 template< typename ObjectT,
-	  typename NameT = uint32_t,
+	  size_t MaxObjects = std::numeric_limits< uint32_t >::max() + 1,
 	  int DefaultObject = 0,
 	  typename NameBitfieldT = boost::uintmax_t,
 
 	  size_t ObjectAlign = 128,
-	  typename NamesAlloc = std::allocator< NameBitfieldT > >
-class gl_object_storage : public striped_gl_object_storage< boost::fusion::vector< ObjectT >, NameT, DefaultObject >
+	  typename Alloc = std::allocator< void > >
+class gl_object_storage : public striped_gl_object_storage< boost::fusion::vector< ObjectT >, MaxObjects, DefaultObject, NameBitfieldT, ObjectAlign, Alloc >
 {
 public:
 
-  typedef striped_gl_object_storage< boost::fusion::vector< ObjectT >, 
-				     NameT, DefaultObject > base_type;
+  typedef striped_gl_object_storage< boost::fusion::vector< ObjectT >, MaxObjects, DefaultObject, NameBitfieldT, ObjectAlign, Alloc > base_type;
+  typedef typename base_type::name_type name_type;
 
   gl_object_storage(const typename base_type::name_type initial_size = 0,void (*init_default_object)(void *) = 0)
     : base_type(initial_size,init_default_object) {
   }
 
   ObjectT & at(const typename base_type::name_type i) {
-    return base_type::template at<0>(i);
+    return base_type::template at< 0 >(i);
   }
 
   const ObjectT & at(const typename base_type::name_type i) const {
-    return base_type::template at<0>(i);
+    return base_type::template at< 0 >(i);
   }
 
   ObjectT & orphan_at(const typename base_type::name_type i) {
-    return base_type::template orphan_at<0>(i);
+    return base_type::template orphan_at< 0 >(i);
   }
 
   const ObjectT & orphan_at(const typename base_type::name_type i) const {
-    return base_type::template orphan_at<0>(i);
+    return base_type::template orphan_at< 0 >(i);
   }
 };
 
@@ -605,16 +346,17 @@ struct cold_hot_gl_object_destroy {
 };
 
 template< typename ColdT, typename HotT,
-	  typename NameT = uint32_t,
+	  size_t MaxObjects = std::numeric_limits< uint32_t >::max() + 1,
 	  int DefaultObject = 0,
 	  typename NameBitfieldT = boost::uintmax_t,
 	  size_t ObjectAlign = 128,
-	  typename NamesAlloc = std::allocator< NameBitfieldT > >
-class cold_hot_gl_object_storage : public striped_gl_object_storage< boost::fusion::vector< ColdT, HotT >, NameT, DefaultObject >
+	  typename Alloc = std::allocator< void > >
+class cold_hot_gl_object_storage : public striped_gl_object_storage< boost::fusion::vector< ColdT, HotT >, MaxObjects, DefaultObject, ObjectAlign, Alloc >
 {
 public:
 
-  typedef striped_gl_object_storage< boost::fusion::vector< ColdT, HotT >, NameT, DefaultObject > base_type;
+  typedef striped_gl_object_storage< boost::fusion::vector< ColdT, HotT >, MaxObjects, DefaultObject > base_type;
+  typedef typename base_type::name_type name_type;
 
   cold_hot_gl_object_storage(const typename base_type::name_type initial_size = 0,void (*init_default_object)(void *) = 0)
     : base_type(initial_size,init_default_object) {

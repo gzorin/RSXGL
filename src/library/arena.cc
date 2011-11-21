@@ -5,8 +5,8 @@
 // arena.cc - Create arenas from which memory may be allocated.
 
 #include "gcm.h"
-#include "rsxgl_context.h"
 #include "arena.h"
+#include "rsxgl_context.h"
 #include "gl_object_storage.h"
 
 #include <GL3/gl3.h>
