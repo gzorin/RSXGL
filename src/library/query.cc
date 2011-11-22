@@ -16,78 +16,35 @@
 #endif
 #define GLAPI extern "C"
 
-// Manage the hardware-limited namespace of query objects (2048 for the RSX). Re-use the capabilities
-// of gl_object<> to do so.
-struct rsxgl_query_object_t {
-  typedef gl_object< rsxgl_query_object_t, RSXGL_MAX_QUERY_OBJECTS > gl_object_type;
-  typedef typename gl_object_type::name_type name_type;
-  typedef typename gl_object_type::storage_type storage_type;
+// Manage the RSX report objects:
+typedef name_space< RSXGL_MAX_QUERY_OBJECTS, true > rsxgl_query_object_name_space_type;
 
-  static storage_type & storage();
-
-  rsxgl_query_object_t() {}
-  ~rsxgl_query_object_t() {}
-};
-
-rsxgl_query_object_t::storage_type &
-rsxgl_query_object_t::storage()
+static rsxgl_query_object_name_space_type &
+rsxgl_query_object_name_space()
 {
-  static rsxgl_query_object_t::storage_type _storage(RSXGL_MAX_QUERY_OBJECTS);
-  return _storage;
+  static rsxgl_query_object_name_space_type name_space;
+  return name_space;
 }
 
-static inline rsxgl_query_object_t::name_type
-rsxgl_query_object_really_allocate()
-{
-  const rsxgl_query_object_t::name_type name = rsxgl_query_object_t::storage().create_name();
-  if(name > RSXGL_MAX_QUERY_OBJECTS) {
-    rsxgl_query_object_t::storage().destroy(name);
-    return 0;
-  }
-  else {
-    rsxgl_assert(name > 0);
-    rsxgl_query_object_t::storage().create_object(name);
-    return name;
-  }
-}
-
-static inline void
-rsxgl_query_object_really_free(const rsxgl_query_object_t::name_type name)
-{
-  if(rsxgl_query_object_t::storage().is_name(name)) {
-    rsxgl_assert(rsxgl_query_object_t::storage().is_object(name));
-    rsxgl_query_object_t::storage().destroy(name);
-  }
-}
-
-#if 0
-static inline query_t::index_type
-rsxgl_sync_name_to_rsx_index(const rsxgl_query_object_t::name_type name)
-{
-  rsxgl_assert(name > 0 && name <= RSXGL_MAX_QUERY_OBJECTS);
-  return (name - 1);
-}
-
-static inline rsxgl_query_object_t::name_type
-rsxgl_rsx_index_to_sync_name(const query_t::index_type index)
-{
-  rsxgl_assert(index < RSXGL_MAX_QUERY_OBJECTS);
-  return (index) + 1;
-}
-
-query_t::index_type
+rsxgl_query_object_index_type
 rsxgl_query_object_allocate()
 {
-  rsxgl_query_object_t::name_type name = rsxgl_query_object_really_allocate();
-  return (name == 0) ? 0 : rsxgl_sync_name_to_rsx_index(name);
+  std::pair< rsxgl_query_object_name_space_type::name_type, bool > tmp = rsxgl_query_object_name_space().create_name();
+  if(tmp.second) {
+    return tmp.first;
+  }
+  else {
+    return RSXGL_MAX_QUERY_OBJECTS;
+  }
 }
 
 void
-rsxgl_query_object_free(const query_t::index_type index)
+rsxgl_query_object_free(const rsxgl_query_object_index_type index)
 {
-  rsxgl_query_object_really_free(rsxgl_rsx_index_to_sync_name(index));
+  if(index < RSXGL_MAX_QUERY_OBJECTS) {
+    rsxgl_query_object_name_space().destroy_name(index);
+  }
 }
-#endif
 
 //
 query_t::storage_type & query_t::storage()
@@ -191,31 +148,52 @@ glBeginQuery (GLenum target, GLuint id)
 
   if(query.type == RSXGL_MAX_QUERY_TARGETS) {
     query.type = rsx_target;
-    // allocate the index:
   }
   else if(query.type != rsx_target) {
+    RSXGL_ERROR_(GL_INVALID_OPERATION);
+  }
+  else if(query.status == ACTIVE) {
     RSXGL_ERROR_(GL_INVALID_OPERATION);
   }
   
   ctx -> query_binding.bind(rsx_target,id);
 
+  for(size_t i = 0;i < 2;++i) {    
+    if(query.indices[i] != RSXGL_MAX_QUERY_OBJECTS) {
+      rsxgl_query_object_free(query.indices[i]);
+      query.indices[i] = RSXGL_MAX_QUERY_OBJECTS;
+    }
+  }
+
   if(query.type == RSXGL_QUERY_SAMPLES_PASSED || query.type == RSXGL_QUERY_ANY_SAMPLES_PASSED) {
+    query.indices[0] = rsxgl_query_object_allocate();
+    rsxgl_assert(query.indices[0] != RSXGL_MAX_QUERY_OBJECTS);
+
+#if 0
     uint32_t * buffer = gcm_reserve(context,4);
     
-    gcm_emit_method_at(buffer,0,NV30_3D_QUERY_ENABLE,1);
+    gcm_emit_method_at(buffer,0,NV30_3D_QUERY_RESET,1);
     gcm_emit_at(buffer,1,1);
 
     gcm_emit_method_at(buffer,2,NV30_3D_QUERY_ENABLE,1);
     gcm_emit_at(buffer,3,1);
 
     gcm_finish_n_commands(context,4);
+#endif
   }
   else if(query.type == RSXGL_QUERY_TIME_ELAPSED) {
+    query.indices[0] = rsxgl_query_object_allocate();
+    query.indices[1] = rsxgl_query_object_allocate();
+    rsxgl_assert(query.indices[0] != RSXGL_MAX_QUERY_OBJECTS && query.indices[1] != RSXGL_MAX_QUERY_OBJECTS);
+
     
   }
   else {
     RSXGL_ERROR_(GL_INVALID_OPERATION);
   }
+
+  query.value = 0;
+  query.status = RSXGL_QUERY_ACTIVE;
 
   RSXGL_NOERROR_();
 }
@@ -234,13 +212,21 @@ glEndQuery (GLenum target)
     RSXGL_ERROR_(GL_INVALID_OPERATION);
   }
 
-  query_t & query = query_t::storage().at(id);
+  query_t & query = ctx -> query_binding[rsx_target];
+
+  if(query.status != RSXGL_QUERY_ACTIVE) {
+    RSXGL_ERROR_(GL_INVALID_OPERATION);
+  }
 
   if(query.type == RSXGL_QUERY_SAMPLES_PASSED || query.type == RSXGL_QUERY_ANY_SAMPLES_PASSED) {
+#if 0
     uint32_t * buffer = gcm_reserve(context,2);
+
     gcm_emit_method_at(buffer,0,NV30_3D_QUERY_GET,1);
     gcm_emit_at(buffer,1,(1 << 24) | (query.index << 8));
+
     gcm_finish_n_commands(context,2);
+#endif
   }
   else {
     RSXGL_ERROR_(GL_INVALID_OPERATION);

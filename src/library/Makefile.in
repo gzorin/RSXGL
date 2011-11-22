@@ -918,6 +918,11 @@ uninstall-am: uninstall-includeHEADERS uninstall-libLIBRARIES
 	uninstall-am uninstall-includeHEADERS uninstall-libLIBRARIES
 
 
+#noinst_PROGRAMS = test-name_space
+#CXX = @CXX@
+#test_name_space_SOURCES = test-name_space.cc
+#test_name_space_CPPFLAGS = -I$(top_srcdir)/extsrc/boost
+
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
 .NOEXPORT:

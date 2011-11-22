@@ -14,6 +14,7 @@
 #include "textures.h"
 #include "program.h"
 #include "framebuffer.h"
+#include "sync.h"
 #include "query.h"
 
 #include "bit_set.h"
@@ -55,7 +56,7 @@ struct rsxgl_context_t {
   // Used by glFinish():
   uint32_t ref;
 
-  uint8_t timestamp_sync;
+  rsxgl_sync_object_index_type timestamp_sync;
 
   // Next timestamp to be given out when draw functions are initiated.
   // Should be initialized to 1:

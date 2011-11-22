@@ -12,6 +12,15 @@
 #include "rsxgl_limits.h"
 #include "gl_object.h"
 
+#include <boost/integer.hpp>
+
+// Manage RSX "reports":
+typedef boost::uint_value_t< RSXGL_MAX_QUERY_OBJECTS >::least rsxgl_query_object_index_type;
+
+// Return value of RSXGL_MAX_QUERY_OBJECTS is failure:
+rsxgl_query_object_index_type rsxgl_query_object_allocate();
+void rsxgl_query_object_free(rsxgl_query_object_index_type);
+
 enum rsxgl_query_target {
   RSXGL_QUERY_SAMPLES_PASSED = 0,
   RSXGL_QUERY_ANY_SAMPLES_PASSED = 1,
@@ -19,6 +28,13 @@ enum rsxgl_query_target {
   RSXGL_QUERY_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN = 3,
   RSXGL_QUERY_TIME_ELAPSED = 4,
   RSXGL_MAX_QUERY_TARGETS = 5
+};
+
+enum rsxgl_query_status {
+  RSXGL_QUERY_STATUS_INACTIVE = 0,
+  RSXGL_QUERY_STATUS_ACTIVE = 1,
+  RSXGL_QUERY_STATUS_PENDING = 2,
+  RSXGL_QUERY_STATUS_CACHED = 3
 };
 
 struct query_t {
@@ -37,15 +53,17 @@ struct query_t {
   uint32_t timestamp;
 
   /// \brief Type of query object:
-  uint8_t type;
+  uint8_t type:6, status:2;
 
-  /// \brief Query object index obtained from rsxgl_query_object_allocate():
-  typedef boost::uint_value_t< RSXGL_MAX_QUERY_OBJECTS - 1 >::least index_type;
+  /// \brief RSX report indices - two are needed for measuring elapsed time:
+  rsxgl_query_object_index_type indices[2];
 
-  index_type index;
+  uint32_t value;
 
   query_t()
-    : timestamp(0), type(RSXGL_MAX_QUERY_TARGETS), index(0) {
+    : timestamp(0), type(RSXGL_MAX_QUERY_TARGETS), index(0), status(RSXGL_QUERY_STATUS_INACTIVE), value(0) {
+    indices[0] = RSXGL_MAX_QUERY_OBJECTS;
+    indices[1] = RSXGL_MAX_QUERY_OBJECTS;
   }
 
   ~query_t();
