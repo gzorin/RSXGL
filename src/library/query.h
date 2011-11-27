@@ -61,7 +61,7 @@ struct query_t {
   uint32_t value;
 
   query_t()
-    : timestamp(0), type(RSXGL_MAX_QUERY_TARGETS), index(0), status(RSXGL_QUERY_STATUS_INACTIVE), value(0) {
+    : timestamp(0), type(RSXGL_MAX_QUERY_TARGETS), status(RSXGL_QUERY_STATUS_INACTIVE), value(0) {
     indices[0] = RSXGL_MAX_QUERY_OBJECTS;
     indices[1] = RSXGL_MAX_QUERY_OBJECTS;
   }

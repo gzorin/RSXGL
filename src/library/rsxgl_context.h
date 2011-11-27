@@ -89,6 +89,7 @@ current_ctx()
 
 uint32_t rsxgl_timestamp_create(rsxgl_context_t *);
 void rsxgl_timestamp_wait(rsxgl_context_t *,const uint32_t);
+bool rsxgl_timestamp_passed(rsxgl_context_t *,const uint32_t);
 void rsxgl_timestamp_post(rsxgl_context_t *,const uint32_t);
 
 #endif

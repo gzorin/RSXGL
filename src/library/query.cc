@@ -7,6 +7,7 @@
 
 #include "rsxgl_context.h"
 #include "query.h"
+#include "timestamp.h"
 
 #include <GL3/gl3.h>
 #include "error.h"
@@ -57,6 +58,19 @@ query_t::~query_t()
 {
   if(type != RSXGL_MAX_QUERY_TARGETS) {
     
+  }
+}
+
+static inline void
+rsxgl_free_query_object(const GLuint id)
+{
+  query_t & query = query_t::storage().at(id);
+
+  for(size_t i = 0;i < 2;++i) {    
+    if(query.indices[i] != RSXGL_MAX_QUERY_OBJECTS) {
+      rsxgl_query_object_free(query.indices[i]);
+      query.indices[i] = RSXGL_MAX_QUERY_OBJECTS;
+    }
   }
 }
 
@@ -136,12 +150,18 @@ glBeginQuery (GLenum target, GLuint id)
 
   rsxgl_context_t * ctx = current_ctx();
 
-  if(!ctx -> query_binding.is_anything_bound(rsx_target) != 0) {
+  if(ctx -> query_binding.is_anything_bound(rsx_target)) {
     RSXGL_ERROR_(GL_INVALID_OPERATION);
   }
 
   if(id == 0 || !query_t::storage().is_name(id)) {
     RSXGL_ERROR_(GL_INVALID_OPERATION);
+  }
+  else if(!query_t::storage().is_object(id)) {
+    query_t::storage().create_object(id);
+  }
+  else {
+    rsxgl_free_query_object(id);
   }
 
   query_t & query = query_t::storage().at(id);
@@ -152,26 +172,20 @@ glBeginQuery (GLenum target, GLuint id)
   else if(query.type != rsx_target) {
     RSXGL_ERROR_(GL_INVALID_OPERATION);
   }
-  else if(query.status == ACTIVE) {
+  else if(query.status == RSXGL_QUERY_STATUS_ACTIVE) {
     RSXGL_ERROR_(GL_INVALID_OPERATION);
   }
   
   ctx -> query_binding.bind(rsx_target,id);
 
-  for(size_t i = 0;i < 2;++i) {    
-    if(query.indices[i] != RSXGL_MAX_QUERY_OBJECTS) {
-      rsxgl_query_object_free(query.indices[i]);
-      query.indices[i] = RSXGL_MAX_QUERY_OBJECTS;
-    }
-  }
+  gcmContextData * context = ctx -> gcm_context();
 
   if(query.type == RSXGL_QUERY_SAMPLES_PASSED || query.type == RSXGL_QUERY_ANY_SAMPLES_PASSED) {
     query.indices[0] = rsxgl_query_object_allocate();
     rsxgl_assert(query.indices[0] != RSXGL_MAX_QUERY_OBJECTS);
 
-#if 0
     uint32_t * buffer = gcm_reserve(context,4);
-    
+
     gcm_emit_method_at(buffer,0,NV30_3D_QUERY_RESET,1);
     gcm_emit_at(buffer,1,1);
 
@@ -179,21 +193,27 @@ glBeginQuery (GLenum target, GLuint id)
     gcm_emit_at(buffer,3,1);
 
     gcm_finish_n_commands(context,4);
-#endif
   }
+#if 0
   else if(query.type == RSXGL_QUERY_TIME_ELAPSED) {
     query.indices[0] = rsxgl_query_object_allocate();
     query.indices[1] = rsxgl_query_object_allocate();
     rsxgl_assert(query.indices[0] != RSXGL_MAX_QUERY_OBJECTS && query.indices[1] != RSXGL_MAX_QUERY_OBJECTS);
 
-    
+    uint32_t * buffer = gcm_reserve(context,2);
+
+    gcm_emit_method_at(buffer,0,NV30_3D_QUERY_GET,1);
+    gcm_emit_at(buffer,1,(1 << 24) | (query.indices[0] << 4));
+
+    gcm_finish_n_commands(context,2);
   }
+#endif
   else {
     RSXGL_ERROR_(GL_INVALID_OPERATION);
   }
 
   query.value = 0;
-  query.status = RSXGL_QUERY_ACTIVE;
+  query.status = RSXGL_QUERY_STATUS_ACTIVE;
 
   RSXGL_NOERROR_();
 }
@@ -208,29 +228,50 @@ glEndQuery (GLenum target)
 
   rsxgl_context_t * ctx = current_ctx();
 
-  if(ctx -> query_binding.is_anything_bound(rsx_target) != 0) {
+  if(!ctx -> query_binding.is_anything_bound(rsx_target)) {
     RSXGL_ERROR_(GL_INVALID_OPERATION);
   }
 
   query_t & query = ctx -> query_binding[rsx_target];
 
-  if(query.status != RSXGL_QUERY_ACTIVE) {
+  if(query.status != RSXGL_QUERY_STATUS_ACTIVE) {
     RSXGL_ERROR_(GL_INVALID_OPERATION);
   }
 
+  gcmContextData * context = ctx -> gcm_context();
+
   if(query.type == RSXGL_QUERY_SAMPLES_PASSED || query.type == RSXGL_QUERY_ANY_SAMPLES_PASSED) {
+    rsxgl_assert(query.indices[0] != RSXGL_MAX_QUERY_OBJECTS);
+
+    uint32_t * buffer = gcm_reserve(context,4);
+
+    gcm_emit_method_at(buffer,0,NV30_3D_QUERY_GET,1);
+    gcm_emit_at(buffer,1,(1 << 24) | (query.indices[0] << 4));
+
+    gcm_emit_method_at(buffer,2,NV30_3D_QUERY_ENABLE,1);
+    gcm_emit_at(buffer,3,0);
+
+    gcm_finish_n_commands(context,4);
+  }
 #if 0
+  else if(query.type == RSXGL_QUERY_TIME_ELAPSED) {
+    rsxgl_assert(query.indices[0] != RSXGL_MAX_QUERY_OBJECTS && query.indices[1] != RSXGL_MAX_QUERY_OBJECTS);
+
     uint32_t * buffer = gcm_reserve(context,2);
 
     gcm_emit_method_at(buffer,0,NV30_3D_QUERY_GET,1);
-    gcm_emit_at(buffer,1,(1 << 24) | (query.index << 8));
+    gcm_emit_at(buffer,1,(1 << 24) | (query.indices[1] << 4));
 
     gcm_finish_n_commands(context,2);
-#endif
   }
+#endif
   else {
     RSXGL_ERROR_(GL_INVALID_OPERATION);
   }
+
+  query.status = RSXGL_QUERY_STATUS_PENDING;
+  query.timestamp = rsxgl_timestamp_create(ctx);
+  rsxgl_timestamp_post(ctx,query.timestamp);
 
   ctx -> query_binding.bind(rsx_target,0);
 
@@ -247,7 +288,7 @@ glGetQueryiv (GLenum target, GLenum pname, GLint *params)
 
   rsxgl_context_t * ctx = current_ctx();
 
-  if(ctx -> query_binding.is_anything_bound(rsx_target) != 0) {
+  if(!ctx -> query_binding.is_anything_bound(rsx_target)) {
     RSXGL_ERROR_(GL_INVALID_OPERATION);
   }
 
@@ -257,27 +298,66 @@ glGetQueryiv (GLenum target, GLenum pname, GLint *params)
 }
 
 static inline void
-rsxgl_get_query_object(GLuint id, GLenum pname, uint32_t * params)
+rsxgl_get_query_object(const GLuint id, const GLenum pname, uint32_t * params)
 {
   if(!query_t::storage().is_object(id)) {
     RSXGL_ERROR_(GL_INVALID_OPERATION);
   }
 
-  // TODO - finish this
+  rsxgl_context_t * ctx = current_ctx();
+
+  query_t & query = query_t::storage().at(id);
+
+  if(!(query.status == RSXGL_QUERY_STATUS_PENDING || query.status == RSXGL_QUERY_STATUS_CACHED)) {
+    RSXGL_ERROR_(GL_INVALID_OPERATION);
+  }
+
+  if(pname == GL_QUERY_RESULT_AVAILABLE) {
+    //*params = (query.status == RSXGL_QUERY_STATUS_CACHED) || (rsxgl_timestamp_passed(ctx,query.timestamp));
+  }
+  else if(pname == GL_QUERY_RESULT) {
+    if(query.status == RSXGL_QUERY_STATUS_PENDING) {
+      rsxgl_timestamp_wait(ctx,query.timestamp);
+      query.status = RSXGL_QUERY_STATUS_CACHED;
+
+      if(query.type == RSXGL_QUERY_SAMPLES_PASSED) {
+	rsxgl_assert(query.indices[0] != RSXGL_MAX_QUERY_OBJECTS);
+	volatile gcmReportData * report = gcmGetReportDataAddress(query.indices[0]);
+	rsxgl_assert(report != 0);
+	query.value = report -> value;
+      }
+    }
+
+    *params = query.value;
+  }
+
+  RSXGL_NOERROR_();  
 }
 
 GLAPI void APIENTRY
 glGetQueryObjectiv (GLuint id, GLenum pname, GLint *params)
 {
+  RSXGL_FORWARD_ERROR_BEGIN();
+
   uint32_t param = 0;
   rsxgl_get_query_object(id,pname,&param);
-  if(!RSXGL_IS_ERROR()) *params = param;
+  RSXGL_FORWARD_ERROR_();
+
+  *params = param;
+
+  RSXGL_FORWARD_ERROR_END();
 }
 
 GLAPI void APIENTRY
 glGetQueryObjectuiv (GLuint id, GLenum pname, GLuint *params)
 {
+  RSXGL_FORWARD_ERROR_BEGIN();
+
   uint32_t param = 0;
   rsxgl_get_query_object(id,pname,&param);
-  if(!RSXGL_IS_ERROR()) *params = param;
+  RSXGL_FORWARD_ERROR_();
+
+  *params = param;
+
+  RSXGL_FORWARD_ERROR_END();
 }

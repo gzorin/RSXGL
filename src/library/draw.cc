@@ -36,18 +36,6 @@
 #endif
 #define GLAPI extern "C"
 
-static GLenum rsxgl_saved_error = GL_NO_ERROR;
-
-#define RSXGL_FORWARD_ERROR_BEGIN() \
-  {rsxgl_saved_error = rsxgl_error; rsxgl_error = GL_NO_ERROR; }
-
-#define RSXGL_FORWARD_ERROR(RETURN)			\
-  {if(RSXGL_IS_ERROR()) return (RETURN); }
-
-#define RSXGL_FORWARD_ERROR_END()					\
-  {if(RSXGL_IS_ERROR()) { return; }					\
-   else {rsxgl_error = rsxgl_saved_error; rsxgl_saved_error = GL_NO_ERROR;} }
-
 static inline uint32_t
 rsxgl_draw_mode(GLenum mode)
 {

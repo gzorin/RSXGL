@@ -132,6 +132,15 @@ rsxgl_timestamp_wait(rsxgl_context_t * ctx,const uint32_t timestamp)
   rsxgl_timestamp_wait(ctx -> cached_timestamp,ctx -> timestamp_sync,timestamp,RSXGL_SYNC_SLEEP_INTERVAL);
 }
 
+bool
+rsxgl_timestamp_passed(rsxgl_context_t * ctx,const uint32_t timestamp)
+{
+  rsxgl_assert(ctx -> timestamp_sync != 0);
+
+  rsxgl_gcm_flush(ctx -> gcm_context());
+  return rsxgl_timestamp_passed(ctx -> cached_timestamp,ctx -> timestamp_sync,timestamp);
+}
+
 void
 rsxgl_timestamp_post(rsxgl_context_t * ctx,const uint32_t timestamp)
 {
