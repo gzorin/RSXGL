@@ -27,7 +27,8 @@ enum rsxgl_query_target {
   RSXGL_QUERY_PRIMITIVES_GENERATED = 2,
   RSXGL_QUERY_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN = 3,
   RSXGL_QUERY_TIME_ELAPSED = 4,
-  RSXGL_MAX_QUERY_TARGETS = 5
+  RSXGL_QUERY_TIMESTAMP = 5,
+  RSXGL_MAX_QUERY_TARGETS = 6
 };
 
 enum rsxgl_query_status {
@@ -58,7 +59,8 @@ struct query_t {
   /// \brief RSX report indices - two are needed for measuring elapsed time:
   rsxgl_query_object_index_type indices[2];
 
-  uint32_t value;
+  /// \brief Cached value:
+  uint64_t value;
 
   query_t()
     : timestamp(0), type(RSXGL_MAX_QUERY_TARGETS), status(RSXGL_QUERY_STATUS_INACTIVE), value(0) {

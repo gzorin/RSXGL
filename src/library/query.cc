@@ -279,6 +279,54 @@ glEndQuery (GLenum target)
 }
 
 GLAPI void APIENTRY
+glQueryCounter (GLuint id, GLenum target)
+{
+  if(target != GL_TIMESTAMP) {
+    RSXGL_ERROR_(GL_INVALID_ENUM);    
+  }
+  const uint8_t rsx_target = RSXGL_QUERY_TIMESTAMP;
+
+  if(id == 0 || !query_t::storage().is_name(id)) {
+    RSXGL_ERROR_(GL_INVALID_OPERATION);
+  }
+  else if(!query_t::storage().is_object(id)) {
+    query_t::storage().create_object(id);
+  }
+  else {
+    rsxgl_free_query_object(id);
+  }
+
+  rsxgl_context_t * ctx = current_ctx();
+
+  query_t & query = query_t::storage().at(id);
+
+  if(query.type == RSXGL_MAX_QUERY_TARGETS) {
+    query.type = rsx_target;
+  }
+  else if(query.type != rsx_target) {
+    RSXGL_ERROR_(GL_INVALID_OPERATION);
+  }
+
+  gcmContextData * context = ctx -> gcm_context();
+
+  query.indices[0] = rsxgl_query_object_allocate();
+  rsxgl_assert(query.indices[0] != RSXGL_MAX_QUERY_OBJECTS);
+
+  uint32_t * buffer = gcm_reserve(context,2);
+  
+  gcm_emit_method_at(buffer,0,NV30_3D_QUERY_GET,1);
+  gcm_emit_at(buffer,1,(1 << 24) | (query.indices[0] << 4));
+  
+  gcm_finish_n_commands(context,2);
+
+  query.status = RSXGL_QUERY_STATUS_PENDING;
+  query.timestamp = rsxgl_timestamp_create(ctx);
+  rsxgl_timestamp_post(ctx,query.timestamp);  
+
+  RSXGL_NOERROR_();
+}
+
+GLAPI void APIENTRY
 glGetQueryiv (GLenum target, GLenum pname, GLint *params)
 {
   const uint8_t rsx_target = rsxgl_query_target(target);
@@ -297,8 +345,9 @@ glGetQueryiv (GLenum target, GLenum pname, GLint *params)
   RSXGL_NOERROR_();
 }
 
+template< typename Type >
 static inline void
-rsxgl_get_query_object(const GLuint id, const GLenum pname, uint32_t * params)
+rsxgl_get_query_object(const GLuint id, const GLenum pname, Type * params)
 {
   if(!query_t::storage().is_object(id)) {
     RSXGL_ERROR_(GL_INVALID_OPERATION);
@@ -313,7 +362,7 @@ rsxgl_get_query_object(const GLuint id, const GLenum pname, uint32_t * params)
   }
 
   if(pname == GL_QUERY_RESULT_AVAILABLE) {
-    //*params = (query.status == RSXGL_QUERY_STATUS_CACHED) || (rsxgl_timestamp_passed(ctx,query.timestamp));
+    *params = (query.status == RSXGL_QUERY_STATUS_CACHED) || (rsxgl_timestamp_passed(ctx,query.timestamp));
   }
   else if(pname == GL_QUERY_RESULT) {
     if(query.status == RSXGL_QUERY_STATUS_PENDING) {
@@ -337,27 +386,23 @@ rsxgl_get_query_object(const GLuint id, const GLenum pname, uint32_t * params)
 GLAPI void APIENTRY
 glGetQueryObjectiv (GLuint id, GLenum pname, GLint *params)
 {
-  RSXGL_FORWARD_ERROR_BEGIN();
-
-  uint32_t param = 0;
-  rsxgl_get_query_object(id,pname,&param);
-  RSXGL_FORWARD_ERROR_();
-
-  *params = param;
-
-  RSXGL_FORWARD_ERROR_END();
+  rsxgl_get_query_object(id,pname,params);
 }
 
 GLAPI void APIENTRY
 glGetQueryObjectuiv (GLuint id, GLenum pname, GLuint *params)
 {
-  RSXGL_FORWARD_ERROR_BEGIN();
+  rsxgl_get_query_object(id,pname,params);
+}
 
-  uint32_t param = 0;
-  rsxgl_get_query_object(id,pname,&param);
-  RSXGL_FORWARD_ERROR_();
+GLAPI void APIENTRY
+glGetQueryObjecti64v (GLuint id, GLenum pname, GLint64 *params)
+{
+  rsxgl_get_query_object(id,pname,params);
+}
 
-  *params = param;
-
-  RSXGL_FORWARD_ERROR_END();
+GLAPI void APIENTRY
+glGetQueryObjectui64v (GLuint id, GLenum pname, GLuint64 *params)
+{
+  rsxgl_get_query_object(id,pname,params);
 }
