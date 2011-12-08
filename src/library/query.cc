@@ -380,7 +380,7 @@ rsxgl_get_query_object(const GLuint id, const GLenum pname, Type * params)
     *params = query.value;
   }
 
-  RSXGL_NOERROR_();  
+  RSXGL_NOERROR_();
 }
 
 GLAPI void APIENTRY
@@ -405,4 +405,76 @@ GLAPI void APIENTRY
 glGetQueryObjectui64v (GLuint id, GLenum pname, GLuint64 *params)
 {
   rsxgl_get_query_object(id,pname,params);
+}
+
+#define NV40_CONDITIONAL_RENDER 0x1E98
+
+GLAPI void APIENTRY
+glBeginConditionalRender (GLuint id, GLenum mode)
+{
+  if(!query_t::storage().is_object(id)) {
+    RSXGL_ERROR_(GL_INVALID_VALUE);
+  }
+
+  if(!(mode == GL_QUERY_WAIT || mode == GL_QUERY_NO_WAIT || mode == GL_QUERY_BY_REGION_WAIT || mode == GL_QUERY_BY_REGION_NO_WAIT)) {
+    RSXGL_ERROR_(GL_INVALID_ENUM);
+  }
+
+  rsxgl_context_t * ctx = current_ctx();
+
+  if(ctx -> conditional_query != 0) {
+    RSXGL_ERROR_(GL_INVALID_OPERATION);
+  }
+
+  query_t & query = query_t::storage().at(id);
+
+  if(!(query.type == RSXGL_QUERY_SAMPLES_PASSED || query.type == RSXGL_QUERY_ANY_SAMPLES_PASSED)) {
+    RSXGL_ERROR_(GL_INVALID_OPERATION);
+  }
+
+  if(!(query.status == RSXGL_QUERY_STATUS_PENDING || query.status == RSXGL_QUERY_STATUS_CACHED)) {
+    RSXGL_ERROR_(GL_INVALID_OPERATION);
+  }
+
+  gcmContextData * context = ctx -> gcm_context();
+
+  // _WAIT mode means: wait for the query value to be reached, test its result, & possibly prevent glDraw, glClear, etc., from uploading new commands
+  // - client will block
+  // _NO_WAIT mode means: insert NV40_CONDITIONAL_RENDER into the command stream, glDraw, glClear, etc., upload new commands, but they may not do anything
+
+  //
+  uint32_t * buffer = gcm_reserve(context,2);
+
+  gcm_emit_method_at(buffer,0,NV40_CONDITIONAL_RENDER,1);
+  gcm_emit_at(buffer,1,(2 << 24) | (0));
+  
+  gcm_finish_n_commands(context,2);
+
+  ctx -> conditional_query = id;
+
+  RSXGL_NOERROR_();
+}
+
+GLAPI void APIENTRY
+glEndConditionalRender (void)
+{
+  rsxgl_context_t * ctx = current_ctx();
+
+  if(ctx -> conditional_query == 0) {
+    RSXGL_ERROR_(GL_INVALID_OPERATION);
+  }
+
+  gcmContextData * context = ctx -> gcm_context();
+
+  //
+  uint32_t * buffer = gcm_reserve(context,2);
+
+  gcm_emit_method_at(buffer,0,NV40_CONDITIONAL_RENDER,1);
+  gcm_emit_at(buffer,1,(1 << 24) | (0));
+  
+  gcm_finish_n_commands(context,2);
+
+  ctx -> conditional_query = 0;
+
+  RSXGL_NOERROR_();
 }
