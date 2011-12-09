@@ -61,9 +61,12 @@ struct rsxgl_context_t {
 
   // Next timestamp to be given out when draw functions are initiated.
   // Should be initialized to 1:
-  uint32_t next_timestamp, last_timestamp;
+  uint32_t current_timestamp, next_timestamp;
 
-  // Cached copy of the current timestamp on the GPU:
+  // The last timestamp that was posted to the command stream:
+  uint32_t last_timestamp;
+
+  // Cached copy of the current timestamp on the GPU.
   // Should be initialized to 0:
   uint32_t cached_timestamp;
 
@@ -88,7 +91,7 @@ current_ctx()
   return rsxgl_ctx;
 }
 
-uint32_t rsxgl_timestamp_create(rsxgl_context_t *);
+uint32_t rsxgl_timestamp_create(rsxgl_context_t *,const uint32_t);
 void rsxgl_timestamp_wait(rsxgl_context_t *,const uint32_t);
 bool rsxgl_timestamp_passed(rsxgl_context_t *,const uint32_t);
 void rsxgl_timestamp_post(rsxgl_context_t *,const uint32_t);

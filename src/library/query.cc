@@ -66,11 +66,9 @@ rsxgl_free_query_object(const GLuint id)
 {
   query_t & query = query_t::storage().at(id);
 
-  for(size_t i = 0;i < 2;++i) {    
-    if(query.indices[i] != RSXGL_MAX_QUERY_OBJECTS) {
-      rsxgl_query_object_free(query.indices[i]);
-      query.indices[i] = RSXGL_MAX_QUERY_OBJECTS;
-    }
+  if(query.index != RSXGL_MAX_QUERY_OBJECTS) {
+    rsxgl_query_object_free(query.index);
+    query.index = RSXGL_MAX_QUERY_OBJECTS;
   }
 }
 
@@ -178,42 +176,27 @@ glBeginQuery (GLenum target, GLuint id)
   
   ctx -> query_binding.bind(rsx_target,id);
 
+  query.value = 0;
+  query.status = RSXGL_QUERY_STATUS_ACTIVE;
+  query.index = rsxgl_query_object_allocate();
+  rsxgl_assert(query.index != RSXGL_MAX_QUERY_OBJECTS);
+  query.timestamps[0] = rsxgl_timestamp_create(ctx);
+
+  //
   gcmContextData * context = ctx -> gcm_context();
 
   if(query.type == RSXGL_QUERY_SAMPLES_PASSED || query.type == RSXGL_QUERY_ANY_SAMPLES_PASSED) {
-    query.indices[0] = rsxgl_query_object_allocate();
-    rsxgl_assert(query.indices[0] != RSXGL_MAX_QUERY_OBJECTS);
-
-    uint32_t * buffer = gcm_reserve(context,4);
-
-    gcm_emit_method_at(buffer,0,NV30_3D_QUERY_RESET,1);
-    gcm_emit_at(buffer,1,1);
-
-    gcm_emit_method_at(buffer,2,NV30_3D_QUERY_ENABLE,1);
-    gcm_emit_at(buffer,3,1);
-
-    gcm_finish_n_commands(context,4);
+    rsxgl_query_object_enable_samples(context,true);
+    rsxgl_query_object_reset(context);
   }
-#if 0
   else if(query.type == RSXGL_QUERY_TIME_ELAPSED) {
-    query.indices[0] = rsxgl_query_object_allocate();
-    query.indices[1] = rsxgl_query_object_allocate();
-    rsxgl_assert(query.indices[0] != RSXGL_MAX_QUERY_OBJECTS && query.indices[1] != RSXGL_MAX_QUERY_OBJECTS);
-
-    uint32_t * buffer = gcm_reserve(context,2);
-
-    gcm_emit_method_at(buffer,0,NV30_3D_QUERY_GET,1);
-    gcm_emit_at(buffer,1,(1 << 24) | (query.indices[0] << 4));
-
-    gcm_finish_n_commands(context,2);
   }
-#endif
   else {
     RSXGL_ERROR_(GL_INVALID_OPERATION);
   }
 
-  query.value = 0;
-  query.status = RSXGL_QUERY_STATUS_ACTIVE;
+  rsxgl_query_object_set(context,query.index);
+  rsxgl_timestamp_post(ctx,query.timestamps[0]);
 
   RSXGL_NOERROR_();
 }
@@ -238,40 +221,25 @@ glEndQuery (GLenum target)
     RSXGL_ERROR_(GL_INVALID_OPERATION);
   }
 
+  query.status = RSXGL_QUERY_STATUS_PENDING;
+  rsxgl_assert(query.index != RSXGL_MAX_QUERY_OBJECTS);
+  query.timestamps[1] = ctx -> last_timestamp;
+
+  rsxgl_debug_printf("query timestamps: %u %u\n",query.timestamps[0],query.timestamps[1]);
+
+  //
   gcmContextData * context = ctx -> gcm_context();
 
   if(query.type == RSXGL_QUERY_SAMPLES_PASSED || query.type == RSXGL_QUERY_ANY_SAMPLES_PASSED) {
-    rsxgl_assert(query.indices[0] != RSXGL_MAX_QUERY_OBJECTS);
-
-    uint32_t * buffer = gcm_reserve(context,4);
-
-    gcm_emit_method_at(buffer,0,NV30_3D_QUERY_GET,1);
-    gcm_emit_at(buffer,1,(1 << 24) | (query.indices[0] << 4));
-
-    gcm_emit_method_at(buffer,2,NV30_3D_QUERY_ENABLE,1);
-    gcm_emit_at(buffer,3,0);
-
-    gcm_finish_n_commands(context,4);
+    rsxgl_query_object_enable_samples(context,false);
   }
-#if 0
   else if(query.type == RSXGL_QUERY_TIME_ELAPSED) {
-    rsxgl_assert(query.indices[0] != RSXGL_MAX_QUERY_OBJECTS && query.indices[1] != RSXGL_MAX_QUERY_OBJECTS);
-
-    uint32_t * buffer = gcm_reserve(context,2);
-
-    gcm_emit_method_at(buffer,0,NV30_3D_QUERY_GET,1);
-    gcm_emit_at(buffer,1,(1 << 24) | (query.indices[1] << 4));
-
-    gcm_finish_n_commands(context,2);
   }
-#endif
   else {
     RSXGL_ERROR_(GL_INVALID_OPERATION);
   }
 
-  query.status = RSXGL_QUERY_STATUS_PENDING;
-  query.timestamp = rsxgl_timestamp_create(ctx);
-  rsxgl_timestamp_post(ctx,query.timestamp);
+  rsxgl_query_object_set(context,query.index);
 
   ctx -> query_binding.bind(rsx_target,0);
 
@@ -307,21 +275,15 @@ glQueryCounter (GLuint id, GLenum target)
     RSXGL_ERROR_(GL_INVALID_OPERATION);
   }
 
+  query.status = RSXGL_QUERY_STATUS_PENDING;
+  query.index = rsxgl_query_object_allocate();
+  rsxgl_assert(query.index != RSXGL_MAX_QUERY_OBJECTS);
+  //query.timestamp = rsxgl_timestamp_create(ctx);
+  //rsxgl_timestamp_post(ctx,query.timestamp);
+
   gcmContextData * context = ctx -> gcm_context();
 
-  query.indices[0] = rsxgl_query_object_allocate();
-  rsxgl_assert(query.indices[0] != RSXGL_MAX_QUERY_OBJECTS);
-
-  uint32_t * buffer = gcm_reserve(context,2);
-  
-  gcm_emit_method_at(buffer,0,NV30_3D_QUERY_GET,1);
-  gcm_emit_at(buffer,1,(1 << 24) | (query.indices[0] << 4));
-  
-  gcm_finish_n_commands(context,2);
-
-  query.status = RSXGL_QUERY_STATUS_PENDING;
-  query.timestamp = rsxgl_timestamp_create(ctx);
-  rsxgl_timestamp_post(ctx,query.timestamp);  
+  rsxgl_query_object_set(context,query.index);
 
   RSXGL_NOERROR_();
 }
@@ -362,19 +324,24 @@ rsxgl_get_query_object(const GLuint id, const GLenum pname, Type * params)
   }
 
   if(pname == GL_QUERY_RESULT_AVAILABLE) {
-    *params = (query.status == RSXGL_QUERY_STATUS_CACHED) || (rsxgl_timestamp_passed(ctx,query.timestamp));
+    *params = (query.status == RSXGL_QUERY_STATUS_CACHED) || (rsxgl_timestamp_passed(ctx,query.timestamps[1]));
   }
   else if(pname == GL_QUERY_RESULT) {
     if(query.status == RSXGL_QUERY_STATUS_PENDING) {
-      rsxgl_timestamp_wait(ctx,query.timestamp);
-      query.status = RSXGL_QUERY_STATUS_CACHED;
+      rsxgl_assert(query.index != RSXGL_MAX_QUERY_OBJECTS);
 
       if(query.type == RSXGL_QUERY_SAMPLES_PASSED) {
-	rsxgl_assert(query.indices[0] != RSXGL_MAX_QUERY_OBJECTS);
-	volatile gcmReportData * report = gcmGetReportDataAddress(query.indices[0]);
-	rsxgl_assert(report != 0);
-	query.value = report -> value;
+	rsxgl_timestamp_wait(ctx,query.timestamps[1]);
+	query.value = rsxgl_query_object_get_value(query.index);
       }
+      else if(query.type == RSXGL_QUERY_ANY_SAMPLES_PASSED) {
+      }
+      else if(query.type == RSXGL_QUERY_TIME_ELAPSED) {
+      }
+      else if(query.type == RSXGL_QUERY_TIMESTAMP) {
+      }
+
+      query.status = RSXGL_QUERY_STATUS_CACHED;
     }
 
     *params = query.value;

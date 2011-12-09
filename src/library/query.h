@@ -21,6 +21,55 @@ typedef boost::uint_value_t< RSXGL_MAX_QUERY_OBJECTS >::least rsxgl_query_object
 rsxgl_query_object_index_type rsxgl_query_object_allocate();
 void rsxgl_query_object_free(rsxgl_query_object_index_type);
 
+static inline void
+rsxgl_query_object_reset(gcmContextData * context)
+{
+  uint32_t * buffer = gcm_reserve(context,2);
+
+  gcm_emit_method_at(buffer,0,NV30_3D_QUERY_RESET,1);
+  gcm_emit_at(buffer,1,1);
+
+  gcm_finish_n_commands(context,2);
+}
+
+static inline void
+rsxgl_query_object_enable_samples(gcmContextData * context,const bool samples)
+{
+  uint32_t * buffer = gcm_reserve(context,2);
+
+  gcm_emit_method_at(buffer,0,NV30_3D_QUERY_ENABLE,1);
+  gcm_emit_at(buffer,1,samples);
+
+  gcm_finish_n_commands(context,2);
+}
+
+static inline void
+rsxgl_query_object_set(gcmContextData * context,const rsxgl_query_object_index_type index)
+{
+  uint32_t * buffer = gcm_reserve(context,2);
+
+  gcm_emit_method_at(buffer,0,NV30_3D_QUERY_GET,1);
+  gcm_emit_at(buffer,1,(1 << 24) | (index << 4));
+
+  gcm_finish_n_commands(context,2);
+}
+
+static inline uint32_t
+rsxgl_query_object_get_value(const rsxgl_query_object_index_type index)
+{
+  volatile gcmReportData * report = gcmGetReportDataAddress(index);
+  rsxgl_assert(report != 0);
+  return report -> value;
+}
+
+static inline uint64_t
+rsxgl_query_object_get_timestamp(const rsxgl_query_object_index_type index)
+{
+  volatile gcmReportData * report = gcmGetReportDataAddress(index);
+  rsxgl_assert(report != 0);
+  return report -> timer;
+}
+
 enum rsxgl_query_target {
   RSXGL_QUERY_SAMPLES_PASSED = 0,
   RSXGL_QUERY_ANY_SAMPLES_PASSED = 1,
@@ -49,23 +98,23 @@ struct query_t {
 
   binding_bitfield_type binding_bitfield;
 
-  //
-  /// \brief Timestamp - point in the command stream when the query will be finished:
-  uint32_t timestamp;
-
   /// \brief Type of query object:
   uint8_t type:6, status:2;
 
   /// \brief RSX report indices - two are needed for measuring elapsed time:
-  rsxgl_query_object_index_type indices[2];
+  rsxgl_query_object_index_type index;
+
+  //
+  /// \brief Timestamp - point in the command stream when the query will be finished:
+  uint32_t timestamps[2];
 
   /// \brief Cached value:
   uint64_t value;
 
   query_t()
-    : timestamp(0), type(RSXGL_MAX_QUERY_TARGETS), status(RSXGL_QUERY_STATUS_INACTIVE), value(0) {
-    indices[0] = RSXGL_MAX_QUERY_OBJECTS;
-    indices[1] = RSXGL_MAX_QUERY_OBJECTS;
+    : type(RSXGL_MAX_QUERY_TARGETS), status(RSXGL_QUERY_STATUS_INACTIVE), index(RSXGL_MAX_QUERY_OBJECTS), value(0) {
+    timestamps[0] = 0;
+    timestamps[1] = 0;
   }
 
   ~query_t();

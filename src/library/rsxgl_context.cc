@@ -22,7 +22,7 @@ rsxgl_context_create(const struct rsxegl_config_t * config,gcmContextData * gcm_
 }
 
 rsxgl_context_t::rsxgl_context_t(const struct rsxegl_config_t * config,gcmContextData * gcm_context)
-  : active_texture(0), conditional_query(0), ref(0), timestamp_sync(0), next_timestamp(1), last_timestamp(0), cached_timestamp(0)
+  : active_texture(0), conditional_query(0), ref(0), timestamp_sync(0), current_timestamp(0), next_timestamp(1), last_timestamp(0), cached_timestamp(0)
 {
   base.api = EGL_OPENGL_API;
   base.config = config;
@@ -76,6 +76,8 @@ rsxgl_context_t::egl_callback(struct rsxegl_context_t * egl_ctx,const uint8_t op
   }
 }
 
+
+#if 0
 uint32_t
 rsxgl_timestamp_create(rsxgl_context_t * ctx)
 {
@@ -88,6 +90,61 @@ rsxgl_timestamp_create(rsxgl_context_t * ctx)
   const uint32_t next_timestamp = result + 1;
   
   if(next_timestamp & ~max_timestamp || next_timestamp == 0) {
+    // Block until the last timestamp has been reached:
+    rsxgl_timestamp_wait(ctx -> cached_timestamp,ctx -> timestamp_sync,ctx -> last_timestamp,RSXGL_SYNC_SLEEP_INTERVAL);
+    
+    // Reset the timestamps of all timestamp-able objects:
+    //
+    // Buffers:
+    {
+      const buffer_t::name_type n = buffer_t::storage().contents().size;
+      for(buffer_t::name_type i = 0;i < n;++i) {
+	if(!buffer_t::storage().is_object(i)) continue;
+	buffer_t::storage().at(i).timestamp = 0;
+      }
+    }
+    
+    // Textures:
+    {
+      const texture_t::name_type n = texture_t::storage().contents().size;
+      for(texture_t::name_type i = 0;i < n;++i) {
+	if(!texture_t::storage().is_object(i)) continue;
+	texture_t::storage().at(i).timestamp = 0;
+      }
+    }
+
+    //
+    ctx -> cached_timestamp = 0;
+
+    ctx -> next_timestamp = 1;
+  }
+  else {
+    ctx -> next_timestamp = next_timestamp;
+  }
+
+  return result;
+}
+#endif
+
+uint32_t
+rsxgl_timestamp_create(rsxgl_context_t * ctx,const uint32_t count)
+{
+  const uint32_t max_timestamp = RSXGL_MAX_TIMESTAMP;
+  rsxgl_assert(is_pot(max_timestamp + 1));
+
+  rsxgl_assert(count > 0);
+
+  const uint32_t current_timestamp = ctx -> current_timestamp;
+  const uint32_t result = ctx -> current_timestamp + count;
+
+  if((result % max_timestamp) <= ctx -> curre
+
+  const uint32_t result = ctx -> next_timestamp;
+  rsxgl_assert(result > 0);
+
+  const uint32_t next_timestamp = result + count;
+  
+  if(next_timestamp & ~max_timestamp || next_timestamp < result) {
     // Block until the last timestamp has been reached:
     rsxgl_timestamp_wait(ctx -> cached_timestamp,ctx -> timestamp_sync,ctx -> last_timestamp,RSXGL_SYNC_SLEEP_INTERVAL);
     
