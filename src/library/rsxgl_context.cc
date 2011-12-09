@@ -130,26 +130,17 @@ uint32_t
 rsxgl_timestamp_create(rsxgl_context_t * ctx,const uint32_t count)
 {
   const uint32_t max_timestamp = RSXGL_MAX_TIMESTAMP;
-  rsxgl_assert(is_pot(max_timestamp + 1));
 
-  rsxgl_assert(count > 0);
+  const uint32_t current_timestamp = ctx -> next_timestamp;
+  const uint32_t next_timestamp = current_timestamp + count;
 
-  const uint32_t current_timestamp = ctx -> current_timestamp;
-  const uint32_t result = ctx -> current_timestamp + count;
+  // overflow:
+  if(next_timestamp > max_timestamp || next_timestamp < current_timestamp) {
+    std::cerr << "timestamp overflow!" << std::endl;
 
-  if((result % max_timestamp) <= ctx -> curre
-
-  const uint32_t result = ctx -> next_timestamp;
-  rsxgl_assert(result > 0);
-
-  const uint32_t next_timestamp = result + count;
-  
-  if(next_timestamp & ~max_timestamp || next_timestamp < result) {
-    // Block until the last timestamp has been reached:
+    // block until last_timestamp is reached:
     rsxgl_timestamp_wait(ctx -> cached_timestamp,ctx -> timestamp_sync,ctx -> last_timestamp,RSXGL_SYNC_SLEEP_INTERVAL);
-    
-    // Reset the timestamps of all timestamp-able objects:
-    //
+
     // Buffers:
     {
       const buffer_t::name_type n = buffer_t::storage().contents().size;
@@ -170,14 +161,14 @@ rsxgl_timestamp_create(rsxgl_context_t * ctx,const uint32_t count)
 
     //
     ctx -> cached_timestamp = 0;
-
-    ctx -> next_timestamp = 1;
+    ctx -> next_timestamp = 1 + count;
+    return 1;
   }
+  //
   else {
     ctx -> next_timestamp = next_timestamp;
+    return current_timestamp;
   }
-
-  return result;
 }
 
 void
