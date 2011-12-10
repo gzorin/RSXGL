@@ -188,6 +188,11 @@ glBeginQuery (GLenum target, GLuint id)
   if(query.type == RSXGL_QUERY_SAMPLES_PASSED || query.type == RSXGL_QUERY_ANY_SAMPLES_PASSED) {
     rsxgl_query_object_enable_samples(context,true);
     rsxgl_query_object_reset(context);
+
+    // this tells glMultiDraw* and glDrawInstanced* functions which report to update as each primitive is drawn:
+    if(query.type == RSXGL_QUERY_ANY_SAMPLES_PASSED) {
+      ctx -> any_samples_passed_query = query.index;
+    }
   }
   else if(query.type == RSXGL_QUERY_TIME_ELAPSED) {
   }
@@ -232,6 +237,10 @@ glEndQuery (GLenum target)
 
   if(query.type == RSXGL_QUERY_SAMPLES_PASSED || query.type == RSXGL_QUERY_ANY_SAMPLES_PASSED) {
     rsxgl_query_object_enable_samples(context,false);
+
+    if(query.type == RSXGL_QUERY_ANY_SAMPLES_PASSED) {
+      ctx -> any_samples_passed_query = RSXGL_MAX_QUERY_OBJECTS;
+    }
   }
   else if(query.type == RSXGL_QUERY_TIME_ELAPSED) {
   }
@@ -389,7 +398,7 @@ glBeginConditionalRender (GLuint id, GLenum mode)
 
   rsxgl_context_t * ctx = current_ctx();
 
-  if(ctx -> conditional_query != 0) {
+  if(ctx -> conditional_render_query != RSXGL_MAX_QUERY_OBJECTS) {
     RSXGL_ERROR_(GL_INVALID_OPERATION);
   }
 
@@ -417,7 +426,7 @@ glBeginConditionalRender (GLuint id, GLenum mode)
   
   gcm_finish_n_commands(context,2);
 
-  ctx -> conditional_query = id;
+  ctx -> conditional_render_query = query.index;
 
   RSXGL_NOERROR_();
 }
@@ -427,7 +436,7 @@ glEndConditionalRender (void)
 {
   rsxgl_context_t * ctx = current_ctx();
 
-  if(ctx -> conditional_query == 0) {
+  if(ctx -> conditional_render_query == RSXGL_MAX_QUERY_OBJECTS) {
     RSXGL_ERROR_(GL_INVALID_OPERATION);
   }
 
@@ -441,7 +450,7 @@ glEndConditionalRender (void)
   
   gcm_finish_n_commands(context,2);
 
-  ctx -> conditional_query = 0;
+  ctx -> conditional_render_query = RSXGL_MAX_QUERY_OBJECTS;
 
   RSXGL_NOERROR_();
 }

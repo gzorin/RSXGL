@@ -89,15 +89,19 @@ rsxgl_emit_sync_gpu_signal_read(gcmContextData * context,const rsxgl_sync_object
 // Insert a command that will set sync object index to value once write processing is finished.
 // (Equivalent to PSL1GHT's rsxSetWriteBackendLabel)
 static inline void
-rsxgl_emit_sync_gpu_signal_write(gcmContextData * context,const rsxgl_sync_object_index_type index,const uint32_t value)
+_rsxgl_emit_sync_gpu_signal_write(uint32_t * buffer,const rsxgl_sync_object_index_type index,const uint32_t value)
 {
-  uint32_t * buffer = gcm_reserve(context,4);
-
   gcm_emit_method_at(buffer,0,NV40TCL_SEMAPHORE_OFFSET,1);
   gcm_emit_at(buffer,1,index << 4);
   gcm_emit_method_at(buffer,2,NV40TCL_SEMAPHORE_BACKENDWRITE_RELEASE,1);
   gcm_emit_at(buffer,3,(value&0xff00ff00) | ((value>>16)&0xff) | ((value&0xff)<<16));
+}
 
+static inline void
+rsxgl_emit_sync_gpu_signal_write(gcmContextData * context,const rsxgl_sync_object_index_type index,const uint32_t value)
+{
+  uint32_t * buffer = gcm_reserve(context,4);
+  _rsxgl_emit_sync_gpu_signal_write(buffer,index,value);
   gcm_finish_n_commands(context,4);
 }
 
