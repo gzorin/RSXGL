@@ -49,7 +49,7 @@ struct rsxgl_context_t {
   framebuffer_t::binding_type framebuffer_binding;
 
   query_t::binding_type query_binding;
-  rsxgl_query_object_index_type any_samples_passed_query, conditional_render_query;
+  rsxgl_query_object_index_type any_samples_passed_query;
   
   program_t::binding_type program_binding;
   program_t::texture_assignments_bitfield_type invalid_texture_assignments;

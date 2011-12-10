@@ -190,7 +190,7 @@ rsxgltest_draw()
   }
 
   {
-    glBeginQuery(GL_SAMPLES_PASSED,query);
+    glBeginQuery(GL_ANY_SAMPLES_PASSED,query);
 
     glUniform3f(color_location,1,0,0);
 
@@ -203,11 +203,28 @@ rsxgltest_draw()
 
     glDrawArrays(GL_TRIANGLES,0,6);
 
-    glEndQuery(GL_SAMPLES_PASSED);
+    glEndQuery(GL_ANY_SAMPLES_PASSED);
 
     GLuint samples = 0;
     glGetQueryObjectuiv(query,GL_QUERY_RESULT,&samples);
     tcp_printf("samples: %u\n",(unsigned int)samples);
+  }
+
+  {
+    glBeginConditionalRender(query,GL_QUERY_NO_WAIT);
+
+    glUniform3f(color_location,0,0,1);
+
+    Eigen::Affine3f transmat = 
+      Eigen::Affine3f::Identity() * 
+      Eigen::Translation3f(0,-15,-5.0);
+    
+    Eigen::Affine3f modelview = ViewMatrixInv * (Eigen::Affine3f::Identity() * transmat);
+    glUniformMatrix4fv(TransMatrix_location,1,GL_FALSE,modelview.data());
+
+    glDrawArrays(GL_TRIANGLES,0,6);
+
+    glEndConditionalRender();
   }
 
   return 1;

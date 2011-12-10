@@ -104,6 +104,8 @@ state_t::state_t()
 
   enable.primitive_restart = 0;
   primitiveRestartIndex = 0;
+
+  enable.conditional_render_status = RSXGL_CONDITIONAL_RENDER_INACTIVE;
 }
 
 union _ieee32_t {

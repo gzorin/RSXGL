@@ -230,8 +230,6 @@ glEndQuery (GLenum target)
   rsxgl_assert(query.index != RSXGL_MAX_QUERY_OBJECTS);
   query.timestamps[1] = ctx -> last_timestamp;
 
-  rsxgl_debug_printf("query timestamps: %u %u\n",query.timestamps[0],query.timestamps[1]);
-
   //
   gcmContextData * context = ctx -> gcm_context();
 
@@ -317,6 +315,39 @@ glGetQueryiv (GLenum target, GLenum pname, GLint *params)
 }
 
 template< typename Type >
+static inline Type
+rsxgl_get_query_object_value(rsxgl_context_t * ctx,query_t & query)
+{
+  rsxgl_assert(query.status == RSXGL_QUERY_STATUS_PENDING || query.status == RSXGL_QUERY_STATUS_CACHED);
+
+  if(query.status == RSXGL_QUERY_STATUS_PENDING) {
+    rsxgl_assert(query.index != RSXGL_MAX_QUERY_OBJECTS);
+    
+    if(query.type == RSXGL_QUERY_SAMPLES_PASSED) {
+      rsxgl_timestamp_wait(ctx,query.timestamps[1]);
+      query.value = rsxgl_query_object_get_value(query.index);
+    }
+    else if(query.type == RSXGL_QUERY_ANY_SAMPLES_PASSED) {
+      uint32_t samples = 0;
+      const uint32_t last_timestamp = query.timestamps[1];
+      for(uint32_t timestamp = query.timestamps[0];(timestamp <= last_timestamp) && (samples == 0);++timestamp) {
+	rsxgl_timestamp_wait(ctx,timestamp);
+	samples += rsxgl_query_object_get_value(query.index);
+      }
+      query.value = (samples > 0);
+    }
+    else if(query.type == RSXGL_QUERY_TIME_ELAPSED) {
+    }
+    else if(query.type == RSXGL_QUERY_TIMESTAMP) {
+    }
+    
+    query.status = RSXGL_QUERY_STATUS_CACHED;
+  }
+
+  return query.value;
+}
+
+template< typename Type >
 static inline void
 rsxgl_get_query_object(const GLuint id, const GLenum pname, Type * params)
 {
@@ -336,24 +367,7 @@ rsxgl_get_query_object(const GLuint id, const GLenum pname, Type * params)
     *params = (query.status == RSXGL_QUERY_STATUS_CACHED) || (rsxgl_timestamp_passed(ctx,query.timestamps[1]));
   }
   else if(pname == GL_QUERY_RESULT) {
-    if(query.status == RSXGL_QUERY_STATUS_PENDING) {
-      rsxgl_assert(query.index != RSXGL_MAX_QUERY_OBJECTS);
-
-      if(query.type == RSXGL_QUERY_SAMPLES_PASSED) {
-	rsxgl_timestamp_wait(ctx,query.timestamps[1]);
-	query.value = rsxgl_query_object_get_value(query.index);
-      }
-      else if(query.type == RSXGL_QUERY_ANY_SAMPLES_PASSED) {
-      }
-      else if(query.type == RSXGL_QUERY_TIME_ELAPSED) {
-      }
-      else if(query.type == RSXGL_QUERY_TIMESTAMP) {
-      }
-
-      query.status = RSXGL_QUERY_STATUS_CACHED;
-    }
-
-    *params = query.value;
+    *params = rsxgl_get_query_object_value< Type >(ctx,query);
   }
 
   RSXGL_NOERROR_();
@@ -398,7 +412,7 @@ glBeginConditionalRender (GLuint id, GLenum mode)
 
   rsxgl_context_t * ctx = current_ctx();
 
-  if(ctx -> conditional_render_query != RSXGL_MAX_QUERY_OBJECTS) {
+  if(ctx -> state.enable.conditional_render_status != RSXGL_CONDITIONAL_RENDER_INACTIVE) {
     RSXGL_ERROR_(GL_INVALID_OPERATION);
   }
 
@@ -412,21 +426,23 @@ glBeginConditionalRender (GLuint id, GLenum mode)
     RSXGL_ERROR_(GL_INVALID_OPERATION);
   }
 
-  gcmContextData * context = ctx -> gcm_context();
+  // 
+  if(query.status == RSXGL_QUERY_STATUS_CACHED || mode == GL_QUERY_WAIT || mode == GL_QUERY_BY_REGION_WAIT) {
+    ctx -> state.enable.conditional_render_status = rsxgl_get_query_object_value< uint32_t >(ctx,query) != 0 ? RSXGL_CONDITIONAL_RENDER_ACTIVE_WAIT_PASS : RSXGL_CONDITIONAL_RENDER_ACTIVE_WAIT_FAIL;
+  }
+  else if(mode == GL_QUERY_NO_WAIT || mode == GL_QUERY_BY_REGION_NO_WAIT) {
+    ctx -> state.enable.conditional_render_status = RSXGL_CONDITIONAL_RENDER_ACTIVE_NO_WAIT;
 
-  // _WAIT mode means: wait for the query value to be reached, test its result, & possibly prevent glDraw, glClear, etc., from uploading new commands
-  // - client will block
-  // _NO_WAIT mode means: insert NV40_CONDITIONAL_RENDER into the command stream, glDraw, glClear, etc., upload new commands, but they may not do anything
+    //
+    gcmContextData * context = ctx -> gcm_context();
 
-  //
-  uint32_t * buffer = gcm_reserve(context,2);
-
-  gcm_emit_method_at(buffer,0,NV40_CONDITIONAL_RENDER,1);
-  gcm_emit_at(buffer,1,(2 << 24) | (0));
-  
-  gcm_finish_n_commands(context,2);
-
-  ctx -> conditional_render_query = query.index;
+    uint32_t * buffer = gcm_reserve(context,2);
+    
+    gcm_emit_method_at(buffer,0,NV40_CONDITIONAL_RENDER,1);
+    gcm_emit_at(buffer,1,(2 << 24) | (query.index << 4));
+    
+    gcm_finish_n_commands(context,2);
+  }
 
   RSXGL_NOERROR_();
 }
@@ -436,21 +452,23 @@ glEndConditionalRender (void)
 {
   rsxgl_context_t * ctx = current_ctx();
 
-  if(ctx -> conditional_render_query == RSXGL_MAX_QUERY_OBJECTS) {
+  if(ctx -> state.enable.conditional_render_status == RSXGL_CONDITIONAL_RENDER_INACTIVE) {
     RSXGL_ERROR_(GL_INVALID_OPERATION);
   }
 
-  gcmContextData * context = ctx -> gcm_context();
+  if(ctx -> state.enable.conditional_render_status == RSXGL_CONDITIONAL_RENDER_ACTIVE_NO_WAIT) {
+    gcmContextData * context = ctx -> gcm_context();
 
-  //
-  uint32_t * buffer = gcm_reserve(context,2);
+    //
+    uint32_t * buffer = gcm_reserve(context,2);
+    
+    gcm_emit_method_at(buffer,0,NV40_CONDITIONAL_RENDER,1);
+    gcm_emit_at(buffer,1,(1 << 24) | (0));
+    
+    gcm_finish_n_commands(context,2);
+  }
 
-  gcm_emit_method_at(buffer,0,NV40_CONDITIONAL_RENDER,1);
-  gcm_emit_at(buffer,1,(1 << 24) | (0));
-  
-  gcm_finish_n_commands(context,2);
-
-  ctx -> conditional_render_query = RSXGL_MAX_QUERY_OBJECTS;
+  ctx -> state.enable.conditional_render_status = RSXGL_CONDITIONAL_RENDER_INACTIVE;
 
   RSXGL_NOERROR_();
 }
