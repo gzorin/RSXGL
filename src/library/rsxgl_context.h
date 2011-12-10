@@ -61,7 +61,7 @@ struct rsxgl_context_t {
 
   // Next timestamp to be given out when draw functions are initiated.
   // Should be initialized to 1:
-  uint32_t current_timestamp, next_timestamp;
+  uint32_t next_timestamp;
 
   // The last timestamp that was posted to the command stream:
   uint32_t last_timestamp;

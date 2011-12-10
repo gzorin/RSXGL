@@ -143,7 +143,7 @@ rsxgl_check_draw_elements(struct rsxgl_context_t * ctx,GLenum mode,GLenum type)
 static inline uint32_t
 rsxgl_draw_init(struct rsxgl_context_t * ctx,GLenum mode,const uint32_t start,const uint32_t length)
 {
-  const uint32_t timestamp = rsxgl_timestamp_create(ctx);
+  const uint32_t timestamp = rsxgl_timestamp_create(ctx,1);
 
   // validate everything:
   rsxgl_draw_framebuffer_validate(ctx,timestamp);

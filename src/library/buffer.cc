@@ -643,7 +643,7 @@ glCopyBufferSubData (GLenum readTarget, GLenum writeTarget, GLintptr readOffset,
     RSXGL_ERROR_(GL_INVALID_VALUE);
   }
   
-  const uint32_t timestamp = rsxgl_timestamp_create(ctx);  
+  const uint32_t timestamp = rsxgl_timestamp_create(ctx,1);
 
   gcmContextData * context = ctx -> gcm_context();
 

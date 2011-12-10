@@ -98,7 +98,7 @@ glClear(GLbitfield mask)
 
   struct rsxgl_context_t * ctx = current_ctx();
   
-  const uint32_t timestamp = rsxgl_timestamp_create(ctx);
+  const uint32_t timestamp = rsxgl_timestamp_create(ctx,1);
   rsxgl_draw_framebuffer_validate(ctx,timestamp);
   rsxgl_state_validate(ctx);
 

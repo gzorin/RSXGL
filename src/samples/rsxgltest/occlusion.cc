@@ -201,7 +201,7 @@ rsxgltest_draw()
     Eigen::Affine3f modelview = ViewMatrixInv * (Eigen::Affine3f::Identity() * transmat);
     glUniformMatrix4fv(TransMatrix_location,1,GL_FALSE,modelview.data());
 
-    //glDrawArrays(GL_TRIANGLES,0,6);
+    glDrawArrays(GL_TRIANGLES,0,6);
 
     glEndQuery(GL_SAMPLES_PASSED);
 

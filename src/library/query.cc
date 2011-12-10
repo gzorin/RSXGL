@@ -180,7 +180,7 @@ glBeginQuery (GLenum target, GLuint id)
   query.status = RSXGL_QUERY_STATUS_ACTIVE;
   query.index = rsxgl_query_object_allocate();
   rsxgl_assert(query.index != RSXGL_MAX_QUERY_OBJECTS);
-  query.timestamps[0] = rsxgl_timestamp_create(ctx);
+  query.timestamps[0] = rsxgl_timestamp_create(ctx,1);
 
   //
   gcmContextData * context = ctx -> gcm_context();

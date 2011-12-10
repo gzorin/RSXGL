@@ -22,7 +22,7 @@ rsxgl_context_create(const struct rsxegl_config_t * config,gcmContextData * gcm_
 }
 
 rsxgl_context_t::rsxgl_context_t(const struct rsxegl_config_t * config,gcmContextData * gcm_context)
-  : active_texture(0), conditional_query(0), ref(0), timestamp_sync(0), current_timestamp(0), next_timestamp(1), last_timestamp(0), cached_timestamp(0)
+  : active_texture(0), conditional_query(0), ref(0), timestamp_sync(0), next_timestamp(1), last_timestamp(0), cached_timestamp(0)
 {
   base.api = EGL_OPENGL_API;
   base.config = config;
@@ -132,9 +132,11 @@ rsxgl_timestamp_create(rsxgl_context_t * ctx,const uint32_t count)
   const uint32_t max_timestamp = RSXGL_MAX_TIMESTAMP;
 
   const uint32_t current_timestamp = ctx -> next_timestamp;
+  rsxgl_assert(current_timestamp == (ctx -> last_timestamp + 1));
+
   const uint32_t next_timestamp = current_timestamp + count;
 
-  // overflow:
+  // check for overflow:
   if(next_timestamp > max_timestamp || next_timestamp < current_timestamp) {
     std::cerr << "timestamp overflow!" << std::endl;
 
@@ -172,6 +174,15 @@ rsxgl_timestamp_create(rsxgl_context_t * ctx,const uint32_t count)
 }
 
 void
+rsxgl_timestamp_post(rsxgl_context_t * ctx,const uint32_t timestamp)
+{
+  rsxgl_assert(ctx -> timestamp_sync != 0);
+
+  rsxgl_emit_sync_gpu_signal_write(ctx -> base.gcm_context,ctx -> timestamp_sync,timestamp);
+  ctx -> last_timestamp = timestamp;
+}
+
+void
 rsxgl_timestamp_wait(rsxgl_context_t * ctx,const uint32_t timestamp)
 {
   rsxgl_assert(ctx -> timestamp_sync != 0);
@@ -187,15 +198,6 @@ rsxgl_timestamp_passed(rsxgl_context_t * ctx,const uint32_t timestamp)
 
   rsxgl_gcm_flush(ctx -> gcm_context());
   return rsxgl_timestamp_passed(ctx -> cached_timestamp,ctx -> timestamp_sync,timestamp);
-}
-
-void
-rsxgl_timestamp_post(rsxgl_context_t * ctx,const uint32_t timestamp)
-{
-  rsxgl_assert(ctx -> timestamp_sync != 0);
-
-  rsxgl_emit_sync_gpu_signal_write(ctx -> base.gcm_context,ctx -> timestamp_sync,timestamp);
-  ctx -> last_timestamp = timestamp;
 }
 
 #if 0
