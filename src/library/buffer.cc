@@ -28,6 +28,9 @@ buffer_t::storage_type & buffer_t::storage()
 {
   static buffer_t::storage_type _storage;
   return _storage;
+
+  //static buffer_t::storage_type * _storage = new buffer_t::storage_type();
+  //return *_storage;
 }
 
 buffer_t::~buffer_t()

@@ -205,9 +205,11 @@ rsxgltest_draw()
 
     glEndQuery(GL_ANY_SAMPLES_PASSED);
 
+#if 0
     GLuint samples = 0;
     glGetQueryObjectuiv(query,GL_QUERY_RESULT,&samples);
     tcp_printf("samples: %u\n",(unsigned int)samples);
+#endif
   }
 
   {

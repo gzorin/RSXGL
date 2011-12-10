@@ -109,6 +109,13 @@ attribs_t::storage_type & attribs_t::storage()
 {
   static attribs_t::storage_type _storage(0,0 /*rsxgl_init_default_attribs*/);
   return _storage;
+
+  //static attribs_t::storage_type * _storage = new attribs_t::storage_type(0,0 /*rsxgl_init_default_attribs*/);
+  //return *_storage;
+}
+
+attribs_t::~attribs_t()
+{
 }
 
 GLAPI void APIENTRY
@@ -128,10 +135,6 @@ glBindVertexArray (GLuint attribs_name)
   ctx -> invalid_attribs.set();
   
   RSXGL_NOERROR_();
-}
-
-attribs_t::~attribs_t()
-{
 }
 
 GLAPI void APIENTRY

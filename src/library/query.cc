@@ -66,9 +66,9 @@ rsxgl_free_query_object(const GLuint id)
 {
   query_t & query = query_t::storage().at(id);
 
-  if(query.index != RSXGL_MAX_QUERY_OBJECTS) {
-    rsxgl_query_object_free(query.index);
-    query.index = RSXGL_MAX_QUERY_OBJECTS;
+  if(query.indices[0] != RSXGL_MAX_QUERY_OBJECTS) {
+    rsxgl_query_object_free(query.indices[0]);
+    query.indices[0] = RSXGL_MAX_QUERY_OBJECTS;
   }
 }
 
@@ -178,8 +178,8 @@ glBeginQuery (GLenum target, GLuint id)
 
   query.value = 0;
   query.status = RSXGL_QUERY_STATUS_ACTIVE;
-  query.index = rsxgl_query_object_allocate();
-  rsxgl_assert(query.index != RSXGL_MAX_QUERY_OBJECTS);
+  query.indices[0] = rsxgl_query_object_allocate();
+  rsxgl_assert(query.indices[0] != RSXGL_MAX_QUERY_OBJECTS);
   query.timestamps[0] = rsxgl_timestamp_create(ctx,1);
 
   //
@@ -191,16 +191,17 @@ glBeginQuery (GLenum target, GLuint id)
 
     // this tells glMultiDraw* and glDrawInstanced* functions which report to update as each primitive is drawn:
     if(query.type == RSXGL_QUERY_ANY_SAMPLES_PASSED) {
-      ctx -> any_samples_passed_query = query.index;
+      ctx -> any_samples_passed_query = query.indices[0];
     }
   }
   else if(query.type == RSXGL_QUERY_TIME_ELAPSED) {
+    
   }
   else {
     RSXGL_ERROR_(GL_INVALID_OPERATION);
   }
 
-  rsxgl_query_object_set(context,query.index);
+  rsxgl_query_object_set(context,query.indices[0]);
   rsxgl_timestamp_post(ctx,query.timestamps[0]);
 
   RSXGL_NOERROR_();
@@ -227,7 +228,7 @@ glEndQuery (GLenum target)
   }
 
   query.status = RSXGL_QUERY_STATUS_PENDING;
-  rsxgl_assert(query.index != RSXGL_MAX_QUERY_OBJECTS);
+  rsxgl_assert(query.indices[0] != RSXGL_MAX_QUERY_OBJECTS);
   query.timestamps[1] = ctx -> last_timestamp;
 
   //
@@ -246,7 +247,7 @@ glEndQuery (GLenum target)
     RSXGL_ERROR_(GL_INVALID_OPERATION);
   }
 
-  rsxgl_query_object_set(context,query.index);
+  rsxgl_query_object_set(context,query.indices[0]);
 
   ctx -> query_binding.bind(rsx_target,0);
 
@@ -283,14 +284,14 @@ glQueryCounter (GLuint id, GLenum target)
   }
 
   query.status = RSXGL_QUERY_STATUS_PENDING;
-  query.index = rsxgl_query_object_allocate();
-  rsxgl_assert(query.index != RSXGL_MAX_QUERY_OBJECTS);
+  query.indices[0] = rsxgl_query_object_allocate();
+  rsxgl_assert(query.indices[0] != RSXGL_MAX_QUERY_OBJECTS);
   //query.timestamp = rsxgl_timestamp_create(ctx);
   //rsxgl_timestamp_post(ctx,query.timestamp);
 
   gcmContextData * context = ctx -> gcm_context();
 
-  rsxgl_query_object_set(context,query.index);
+  rsxgl_query_object_set(context,query.indices[0]);
 
   RSXGL_NOERROR_();
 }
@@ -321,18 +322,18 @@ rsxgl_get_query_object_value(rsxgl_context_t * ctx,query_t & query)
   rsxgl_assert(query.status == RSXGL_QUERY_STATUS_PENDING || query.status == RSXGL_QUERY_STATUS_CACHED);
 
   if(query.status == RSXGL_QUERY_STATUS_PENDING) {
-    rsxgl_assert(query.index != RSXGL_MAX_QUERY_OBJECTS);
+    rsxgl_assert(query.indices[0] != RSXGL_MAX_QUERY_OBJECTS);
     
     if(query.type == RSXGL_QUERY_SAMPLES_PASSED) {
       rsxgl_timestamp_wait(ctx,query.timestamps[1]);
-      query.value = rsxgl_query_object_get_value(query.index);
+      query.value = rsxgl_query_object_get_value(query.indices[0]);
     }
     else if(query.type == RSXGL_QUERY_ANY_SAMPLES_PASSED) {
       uint32_t samples = 0;
       const uint32_t last_timestamp = query.timestamps[1];
       for(uint32_t timestamp = query.timestamps[0];(timestamp <= last_timestamp) && (samples == 0);++timestamp) {
 	rsxgl_timestamp_wait(ctx,timestamp);
-	samples += rsxgl_query_object_get_value(query.index);
+	samples += rsxgl_query_object_get_value(query.indices[0]);
       }
       query.value = (samples > 0);
     }
@@ -439,7 +440,7 @@ glBeginConditionalRender (GLuint id, GLenum mode)
     uint32_t * buffer = gcm_reserve(context,2);
     
     gcm_emit_method_at(buffer,0,NV40_CONDITIONAL_RENDER,1);
-    gcm_emit_at(buffer,1,(2 << 24) | (query.index << 4));
+    gcm_emit_at(buffer,1,(2 << 24) | (query.indices[0] << 4));
     
     gcm_finish_n_commands(context,2);
   }

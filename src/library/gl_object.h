@@ -213,7 +213,7 @@ struct object_binding_type {
   }
 };
 
-// Contain referenfe counted ObjectType's.
+// Contain reference counted ObjectType's.
 template< typename ObjectType, size_t Size >
 struct object_container_type {
   typedef ObjectType object_type;

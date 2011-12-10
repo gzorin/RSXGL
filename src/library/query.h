@@ -102,7 +102,7 @@ struct query_t {
   uint8_t type:6, status:2;
 
   /// \brief RSX report indices - two are needed for measuring elapsed time:
-  rsxgl_query_object_index_type index;
+  rsxgl_query_object_index_type indices[2];
 
   //
   /// \brief Timestamp - point in the command stream when the query will be finished:
@@ -112,7 +112,9 @@ struct query_t {
   uint64_t value;
 
   query_t()
-    : type(RSXGL_MAX_QUERY_TARGETS), status(RSXGL_QUERY_STATUS_INACTIVE), index(RSXGL_MAX_QUERY_OBJECTS), value(0) {
+    : type(RSXGL_MAX_QUERY_TARGETS), status(RSXGL_QUERY_STATUS_INACTIVE), value(0) {
+    indices[0] = RSXGL_MAX_QUERY_OBJECTS;
+    indices[1] = RSXGL_MAX_QUERY_OBJECTS;
     timestamps[0] = 0;
     timestamps[1] = 0;
   }
