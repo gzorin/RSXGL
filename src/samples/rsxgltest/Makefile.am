@@ -62,8 +62,8 @@ occlusion_sources = occlusion.cc occlusion.vert occlusion.frag
 occlusion2_objects = occlusion_vpo.o occlusion_fpo.o
 occlusion2_sources = occlusion2.cc occlusion.vert occlusion.frag
 
-objects = $(occlusion2_objects)
-sources = $(occlusion2_sources)
+objects = $(occlusion_objects)
+sources = $(occlusion_sources)
 
 rsxgltest_elf_DEPENDENCIES = $(top_builddir)/src/library/libEGL.a $(top_builddir)/src/library/libGL.a	\
 	$(objects)

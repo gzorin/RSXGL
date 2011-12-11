@@ -66,9 +66,11 @@ rsxgl_free_query_object(const GLuint id)
 {
   query_t & query = query_t::storage().at(id);
 
-  if(query.indices[0] != RSXGL_MAX_QUERY_OBJECTS) {
-    rsxgl_query_object_free(query.indices[0]);
-    query.indices[0] = RSXGL_MAX_QUERY_OBJECTS;
+  for(unsigned int i = 0;i < 2;++i) {
+    if(query.indices[i] != RSXGL_MAX_QUERY_OBJECTS) {
+      rsxgl_query_object_free(query.indices[i]);
+      query.indices[i] = RSXGL_MAX_QUERY_OBJECTS;
+    }
   }
 }
 
@@ -178,30 +180,36 @@ glBeginQuery (GLenum target, GLuint id)
 
   query.value = 0;
   query.status = RSXGL_QUERY_STATUS_ACTIVE;
-  query.indices[0] = rsxgl_query_object_allocate();
-  rsxgl_assert(query.indices[0] != RSXGL_MAX_QUERY_OBJECTS);
   query.timestamps[0] = rsxgl_timestamp_create(ctx,1);
 
   //
   gcmContextData * context = ctx -> gcm_context();
 
   if(query.type == RSXGL_QUERY_SAMPLES_PASSED || query.type == RSXGL_QUERY_ANY_SAMPLES_PASSED) {
+    query.indices[0] = rsxgl_query_object_allocate();
+    rsxgl_assert(query.indices[0] != RSXGL_MAX_QUERY_OBJECTS);
+
     rsxgl_query_object_enable_samples(context,true);
-    rsxgl_query_object_reset(context);
+    rsxgl_query_object_reset_samples(context);
 
     // this tells glMultiDraw* and glDrawInstanced* functions which report to update as each primitive is drawn:
     if(query.type == RSXGL_QUERY_ANY_SAMPLES_PASSED) {
       ctx -> any_samples_passed_query = query.indices[0];
     }
+
+    rsxgl_query_object_set(context,query.indices[0]);
   }
   else if(query.type == RSXGL_QUERY_TIME_ELAPSED) {
-    
+    query.indices[0] = rsxgl_query_object_allocate();
+    query.indices[1] = rsxgl_query_object_allocate();
+    rsxgl_assert(query.indices[0] != RSXGL_MAX_QUERY_OBJECTS && query.indices[1] != RSXGL_MAX_QUERY_OBJECTS);
+
+    rsxgl_query_object_set(context,query.indices[0]);
   }
   else {
     RSXGL_ERROR_(GL_INVALID_OPERATION);
   }
 
-  rsxgl_query_object_set(context,query.indices[0]);
   rsxgl_timestamp_post(ctx,query.timestamps[0]);
 
   RSXGL_NOERROR_();
@@ -229,7 +237,7 @@ glEndQuery (GLenum target)
 
   query.status = RSXGL_QUERY_STATUS_PENDING;
   rsxgl_assert(query.indices[0] != RSXGL_MAX_QUERY_OBJECTS);
-  query.timestamps[1] = ctx -> last_timestamp;
+  query.timestamps[1] = rsxgl_timestamp_create(ctx,1);
 
   //
   gcmContextData * context = ctx -> gcm_context();
@@ -240,14 +248,17 @@ glEndQuery (GLenum target)
     if(query.type == RSXGL_QUERY_ANY_SAMPLES_PASSED) {
       ctx -> any_samples_passed_query = RSXGL_MAX_QUERY_OBJECTS;
     }
+
+    rsxgl_query_object_set(context,query.indices[0]);
   }
   else if(query.type == RSXGL_QUERY_TIME_ELAPSED) {
+    rsxgl_query_object_set(context,query.indices[1]);
   }
   else {
     RSXGL_ERROR_(GL_INVALID_OPERATION);
   }
 
-  rsxgl_query_object_set(context,query.indices[0]);
+  rsxgl_timestamp_post(ctx,query.timestamps[1]);
 
   ctx -> query_binding.bind(rsx_target,0);
 
@@ -322,13 +333,18 @@ rsxgl_get_query_object_value(rsxgl_context_t * ctx,query_t & query)
   rsxgl_assert(query.status == RSXGL_QUERY_STATUS_PENDING || query.status == RSXGL_QUERY_STATUS_CACHED);
 
   if(query.status == RSXGL_QUERY_STATUS_PENDING) {
-    rsxgl_assert(query.indices[0] != RSXGL_MAX_QUERY_OBJECTS);
-    
     if(query.type == RSXGL_QUERY_SAMPLES_PASSED) {
+      rsxgl_assert(query.indices[0] != RSXGL_MAX_QUERY_OBJECTS);
+
       rsxgl_timestamp_wait(ctx,query.timestamps[1]);
       query.value = rsxgl_query_object_get_value(query.indices[0]);
+
+      rsxgl_query_object_free(query.indices[0]);
+      query.indices[0] = RSXGL_MAX_QUERY_OBJECTS;
     }
     else if(query.type == RSXGL_QUERY_ANY_SAMPLES_PASSED) {
+      rsxgl_assert(query.indices[0] != RSXGL_MAX_QUERY_OBJECTS);
+
       uint32_t samples = 0;
       const uint32_t last_timestamp = query.timestamps[1];
       for(uint32_t timestamp = query.timestamps[0];(timestamp <= last_timestamp) && (samples == 0);++timestamp) {
@@ -336,8 +352,20 @@ rsxgl_get_query_object_value(rsxgl_context_t * ctx,query_t & query)
 	samples += rsxgl_query_object_get_value(query.indices[0]);
       }
       query.value = (samples > 0);
+
+      rsxgl_query_object_free(query.indices[0]);
+      query.indices[0] = RSXGL_MAX_QUERY_OBJECTS;
     }
     else if(query.type == RSXGL_QUERY_TIME_ELAPSED) {
+      rsxgl_assert(query.indices[0] != RSXGL_MAX_QUERY_OBJECTS && query.indices[1] != RSXGL_MAX_QUERY_OBJECTS);      
+
+      rsxgl_timestamp_wait(ctx,query.timestamps[1]);
+      query.value = rsxgl_query_object_get_timestamp(query.indices[1]) - rsxgl_query_object_get_timestamp(query.indices[0]);
+
+      rsxgl_query_object_free(query.indices[0]);
+      rsxgl_query_object_free(query.indices[1]);
+      query.indices[0] = RSXGL_MAX_QUERY_OBJECTS;
+      query.indices[1] = RSXGL_MAX_QUERY_OBJECTS;
     }
     else if(query.type == RSXGL_QUERY_TIMESTAMP) {
     }
@@ -398,7 +426,7 @@ glGetQueryObjectui64v (GLuint id, GLenum pname, GLuint64 *params)
   rsxgl_get_query_object(id,pname,params);
 }
 
-#define NV40_CONDITIONAL_RENDER 0x1E98
+#define NV40_CONDITIONAL_RENDER 0x00001e98
 
 GLAPI void APIENTRY
 glBeginConditionalRender (GLuint id, GLenum mode)
@@ -435,14 +463,20 @@ glBeginConditionalRender (GLuint id, GLenum mode)
     ctx -> state.enable.conditional_render_status = RSXGL_CONDITIONAL_RENDER_ACTIVE_NO_WAIT;
 
     //
+    rsxgl_debug_printf("emitting begin NO_WAIT render commands index is: %u\n",query.indices[0]);
+
     gcmContextData * context = ctx -> gcm_context();
 
-    uint32_t * buffer = gcm_reserve(context,2);
+    uint32_t * buffer = gcm_reserve(context,4);
+
+    gcm_emit_nop_at(buffer,0,1);
+    gcm_emit_at(buffer,1,0);
     
-    gcm_emit_method_at(buffer,0,NV40_CONDITIONAL_RENDER,1);
-    gcm_emit_at(buffer,1,(2 << 24) | (query.indices[0] << 4));
+    gcm_emit_method_at(buffer,2,NV40_CONDITIONAL_RENDER,1);
+    gcm_emit_at(buffer,3,((uint32_t)2 << 24) | ((uint32_t)query.indices[0] << 4));
+    //gcm_emit_at(buffer,3,(0 << 24) | (0));
     
-    gcm_finish_n_commands(context,2);
+    gcm_finish_n_commands(context,4);
   }
 
   RSXGL_NOERROR_();
@@ -458,6 +492,8 @@ glEndConditionalRender (void)
   }
 
   if(ctx -> state.enable.conditional_render_status == RSXGL_CONDITIONAL_RENDER_ACTIVE_NO_WAIT) {
+    rsxgl_debug_printf("emitting end NO_WAIT render commands\n");
+
     gcmContextData * context = ctx -> gcm_context();
 
     //
@@ -465,7 +501,7 @@ glEndConditionalRender (void)
     
     gcm_emit_method_at(buffer,0,NV40_CONDITIONAL_RENDER,1);
     gcm_emit_at(buffer,1,(1 << 24) | (0));
-    
+
     gcm_finish_n_commands(context,2);
   }
 

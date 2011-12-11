@@ -138,8 +138,6 @@ rsxgl_timestamp_create(rsxgl_context_t * ctx,const uint32_t count)
 
   // check for overflow:
   if(next_timestamp > max_timestamp || next_timestamp < current_timestamp) {
-    std::cerr << "timestamp overflow!" << std::endl;
-
     // block until last_timestamp is reached:
     rsxgl_timestamp_wait(ctx -> cached_timestamp,ctx -> timestamp_sync,ctx -> last_timestamp,RSXGL_SYNC_SLEEP_INTERVAL);
 

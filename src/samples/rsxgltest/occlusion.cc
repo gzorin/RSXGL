@@ -60,7 +60,7 @@ GLuint buffers[2] = { 0,0 };
 GLuint shaders[2] = { 0,0 };
 GLuint program = 0;
 
-GLuint query = 0;
+GLuint queries[2] = { 0,0 };
 
 GLint ProjMatrix_location = -1, TransMatrix_location = -1, color_location = -1;
 
@@ -154,7 +154,7 @@ rsxgltest_init(int argc,const char ** argv)
     glBindBuffer(GL_ARRAY_BUFFER,0);
   }
 
-  glGenQueries(1,&query);
+  glGenQueries(2,queries);
 }
 
 extern "C"
@@ -190,7 +190,7 @@ rsxgltest_draw()
   }
 
   {
-    glBeginQuery(GL_ANY_SAMPLES_PASSED,query);
+    glBeginQuery(GL_ANY_SAMPLES_PASSED,queries[0]);
 
     glUniform3f(color_location,1,0,0);
 
@@ -204,16 +204,14 @@ rsxgltest_draw()
     glDrawArrays(GL_TRIANGLES,0,6);
 
     glEndQuery(GL_ANY_SAMPLES_PASSED);
-
-#if 0
-    GLuint samples = 0;
-    glGetQueryObjectuiv(query,GL_QUERY_RESULT,&samples);
-    tcp_printf("samples: %u\n",(unsigned int)samples);
-#endif
   }
 
   {
-    glBeginConditionalRender(query,GL_QUERY_NO_WAIT);
+#if 0
+    glBeginQuery(GL_TIME_ELAPSED,queries[1]);
+#endif
+
+    glBeginConditionalRender(queries[0],GL_QUERY_NO_WAIT);
 
     glUniform3f(color_location,0,0,1);
 
@@ -227,6 +225,27 @@ rsxgltest_draw()
     glDrawArrays(GL_TRIANGLES,0,6);
 
     glEndConditionalRender();
+
+#if 0
+    glEndQuery(GL_TIME_ELAPSED);
+
+    GLuint64 elapsed_time = 0;
+    glGetQueryObjectui64v(queries[1],GL_QUERY_RESULT,&elapsed_time);
+    tcp_printf("elapsed time: %lu\n",(unsigned long)elapsed_time);
+#endif
+  }
+
+  {
+    glUniform3f(color_location,1,0,1);
+
+    Eigen::Affine3f transmat = 
+      Eigen::Affine3f::Identity() * 
+      Eigen::Translation3f(0,15,5.0);
+    
+    Eigen::Affine3f modelview = ViewMatrixInv * (Eigen::Affine3f::Identity() * transmat);
+    glUniformMatrix4fv(TransMatrix_location,1,GL_FALSE,modelview.data());
+
+    glDrawArrays(GL_TRIANGLES,0,6);
   }
 
   return 1;
