@@ -189,8 +189,8 @@ glBeginQuery (GLenum target, GLuint id)
     query.indices[0] = rsxgl_query_object_allocate();
     rsxgl_assert(query.indices[0] != RSXGL_MAX_QUERY_OBJECTS);
 
-    rsxgl_query_object_enable_samples(context,true);
-    rsxgl_query_object_reset_samples(context);
+    rsxgl_query_enable_samples(context,true);
+    rsxgl_query_reset_samples(context);
 
     // this tells glMultiDraw* and glDrawInstanced* functions which report to update as each primitive is drawn:
     if(query.type == RSXGL_QUERY_ANY_SAMPLES_PASSED) {
@@ -243,7 +243,7 @@ glEndQuery (GLenum target)
   gcmContextData * context = ctx -> gcm_context();
 
   if(query.type == RSXGL_QUERY_SAMPLES_PASSED || query.type == RSXGL_QUERY_ANY_SAMPLES_PASSED) {
-    rsxgl_query_object_enable_samples(context,false);
+    rsxgl_query_enable_samples(context,false);
 
     if(query.type == RSXGL_QUERY_ANY_SAMPLES_PASSED) {
       ctx -> any_samples_passed_query = RSXGL_MAX_QUERY_OBJECTS;
@@ -463,8 +463,6 @@ glBeginConditionalRender (GLuint id, GLenum mode)
     ctx -> state.enable.conditional_render_status = RSXGL_CONDITIONAL_RENDER_ACTIVE_NO_WAIT;
 
     //
-    rsxgl_debug_printf("emitting begin NO_WAIT render commands index is: %u\n",query.indices[0]);
-
     gcmContextData * context = ctx -> gcm_context();
 
     uint32_t * buffer = gcm_reserve(context,4);
@@ -473,8 +471,7 @@ glBeginConditionalRender (GLuint id, GLenum mode)
     gcm_emit_at(buffer,1,0);
     
     gcm_emit_method_at(buffer,2,NV40_CONDITIONAL_RENDER,1);
-    gcm_emit_at(buffer,3,((uint32_t)2 << 24) | ((uint32_t)query.indices[0] << 4));
-    //gcm_emit_at(buffer,3,(0 << 24) | (0));
+    gcm_emit_at(buffer,3,(2 << 24) | (query.indices[0] << 4));
     
     gcm_finish_n_commands(context,4);
   }
@@ -492,11 +489,9 @@ glEndConditionalRender (void)
   }
 
   if(ctx -> state.enable.conditional_render_status == RSXGL_CONDITIONAL_RENDER_ACTIVE_NO_WAIT) {
-    rsxgl_debug_printf("emitting end NO_WAIT render commands\n");
-
+    //
     gcmContextData * context = ctx -> gcm_context();
 
-    //
     uint32_t * buffer = gcm_reserve(context,2);
     
     gcm_emit_method_at(buffer,0,NV40_CONDITIONAL_RENDER,1);

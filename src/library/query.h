@@ -22,7 +22,7 @@ rsxgl_query_object_index_type rsxgl_query_object_allocate();
 void rsxgl_query_object_free(rsxgl_query_object_index_type);
 
 static inline void
-rsxgl_query_object_reset_samples(gcmContextData * context)
+rsxgl_query_reset_samples(gcmContextData * context)
 {
   uint32_t * buffer = gcm_reserve(context,2);
 
@@ -33,7 +33,7 @@ rsxgl_query_object_reset_samples(gcmContextData * context)
 }
 
 static inline void
-rsxgl_query_object_enable_samples(gcmContextData * context,const bool samples)
+rsxgl_query_enable_samples(gcmContextData * context,const bool samples)
 {
   uint32_t * buffer = gcm_reserve(context,2);
 
@@ -49,7 +49,7 @@ rsxgl_query_object_set(gcmContextData * context,const rsxgl_query_object_index_t
   uint32_t * buffer = gcm_reserve(context,2);
 
   gcm_emit_method_at(buffer,0,NV30_3D_QUERY_GET,1);
-  gcm_emit_at(buffer,1,(1 << 24) | ((uint32_t)index << 4));
+  gcm_emit_at(buffer,1,(1 << 24) | (index << 4));
 
   gcm_finish_n_commands(context,2);
 }
