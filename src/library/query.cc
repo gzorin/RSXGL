@@ -467,7 +467,7 @@ glBeginConditionalRender (GLuint id, GLenum mode)
 
     uint32_t * buffer = gcm_reserve(context,4);
 
-    gcm_emit_nop_at(buffer,0,1);
+    gcm_emit_wait_for_idle_at(buffer,0,1);
     gcm_emit_at(buffer,1,0);
     
     gcm_emit_method_at(buffer,2,NV40_CONDITIONAL_RENDER,1);

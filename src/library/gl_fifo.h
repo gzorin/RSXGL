@@ -69,6 +69,12 @@ gcm_emit_nop_at(uint32_t * buffer,const uint32_t location,const uint32_t n)
 }
 
 static inline void
+gcm_emit_wait_for_idle_at(uint32_t * buffer,const uint32_t location,const uint32_t n)
+{
+  gcm_emit_method_at(buffer,location,0x110,n);
+}
+
+static inline void
 gcm_finish_commands(gcmContextData * context,uint32_t ** buffer)
 {
   context -> current = *buffer;
