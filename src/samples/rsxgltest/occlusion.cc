@@ -223,6 +223,7 @@ rsxgltest_draw()
     glDrawArrays(GL_TRIANGLES,0,6);
 
     glEndConditionalRender();
+    //glQueryCounter(queries[1],GL_TIMESTAMP);
 
     glEndQuery(GL_TIME_ELAPSED);
 

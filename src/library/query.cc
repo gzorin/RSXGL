@@ -297,8 +297,8 @@ glQueryCounter (GLuint id, GLenum target)
   query.status = RSXGL_QUERY_STATUS_PENDING;
   query.indices[0] = rsxgl_query_object_allocate();
   rsxgl_assert(query.indices[0] != RSXGL_MAX_QUERY_OBJECTS);
-  //query.timestamp = rsxgl_timestamp_create(ctx);
-  //rsxgl_timestamp_post(ctx,query.timestamp);
+  query.timestamps[0] = rsxgl_timestamp_create(ctx,1);
+  rsxgl_timestamp_post(ctx,query.timestamps[0]);
 
   gcmContextData * context = ctx -> gcm_context();
 
@@ -368,6 +368,11 @@ rsxgl_get_query_object_value(rsxgl_context_t * ctx,query_t & query)
       query.indices[1] = RSXGL_MAX_QUERY_OBJECTS;
     }
     else if(query.type == RSXGL_QUERY_TIMESTAMP) {
+      rsxgl_timestamp_wait(ctx,query.timestamps[0]);
+      query.value = rsxgl_query_object_get_timestamp(query.indices[0]);
+
+      rsxgl_query_object_free(query.indices[0]);
+      query.indices[0] = RSXGL_MAX_QUERY_OBJECTS;
     }
     
     query.status = RSXGL_QUERY_STATUS_CACHED;
