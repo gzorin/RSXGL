@@ -17,6 +17,8 @@
 #include "bit_set.h"
 #include "smint_array.h"
 
+#include <nv40prog.h>
+
 enum rsxgl_vertex_array_target {
   RSXGL_ACTIVE_VERTEX_ARRAY = 0,
   RSXGL_MAX_VERTEX_ARRAY_TARGETS = 1

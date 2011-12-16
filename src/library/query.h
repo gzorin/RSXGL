@@ -11,6 +11,8 @@
 #include "gl_constants.h"
 #include "rsxgl_limits.h"
 #include "gl_object.h"
+#include "nv40.h"
+#include "gl_fifo.h"
 
 #include <boost/integer.hpp>
 

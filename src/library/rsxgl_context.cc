@@ -22,7 +22,7 @@ rsxgl_context_create(const struct rsxegl_config_t * config,gcmContextData * gcm_
 }
 
 rsxgl_context_t::rsxgl_context_t(const struct rsxegl_config_t * config,gcmContextData * gcm_context)
-  : active_texture(0), any_samples_passed_query(RSXGL_MAX_QUERY_OBJECTS), ref(0), timestamp_sync(0), next_timestamp(1), last_timestamp(0), cached_timestamp(0)
+  : object_context(0), active_texture(0), any_samples_passed_query(RSXGL_MAX_QUERY_OBJECTS), ref(0), timestamp_sync(0), next_timestamp(1), last_timestamp(0), cached_timestamp(0)
 {
   base.api = EGL_OPENGL_API;
   base.config = config;
@@ -35,6 +35,10 @@ rsxgl_context_t::rsxgl_context_t(const struct rsxegl_config_t * config,gcmContex
   timestamp_sync = rsxgl_sync_object_allocate();
   rsxgl_assert(timestamp_sync != 0);
   rsxgl_sync_cpu_signal(timestamp_sync,0);
+}
+
+rsxgl_context_t::~rsxgl_context_t()
+{
 }
 
 void

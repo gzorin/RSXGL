@@ -6,6 +6,7 @@
 #include "rsxgl_assert.h"
 #include "gcm.h"
 #include "egl_types.h"
+#include "rsxgl_object_context.h"
 #include "arena.h"
 #include "buffer.h"
 #include "state.h"
@@ -23,6 +24,8 @@
 
 struct rsxgl_context_t {
   rsxegl_context_t base;
+
+  rsxgl_object_context_t * object_context;
 
   state_t state;
 
@@ -71,6 +74,7 @@ struct rsxgl_context_t {
   uint32_t cached_timestamp;
 
   rsxgl_context_t(const struct rsxegl_config_t *,gcmContextData *);
+  ~rsxgl_context_t();
 
   inline
   gcmContextData * gcm_context() {
@@ -89,6 +93,13 @@ current_ctx()
 {
   assert(rsxgl_ctx != 0);
   return rsxgl_ctx;
+}
+
+static inline rsxgl_object_context_t *
+current_object_ctx()
+{
+  assert(rsxgl_ctx != 0 && rsxgl_ctx -> object_context != 0);
+  return rsxgl_ctx -> object_context;
 }
 
 uint32_t rsxgl_timestamp_create(rsxgl_context_t *,const uint32_t);
