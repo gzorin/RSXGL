@@ -207,9 +207,7 @@ rsxgltest_draw()
   }
 
   {
-#if 0
     glBeginQuery(GL_TIME_ELAPSED,queries[1]);
-#endif
 
     glBeginConditionalRender(queries[0],GL_QUERY_NO_WAIT);
 
@@ -226,13 +224,11 @@ rsxgltest_draw()
 
     glEndConditionalRender();
 
-#if 0
     glEndQuery(GL_TIME_ELAPSED);
 
     GLuint64 elapsed_time = 0;
     glGetQueryObjectui64v(queries[1],GL_QUERY_RESULT,&elapsed_time);
     tcp_printf("elapsed time: %lu\n",(unsigned long)elapsed_time);
-#endif
   }
 
   {
