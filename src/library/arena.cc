@@ -21,39 +21,10 @@
 #endif
 #define GLAPI extern "C"
 
-#if defined(RSXGL_STATIC_OBJECT_STORAGE)
-extern "C" mspace rsxgl_rsx_mspace();
-
-static void
-rsxgl_init_default_arena(void * ptr)
-{
-  memory_arena_t::storage_type * storage = (memory_arena_t::storage_type *)ptr;
-
-  gcmConfiguration config;
-  gcmGetConfiguration(&config);
-  uint32_t offset;
-  gcmAddressToOffset(config.localAddress,&offset);
-  
-  memory_arena_t & arena = storage -> at(0);
-  
-  arena.address = config.localAddress;
-  arena.space = rsxgl_rsx_mspace();
-  arena.memory.location = RSXGL_MEMORY_LOCATION_LOCAL;
-  arena.memory.offset = offset;
-  arena.size = config.localSize;
-}
-
-memory_arena_t::storage_type & memory_arena_t::storage()
-{
-  static memory_arena_t::storage_type _storage(0,rsxgl_init_default_arena);
-  return _storage;
-}
-#else
 memory_arena_t::storage_type & memory_arena_t::storage()
 {
   return current_object_ctx() -> arena_storage();
 }
-#endif
 
 memory_t
 rsxgl_arena_allocate(memory_arena_t & arena,rsx_size_t align,rsx_size_t size,rsx_ptr_t * address)

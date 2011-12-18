@@ -28,19 +28,10 @@
 #endif
 #define GLAPI extern "C"
 
-#if defined(RSXGL_STATIC_OBJECT_STORAGE)
-// Samplers:
-sampler_t::storage_type & sampler_t::storage()
-{
-  static sampler_t::storage_type _storage(0,0);
-  return _storage;
-}
-#else
 sampler_t::storage_type & sampler_t::storage()
 {
   return current_object_ctx() -> sampler_storage();
 }
-#endif
 
 sampler_t::sampler_t()
 {
@@ -576,19 +567,10 @@ glGetSamplerParameterfv (GLuint sampler_name, GLenum pname, GLfloat *params)
   *params = value;
 }
 
-#if defined(RSXGL_STATIC_OBJECT_STORAGE)
-// Textures:
-texture_t::storage_type & texture_t::storage()
-{
-  static texture_t::storage_type _storage(0,0);
-  return _storage;
-}
-#else
 texture_t::storage_type & texture_t::storage()
 {
   return current_object_ctx() -> texture_storage();
 }
-#endif
 
 texture_t::texture_t()
   : deleted(0), timestamp(0), ref_count(0), invalid(0), valid(0), immutable(0), internalformat(RSXGL_MAX_TEX_FORMATS), cube(0), rect(0), max_level(0), dims(0), format(0), pitch(0), remap(0)
