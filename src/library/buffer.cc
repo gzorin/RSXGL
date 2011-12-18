@@ -24,6 +24,7 @@
 #endif
 #define GLAPI extern "C"
 
+#if defined(RSXGL_STATIC_OBJECT_STORAGE)
 buffer_t::storage_type & buffer_t::storage()
 {
   static buffer_t::storage_type _storage;
@@ -32,6 +33,12 @@ buffer_t::storage_type & buffer_t::storage()
   //static buffer_t::storage_type * _storage = new buffer_t::storage_type();
   //return *_storage;
 }
+#else
+buffer_t::storage_type & buffer_t::storage()
+{
+  return current_object_ctx() -> buffer_storage();
+}
+#endif
 
 buffer_t::~buffer_t()
 {

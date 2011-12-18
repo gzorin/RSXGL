@@ -25,7 +25,11 @@
 struct rsxgl_context_t {
   rsxegl_context_t base;
 
-  rsxgl_object_context_t * object_context;
+private:
+
+  rsxgl_object_context_t * m_object_context;
+
+public:
 
   state_t state;
 
@@ -73,13 +77,19 @@ struct rsxgl_context_t {
   // Should be initialized to 0:
   uint32_t cached_timestamp;
 
-  rsxgl_context_t(const struct rsxegl_config_t *,gcmContextData *);
+  rsxgl_context_t(const struct rsxegl_config_t *,gcmContextData *,struct rsxgl_object_context_t *);
   ~rsxgl_context_t();
 
   inline
   gcmContextData * gcm_context() {
     rsxgl_assert(base.gcm_context != 0);
     return base.gcm_context;
+  }
+
+  inline
+  rsxgl_object_context_t * object_context() {
+    rsxgl_assert(m_object_context != 0);
+    return m_object_context;
   }
 
   static void egl_callback(rsxegl_context_t *,const uint8_t);
@@ -98,8 +108,8 @@ current_ctx()
 static inline rsxgl_object_context_t *
 current_object_ctx()
 {
-  assert(rsxgl_ctx != 0 && rsxgl_ctx -> object_context != 0);
-  return rsxgl_ctx -> object_context;
+  assert(rsxgl_ctx != 0);
+  return rsxgl_ctx -> object_context();
 }
 
 uint32_t rsxgl_timestamp_create(rsxgl_context_t *,const uint32_t);

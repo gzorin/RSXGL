@@ -380,6 +380,7 @@ main(int argc, const char ** argv)
 
 	    // Initialize:
 	    result = eglMakeCurrent(dpy,surface,surface,ctx);
+	    tcp_printf("eglMakeCurrent\n");
 	    rsxgltest_init(argc,argv);
 
 	    gettimeofday(&start_time,0);

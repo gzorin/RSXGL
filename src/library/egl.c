@@ -733,7 +733,10 @@ eglQueryAPI()
   RSXEGL_NOERROR(rsxegl_api);
 }
 
-extern struct rsxegl_context_t * rsxgl_context_create(const struct rsxegl_config_t *,gcmContextData *);
+struct rsxgl_object_context_t;
+
+extern struct rsxegl_context_t * rsxgl_context_create(const struct rsxegl_config_t *,gcmContextData *,struct rsxgl_object_context_t *);
+extern struct rsxgl_object_context_t * rsxgl_object_context_create();
 
 static struct rsxegl_context_t * current_rsxgl_ctx = 0;
 
@@ -747,7 +750,7 @@ eglCreateContext(EGLDisplay dpy,EGLConfig config,EGLContext share_context,const 
 
   switch(rsxegl_api) {
   case EGL_OPENGL_API:
-    ctx = rsxgl_context_create(config,rsx_gcm_context);
+    ctx = rsxgl_context_create(config,rsx_gcm_context,rsxgl_object_context_create());
     assert(ctx -> callback != 0);
     RSXEGL_NOERROR(ctx);
   default:

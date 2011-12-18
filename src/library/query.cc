@@ -48,11 +48,18 @@ rsxgl_query_object_free(const rsxgl_query_object_index_type index)
 }
 
 //
+#if defined(RSXGL_STATIC_OBJECT_STORAGE)
 query_t::storage_type & query_t::storage()
 {
   static query_t::storage_type _storage;
   return _storage;
 }
+#else
+query_t::storage_type & query_t::storage()
+{
+  return current_object_ctx() -> query_storage();
+}
+#endif
 
 query_t::~query_t()
 {

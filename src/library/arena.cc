@@ -21,6 +21,7 @@
 #endif
 #define GLAPI extern "C"
 
+#if defined(RSXGL_STATIC_OBJECT_STORAGE)
 extern "C" mspace rsxgl_rsx_mspace();
 
 static void
@@ -47,6 +48,12 @@ memory_arena_t::storage_type & memory_arena_t::storage()
   static memory_arena_t::storage_type _storage(0,rsxgl_init_default_arena);
   return _storage;
 }
+#else
+memory_arena_t::storage_type & memory_arena_t::storage()
+{
+  return current_object_ctx() -> arena_storage();
+}
+#endif
 
 memory_t
 rsxgl_arena_allocate(memory_arena_t & arena,rsx_size_t align,rsx_size_t size,rsx_ptr_t * address)

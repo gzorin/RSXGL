@@ -16,13 +16,20 @@ rsxgl_context_t * rsxgl_ctx = 0;
 
 extern "C"
 void *
-rsxgl_context_create(const struct rsxegl_config_t * config,gcmContextData * gcm_context)
+rsxgl_context_create(const struct rsxegl_config_t * config,gcmContextData * gcm_context,rsxgl_object_context_t * object_context)
 {
-  return new rsxgl_context_t(config,gcm_context);
+  return new rsxgl_context_t(config,gcm_context,object_context);
 }
 
-rsxgl_context_t::rsxgl_context_t(const struct rsxegl_config_t * config,gcmContextData * gcm_context)
-  : object_context(0), active_texture(0), any_samples_passed_query(RSXGL_MAX_QUERY_OBJECTS), ref(0), timestamp_sync(0), next_timestamp(1), last_timestamp(0), cached_timestamp(0)
+extern "C"
+void *
+rsxgl_object_context_create()
+{
+  return new rsxgl_object_context_t();
+}
+
+rsxgl_context_t::rsxgl_context_t(const struct rsxegl_config_t * config,gcmContextData * gcm_context,struct rsxgl_object_context_t * _object_context)
+  : m_object_context(_object_context), active_texture(0), any_samples_passed_query(RSXGL_MAX_QUERY_OBJECTS), ref(0), timestamp_sync(0), next_timestamp(1), last_timestamp(0), cached_timestamp(0)
 {
   base.api = EGL_OPENGL_API;
   base.config = config;
@@ -32,6 +39,8 @@ rsxgl_context_t::rsxgl_context_t(const struct rsxegl_config_t * config,gcmContex
   base.valid = 1;
   base.callback = rsxgl_context_t::egl_callback;
 
+  ++m_object_context -> m_refCount;
+
   timestamp_sync = rsxgl_sync_object_allocate();
   rsxgl_assert(timestamp_sync != 0);
   rsxgl_sync_cpu_signal(timestamp_sync,0);
@@ -39,6 +48,10 @@ rsxgl_context_t::rsxgl_context_t(const struct rsxegl_config_t * config,gcmContex
 
 rsxgl_context_t::~rsxgl_context_t()
 {
+  --m_object_context -> m_refCount;
+  if(m_object_context -> m_refCount == 0) {
+    delete m_object_context;
+  }
 }
 
 void
@@ -47,7 +60,7 @@ rsxgl_context_t::egl_callback(struct rsxegl_context_t * egl_ctx,const uint8_t op
   rsxgl_context_t * ctx = (rsxgl_context_t *)egl_ctx;
 
   if(op == RSXEGL_MAKE_CONTEXT_CURRENT || op == RSXEGL_POST_GPU_SWAP) {
-    framebuffer_t & framebuffer = framebuffer_t::storage().at(0);
+    framebuffer_t & framebuffer = ctx -> object_context() -> framebuffer_storage().at(0);
 
     if(op == RSXEGL_MAKE_CONTEXT_CURRENT) {
       framebuffer.attachment_types.set(RSXGL_COLOR_ATTACHMENT0,((ctx -> base.draw -> format & NV30_3D_RT_FORMAT_COLOR__MASK) != 0) ? RSXGL_ATTACHMENT_TYPE_RENDERBUFFER : RSXGL_ATTACHMENT_TYPE_NONE);
@@ -80,56 +93,6 @@ rsxgl_context_t::egl_callback(struct rsxegl_context_t * egl_ctx,const uint8_t op
   }
 }
 
-
-#if 0
-uint32_t
-rsxgl_timestamp_create(rsxgl_context_t * ctx)
-{
-  const uint32_t max_timestamp = RSXGL_MAX_TIMESTAMP;
-  rsxgl_assert(is_pot(max_timestamp + 1));
-
-  const uint32_t result = ctx -> next_timestamp;
-  rsxgl_assert(result > 0);
-
-  const uint32_t next_timestamp = result + 1;
-  
-  if(next_timestamp & ~max_timestamp || next_timestamp == 0) {
-    // Block until the last timestamp has been reached:
-    rsxgl_timestamp_wait(ctx -> cached_timestamp,ctx -> timestamp_sync,ctx -> last_timestamp,RSXGL_SYNC_SLEEP_INTERVAL);
-    
-    // Reset the timestamps of all timestamp-able objects:
-    //
-    // Buffers:
-    {
-      const buffer_t::name_type n = buffer_t::storage().contents().size;
-      for(buffer_t::name_type i = 0;i < n;++i) {
-	if(!buffer_t::storage().is_object(i)) continue;
-	buffer_t::storage().at(i).timestamp = 0;
-      }
-    }
-    
-    // Textures:
-    {
-      const texture_t::name_type n = texture_t::storage().contents().size;
-      for(texture_t::name_type i = 0;i < n;++i) {
-	if(!texture_t::storage().is_object(i)) continue;
-	texture_t::storage().at(i).timestamp = 0;
-      }
-    }
-
-    //
-    ctx -> cached_timestamp = 0;
-
-    ctx -> next_timestamp = 1;
-  }
-  else {
-    ctx -> next_timestamp = next_timestamp;
-  }
-
-  return result;
-}
-#endif
-
 uint32_t
 rsxgl_timestamp_create(rsxgl_context_t * ctx,const uint32_t count)
 {
@@ -147,19 +110,19 @@ rsxgl_timestamp_create(rsxgl_context_t * ctx,const uint32_t count)
 
     // Buffers:
     {
-      const buffer_t::name_type n = buffer_t::storage().contents().size;
+      const buffer_t::name_type n = ctx -> object_context() -> buffer_storage().contents().size;
       for(buffer_t::name_type i = 0;i < n;++i) {
-	if(!buffer_t::storage().is_object(i)) continue;
-	buffer_t::storage().at(i).timestamp = 0;
+	if(!ctx -> object_context() -> buffer_storage().is_object(i)) continue;
+	ctx -> object_context() -> buffer_storage().at(i).timestamp = 0;
       }
     }
     
     // Textures:
     {
-      const texture_t::name_type n = texture_t::storage().contents().size;
+      const texture_t::name_type n = ctx -> object_context() -> texture_storage().contents().size;
       for(texture_t::name_type i = 0;i < n;++i) {
-	if(!texture_t::storage().is_object(i)) continue;
-	texture_t::storage().at(i).timestamp = 0;
+	if(!ctx -> object_context() -> texture_storage().is_object(i)) continue;
+	ctx -> object_context() -> texture_storage().at(i).timestamp = 0;
       }
     }
 

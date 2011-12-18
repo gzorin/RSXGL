@@ -97,6 +97,7 @@ get(const ieee32_t & lhs,float & rhs) {
   rhs = lhs.f;
 }
 
+#if defined(RSXGL_STATIC_OBJECT_STORAGE)
 void
 rsxgl_init_default_attribs(void * ptr)
 {
@@ -113,6 +114,12 @@ attribs_t::storage_type & attribs_t::storage()
   //static attribs_t::storage_type * _storage = new attribs_t::storage_type(0,0 /*rsxgl_init_default_attribs*/);
   //return *_storage;
 }
+#else
+attribs_t::storage_type & attribs_t::storage()
+{
+  return current_object_ctx() -> attribs_storage();
+}
+#endif
 
 attribs_t::~attribs_t()
 {

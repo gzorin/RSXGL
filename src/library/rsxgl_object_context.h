@@ -13,6 +13,7 @@
 #include "query.h"
 
 struct rsxgl_object_context_t {
+  uint32_t m_refCount;
 
   rsxgl_object_context_t();
 
@@ -67,8 +68,6 @@ struct rsxgl_object_context_t {
   }
 
 private:
-
-  uint32_t m_refCount;
 
   memory_arena_t::storage_type m_arena_storage;
   buffer_t::storage_type m_buffer_storage;

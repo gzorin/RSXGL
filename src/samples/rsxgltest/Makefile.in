@@ -45,7 +45,8 @@ mkinstalldirs = $(install_sh) -d
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 PROGRAMS = $(noinst_PROGRAMS)
-am__objects_1 = rsxgltest_elf-occlusion.$(OBJEXT)
+am__objects_1 = rsxgltest_elf-fbo.$(OBJEXT) \
+	rsxgltest_elf-texture.$(OBJEXT)
 am__objects_2 = $(am__objects_1)
 am_rsxgltest_elf_OBJECTS = rsxgltest_elf-main.$(OBJEXT) \
 	rsxgltest_elf-math3d.$(OBJEXT) \
@@ -247,8 +248,8 @@ occlusion_objects = occlusion_vpo.o occlusion_fpo.o
 occlusion_sources = occlusion.cc occlusion.vert occlusion.frag
 occlusion2_objects = occlusion_vpo.o occlusion_fpo.o
 occlusion2_sources = occlusion2.cc occlusion.vert occlusion.frag
-objects = $(occlusion_objects)
-sources = $(occlusion_sources)
+objects = $(fbo_objects)
+sources = $(fbo_sources)
 rsxgltest_elf_DEPENDENCIES = $(top_builddir)/src/library/libEGL.a $(top_builddir)/src/library/libGL.a	\
 	$(objects)
 
@@ -312,10 +313,11 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/rsxgltest_elf-fbo.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/rsxgltest_elf-main.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/rsxgltest_elf-math3d.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/rsxgltest_elf-occlusion.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/rsxgltest_elf-sine_wave.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/rsxgltest_elf-texture.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
@@ -359,6 +361,20 @@ rsxgltest_elf-sine_wave.obj: sine_wave.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(rsxgltest_elf_CPPFLAGS) $(CPPFLAGS) $(rsxgltest_elf_CFLAGS) $(CFLAGS) -c -o rsxgltest_elf-sine_wave.obj `if test -f 'sine_wave.c'; then $(CYGPATH_W) 'sine_wave.c'; else $(CYGPATH_W) '$(srcdir)/sine_wave.c'; fi`
 
+rsxgltest_elf-texture.o: texture.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(rsxgltest_elf_CPPFLAGS) $(CPPFLAGS) $(rsxgltest_elf_CFLAGS) $(CFLAGS) -MT rsxgltest_elf-texture.o -MD -MP -MF $(DEPDIR)/rsxgltest_elf-texture.Tpo -c -o rsxgltest_elf-texture.o `test -f 'texture.c' || echo '$(srcdir)/'`texture.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/rsxgltest_elf-texture.Tpo $(DEPDIR)/rsxgltest_elf-texture.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='texture.c' object='rsxgltest_elf-texture.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(rsxgltest_elf_CPPFLAGS) $(CPPFLAGS) $(rsxgltest_elf_CFLAGS) $(CFLAGS) -c -o rsxgltest_elf-texture.o `test -f 'texture.c' || echo '$(srcdir)/'`texture.c
+
+rsxgltest_elf-texture.obj: texture.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(rsxgltest_elf_CPPFLAGS) $(CPPFLAGS) $(rsxgltest_elf_CFLAGS) $(CFLAGS) -MT rsxgltest_elf-texture.obj -MD -MP -MF $(DEPDIR)/rsxgltest_elf-texture.Tpo -c -o rsxgltest_elf-texture.obj `if test -f 'texture.c'; then $(CYGPATH_W) 'texture.c'; else $(CYGPATH_W) '$(srcdir)/texture.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/rsxgltest_elf-texture.Tpo $(DEPDIR)/rsxgltest_elf-texture.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='texture.c' object='rsxgltest_elf-texture.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(rsxgltest_elf_CPPFLAGS) $(CPPFLAGS) $(rsxgltest_elf_CFLAGS) $(CFLAGS) -c -o rsxgltest_elf-texture.obj `if test -f 'texture.c'; then $(CYGPATH_W) 'texture.c'; else $(CYGPATH_W) '$(srcdir)/texture.c'; fi`
+
 .cc.o:
 @am__fastdepCXX_TRUE@	$(CXXCOMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
 @am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Po
@@ -387,19 +403,19 @@ rsxgltest_elf-math3d.obj: math3d.cc
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(rsxgltest_elf_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o rsxgltest_elf-math3d.obj `if test -f 'math3d.cc'; then $(CYGPATH_W) 'math3d.cc'; else $(CYGPATH_W) '$(srcdir)/math3d.cc'; fi`
 
-rsxgltest_elf-occlusion.o: occlusion.cc
-@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(rsxgltest_elf_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT rsxgltest_elf-occlusion.o -MD -MP -MF $(DEPDIR)/rsxgltest_elf-occlusion.Tpo -c -o rsxgltest_elf-occlusion.o `test -f 'occlusion.cc' || echo '$(srcdir)/'`occlusion.cc
-@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/rsxgltest_elf-occlusion.Tpo $(DEPDIR)/rsxgltest_elf-occlusion.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='occlusion.cc' object='rsxgltest_elf-occlusion.o' libtool=no @AMDEPBACKSLASH@
+rsxgltest_elf-fbo.o: fbo.cc
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(rsxgltest_elf_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT rsxgltest_elf-fbo.o -MD -MP -MF $(DEPDIR)/rsxgltest_elf-fbo.Tpo -c -o rsxgltest_elf-fbo.o `test -f 'fbo.cc' || echo '$(srcdir)/'`fbo.cc
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/rsxgltest_elf-fbo.Tpo $(DEPDIR)/rsxgltest_elf-fbo.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='fbo.cc' object='rsxgltest_elf-fbo.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(rsxgltest_elf_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o rsxgltest_elf-occlusion.o `test -f 'occlusion.cc' || echo '$(srcdir)/'`occlusion.cc
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(rsxgltest_elf_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o rsxgltest_elf-fbo.o `test -f 'fbo.cc' || echo '$(srcdir)/'`fbo.cc
 
-rsxgltest_elf-occlusion.obj: occlusion.cc
-@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(rsxgltest_elf_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT rsxgltest_elf-occlusion.obj -MD -MP -MF $(DEPDIR)/rsxgltest_elf-occlusion.Tpo -c -o rsxgltest_elf-occlusion.obj `if test -f 'occlusion.cc'; then $(CYGPATH_W) 'occlusion.cc'; else $(CYGPATH_W) '$(srcdir)/occlusion.cc'; fi`
-@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/rsxgltest_elf-occlusion.Tpo $(DEPDIR)/rsxgltest_elf-occlusion.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='occlusion.cc' object='rsxgltest_elf-occlusion.obj' libtool=no @AMDEPBACKSLASH@
+rsxgltest_elf-fbo.obj: fbo.cc
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(rsxgltest_elf_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT rsxgltest_elf-fbo.obj -MD -MP -MF $(DEPDIR)/rsxgltest_elf-fbo.Tpo -c -o rsxgltest_elf-fbo.obj `if test -f 'fbo.cc'; then $(CYGPATH_W) 'fbo.cc'; else $(CYGPATH_W) '$(srcdir)/fbo.cc'; fi`
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/rsxgltest_elf-fbo.Tpo $(DEPDIR)/rsxgltest_elf-fbo.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='fbo.cc' object='rsxgltest_elf-fbo.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(rsxgltest_elf_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o rsxgltest_elf-occlusion.obj `if test -f 'occlusion.cc'; then $(CYGPATH_W) 'occlusion.cc'; else $(CYGPATH_W) '$(srcdir)/occlusion.cc'; fi`
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(rsxgltest_elf_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o rsxgltest_elf-fbo.obj `if test -f 'fbo.cc'; then $(CYGPATH_W) 'fbo.cc'; else $(CYGPATH_W) '$(srcdir)/fbo.cc'; fi`
 
 ID: $(HEADERS) $(SOURCES) $(LISP) $(TAGS_FILES)
 	list='$(SOURCES) $(HEADERS) $(LISP) $(TAGS_FILES)'; \

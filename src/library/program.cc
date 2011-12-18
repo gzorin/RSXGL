@@ -52,6 +52,7 @@
 #define GLAPI extern "C"
 
 //
+#if defined(RSXGL_STATIC_OBJECT_STORAGE)
 shader_t::storage_type & shader_t::storage()
 {
   static shader_t::storage_type _storage;
@@ -63,6 +64,17 @@ program_t::storage_type & program_t::storage()
   static program_t::storage_type _storage;
   return _storage;
 }
+#else
+shader_t::storage_type & shader_t::storage()
+{
+  return current_object_ctx() -> shader_storage();
+}
+
+program_t::storage_type & program_t::storage()
+{
+  return current_object_ctx() -> program_storage();
+}
+#endif
 
 // Shader functions:
 shader_t::shader_t()
