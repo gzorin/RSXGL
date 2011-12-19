@@ -20,6 +20,7 @@ BUILT_SOURCES = textures_vpo.h textures_fpo.h \
 	cube_vpo.h cube_fpo.h \
 	texcube_vpo.h texcube_fpo.h \
 	fbo_inner_vpo.h fbo_inner_fpo.h \
+	occlusion_vpo.h occlusion_fpo.h \
 	gradient_png.h
 CLEANFILES = draw_vpo.h draw_fpo.h draw_vpo.o draw_fpo.o \
 	textures_vpo.h textures_fpo.h textures_vpo.o textures_fpo.o \
@@ -55,8 +56,14 @@ texcube_sources = texcube.cc texture.c texcube.vert texcube.frag nagel.bin face.
 fbo_objects = fbo_inner_vpo.o fbo_inner_fpo.o nagel_bin.o
 fbo_sources = fbo.cc texture.c fbo_inner.vert fbo_inner.frag nagel.bin
 
-objects = $(manycubes_objects)
-sources = $(manycubes_sources)
+occlusion_objects = occlusion_vpo.o occlusion_fpo.o
+occlusion_sources = occlusion.cc occlusion.vert occlusion.frag
+
+occlusion2_objects = occlusion_vpo.o occlusion_fpo.o
+occlusion2_sources = occlusion2.cc occlusion.vert occlusion.frag
+
+objects = $(fbo_objects)
+sources = $(fbo_sources)
 
 rsxgltest_elf_DEPENDENCIES = $(top_builddir)/src/library/libEGL.a $(top_builddir)/src/library/libGL.a	\
 	$(objects)

@@ -97,18 +97,13 @@ get(const ieee32_t & lhs,float & rhs) {
   rhs = lhs.f;
 }
 
-void
-rsxgl_init_default_attribs(void * ptr)
-{
-  attribs_t::storage_type * storage = (attribs_t::storage_type *)ptr;
-  attribs_t & attribs = storage -> at(0);
-  attribs = attribs_t();
-}
-
 attribs_t::storage_type & attribs_t::storage()
 {
-  static attribs_t::storage_type _storage(0,0 /*rsxgl_init_default_attribs*/);
-  return _storage;
+  return current_object_ctx() -> attribs_storage();
+}
+
+attribs_t::~attribs_t()
+{
 }
 
 GLAPI void APIENTRY
@@ -128,10 +123,6 @@ glBindVertexArray (GLuint attribs_name)
   ctx -> invalid_attribs.set();
   
   RSXGL_NOERROR_();
-}
-
-attribs_t::~attribs_t()
-{
 }
 
 GLAPI void APIENTRY

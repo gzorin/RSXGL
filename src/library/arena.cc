@@ -5,8 +5,8 @@
 // arena.cc - Create arenas from which memory may be allocated.
 
 #include "gcm.h"
-#include "rsxgl_context.h"
 #include "arena.h"
+#include "rsxgl_context.h"
 #include "gl_object_storage.h"
 
 #include <GL3/gl3.h>
@@ -21,31 +21,9 @@
 #endif
 #define GLAPI extern "C"
 
-extern "C" mspace rsxgl_rsx_mspace();
-
-static void
-rsxgl_init_default_arena(void * ptr)
-{
-  memory_arena_t::storage_type * storage = (memory_arena_t::storage_type *)ptr;
-
-  gcmConfiguration config;
-  gcmGetConfiguration(&config);
-  uint32_t offset;
-  gcmAddressToOffset(config.localAddress,&offset);
-  
-  memory_arena_t & arena = storage -> at(0);
-  
-  arena.address = config.localAddress;
-  arena.space = rsxgl_rsx_mspace();
-  arena.memory.location = RSXGL_MEMORY_LOCATION_LOCAL;
-  arena.memory.offset = offset;
-  arena.size = config.localSize;
-}
-
 memory_arena_t::storage_type & memory_arena_t::storage()
 {
-  static memory_arena_t::storage_type _storage(0,rsxgl_init_default_arena);
-  return _storage;
+  return current_object_ctx() -> arena_storage();
 }
 
 memory_t

@@ -6,6 +6,7 @@
 #include "rsxgl_assert.h"
 #include "gcm.h"
 #include "egl_types.h"
+#include "rsxgl_object_context.h"
 #include "arena.h"
 #include "buffer.h"
 #include "state.h"
@@ -14,6 +15,7 @@
 #include "textures.h"
 #include "program.h"
 #include "framebuffer.h"
+#include "sync.h"
 #include "query.h"
 
 #include "bit_set.h"
@@ -22,6 +24,12 @@
 
 struct rsxgl_context_t {
   rsxegl_context_t base;
+
+private:
+
+  rsxgl_object_context_t * m_object_context;
+
+public:
 
   state_t state;
 
@@ -48,6 +56,7 @@ struct rsxgl_context_t {
   framebuffer_t::binding_type framebuffer_binding;
 
   query_t::binding_type query_binding;
+  rsxgl_query_object_index_type any_samples_passed_query;
   
   program_t::binding_type program_binding;
   program_t::texture_assignments_bitfield_type invalid_texture_assignments;
@@ -55,22 +64,32 @@ struct rsxgl_context_t {
   // Used by glFinish():
   uint32_t ref;
 
-  uint8_t timestamp_sync;
+  rsxgl_sync_object_index_type timestamp_sync;
 
   // Next timestamp to be given out when draw functions are initiated.
   // Should be initialized to 1:
-  uint32_t next_timestamp, last_timestamp;
+  uint32_t next_timestamp;
 
-  // Cached copy of the current timestamp on the GPU:
+  // The last timestamp that was posted to the command stream:
+  uint32_t last_timestamp;
+
+  // Cached copy of the current timestamp on the GPU.
   // Should be initialized to 0:
   uint32_t cached_timestamp;
 
-  rsxgl_context_t(const struct rsxegl_config_t *,gcmContextData *);
+  rsxgl_context_t(const struct rsxegl_config_t *,gcmContextData *,struct rsxgl_object_context_t *);
+  ~rsxgl_context_t();
 
   inline
   gcmContextData * gcm_context() {
     rsxgl_assert(base.gcm_context != 0);
     return base.gcm_context;
+  }
+
+  inline
+  rsxgl_object_context_t * object_context() {
+    rsxgl_assert(m_object_context != 0);
+    return m_object_context;
   }
 
   static void egl_callback(rsxegl_context_t *,const uint8_t);
@@ -86,8 +105,16 @@ current_ctx()
   return rsxgl_ctx;
 }
 
-uint32_t rsxgl_timestamp_create(rsxgl_context_t *);
+static inline rsxgl_object_context_t *
+current_object_ctx()
+{
+  assert(rsxgl_ctx != 0);
+  return rsxgl_ctx -> object_context();
+}
+
+uint32_t rsxgl_timestamp_create(rsxgl_context_t *,const uint32_t);
 void rsxgl_timestamp_wait(rsxgl_context_t *,const uint32_t);
+bool rsxgl_timestamp_passed(rsxgl_context_t *,const uint32_t);
 void rsxgl_timestamp_post(rsxgl_context_t *,const uint32_t);
 
 #endif

@@ -90,3 +90,27 @@ pick(float * viewport,
 
   return r;
 }
+
+Eigen::Affine3f
+lookat(const Eigen::Vector3f & eye,const Eigen::Vector3f & center,const Eigen::Vector3f & up)
+{
+  const Eigen::Vector3f tmp = center - eye;
+  const Eigen::Vector3f forward = tmp / tmp.norm();
+  const Eigen::Vector3f side = forward.cross(up);
+
+  Eigen::Affine3f m = Eigen::Affine3f::Identity();
+
+  m(0,0) = side[0];
+  m(1,0) = side[1];
+  m(2,0) = side[2];
+
+  m(0,1) = up[0];
+  m(1,1) = up[1];
+  m(2,1) = up[2];
+
+  m(0,2) = -forward[0];
+  m(1,2) = -forward[1];
+  m(2,2) = -forward[2];
+
+  return m * Eigen::Translation3f(-eye[0],-eye[1],-eye[2]);
+}

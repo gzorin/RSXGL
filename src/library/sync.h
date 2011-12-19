@@ -12,12 +12,14 @@
 #include "gcm.h"
 #include "gl_fifo.h"
 #include "rsxgl_assert.h"
-#include "cxxutil.h"
+#include "rsxgl_limits.h"
 
 #include <sys/unistd.h>
 #include <algorithm>
 #include <stddef.h>
 #include <ppu_intrinsics.h>
+
+#include <boost/integer.hpp>
 
 //
 static inline void
@@ -44,9 +46,16 @@ rsxgl_emit_set_ref(gcmContextData * context,const uint32_t value)
   gcm_finish_n_commands(context,2);
 }
 
+// Manage RSX semaphores:
+typedef boost::uint_value_t< RSXGL_MAX_SYNC_OBJECTS >::least rsxgl_sync_object_index_type;
+
+// Return value of RSXGL_MAX_SYNC_OBJECTS is failure:
+rsxgl_sync_object_index_type rsxgl_sync_object_allocate();
+void rsxgl_sync_object_free(rsxgl_sync_object_index_type);
+
 // Set a sync object to some value. If the RSX is waiting for this value, then it'll wake up and go.
 static inline void
-rsxgl_sync_cpu_signal(const uint8_t index,const uint32_t value)
+rsxgl_sync_cpu_signal(const rsxgl_sync_object_index_type index,const uint32_t value)
 {
   volatile uint32_t * object = gcmGetLabelAddress(index);
   rsxgl_assert(object != 0);
@@ -55,7 +64,7 @@ rsxgl_sync_cpu_signal(const uint8_t index,const uint32_t value)
 
 // Get the value of a sync object:
 static inline uint32_t
-rsxgl_sync_value(const uint8_t index)
+rsxgl_sync_value(const rsxgl_sync_object_index_type index)
 {
   volatile uint32_t * object = gcmGetLabelAddress(index);
   rsxgl_assert(object != 0);
@@ -65,7 +74,7 @@ rsxgl_sync_value(const uint8_t index)
 // Insert a command that will set sync object index to value once read processing is finished.
 // (Equivalent to PSL1GHT's rsxSetWriteCommandLabel)
 static inline void
-rsxgl_emit_sync_gpu_signal_read(gcmContextData * context,const uint8_t index,const uint32_t value)
+rsxgl_emit_sync_gpu_signal_read(gcmContextData * context,const rsxgl_sync_object_index_type index,const uint32_t value)
 {
   uint32_t * buffer = gcm_reserve(context,4);
 
@@ -80,15 +89,19 @@ rsxgl_emit_sync_gpu_signal_read(gcmContextData * context,const uint8_t index,con
 // Insert a command that will set sync object index to value once write processing is finished.
 // (Equivalent to PSL1GHT's rsxSetWriteBackendLabel)
 static inline void
-rsxgl_emit_sync_gpu_signal_write(gcmContextData * context,const uint8_t index,const uint32_t value)
+_rsxgl_emit_sync_gpu_signal_write(uint32_t * buffer,const rsxgl_sync_object_index_type index,const uint32_t value)
 {
-  uint32_t * buffer = gcm_reserve(context,4);
-
   gcm_emit_method_at(buffer,0,NV40TCL_SEMAPHORE_OFFSET,1);
   gcm_emit_at(buffer,1,index << 4);
   gcm_emit_method_at(buffer,2,NV40TCL_SEMAPHORE_BACKENDWRITE_RELEASE,1);
   gcm_emit_at(buffer,3,(value&0xff00ff00) | ((value>>16)&0xff) | ((value&0xff)<<16));
+}
 
+static inline void
+rsxgl_emit_sync_gpu_signal_write(gcmContextData * context,const rsxgl_sync_object_index_type index,const uint32_t value)
+{
+  uint32_t * buffer = gcm_reserve(context,4);
+  _rsxgl_emit_sync_gpu_signal_write(buffer,index,value);
   gcm_finish_n_commands(context,4);
 }
 
@@ -100,7 +113,7 @@ rsxgl_emit_sync_gpu_signal_write(gcmContextData * context,const uint8_t index,co
 //
 // Returns 1 if the sync object was set to value while this function ran, 0 if it "timed out".
 static inline int
-rsxgl_sync_cpu_wait(const uint8_t index,const uint32_t value,const useconds_t timeout,const useconds_t timeout_interval)
+rsxgl_sync_cpu_wait(const rsxgl_sync_object_index_type index,const uint32_t value,const useconds_t timeout,const useconds_t timeout_interval)
 {
   rsxgl_assert(timeout_interval > 0);
 
@@ -121,7 +134,7 @@ rsxgl_sync_cpu_wait(const uint8_t index,const uint32_t value,const useconds_t ti
 // Tell the GPU to wait until a sync object is set to some value:
 // (Equivalent to PSL1GHT's rsxSetWaitLabel)
 static inline void
-rsxgl_sync_gpu_wait(gcmContextData * context,const uint8_t index,const uint32_t value)
+rsxgl_sync_gpu_wait(gcmContextData * context,const rsxgl_sync_object_index_type index,const uint32_t value)
 {
   uint32_t * buffer = gcm_reserve(context,4);
 
@@ -132,9 +145,5 @@ rsxgl_sync_gpu_wait(gcmContextData * context,const uint8_t index,const uint32_t 
 
   gcm_finish_n_commands(context,4);  
 }
-
-// Return 0 is failure:
-uint8_t rsxgl_sync_object_allocate();
-void rsxgl_sync_object_free(uint8_t);
 
 #endif

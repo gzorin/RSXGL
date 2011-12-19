@@ -17,7 +17,7 @@ libEGL_a_CFLAGS = -std=gnu99 -fgnu89-inline
 libEGL_a_CPPFLAGS = -D__RSX__ -I\$(top_srcdir)/include ${CPPFLAGS} -Wall $(dlmalloc_CPPFLAGS) $(PS3DEV_PPU_CPPFLAGS) $(PSL1GHT_PPU_CPPFLAGS)
 
 libGL_a_DEPENDENCIES = ../cgcomp/libnv40.a
-libGL_a_SOURCES = rsxgl_context.cc gl_fifo.c					\
+libGL_a_SOURCES = rsxgl_context.cc rsxgl_object_context.cc gl_fifo.c					\
 	error.cc get.cc state.cc enable.cc arena.cc buffer.cc clear.cc draw.cc	\
 	sync.cc query.cc							\
 	program.cc attribs.cc uniforms.cc textures.cc framebuffer.cc		\
@@ -26,3 +26,8 @@ libGL_a_CPPFLAGS = -D__RSX__ -I\$(top_srcdir)/include $(PS3DEV_PPU_CPPFLAGS) $(P
 libGL_a_CFLAGS = -std=gnu99 -fgnu89-inline
 libGL_a_CXXFLAGS = -I$(top_srcdir)/extsrc/boost -std=c++0x -fno-rtti
 libGL_a_LIBADD = ../cgcomp/libnv40.a @PPU_CXXLIB@
+
+#noinst_PROGRAMS = test-name_space
+#CXX = @CXX@
+#test_name_space_SOURCES = test-name_space.cc
+#test_name_space_CPPFLAGS = -I$(top_srcdir)/extsrc/boost

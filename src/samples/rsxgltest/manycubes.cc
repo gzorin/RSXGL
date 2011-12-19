@@ -61,6 +61,8 @@ GLuint texture = 0;
 GLuint shaders[2] = { 0,0 };
 GLuint program = 0;
 
+GLuint query = 0;
+
 GLint ProjMatrix_location = -1, TransMatrix_location = -1, color_location = -1, ncubes_location = -1, texture_location = -1;
 
 #define DTOR(X) ((X)*0.01745329f)
@@ -292,6 +294,8 @@ rsxgltest_init(int argc,const char ** argv)
 
   glTexParameteri(GL_TEXTURE_1D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);
   glTexParameteri(GL_TEXTURE_1D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
+
+  glGenQueries(1,&query);
 }
 
 extern "C"
@@ -313,15 +317,44 @@ rsxgltest_draw()
     compute_sine_wave(xyz_waves + 2,rsxgltest_elapsed_time)
   };
 
-  Eigen::Affine3f rotmat = 
-    Eigen::Affine3f::Identity() * 
-    Eigen::AngleAxisf(DTOR(xyz[2]) * 360.0f,Eigen::Vector3f::UnitZ()) *
-    Eigen::AngleAxisf(DTOR(xyz[1]) * 360.0f,Eigen::Vector3f::UnitY()) *
-    Eigen::AngleAxisf(DTOR(xyz[0]) * 360.0f,Eigen::Vector3f::UnitX());
+  {
+    glBeginQuery(GL_SAMPLES_PASSED,query);
 
-  Eigen::Affine3f modelview = ViewMatrixInv * (Eigen::Affine3f::Identity() * rotmat);
-  glUniformMatrix4fv(TransMatrix_location,1,GL_FALSE,modelview.data());
-  glDrawElementsInstanced(GL_TRIANGLES,36,GL_UNSIGNED_INT,0,ncubes);
+    Eigen::Affine3f rotmat = 
+      Eigen::Affine3f::Identity() * 
+      Eigen::AngleAxisf(DTOR(xyz[2]) * 360.0f,Eigen::Vector3f::UnitZ()) *
+      Eigen::AngleAxisf(DTOR(xyz[1]) * 360.0f,Eigen::Vector3f::UnitY()) *
+      Eigen::AngleAxisf(DTOR(xyz[0]) * 360.0f,Eigen::Vector3f::UnitX());
+    
+    Eigen::Affine3f modelview = ViewMatrixInv * (Eigen::Affine3f::Identity() * rotmat);
+    glUniformMatrix4fv(TransMatrix_location,1,GL_FALSE,modelview.data());
+    glDrawElementsInstanced(GL_TRIANGLES,36,GL_UNSIGNED_INT,0,ncubes);
+
+    glEndQuery(GL_SAMPLES_PASSED);
+
+    GLuint samples = 1357;
+    glGetQueryObjectuiv(query,GL_QUERY_RESULT,&samples);
+    tcp_printf("samples: %u\n",(unsigned int)samples);
+  }
+
+  GLsync s = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE,0);
+  glClientWaitSync(s,GL_SYNC_FLUSH_COMMANDS_BIT,1e9);
+
+  {
+    //glBeginQuery(GL_SAMPLES_PASSED,query);
+
+    Eigen::Affine3f rotmat = 
+      Eigen::Affine3f::Identity() * 
+      Eigen::AngleAxisf(DTOR(xyz[2]) * 360.0f,Eigen::Vector3f::UnitZ()) *
+      Eigen::AngleAxisf(DTOR(xyz[1]) * 360.0f,Eigen::Vector3f::UnitY()) *
+      Eigen::AngleAxisf((DTOR(xyz[0] + 180.0f)) + 180.0f,Eigen::Vector3f::UnitX());
+    
+    Eigen::Affine3f modelview = ViewMatrixInv * (Eigen::Affine3f::Identity() * rotmat);
+    glUniformMatrix4fv(TransMatrix_location,1,GL_FALSE,modelview.data());
+    glDrawElementsInstanced(GL_TRIANGLES,36,GL_UNSIGNED_INT,0,ncubes);
+
+    //glEndQuery(GL_SAMPLES_PASSED);
+  }
 
   return 1;
 }

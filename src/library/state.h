@@ -89,6 +89,13 @@ enum pixel_store_alignment {
   RSXGL_PIXEL_STORE_ALIGNMENT_8 = 3
 };
 
+enum conditional_render_status {
+  RSXGL_CONDITIONAL_RENDER_INACTIVE = 0,
+  RSXGL_CONDITIONAL_RENDER_ACTIVE_WAIT_PASS = 1,
+  RSXGL_CONDITIONAL_RENDER_ACTIVE_WAIT_FAIL = 2,
+  RSXGL_CONDITIONAL_RENDER_ACTIVE_NO_WAIT = 3
+};
+
 struct state_t {
   union {
     uint32_t all;
@@ -113,7 +120,7 @@ struct state_t {
   } invalid;
 
   struct {
-    uint32_t blend:1, scissor:1, depth_test:1, primitive_restart:1;
+    uint32_t blend:1, scissor:1, depth_test:1, primitive_restart:1, conditional_render_status:2;
   } enable;
 
   struct {

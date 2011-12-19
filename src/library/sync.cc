@@ -77,6 +77,37 @@ glFinish (void)
   RSXGL_NOERROR_();
 }
 
+// Dole out RSX semaphore indices
+typedef name_space< RSXGL_MAX_SYNC_OBJECTS, true > rsxgl_sync_object_name_space_type;
+
+static rsxgl_sync_object_name_space_type &
+rsxgl_sync_object_name_space()
+{
+  static rsxgl_sync_object_name_space_type name_space;
+  return name_space;
+}
+
+rsxgl_sync_object_index_type
+rsxgl_sync_object_allocate()
+{
+  std::pair< rsxgl_sync_object_name_space_type::name_type, bool > tmp = rsxgl_sync_object_name_space().create_name();
+  if(tmp.second) {
+    return tmp.first + 64;
+  }
+  else {
+    return RSXGL_MAX_SYNC_OBJECTS;
+  }
+}
+
+void
+rsxgl_sync_object_free(const rsxgl_sync_object_index_type index)
+{
+  const rsxgl_sync_object_index_type tmp = index - 64;
+  if(tmp < RSXGL_MAX_SYNC_OBJECTS) {
+    rsxgl_sync_object_name_space().destroy_name(tmp);
+  }
+}
+
 // Sync objects are not considered true "GL objects," but they do require library-generated names.
 // So we re-use that capability from gl_object<>. But since they can't be bound or orphaned, etc.,
 // this class does not use the CRTP the way that other GL objects do.
@@ -87,13 +118,13 @@ struct rsxgl_sync_object_t {
 
   static storage_type & storage();
 
-  uint32_t status:1, index:8, value:23;
+  name_type name;
+  rsxgl_sync_object_index_type index;
+  uint32_t status:1, value:31;
 
   rsxgl_sync_object_t()
-    : status(0), index(0), value(0) {
+    : name(0), index(RSXGL_MAX_SYNC_OBJECTS), status(0), value(0) {
   }
-
-  void destroy() {}
 };
 
 rsxgl_sync_object_t::storage_type &
@@ -101,59 +132,6 @@ rsxgl_sync_object_t::storage()
 {
   static rsxgl_sync_object_t::storage_type _storage(RSXGL_MAX_SYNC_OBJECTS);
   return _storage;
-}
-
-static inline rsxgl_sync_object_t::name_type
-rsxgl_sync_object_really_allocate()
-{
-  const rsxgl_sync_object_t::name_type name = rsxgl_sync_object_t::storage().create_name();
-  if(name > RSXGL_MAX_SYNC_OBJECTS) {
-    rsxgl_sync_object_t::storage().destroy(name);
-    return 0;
-  }
-  else {
-    rsxgl_assert(name > 0);
-    rsxgl_sync_object_t::storage().create_object(name);
-    return name;
-  }
-}
-
-static inline void
-rsxgl_sync_object_really_free(const rsxgl_sync_object_t::name_type name)
-{
-  if(rsxgl_sync_object_t::storage().is_name(name)) {
-    rsxgl_assert(rsxgl_sync_object_t::storage().is_object(name));
-    rsxgl_sync_object_t::storage().destroy(name);
-  }
-}
-
-static inline uint8_t
-rsxgl_sync_name_to_rsx_index(const rsxgl_sync_object_t::name_type name)
-{
-  rsxgl_assert(name > 0 && name <= RSXGL_MAX_SYNC_OBJECTS);
-  return (name - 1) + 64;
-}
-
-static inline rsxgl_sync_object_t::name_type
-rsxgl_rsx_index_to_sync_name(const uint8_t index)
-{
-  rsxgl_assert(index >= 64);
-  return (index - 64) + 1;
-}
-
-uint8_t
-rsxgl_sync_object_allocate()
-{
-  rsxgl_sync_object_t::name_type name = rsxgl_sync_object_really_allocate();
-  return (name == 0) ? 0 : rsxgl_sync_name_to_rsx_index(name);
-}
-
-void
-rsxgl_sync_object_free(uint8_t index)
-{
-  if(index >= 64) {
-    rsxgl_sync_object_really_free(rsxgl_rsx_index_to_sync_name(index));
-  }
 }
 
 static const uint32_t rsxgl_sync_token_max = (1 << 23);
@@ -177,73 +155,65 @@ glFenceSync (GLenum condition, GLbitfield flags)
     RSXGL_ERROR(GL_INVALID_VALUE,0);
   }
 
-  rsxgl_sync_object_t::name_type name = rsxgl_sync_object_really_allocate();
+  const rsxgl_sync_object_t::name_type name = rsxgl_sync_object_t::storage().create_name_and_object();
 
-  if(name == 0) {
-    RSXGL_ERROR(GL_OUT_OF_MEMORY,0);
-  }
-  else {
-    rsxgl_assert(rsxgl_sync_object_t::storage().is_object(name));
+  const rsxgl_sync_object_index_type index = rsxgl_sync_object_allocate();
+  const uint32_t token = rsxgl_sync_token();
 
-    const uint8_t index = rsxgl_sync_name_to_rsx_index(name);
-    const uint32_t token = rsxgl_sync_token();
-
+  if(index != RSXGL_MAX_SYNC_OBJECTS) {
     rsxgl_sync_object_t * sync_object = &rsxgl_sync_object_t::storage().at(name);
+    sync_object -> name = name;
     sync_object -> status = 0;
     sync_object -> index = index;
     sync_object -> value = token;
-
+  
     rsxgl_sync_cpu_signal(index,RSXGL_SYNC_UNSIGNALED_TOKEN);
     rsxgl_emit_sync_gpu_signal_read(current_ctx() -> base.gcm_context,sync_object -> index,token);
 
     RSXGL_NOERROR((GLsync)sync_object);
+  }
+  else {
+    RSXGL_ERROR(GL_OUT_OF_MEMORY,0);
   }
 }
 
 GLAPI GLboolean APIENTRY
 glIsSync (GLsync sync)
 {
-  rsxgl_sync_object_t * sync_object = (rsxgl_sync_object_t *)sync;
-  if(sync_object != 0 && rsxgl_sync_object_t::storage().is_name(rsxgl_rsx_index_to_sync_name(sync_object -> index))) {
-    rsxgl_assert(rsxgl_sync_object_t::storage().is_object(rsxgl_rsx_index_to_sync_name(sync_object -> index)));
-    return GL_TRUE;
-  }
-  else {
-    return GL_FALSE;
-  }
+  return (sync != 0) && (rsxgl_sync_object_t::storage().is_object(reinterpret_cast< rsxgl_sync_object_t * >(sync) -> name));
 }
 
 GLAPI void APIENTRY
 glDeleteSync (GLsync sync)
 {
-  rsxgl_sync_object_t * sync_object = (rsxgl_sync_object_t *)sync;
-  if(sync_object == 0 || !rsxgl_sync_object_t::storage().is_name(rsxgl_rsx_index_to_sync_name(sync_object -> index))) {
+  if(sync == 0 || !rsxgl_sync_object_t::storage().is_object(reinterpret_cast< rsxgl_sync_object_t * >(sync) -> name)) {
     RSXGL_ERROR_(GL_INVALID_VALUE);
   }
 
-  rsxgl_sync_object_t::name_type name = rsxgl_rsx_index_to_sync_name(sync_object -> index);
-  rsxgl_assert(rsxgl_sync_object_t::storage().is_object(name));
+  rsxgl_sync_object_t * sync_object = reinterpret_cast< rsxgl_sync_object_t * >(sync);
 
-  // TODO - if it's unsignaled, orphan it instead:
-  rsxgl_sync_object_t::storage().destroy(name);
+  if(sync_object -> index != RSXGL_MAX_SYNC_OBJECTS) {
+    rsxgl_sync_object_free(sync_object -> index);
+  }
+
+  rsxgl_sync_object_t::storage().destroy(sync_object -> name);
 }
 
 GLAPI GLenum APIENTRY
 glClientWaitSync (GLsync sync, GLbitfield flags, GLuint64 timeout)
 {
-  rsxgl_sync_object_t * sync_object = (rsxgl_sync_object_t *)sync;
-  if(sync_object == 0 || !rsxgl_sync_object_t::storage().is_name(rsxgl_rsx_index_to_sync_name(sync_object -> index))) {
+  if(sync == 0 || !rsxgl_sync_object_t::storage().is_object(reinterpret_cast< rsxgl_sync_object_t * >(sync) -> name)) {
     RSXGL_ERROR(GL_INVALID_VALUE,GL_WAIT_FAILED);
   }
-  
+
   static const GLbitfield valid_flags = GL_SYNC_FLUSH_COMMANDS_BIT;
   if((flags & ~valid_flags) != 0) {
     RSXGL_ERROR(GL_INVALID_VALUE,GL_WAIT_FAILED);
   }
 
-  rsxgl_assert(rsxgl_sync_object_t::storage().is_object(rsxgl_rsx_index_to_sync_name(sync_object -> index)));
-
   rsxgl_context_t * ctx = current_ctx();
+
+  rsxgl_sync_object_t * sync_object = reinterpret_cast< rsxgl_sync_object_t * >(sync);
 
   // Flush it all:
   if(flags & GL_SYNC_FLUSH_COMMANDS_BIT) {
@@ -255,7 +225,7 @@ glClientWaitSync (GLsync sync, GLbitfield flags, GLuint64 timeout)
     RSXGL_NOERROR(GL_ALREADY_SIGNALED);
   }
 
-  // Timeout is nanoseconds - convert to microseconds:
+  // timeout is nanoseconds - convert to microseconds:
   const useconds_t timeout_usec = timeout / 1000;
 
   const int result = rsxgl_sync_cpu_wait(sync_object -> index,sync_object -> value,timeout_usec,RSXGL_SYNC_SLEEP_INTERVAL);
@@ -272,8 +242,7 @@ glClientWaitSync (GLsync sync, GLbitfield flags, GLuint64 timeout)
 GLAPI void APIENTRY
 glWaitSync (GLsync sync, GLbitfield flags, GLuint64 timeout)
 {
-  rsxgl_sync_object_t * sync_object = (rsxgl_sync_object_t *)sync;
-  if(sync_object == 0 || !rsxgl_sync_object_t::storage().is_name(rsxgl_rsx_index_to_sync_name(sync_object -> index))) {
+  if(sync == 0 || !rsxgl_sync_object_t::storage().is_object(reinterpret_cast< rsxgl_sync_object_t * >(sync) -> name)) {
     RSXGL_ERROR_(GL_INVALID_VALUE);
   }
 
@@ -281,15 +250,7 @@ glWaitSync (GLsync sync, GLbitfield flags, GLuint64 timeout)
     RSXGL_ERROR_(GL_INVALID_VALUE);
   }
 
-  rsxgl_assert(rsxgl_sync_object_t::storage().is_object(rsxgl_rsx_index_to_sync_name(sync_object -> index)));
-
-  // Doesn't seem like there's much to do here - this function seems useful mainly for an implementation that
-  // supports switching between multiple GL contexts that are possibly running on different GPU's (which RSXGL
-  // don't support), or for a future version of OpenGL that specifies a way for the CPU to signal the sync object.
-  // This function is supposed to cause the GPU to block until a sync object is signalled - but the GL_ARB_sync
-  // extension specifies that only the GPU itself can perform the signalling by calling glFenceSync only,
-  // and the passing of a valid sync object to this function implies that would have been done already.
-  // Still checked, dutifully, for GL errors, tho.
+  // TODO - Do something here. Not sure what.
 
   RSXGL_NOERROR_();
 }
@@ -297,18 +258,16 @@ glWaitSync (GLsync sync, GLbitfield flags, GLuint64 timeout)
 GLAPI void APIENTRY
 glGetSynciv (GLsync sync, GLenum pname, GLsizei bufSize, GLsizei *length, GLint *values)
 {
-  rsxgl_sync_object_t * sync_object = (rsxgl_sync_object_t *)sync;
-  if(sync_object == 0 || !rsxgl_sync_object_t::storage().is_name(rsxgl_rsx_index_to_sync_name(sync_object -> index))) {
+  if(sync == 0 || !rsxgl_sync_object_t::storage().is_object(reinterpret_cast< rsxgl_sync_object_t * >(sync) -> name)) {
     RSXGL_ERROR_(GL_INVALID_VALUE);
   }
-
-  rsxgl_sync_object_t::name_type name = rsxgl_rsx_index_to_sync_name(sync_object -> index);
-  rsxgl_assert(rsxgl_sync_object_t::storage().is_object(name));
 
   if(bufSize < 1) {
     if(length != 0) *length = 0;
     RSXGL_NOERROR_();
   }
+
+  rsxgl_sync_object_t * sync_object = reinterpret_cast< rsxgl_sync_object_t * >(sync);
 
   if(pname == GL_OBJECT_TYPE) {
     *values = GL_SYNC_FENCE;
@@ -327,65 +286,6 @@ glGetSynciv (GLsync sync, GLenum pname, GLsizei bufSize, GLsizei *length, GLint 
   }
 
   if(length != 0) *length = 1;
-  RSXGL_NOERROR_();
-}
-
-#if 0
-// Dumb synchronization extension. I was using these to test some things related to buffer streaming. Might want them again,
-// but hopefully not. They implement the ability to tell the GPU to wait for a signal set by the CPU, something which
-// is supported by the RSX but not presently called-for by the GL spec.
-GLAPI GLsync APIENTRY
-rsxglCreateSync(GLuint value)
-{
-  rsxgl_debug_printf("%s: %u\n",__PRETTY_FUNCTION__,value);
-  
-  rsxgl_sync_object_t::name_type name = rsxgl_sync_object_really_allocate();
-
-  if(name == 0) {
-    RSXGL_ERROR(GL_OUT_OF_MEMORY,0);
-  }
-  else {
-    rsxgl_assert(rsxgl_sync_object_t::storage().is_object(name));
-
-    const uint8_t index = rsxgl_sync_name_to_rsx_index(name);
-    const uint32_t token = rsxgl_sync_token();
-
-    rsxgl_sync_object_t * sync_object = &rsxgl_sync_object_t::storage().at(name);
-    sync_object -> status = 0;
-    sync_object -> index = index;
-    sync_object -> value = value;
-
-    rsxgl_sync_cpu_signal(index,value);
-
-    RSXGL_NOERROR((GLsync)sync_object);
-  }
-}
-
-GLAPI void APIENTRY
-rsxglSyncGPUWait(GLsync sync,GLuint value)
-{
-  rsxgl_sync_object_t * sync_object = (rsxgl_sync_object_t *)sync;
-  if(sync_object == 0 || !rsxgl_sync_object_t::storage().is_name(rsxgl_rsx_index_to_sync_name(sync_object -> index))) {
-    RSXGL_ERROR_(GL_INVALID_VALUE);
-  }
-
-  rsxgl_debug_printf("%s: %u %u\n",__PRETTY_FUNCTION__,sync_object -> index,value);
-  rsxgl_sync_gpu_wait(current_ctx() -> gcm_context(),sync_object -> index,value);
 
   RSXGL_NOERROR_();
 }
-
-GLAPI void APIENTRY
-rsxglSyncCPUSignal(GLsync sync,GLuint value)
-{
-  rsxgl_sync_object_t * sync_object = (rsxgl_sync_object_t *)sync;
-  if(sync_object == 0 || !rsxgl_sync_object_t::storage().is_name(rsxgl_rsx_index_to_sync_name(sync_object -> index))) {
-    RSXGL_ERROR_(GL_INVALID_VALUE);
-  }
-
-  rsxgl_debug_printf("%s: %u %u\n",__PRETTY_FUNCTION__,sync_object -> index,value);
-  rsxgl_sync_cpu_signal(sync_object -> index,value);
-
-  RSXGL_NOERROR_();
-}
-#endif

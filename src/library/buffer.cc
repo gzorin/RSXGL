@@ -26,8 +26,7 @@
 
 buffer_t::storage_type & buffer_t::storage()
 {
-  static buffer_t::storage_type _storage;
-  return _storage;
+  return current_object_ctx() -> buffer_storage();
 }
 
 buffer_t::~buffer_t()
@@ -643,7 +642,7 @@ glCopyBufferSubData (GLenum readTarget, GLenum writeTarget, GLintptr readOffset,
     RSXGL_ERROR_(GL_INVALID_VALUE);
   }
   
-  const uint32_t timestamp = rsxgl_timestamp_create(ctx);  
+  const uint32_t timestamp = rsxgl_timestamp_create(ctx,1);
 
   gcmContextData * context = ctx -> gcm_context();
 

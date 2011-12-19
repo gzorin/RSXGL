@@ -133,8 +133,7 @@ rsxgl_texture_framebuffer_format[RSXGL_MAX_TEX_FORMATS] = {
 // Renderbuffers:
 renderbuffer_t::storage_type & renderbuffer_t::storage()
 {
-  static renderbuffer_t::storage_type _storage(0,0);
-  return _storage;
+  return current_object_ctx() -> renderbuffer_storage();
 }
 
 renderbuffer_t::renderbuffer_t()
@@ -418,18 +417,9 @@ glGetRenderbufferParameteriv (GLenum target, GLenum pname, GLint *params)
 }
 
 // Framebuffers:
-void
-rsxgl_init_default_framebuffer(void * ptr)
-{
-  framebuffer_t::storage_type * storage = (framebuffer_t::storage_type *)ptr;
-  framebuffer_t & framebuffer = storage -> at(0);
-  framebuffer.is_default = 1;
-}
-
 framebuffer_t::storage_type & framebuffer_t::storage()
 {
-  static framebuffer_t::storage_type _storage(0,rsxgl_init_default_framebuffer);
-  return _storage;
+  return current_object_ctx() -> framebuffer_storage();
 }
 
 framebuffer_t::framebuffer_t()

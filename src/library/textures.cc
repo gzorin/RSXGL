@@ -28,11 +28,9 @@
 #endif
 #define GLAPI extern "C"
 
-// Samplers:
 sampler_t::storage_type & sampler_t::storage()
 {
-  static sampler_t::storage_type _storage(0,0);
-  return _storage;
+  return current_object_ctx() -> sampler_storage();
 }
 
 sampler_t::sampler_t()
@@ -569,11 +567,9 @@ glGetSamplerParameterfv (GLuint sampler_name, GLenum pname, GLfloat *params)
   *params = value;
 }
 
-// Textures:
 texture_t::storage_type & texture_t::storage()
 {
-  static texture_t::storage_type _storage(0,0);
-  return _storage;
+  return current_object_ctx() -> texture_storage();
 }
 
 texture_t::texture_t()
