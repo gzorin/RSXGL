@@ -1023,13 +1023,13 @@ rsxgl_tex_bytesPerPixel[RSXGL_MAX_TEX_FORMATS] = {
   2,
   0,
   0,
-  0,
   8,
   16,
   4,
   2,
   4,
   4,
+  0,
   0
 };
 
@@ -2179,9 +2179,12 @@ rsxgl_textures_validate(rsxgl_context_t * ctx,program_t & program,const uint32_t
 	
 	gcm_emit_method(&buffer,NV40_3D_TEX_SIZE1(index),1);
 	gcm_emit(&buffer,((uint32_t)texture.size[2] << NV40_3D_TEX_SIZE1_DEPTH__SHIFT) | (uint32_t)texture.pitch);
-	
+
 	gcm_emit_method(&buffer,NV30_3D_TEX_SWIZZLE(index),1);
 	gcm_emit(&buffer,texture.remap);
+	//static const uint32_t remap = rsxgl_tex_remap(RSXGL_TEXTURE_REMAP_REMAP,RSXGL_TEXTURE_REMAP_REMAP,RSXGL_TEXTURE_REMAP_REMAP,RSXGL_TEXTURE_REMAP_REMAP,
+	//				      RSXGL_TEXTURE_REMAP_FROM_R,RSXGL_TEXTURE_REMAP_FROM_G,RSXGL_TEXTURE_REMAP_FROM_B,RSXGL_TEXTURE_REMAP_FROM_A);
+	//gcm_emit(&buffer,remap);
 	
 	gcm_finish_commands(context,&buffer);
       }
