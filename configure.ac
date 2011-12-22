@@ -15,13 +15,14 @@ AC_CONFIG_FILES(
 	src/samples/Makefile
 	src/samples/rsxgltest/Makefile
 	src/samples/rsxglgears/Makefile
+	src/samples/fluids/Makefile
 	)
 
 # Which subdirectories get built:
 RSXGL_SUBDIRS="include src/cgcomp src/library"
 
 # Determine which samples get built:
-RSXGL_SAMPLES="rsxgltest rsxglgears"
+RSXGL_SAMPLES="rsxgltest rsxglgears fluids"
 
 AC_SUBST([RSXGL_SUBDIRS])
 AC_SUBST([RSXGL_SAMPLES])

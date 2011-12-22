@@ -260,7 +260,7 @@ summarize_program(const char * label,GLuint program)
 }
 
 // quit:
-int running = 1;
+int running = 1, drawing = 1;
 
 static void
 eventHandle(u64 status, u64 param, void * userdata) {
@@ -270,7 +270,14 @@ eventHandle(u64 status, u64 param, void * userdata) {
     //printf("Quit app requested\n");
     //exit(0);
     running = 0;
-  }else{
+  }
+  else if(status == SYSUTIL_MENU_OPEN) {
+    drawing = 0;
+  }
+  else if(status == SYSUTIL_MENU_CLOSE) {
+    drawing = 1;
+  }
+  else {
     //printf("Unhandled event: %08llX\n", (unsigned long long int)status);
   }
 }
@@ -407,8 +414,10 @@ main(int argc, const char ** argv)
 		}
 	      }
 	      
-	      result = rsxgltest_draw();
-	      if(!result) break;
+	      if(drawing) {
+		result = rsxgltest_draw();
+		if(!result) break;
+	      }
 	      
 	      result = eglSwapBuffers(dpy,surface);
 

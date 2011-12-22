@@ -17,18 +17,6 @@ objs = teapot.obj teddy.obj crab.obj yamato.obj
 objs_H = $(objs:.obj=_obj.h)
 objs_OBJS = $(objs:.obj=_obj.o)
 
-vertex_shaders = $(filter %.vert,$(notdir $(1)))
-fragment_shaders = $(filter %.frag,$(notdir $(1)))
-
-vertex_shader_objs = $(1:.vert=_vpo.o)
-fragment_shader_objs = $(1:.frag=_fpo.o)
-
-vertex_shader_headers = $(1:.vert=_vpo.h)
-fragment_shader_headers = $(1:.frag=_fpo.h)
-
-shader_objs = $(call vertex_shader_objs,$(call vertex_shaders,$(1))) $(call fragment_shader_objs,$(call fragment_shaders,$(1)))
-shader_headers = $(call vertex_shader_headers,$(call vertex_shaders,$(1))) $(call fragment_shader_headers,$(call fragment_shaders,$(1)))
-
 SUFFIXES += .obj _obj.o _obj.h
 
 %_obj.o: %.obj
@@ -37,11 +25,6 @@ SUFFIXES += .obj _obj.o _obj.h
 
 %_obj.h: %_obj.o
 	@echo "$<"
-
-dumb:
-	@echo $(objs)
-	@echo $(objs_H)
-	@echo $(objs_OBJS)
 
 shaders = glassview.vert glassview.frag diffuse.vert diffuse.frag 
 sources = glassview.cc $(shaders) \

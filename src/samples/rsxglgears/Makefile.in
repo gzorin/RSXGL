@@ -203,6 +203,19 @@ SPRX := $(PSL1GHT_BIN)/sprxlinker
 SFOXML := $(PSL1GHT_BIN)/sfo.xml
 ICON0 := $(PSL1GHT_BIN)/ICON0.PNG
 SUFFIXES = .bin _bin.o _bin.h .png _png.o _png.h .vcg .fcg .vert .frag _vpo.o _fpo.o _vpo.h _fpo.h .vpo .fpo
+vertex_shaders = $(filter %.vert,$(notdir $(1)))
+fragment_shaders = $(filter %.frag,$(notdir $(1)))
+vertex_shader_objs = $(1:.vert=_vpo.o)
+fragment_shader_objs = $(1:.frag=_fpo.o)
+vertex_shader_headers = $(1:.vert=_vpo.h)
+fragment_shader_headers = $(1:.frag=_fpo.h)
+shader_objs = $(call vertex_shader_objs,$(call vertex_shaders,$(1))) $(call fragment_shader_objs,$(call fragment_shaders,$(1)))
+shader_headers = $(call vertex_shader_headers,$(call vertex_shaders,$(1))) $(call fragment_shader_headers,$(call fragment_shaders,$(1)))
+png_images = $(filter %.png,$(notdir $(1)))
+png_image_objs = $(1:.png=_png.o)
+png_image_headers = $(1:.png=_png.h)
+image_objs = $(call png_image_objs,$(call png_images,$(1)))
+image_headers = $(call png_image_headers,$(call png_images,$(1)))
 BUILT_SOURCES = rsxglgears_vpo.h rsxglgears_fpo.h
 CLEANFILES = rsxglgears_vpo.h rsxglgears_fpo.h rsxglgears_vpo.o rsxglgears_fpo.o
 sources = rsxglglears.c

@@ -91,3 +91,21 @@ SUFFIXES = .bin _bin.o _bin.h .png _png.o _png.h .vcg .fcg .vert .frag _vpo.o _f
 
 transfer: pkg
 	@if test -n "$(RSXGL_TARGET_IP)" -a -n "$(LFTP)" -a -f "$(abs_builddir)/pkg/USRDIR/EBOOT.BIN"; then echo "Transferring to $(RSXGL_TARGET_IP)";$(LFTP) -e "cd /dev_hdd0/game/$(APPID)/USRDIR/;put $(abs_builddir)/pkg/USRDIR/EBOOT.BIN;exit;" -u root,openbox $(RSXGL_TARGET_IP); fi
+
+vertex_shaders = $(filter %.vert,$(notdir $(1)))
+fragment_shaders = $(filter %.frag,$(notdir $(1)))
+
+vertex_shader_objs = $(1:.vert=_vpo.o)
+fragment_shader_objs = $(1:.frag=_fpo.o)
+
+vertex_shader_headers = $(1:.vert=_vpo.h)
+fragment_shader_headers = $(1:.frag=_fpo.h)
+
+shader_objs = $(call vertex_shader_objs,$(call vertex_shaders,$(1))) $(call fragment_shader_objs,$(call fragment_shaders,$(1)))
+shader_headers = $(call vertex_shader_headers,$(call vertex_shaders,$(1))) $(call fragment_shader_headers,$(call fragment_shaders,$(1)))
+
+png_images = $(filter %.png,$(notdir $(1)))
+png_image_objs = $(1:.png=_png.o)
+png_image_headers = $(1:.png=_png.h)
+image_objs = $(call png_image_objs,$(call png_images,$(1)))
+image_headers = $(call png_image_headers,$(call png_images,$(1)))

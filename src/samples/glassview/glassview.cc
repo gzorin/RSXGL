@@ -188,14 +188,6 @@ rsxgltest_pad(unsigned int,const padData * paddata)
     }
   }
 
-#if 0
-  tcp_printf("%u %u %u %u\n",
-	     (unsigned int)paddata -> ANA_L_H,
-	     (unsigned int)paddata -> ANA_L_V,
-	     (unsigned int)paddata -> ANA_R_H,
-	     (unsigned int)paddata -> ANA_R_V);
-#endif
-
   // abs of values below this get ignored:
   const float threshold = 0.05;
 
