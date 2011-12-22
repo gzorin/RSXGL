@@ -26,6 +26,7 @@ frustum(float left,float right,
   r(2,2) = c;
   r(2,3) = d;
   r(3,2) = -1.0f;
+  r(3,3) = 0;
 
   return r;
 }
@@ -36,16 +37,30 @@ ortho(float left,float right,
       float near,float far)
 {
   Eigen::Projective3f r;
-
-  float right_minus_left = right - left,
+  
+  const float
+    right_minus_left = right - left,
     top_minus_bottom = top - bottom,
     far_minus_near = far - near;
 
   r(0,0) = 2.0f / right_minus_left;
-  r(3,0) = -(right + left) / right_minus_left;
+  r(0,1) = 0;
+  r(0,2) = 0;
+  r(0,3) = -(right + left) / right_minus_left;
+
+  r(1,0) = 0;
   r(1,1) = 2.0 / top_minus_bottom;
-  r(3,1) = -(top + bottom) / top_minus_bottom;
+  r(1,2) = 0.0f;
+  r(1,3) = -(top + bottom) / top_minus_bottom;
+
+  r(2,0) = 0;
+  r(2,1) = 0;
   r(2,2) = -2.0f / far_minus_near;
+  r(2,3) = -(far + near) / far_minus_near;
+
+  r(3,0) = 0;
+  r(3,1) = 0;
+  r(3,2) = 0;
   r(3,3) = 1.0f;
 
   return r;
