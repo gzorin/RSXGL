@@ -38,7 +38,7 @@ x implement glTexStorage*()
 
 - Make it possible to work with non-EGL configured display.
 
-- Move object storage from globals to context.
+x Move object storage from globals to context.
 
 - Support multiple contexts with shared objects.
 
@@ -51,4 +51,4 @@ x Add libstdc++.a to libGL.a, so that client code doesn't need to use g++ to
 
 x Vertex program textures
 
-- Query objects
+x Query objects

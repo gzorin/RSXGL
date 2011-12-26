@@ -3,10 +3,6 @@ yet (the RSX is capable of supporting most of them):
 
 * Full GLSL support. Currently, GLSL and Cg shaders can be compiled offline and
   used with a OpenGL ES 2 style API.
-* Instanced draw commands.
-* Framebuffer objects and multiple render targets.
-* glQuery*() objects.
-* Point sprites.
 * A variety of capabilities related to texture maps (rectangular and
   cube textures, the behavior of glPixelStore, copying from the
   framebuffer, mipmap generation, and texture formats, including
