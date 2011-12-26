@@ -8,7 +8,7 @@ CXXFLAGS = -O1 @PPU_CXXFLAGS@
 CPPFLAGS = @PPU_CPPFLAGS@
 
 lib_LIBRARIES = libEGL.a libGL.a
-include_HEADERS = GL3/rsxgl.h GL3/gl3ext.h GL3/rsxgl3ext.h GL3/rsxgl_compatibility.h
+nobase_include_HEADERS = GL3/rsxgl.h GL3/gl3ext.h GL3/rsxgl3ext.h GL3/rsxgl_compatibility.h
 
 dlmalloc_CPPFLAGS = -DMSPACES -DONLY_MSPACES -DHAVE_MMAP=0 -Dmalloc_getpagesize=4096
 
@@ -26,8 +26,3 @@ libGL_a_CPPFLAGS = -D__RSX__ -I\$(top_srcdir)/include $(PS3DEV_PPU_CPPFLAGS) $(P
 libGL_a_CFLAGS = -std=gnu99 -fgnu89-inline
 libGL_a_CXXFLAGS = -I$(top_srcdir)/extsrc/boost -std=c++0x -fno-rtti
 libGL_a_LIBADD = ../cgcomp/libnv40.a @PPU_CXXLIB@
-
-#noinst_PROGRAMS = test-name_space
-#CXX = @CXX@
-#test_name_space_SOURCES = test-name_space.cc
-#test_name_space_CPPFLAGS = -I$(top_srcdir)/extsrc/boost

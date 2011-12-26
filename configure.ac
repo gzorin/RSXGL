@@ -5,6 +5,7 @@ AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE([foreign])
 AC_CONFIG_FILES(
 	include/config.h
+	ps3dev.cmake
 	Makefile
 	include/Makefile
 	src/cgcomp/Makefile
@@ -120,6 +121,10 @@ fi;
 AC_SUBST([RSXGL_CONFIG_samples_host_ip])
 AC_SUBST([RSXGL_CONFIG_samples_host_port])
 
+# Find cmake:
+AC_PATH_PROG([CMAKE],[cmake])
+AC_MSG_NOTICE([path to the cmake is ${CMAKE}])
+
 # Find the Cg compiler:
 AC_PATH_PROG([CGC],[cgc])
 AC_MSG_NOTICE([path to the cgc compiler is ${CGC}])
@@ -161,11 +166,39 @@ AC_EXTSRC_INIT()
 AC_EXTSRC([assimp],[the Open Asset Import library])
 AC_EXTSRC_CHECK([assimp],[include/assimp.h])
 
-AM_COND_IF([assimp_SOURCE_FOUND],[AC_CONFIG_FILES([src/assimp/Makefile src/samples/glassview/Makefile])])
+AM_COND_IF([assimp_SOURCE_FOUND],[AC_CONFIG_FILES([src/glassimp/Makefile src/samples/glassview/Makefile])])
 
 if test "${assimp_source_found}" == "yes"; then
-   RSXGL_SUBDIRS="${RSXGL_SUBDIRS} src/assimp";
+   RSXGL_SUBDIRS="${RSXGL_SUBDIRS} src/assimp src/glassimp";
    RSXGL_SAMPLES="${RSXGL_SAMPLES} glassview";
+   AC_CONFIG_COMMANDS([assimp],
+   [
+	mkdir -p "${abs_top_builddir}/src/assimp";
+	pushd "${abs_top_builddir}/src/assimp";
+	echo "${CMAKE}" -DCMAKE_TOOLCHAIN_FILE="${abs_top_builddir}/ps3dev.cmake" \
+		   -DCMAKE_C_FLAGS="-I${abs_srcdir}/src/assimp -include ${abs_srcdir}/src/assimp/lv2_port.h" \
+		   -DCMAKE_CXX_FLAGS="-I${abs_srcdir}/src/assimp\" -include \"${abs_srcdir}/src/assimp/lv2_port.h" \
+		   -DBUILD_ASSIMP_TOOLS=OFF -DBUILD_STATIC_LIB=ON -DENABLE_BOOST_WORKAROUND=ON -DCMAKE_INSTALL_PREFIX="${prefix}" \
+		   -DZLIB_INCLUDE_DIR="${PORTLIBS}/ppu/include" \
+		   -DZLIB_LIBRARY="${PORTLIBS}/ppu/lib/libz.a" \
+		   "${assimp_SOURCE_LOCATION}";
+	"${CMAKE}" -DCMAKE_TOOLCHAIN_FILE="${abs_top_builddir}/ps3dev.cmake" \
+		   -DCMAKE_C_FLAGS="-I${abs_srcdir}/src/assimp -include ${abs_srcdir}/src/assimp/lv2_port.h" \
+		   -DCMAKE_CXX_FLAGS="-I${abs_srcdir}/src/assimp -include ${abs_srcdir}/src/assimp/lv2_port.h" \
+		   -DBUILD_ASSIMP_TOOLS=OFF -DBUILD_STATIC_LIB=ON -DENABLE_BOOST_WORKAROUND=ON -DCMAKE_INSTALL_PREFIX="${prefix}" \
+		   -DZLIB_INCLUDE_DIR="${PORTLIBS}/ppu/include" \
+		   -DZLIB_LIBRARY="${PORTLIBS}/ppu/lib/libz.a" \
+		   "${assimp_SOURCE_LOCATION}";
+	popd;
+   	],
+   [
+	abs_top_builddir=`pwd`;
+	assimp_SOURCE_LOCATION=${assimp_SOURCE_LOCATION};
+	CMAKE="${CMAKE}";
+	prefix="${prefix}";
+	abs_srcdir=$(cd "${srcdir}"; /bin/pwd);
+	PORTLIBS="${PORTLIBS}";
+	])
 fi;
 
 RSXGL_SUBDIRS="${RSXGL_SUBDIRS} src/samples"

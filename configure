@@ -581,6 +581,7 @@ PSL1GHT_PPU_CPPFLAGS
 PSL1GHT
 LFTP
 CGC
+CMAKE
 RSXGL_CONFIG_samples_host_port
 RSXGL_CONFIG_samples_host_ip
 RSXGL_CONFIG_RSX_compatibility
@@ -2374,7 +2375,7 @@ am__tar='${AMTAR} chof - "$$tardir"'; am__untar='${AMTAR} xf -'
 
 
 
-ac_config_files="$ac_config_files include/config.h Makefile include/Makefile src/cgcomp/Makefile src/library/Makefile src/library/rsxgl_config.h src/library/GL3/rsxgl3ext.h src/library/GL3/rsxgl_compatibility.h src/samples/Makefile src/samples/rsxgltest/Makefile src/samples/rsxglgears/Makefile src/samples/fluids/Makefile"
+ac_config_files="$ac_config_files include/config.h ps3dev.cmake Makefile include/Makefile src/cgcomp/Makefile src/library/Makefile src/library/rsxgl_config.h src/library/GL3/rsxgl3ext.h src/library/GL3/rsxgl_compatibility.h src/samples/Makefile src/samples/rsxgltest/Makefile src/samples/rsxglgears/Makefile src/samples/fluids/Makefile"
 
 
 # Which subdirectories get built:
@@ -3987,6 +3988,50 @@ fi;
 
 
 
+# Find cmake:
+# Extract the first word of "cmake", so it can be a program name with args.
+set dummy cmake; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_path_CMAKE+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $CMAKE in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_CMAKE="$CMAKE" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_test_x "$as_dir/$ac_word$ac_exec_ext"; }; then
+    ac_cv_path_CMAKE="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+CMAKE=$ac_cv_path_CMAKE
+if test -n "$CMAKE"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $CMAKE" >&5
+$as_echo "$CMAKE" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: path to the cmake is ${CMAKE}" >&5
+$as_echo "$as_me: path to the cmake is ${CMAKE}" >&6;}
+
 # Find the Cg compiler:
 # Extract the first word of "cgc", so it can be a program name with args.
 set dummy cgc; ac_word=$2
@@ -4225,13 +4270,15 @@ fi
 
 
 if  test "${assimp_source_found}" == "yes" ; then
-  ac_config_files="$ac_config_files src/assimp/Makefile src/samples/glassview/Makefile"
+  ac_config_files="$ac_config_files src/glassimp/Makefile src/samples/glassview/Makefile"
 
 fi
 
 if test "${assimp_source_found}" == "yes"; then
-   RSXGL_SUBDIRS="${RSXGL_SUBDIRS} src/assimp";
+   RSXGL_SUBDIRS="${RSXGL_SUBDIRS} src/assimp src/glassimp";
    RSXGL_SAMPLES="${RSXGL_SAMPLES} glassview";
+   ac_config_commands="$ac_config_commands assimp"
+
 fi;
 
 RSXGL_SUBDIRS="${RSXGL_SUBDIRS} src/samples"
@@ -4981,6 +5028,14 @@ cat >>$CONFIG_STATUS <<_ACEOF || ac_write_fail=1
 #
 AMDEP_TRUE="$AMDEP_TRUE" ac_aux_dir="$ac_aux_dir"
 
+	abs_top_builddir=`pwd`;
+	assimp_SOURCE_LOCATION=${assimp_SOURCE_LOCATION};
+	CMAKE="${CMAKE}";
+	prefix="${prefix}";
+	abs_srcdir=$(cd "${srcdir}"; /bin/pwd);
+	PORTLIBS="${PORTLIBS}";
+
+
 _ACEOF
 
 cat >>$CONFIG_STATUS <<\_ACEOF || ac_write_fail=1
@@ -4990,6 +5045,7 @@ for ac_config_target in $ac_config_targets
 do
   case $ac_config_target in
     "include/config.h") CONFIG_FILES="$CONFIG_FILES include/config.h" ;;
+    "ps3dev.cmake") CONFIG_FILES="$CONFIG_FILES ps3dev.cmake" ;;
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "include/Makefile") CONFIG_FILES="$CONFIG_FILES include/Makefile" ;;
     "src/cgcomp/Makefile") CONFIG_FILES="$CONFIG_FILES src/cgcomp/Makefile" ;;
@@ -5002,8 +5058,9 @@ do
     "src/samples/rsxglgears/Makefile") CONFIG_FILES="$CONFIG_FILES src/samples/rsxglgears/Makefile" ;;
     "src/samples/fluids/Makefile") CONFIG_FILES="$CONFIG_FILES src/samples/fluids/Makefile" ;;
     "depfiles") CONFIG_COMMANDS="$CONFIG_COMMANDS depfiles" ;;
-    "src/assimp/Makefile") CONFIG_FILES="$CONFIG_FILES src/assimp/Makefile" ;;
+    "src/glassimp/Makefile") CONFIG_FILES="$CONFIG_FILES src/glassimp/Makefile" ;;
     "src/samples/glassview/Makefile") CONFIG_FILES="$CONFIG_FILES src/samples/glassview/Makefile" ;;
+    "assimp") CONFIG_COMMANDS="$CONFIG_COMMANDS assimp" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
   esac
@@ -5528,6 +5585,25 @@ $as_echo X"$file" |
   done
 }
  ;;
+    "assimp":C)
+	mkdir -p "${abs_top_builddir}/src/assimp";
+	pushd "${abs_top_builddir}/src/assimp";
+	echo "${CMAKE}" -DCMAKE_TOOLCHAIN_FILE="${abs_top_builddir}/ps3dev.cmake" \
+		   -DCMAKE_C_FLAGS="-I${abs_srcdir}/src/assimp -include ${abs_srcdir}/src/assimp/lv2_port.h" \
+		   -DCMAKE_CXX_FLAGS="-I${abs_srcdir}/src/assimp\" -include \"${abs_srcdir}/src/assimp/lv2_port.h" \
+		   -DBUILD_ASSIMP_TOOLS=OFF -DBUILD_STATIC_LIB=ON -DENABLE_BOOST_WORKAROUND=ON -DCMAKE_INSTALL_PREFIX="${prefix}" \
+		   -DZLIB_INCLUDE_DIR="${PORTLIBS}/ppu/include" \
+		   -DZLIB_LIBRARY="${PORTLIBS}/ppu/lib/libz.a" \
+		   "${assimp_SOURCE_LOCATION}";
+	"${CMAKE}" -DCMAKE_TOOLCHAIN_FILE="${abs_top_builddir}/ps3dev.cmake" \
+		   -DCMAKE_C_FLAGS="-I${abs_srcdir}/src/assimp -include ${abs_srcdir}/src/assimp/lv2_port.h" \
+		   -DCMAKE_CXX_FLAGS="-I${abs_srcdir}/src/assimp -include ${abs_srcdir}/src/assimp/lv2_port.h" \
+		   -DBUILD_ASSIMP_TOOLS=OFF -DBUILD_STATIC_LIB=ON -DENABLE_BOOST_WORKAROUND=ON -DCMAKE_INSTALL_PREFIX="${prefix}" \
+		   -DZLIB_INCLUDE_DIR="${PORTLIBS}/ppu/include" \
+		   -DZLIB_LIBRARY="${PORTLIBS}/ppu/lib/libz.a" \
+		   "${assimp_SOURCE_LOCATION}";
+	popd;
+   	 ;;
 
   esac
 done # for ac_tag

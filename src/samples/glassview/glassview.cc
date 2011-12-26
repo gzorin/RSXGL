@@ -21,9 +21,9 @@
 #include <math.h>
 #include <Eigen/Geometry>
 
-#include <assimp.hpp>
-#include <aiScene.h>
-#include <aiPostProcess.h>
+#include <assimp/assimp.hpp>
+#include <assimp/aiScene.h>
+#include <assimp/aiPostProcess.h>
 
 #include "glassimp.h"
 
