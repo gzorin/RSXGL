@@ -1,3 +1,5 @@
+static unsigned int QUALITY = 10;
+
 #define IX(i,j) ((i)+(N+2)*(j))
 #define SWAP(x0,x) {float * tmp=x0;x0=x;x=tmp;}
 #define FOR_EACH_CELL for ( i=1 ; i<=N ; i++ ) { for ( j=1 ; j<=N ; j++ ) {
@@ -29,7 +31,7 @@ void lin_solve ( int N, int b, float * x, float * x0, float a, float c )
 {
 	int i, j, k;
 
-	for ( k=0 ; k<20 ; k++ ) {
+	for ( k=0 ; k<QUALITY ; k++ ) {
 		FOR_EACH_CELL
 			x[IX(i,j)] = (x0[IX(i,j)] + a*(x[IX(i-1,j)]+x[IX(i+1,j)]+x[IX(i,j-1)]+x[IX(i,j+1)]))/c;
 		END_FOR

@@ -6,7 +6,7 @@
 
 #include "glassimp.h"
 
-#include <aiMesh.h>
+#include <assimp/aiMesh.h>
 
 #include <stdint.h>
 #include <algorithm>

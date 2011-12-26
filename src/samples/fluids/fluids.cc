@@ -190,7 +190,7 @@ rsxgltest_init(int argc,const char ** argv)
 {
   tcp_printf("%s\n",__PRETTY_FUNCTION__);
 
-  N = 96;
+  N = 80;
   dt = 0.1f;
   diff = 0.0f;
   visc = 0.0f;
@@ -363,7 +363,7 @@ rsxgltest_draw()
     glUseProgram(programs[0]);
 
     for(int i = 0,n = (N+2)*(N+2);i < n;++i) {
-      dens8[i] = (uint8_t)(dens[i] * 255);
+      dens8[i] = (uint8_t)(dens[i] * 255.0f);
     }
     
     glBindTexture(GL_TEXTURE_2D,textures[0]);
