@@ -6,10 +6,10 @@ AC_ARG_WITH([psl1ght],AS_HELP_STRING([--with-psl1ght],[location of compiled PSL1
 PSL1GHT=${PSL1GHT:-"${PS3DEV}/libpsl1ght"}
 
 # Check for PSL1GHT's rsx/gcm_sys.h:
-AC_TOOLCHAIN_PUSH([host])
+AC_TOOLCHAIN_PUSH([ppu])
 CPPFLAGS="-I${PSL1GHT}/ppu/include ${CPPFLAGS}"
 AC_CHECK_HEADER([rsx/gcm_sys.h],[],[AC_MSG_ERROR([cannot include PSL1GHT's <rsx/gcm_sys.h> (PSL1GHT==\"${PSL1GHT}\")])])
-AC_TOOLCHAIN_POP([host])
+AC_TOOLCHAIN_POP([ppu])
 
 AC_MSG_NOTICE([location of PSL1GHT is ${PSL1GHT}])
 PSL1GHT_CPPFLAGS="-I\${PSL1GHT}/ppu/include"

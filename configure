@@ -606,12 +606,12 @@ LIBOBJS
 extsrc_clean_commands
 extsrc_build_commands
 extsrcdir
-host_zlib_LIBS
-host_zlib_LDFLAGS
-host_zlib_CPPFLAGS
-host_libpng_LIBS
-host_libpng_LDFLAGS
-host_libpng_CPPFLAGS
+ppu_zlib_LIBS
+ppu_zlib_LDFLAGS
+ppu_zlib_CPPFLAGS
+ppu_libpng_LIBS
+ppu_libpng_LDFLAGS
+ppu_libpng_CPPFLAGS
 PKG_CONFIG_LIBDIR
 PKG_CONFIG_PATH
 PKG_CONFIG
@@ -634,28 +634,28 @@ PSL1GHT
 EGREP
 GREP
 CXXCPP
-host_STRIP
-host_AS
-host_RANLIB
-host_AR
-host_CXXFLAGS
-host_CXX
-host_CPPFLAGS
-host_LIBS
-host_LDFLAGS
-host_CFLAGS
-host_CC
-host_mandir
-host_datadir
-host_datarootdir
-host_sysconfdir
-host_sbindir
-host_includedir
-host_libdir
-host_bindir
-hostprefix
-host_PKG_CONFIG_PATH
-host_PATH
+ppu_STRIP
+ppu_AS
+ppu_RANLIB
+ppu_AR
+ppu_CXXFLAGS
+ppu_CXX
+ppu_CPPFLAGS
+ppu_LIBS
+ppu_LDFLAGS
+ppu_CFLAGS
+ppu_CC
+ppu_mandir
+ppu_datadir
+ppu_datarootdir
+ppu_sysconfdir
+ppu_sbindir
+ppu_includedir
+ppu_libdir
+ppu_bindir
+ppuprefix
+ppu_PKG_CONFIG_PATH
+ppu_PATH
 PS3DEV
 RANLIB
 am__fastdepCXX_FALSE
@@ -747,7 +747,7 @@ ac_subst_files=''
 ac_user_opts='
 enable_option_checking
 enable_dependency_tracking
-with_host_prefix
+with_ppu_prefix
 with_psl1ght
 with_ppu_cxxlib
 enable_samples
@@ -768,26 +768,26 @@ CXX
 CXXFLAGS
 CCC
 PS3DEV
-host_PATH
-host_PKG_CONFIG_PATH
-host_CC
-host_CFLAGS
-host_LDFLAGS
-host_LIBS
-host_CPPFLAGS
-host_CXX
-host_CXXFLAGS
-host_CCC
+ppu_PATH
+ppu_PKG_CONFIG_PATH
+ppu_CC
+ppu_CFLAGS
+ppu_LDFLAGS
+ppu_LIBS
+ppu_CPPFLAGS
+ppu_CXX
+ppu_CXXFLAGS
+ppu_CCC
 CXXCPP
 PKG_CONFIG
 PKG_CONFIG_PATH
 PKG_CONFIG_LIBDIR
-host_libpng_CPPFLAGS
-host_libpng_LDFLAGS
-host_libpng_LIBS
-host_zlib_CPPFLAGS
-host_zlib_LDFLAGS
-host_zlib_LIBS'
+ppu_libpng_CPPFLAGS
+ppu_libpng_LDFLAGS
+ppu_libpng_LIBS
+ppu_zlib_CPPFLAGS
+ppu_zlib_LDFLAGS
+ppu_zlib_LIBS'
 
 
 # Initialize some variables set by options.
@@ -1414,8 +1414,8 @@ Optional Features:
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
-  --with-host-prefix=PREFIX
-                          install products built with the "host" toolchain in
+  --with-ppu-prefix=PREFIX
+                          install products built with the "ppu" toolchain in
                           PREFIX
   --with-psl1ght          location of compiled PSL1GHT
   --with-ppu-cxxlib       full path to a static C++ standard library
@@ -1435,37 +1435,36 @@ Some influential environment variables:
   CXX         C++ compiler command
   CXXFLAGS    C++ compiler flags
   PS3DEV      location of compiled PS3 development toolchain
-  host_PATH   path to use to search for "host" toolchain programs
-  host_PKG_CONFIG_PATH
-              path to use to search for packages built for "host" toolchain
-  host_CC     C compiler command for "host" toolchain
-  host_CFLAGS C compiler flags for "host" toolchain
-  host_LDFLAGS
-              linker flags for "host" toolchain
-  host_LIBS   libraries to pass to the "host" toolchain linker
-  host_CPPFLAGS
-              preprocessor flags for "host" toolchain
-  host_CXX    C++ compiler command for "host" toolchain
-  host_CXXFLAGS
-              C++ compiler flags for "host" toolchain
+  ppu_PATH    path to use to search for "ppu" toolchain programs
+  ppu_PKG_CONFIG_PATH
+              path to use to search for packages built for "ppu" toolchain
+  ppu_CC      C compiler command for "ppu" toolchain
+  ppu_CFLAGS  C compiler flags for "ppu" toolchain
+  ppu_LDFLAGS linker flags for "ppu" toolchain
+  ppu_LIBS    libraries to pass to the "ppu" toolchain linker
+  ppu_CPPFLAGS
+              preprocessor flags for "ppu" toolchain
+  ppu_CXX     C++ compiler command for "ppu" toolchain
+  ppu_CXXFLAGS
+              C++ compiler flags for "ppu" toolchain
   CXXCPP      C++ preprocessor
   PKG_CONFIG  path to pkg-config utility
   PKG_CONFIG_PATH
               directories to add to pkg-config's search path
   PKG_CONFIG_LIBDIR
               path overriding pkg-config's built-in search path
-  host_libpng_CPPFLAGS
-              C preprocessor flags for host_libpng, overriding pkg-config
-  host_libpng_LDFLAGS
-              linker flags for host_libpng, overriding pkg-config
-  host_libpng_LIBS
-              library flags for host_libpng, overriding pkg-config
-  host_zlib_CPPFLAGS
-              C preprocessor flags for host_zlib, overriding pkg-config
-  host_zlib_LDFLAGS
-              linker flags for host_zlib, overriding pkg-config
-  host_zlib_LIBS
-              library flags for host_zlib, overriding pkg-config
+  ppu_libpng_CPPFLAGS
+              C preprocessor flags for ppu_libpng, overriding pkg-config
+  ppu_libpng_LDFLAGS
+              linker flags for ppu_libpng, overriding pkg-config
+  ppu_libpng_LIBS
+              library flags for ppu_libpng, overriding pkg-config
+  ppu_zlib_CPPFLAGS
+              C preprocessor flags for ppu_zlib, overriding pkg-config
+  ppu_zlib_LDFLAGS
+              linker flags for ppu_zlib, overriding pkg-config
+  ppu_zlib_LIBS
+              library flags for ppu_zlib, overriding pkg-config
 
 Use these variables to override the choices made by `configure' or to help
 it to find libraries and programs with nonstandard names/locations.
@@ -4255,45 +4254,45 @@ function pop_toolchain_stack ()
 
 
 # Defaults for PATH, PKG_CONFIG_PATH
-test -n "${PS3DEV}/ppu/bin" && host_PATH=${host_PATH:-"${PS3DEV}/ppu/bin"}
-test -n "${PS3DEV}/portlibs/ppu/lib/pkgconfig" && host_PKG_CONFIG_PATH=${host_PKG_CONFIG_PATH:-"${PS3DEV}/portlibs/ppu/lib/pkgconfig"}
+test -n "${PS3DEV}/ppu/bin" && ppu_PATH=${ppu_PATH:-"${PS3DEV}/ppu/bin"}
+test -n "${PS3DEV}/portlibs/ppu/lib/pkgconfig" && ppu_PKG_CONFIG_PATH=${ppu_PKG_CONFIG_PATH:-"${PS3DEV}/portlibs/ppu/lib/pkgconfig"}
 
-ac_host_toolchain=yes
+ac_ppu_toolchain=yes
 
 if test -n "powerpc64-ps3-elf"; then
-ac_host_toolchain_prefix=powerpc64-ps3-elf-
+ac_ppu_toolchain_prefix=powerpc64-ps3-elf-
 else
-ac_host_toolchain_prefix=""
+ac_ppu_toolchain_prefix=""
 fi
 
-ac_host_toolchain_path=${PS3DEV}/ppu/bin
+ac_ppu_toolchain_path=${PS3DEV}/ppu/bin
 
-create_toolchain_stack "ac_host_toolchain_stack" "PATH" "PKG_CONFIG_PATH" "CPP" "CPPFLAGS" "CC" "CFLAGS" "OBJC" "OBJCPP" "CXX" "CXXFLAGS" "OBJCXX" "OBJCXXCPP" "LDFLAGS" "LIBS"
-
-
+create_toolchain_stack "ac_ppu_toolchain_stack" "PATH" "PKG_CONFIG_PATH" "CPP" "CPPFLAGS" "CC" "CFLAGS" "OBJC" "OBJCPP" "CXX" "CXXFLAGS" "OBJCXX" "OBJCXXCPP" "LDFLAGS" "LIBS"
 
 
 
 
-# Check whether --with-host-prefix was given.
-if test "${with_host_prefix+set}" = set; then :
-  withval=$with_host_prefix; hostprefix="${withval}"
+
+
+# Check whether --with-ppu-prefix was given.
+if test "${with_ppu_prefix+set}" = set; then :
+  withval=$with_ppu_prefix; ppuprefix="${withval}"
 else
-  hostprefix="${PS3DEV}/portlibs/ppu"
+  ppuprefix="${PS3DEV}/portlibs/ppu"
 fi
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: products built with \"host\" toolchain will be stored in: ${hostprefix}" >&5
-$as_echo "$as_me: products built with \"host\" toolchain will be stored in: ${hostprefix}" >&6;}
+{ $as_echo "$as_me:${as_lineno-$LINENO}: products built with \"ppu\" toolchain will be stored in: ${ppuprefix}" >&5
+$as_echo "$as_me: products built with \"ppu\" toolchain will be stored in: ${ppuprefix}" >&6;}
 
-host_bindir="${hostprefix}/bin"
-host_libdir="${hostprefix}/lib"
-host_includedir="${hostprefix}/include"
-host_libdir="${hostprefix}/lib"
-host_sbindir="${hostprefix}/sbin"
-host_sysconfdir="${hostprefix}/etc"
-host_datarootdir="${hostprefix}/share"
-host_datadir="${hostprefix}/share"
-host_mandir="${hostprefix}/man"
+ppu_bindir="${ppuprefix}/bin"
+ppu_libdir="${ppuprefix}/lib"
+ppu_includedir="${ppuprefix}/include"
+ppu_libdir="${ppuprefix}/lib"
+ppu_sbindir="${ppuprefix}/sbin"
+ppu_sysconfdir="${ppuprefix}/etc"
+ppu_datarootdir="${ppuprefix}/share"
+ppu_datadir="${ppuprefix}/share"
+ppu_mandir="${ppuprefix}/man"
 
 
 
@@ -4312,18 +4311,18 @@ ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
 ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
 ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
-push_toolchain_stack "ac_host_toolchain_stack" "PATH" "${host_PATH}:${PATH}"
+push_toolchain_stack "ac_ppu_toolchain_stack" "PATH" "${ppu_PATH}:${PATH}"
 prog="gcc"
-# Extract the first word of ""${ac_host_toolchain_prefix}${prog}"", so it can be a program name with args.
-set dummy "${ac_host_toolchain_prefix}${prog}"; ac_word=$2
+# Extract the first word of ""${ac_ppu_toolchain_prefix}${prog}"", so it can be a program name with args.
+set dummy "${ac_ppu_toolchain_prefix}${prog}"; ac_word=$2
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
 $as_echo_n "checking for $ac_word... " >&6; }
-if ${ac_cv_path_host_CC+:} false; then :
+if ${ac_cv_path_ppu_CC+:} false; then :
   $as_echo_n "(cached) " >&6
 else
-  case $host_CC in
+  case $ppu_CC in
   [\\/]* | ?:[\\/]*)
-  ac_cv_path_host_CC="$host_CC" # Let the user override the test with a path.
+  ac_cv_path_ppu_CC="$ppu_CC" # Let the user override the test with a path.
   ;;
   *)
   as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
@@ -4333,7 +4332,7 @@ do
   test -z "$as_dir" && as_dir=.
     for ac_exec_ext in '' $ac_executable_extensions; do
   if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_test_x "$as_dir/$ac_word$ac_exec_ext"; }; then
-    ac_cv_path_host_CC="$as_dir/$ac_word$ac_exec_ext"
+    ac_cv_path_ppu_CC="$as_dir/$ac_word$ac_exec_ext"
     $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
     break 2
   fi
@@ -4344,28 +4343,28 @@ IFS=$as_save_IFS
   ;;
 esac
 fi
-host_CC=$ac_cv_path_host_CC
-if test -n "$host_CC"; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $host_CC" >&5
-$as_echo "$host_CC" >&6; }
+ppu_CC=$ac_cv_path_ppu_CC
+if test -n "$ppu_CC"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ppu_CC" >&5
+$as_echo "$ppu_CC" >&6; }
 else
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
 fi
 
 
-pop_toolchain_stack "ac_host_toolchain_stack" "PATH"
+pop_toolchain_stack "ac_ppu_toolchain_stack" "PATH"
 
 
 
-test -z "${host_CC}" && { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+test -z "${ppu_CC}" && { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
 as_fn_error $? "no acceptable C compiler found in \$PATH
 See \`config.log' for more details" "$LINENO" 5; }
 
 # Provide some information about the compiler.
 $as_echo "$as_me:${as_lineno-$LINENO}: checking for C compiler version" >&5
-ac_compiler=${host_CC}
+ac_compiler=${ppu_CC}
 for ac_option in --version -v -V -qversion; do
   { { ac_try="$ac_compiler $ac_option >&5"
 case "(($ac_try" in
@@ -4388,21 +4387,21 @@ $as_echo "$ac_try_echo"; } >&5
 done
 
 
-push_toolchain_stack "ac_host_toolchain_stack" \
-		     "PATH" "${host_PATH}:${PATH}" \
-		     "PKG_CONFIG_PATH" "${host_PKG_CONFIG_PATH}:${PKG_CONFIG_PATH}" \
-		     "CPP" "${host_CPP}" \
-		     "CPPFLAGS" "${host_CPPFLAGS}" \
-		     "CC" "${host_CC}" \
-		     "CFLAGS" "${host_CFLAGS}" \
-		     "OBJC" "${host_OBJC}" \
-		     "OBJCPP" "${host_OBJCPP}" \
-		     "CXX" "${host_CXX}" \
-		     "CXXFLAGS" "${host_CXXFLAGS}" \
-		     "OBJCXX" "${host_OBJCXX}" \
-		     "OBJCXXCPP" "${host_OBJCXXCPP}" \
-		     "LDFLAGS" "${host_LDFLAGS}" \
-		     "LIBS" "${host_LIBS}"
+push_toolchain_stack "ac_ppu_toolchain_stack" \
+		     "PATH" "${ppu_PATH}:${PATH}" \
+		     "PKG_CONFIG_PATH" "${ppu_PKG_CONFIG_PATH}:${PKG_CONFIG_PATH}" \
+		     "CPP" "${ppu_CPP}" \
+		     "CPPFLAGS" "${ppu_CPPFLAGS}" \
+		     "CC" "${ppu_CC}" \
+		     "CFLAGS" "${ppu_CFLAGS}" \
+		     "OBJC" "${ppu_OBJC}" \
+		     "OBJCPP" "${ppu_OBJCPP}" \
+		     "CXX" "${ppu_CXX}" \
+		     "CXXFLAGS" "${ppu_CXXFLAGS}" \
+		     "OBJCXX" "${ppu_OBJCXX}" \
+		     "OBJCXXCPP" "${ppu_OBJCXXCPP}" \
+		     "LDFLAGS" "${ppu_LDFLAGS}" \
+		     "LIBS" "${ppu_LIBS}"
 
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether we are using the GNU C compiler" >&5
@@ -4436,9 +4435,9 @@ fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_c_compiler_gnu" >&5
 $as_echo "$ac_cv_c_compiler_gnu" >&6; }
 if test $ac_compiler_gnu = yes; then
-  host_GCC=yes
+  ppu_GCC=yes
 else
-  host_GCC=
+  ppu_GCC=
 fi
 ac_test_CFLAGS=${CFLAGS+set}
 ac_save_CFLAGS=$CFLAGS
@@ -4613,7 +4612,7 @@ fi
 
 
 
-pop_toolchain_stack "ac_host_toolchain_stack" "PATH" "PKG_CONFIG_PATH" "CPP" "CPPFLAGS" "CC" "CFLAGS" "OBJC" "OBJCPP" "CXX" "CXXFLAGS" "OBJCXX" "OBJCXXCPP" "LDFLAGS" "LIBS"
+pop_toolchain_stack "ac_ppu_toolchain_stack" "PATH" "PKG_CONFIG_PATH" "CPP" "CPPFLAGS" "CC" "CFLAGS" "OBJC" "OBJCPP" "CXX" "CXXFLAGS" "OBJCXX" "OBJCXXCPP" "LDFLAGS" "LIBS"
 
 
 
@@ -4632,15 +4631,15 @@ ac_cpp='$CXXCPP $CPPFLAGS'
 ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
 ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
 ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
-if test -z "${host_CXX}"; then
-  if test -n "${host_CCC}"; then
-    host_CXX=${host_CCC}
+if test -z "${ppu_CXX}"; then
+  if test -n "${ppu_CCC}"; then
+    ppu_CXX=${ppu_CCC}
   else
 
-push_toolchain_stack "ac_host_toolchain_stack" "PATH" "${host_PATH}:${PATH}"
+push_toolchain_stack "ac_ppu_toolchain_stack" "PATH" "${ppu_PATH}:${PATH}"
 progs=""
 for prog in g++ c++ gpp aCC CC cxx cc++ cl.exe FCC KCC RCC xlC_r xlC; do
-    progs="${progs} ${ac_host_toolchain_prefix}${prog}"
+    progs="${progs} ${ac_ppu_toolchain_prefix}${prog}"
 done
 for ac_prog in ${progs}
 do
@@ -4648,12 +4647,12 @@ do
 set dummy $ac_prog; ac_word=$2
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
 $as_echo_n "checking for $ac_word... " >&6; }
-if ${ac_cv_path_host_CXX+:} false; then :
+if ${ac_cv_path_ppu_CXX+:} false; then :
   $as_echo_n "(cached) " >&6
 else
-  case $host_CXX in
+  case $ppu_CXX in
   [\\/]* | ?:[\\/]*)
-  ac_cv_path_host_CXX="$host_CXX" # Let the user override the test with a path.
+  ac_cv_path_ppu_CXX="$ppu_CXX" # Let the user override the test with a path.
   ;;
   *)
   as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
@@ -4663,7 +4662,7 @@ do
   test -z "$as_dir" && as_dir=.
     for ac_exec_ext in '' $ac_executable_extensions; do
   if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_test_x "$as_dir/$ac_word$ac_exec_ext"; }; then
-    ac_cv_path_host_CXX="$as_dir/$ac_word$ac_exec_ext"
+    ac_cv_path_ppu_CXX="$as_dir/$ac_word$ac_exec_ext"
     $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
     break 2
   fi
@@ -4674,27 +4673,27 @@ IFS=$as_save_IFS
   ;;
 esac
 fi
-host_CXX=$ac_cv_path_host_CXX
-if test -n "$host_CXX"; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $host_CXX" >&5
-$as_echo "$host_CXX" >&6; }
+ppu_CXX=$ac_cv_path_ppu_CXX
+if test -n "$ppu_CXX"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ppu_CXX" >&5
+$as_echo "$ppu_CXX" >&6; }
 else
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
 fi
 
 
-  test -n "$host_CXX" && break
+  test -n "$ppu_CXX" && break
 done
-test -n "$host_CXX" || host_CXX=""${ac_host_toolchain_prefix}g++""
+test -n "$ppu_CXX" || ppu_CXX=""${ac_ppu_toolchain_prefix}g++""
 
-pop_toolchain_stack "ac_host_toolchain_stack" "PATH"
+pop_toolchain_stack "ac_ppu_toolchain_stack" "PATH"
 
   fi
 fi
 # Provide some information about the compiler.
 $as_echo "$as_me:${as_lineno-$LINENO}: checking for C++ compiler version" >&5
-ac_compiler=${host_CXX}
+ac_compiler=${ppu_CXX}
 for ac_option in --version -v -V -qversion; do
   { { ac_try="$ac_compiler $ac_option >&5"
 case "(($ac_try" in
@@ -4717,21 +4716,21 @@ $as_echo "$ac_try_echo"; } >&5
 done
 
 
-push_toolchain_stack "ac_host_toolchain_stack" \
-		     "PATH" "${host_PATH}:${PATH}" \
-		     "PKG_CONFIG_PATH" "${host_PKG_CONFIG_PATH}:${PKG_CONFIG_PATH}" \
-		     "CPP" "${host_CPP}" \
-		     "CPPFLAGS" "${host_CPPFLAGS}" \
-		     "CC" "${host_CC}" \
-		     "CFLAGS" "${host_CFLAGS}" \
-		     "OBJC" "${host_OBJC}" \
-		     "OBJCPP" "${host_OBJCPP}" \
-		     "CXX" "${host_CXX}" \
-		     "CXXFLAGS" "${host_CXXFLAGS}" \
-		     "OBJCXX" "${host_OBJCXX}" \
-		     "OBJCXXCPP" "${host_OBJCXXCPP}" \
-		     "LDFLAGS" "${host_LDFLAGS}" \
-		     "LIBS" "${host_LIBS}"
+push_toolchain_stack "ac_ppu_toolchain_stack" \
+		     "PATH" "${ppu_PATH}:${PATH}" \
+		     "PKG_CONFIG_PATH" "${ppu_PKG_CONFIG_PATH}:${PKG_CONFIG_PATH}" \
+		     "CPP" "${ppu_CPP}" \
+		     "CPPFLAGS" "${ppu_CPPFLAGS}" \
+		     "CC" "${ppu_CC}" \
+		     "CFLAGS" "${ppu_CFLAGS}" \
+		     "OBJC" "${ppu_OBJC}" \
+		     "OBJCPP" "${ppu_OBJCPP}" \
+		     "CXX" "${ppu_CXX}" \
+		     "CXXFLAGS" "${ppu_CXXFLAGS}" \
+		     "OBJCXX" "${ppu_OBJCXX}" \
+		     "OBJCXXCPP" "${ppu_OBJCXXCPP}" \
+		     "LDFLAGS" "${ppu_LDFLAGS}" \
+		     "LIBS" "${ppu_LIBS}"
 
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether we are using the GNU C++ compiler" >&5
@@ -4851,7 +4850,7 @@ else
 fi
 
 
-pop_toolchain_stack "ac_host_toolchain_stack" "PATH" "PKG_CONFIG_PATH" "CPP" "CPPFLAGS" "CC" "CFLAGS" "OBJC" "OBJCPP" "CXX" "CXXFLAGS" "OBJCXX" "OBJCXXCPP" "LDFLAGS" "LIBS"
+pop_toolchain_stack "ac_ppu_toolchain_stack" "PATH" "PKG_CONFIG_PATH" "CPP" "CPPFLAGS" "CC" "CFLAGS" "OBJC" "OBJCPP" "CXX" "CXXFLAGS" "OBJCXX" "OBJCXXCPP" "LDFLAGS" "LIBS"
 
 
 
@@ -4866,18 +4865,18 @@ ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ex
 ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
 
 
-push_toolchain_stack "ac_host_toolchain_stack" "PATH" "${host_PATH}:${PATH}"
+push_toolchain_stack "ac_ppu_toolchain_stack" "PATH" "${ppu_PATH}:${PATH}"
 prog="ar"
-# Extract the first word of ""${ac_host_toolchain_prefix}${prog}"", so it can be a program name with args.
-set dummy "${ac_host_toolchain_prefix}${prog}"; ac_word=$2
+# Extract the first word of ""${ac_ppu_toolchain_prefix}${prog}"", so it can be a program name with args.
+set dummy "${ac_ppu_toolchain_prefix}${prog}"; ac_word=$2
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
 $as_echo_n "checking for $ac_word... " >&6; }
-if ${ac_cv_path_host_AR+:} false; then :
+if ${ac_cv_path_ppu_AR+:} false; then :
   $as_echo_n "(cached) " >&6
 else
-  case $host_AR in
+  case $ppu_AR in
   [\\/]* | ?:[\\/]*)
-  ac_cv_path_host_AR="$host_AR" # Let the user override the test with a path.
+  ac_cv_path_ppu_AR="$ppu_AR" # Let the user override the test with a path.
   ;;
   *)
   as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
@@ -4887,7 +4886,7 @@ do
   test -z "$as_dir" && as_dir=.
     for ac_exec_ext in '' $ac_executable_extensions; do
   if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_test_x "$as_dir/$ac_word$ac_exec_ext"; }; then
-    ac_cv_path_host_AR="$as_dir/$ac_word$ac_exec_ext"
+    ac_cv_path_ppu_AR="$as_dir/$ac_word$ac_exec_ext"
     $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
     break 2
   fi
@@ -4898,31 +4897,31 @@ IFS=$as_save_IFS
   ;;
 esac
 fi
-host_AR=$ac_cv_path_host_AR
-if test -n "$host_AR"; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $host_AR" >&5
-$as_echo "$host_AR" >&6; }
+ppu_AR=$ac_cv_path_ppu_AR
+if test -n "$ppu_AR"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ppu_AR" >&5
+$as_echo "$ppu_AR" >&6; }
 else
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
 fi
 
 
-pop_toolchain_stack "ac_host_toolchain_stack" "PATH"
+pop_toolchain_stack "ac_ppu_toolchain_stack" "PATH"
 
 
-push_toolchain_stack "ac_host_toolchain_stack" "PATH" "${host_PATH}:${PATH}"
+push_toolchain_stack "ac_ppu_toolchain_stack" "PATH" "${ppu_PATH}:${PATH}"
 prog="ranlib"
-# Extract the first word of ""${ac_host_toolchain_prefix}${prog}"", so it can be a program name with args.
-set dummy "${ac_host_toolchain_prefix}${prog}"; ac_word=$2
+# Extract the first word of ""${ac_ppu_toolchain_prefix}${prog}"", so it can be a program name with args.
+set dummy "${ac_ppu_toolchain_prefix}${prog}"; ac_word=$2
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
 $as_echo_n "checking for $ac_word... " >&6; }
-if ${ac_cv_path_host_RANLIB+:} false; then :
+if ${ac_cv_path_ppu_RANLIB+:} false; then :
   $as_echo_n "(cached) " >&6
 else
-  case $host_RANLIB in
+  case $ppu_RANLIB in
   [\\/]* | ?:[\\/]*)
-  ac_cv_path_host_RANLIB="$host_RANLIB" # Let the user override the test with a path.
+  ac_cv_path_ppu_RANLIB="$ppu_RANLIB" # Let the user override the test with a path.
   ;;
   *)
   as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
@@ -4932,7 +4931,7 @@ do
   test -z "$as_dir" && as_dir=.
     for ac_exec_ext in '' $ac_executable_extensions; do
   if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_test_x "$as_dir/$ac_word$ac_exec_ext"; }; then
-    ac_cv_path_host_RANLIB="$as_dir/$ac_word$ac_exec_ext"
+    ac_cv_path_ppu_RANLIB="$as_dir/$ac_word$ac_exec_ext"
     $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
     break 2
   fi
@@ -4943,31 +4942,31 @@ IFS=$as_save_IFS
   ;;
 esac
 fi
-host_RANLIB=$ac_cv_path_host_RANLIB
-if test -n "$host_RANLIB"; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $host_RANLIB" >&5
-$as_echo "$host_RANLIB" >&6; }
+ppu_RANLIB=$ac_cv_path_ppu_RANLIB
+if test -n "$ppu_RANLIB"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ppu_RANLIB" >&5
+$as_echo "$ppu_RANLIB" >&6; }
 else
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
 fi
 
 
-pop_toolchain_stack "ac_host_toolchain_stack" "PATH"
+pop_toolchain_stack "ac_ppu_toolchain_stack" "PATH"
 
 
-push_toolchain_stack "ac_host_toolchain_stack" "PATH" "${host_PATH}:${PATH}"
+push_toolchain_stack "ac_ppu_toolchain_stack" "PATH" "${ppu_PATH}:${PATH}"
 prog="as"
-# Extract the first word of ""${ac_host_toolchain_prefix}${prog}"", so it can be a program name with args.
-set dummy "${ac_host_toolchain_prefix}${prog}"; ac_word=$2
+# Extract the first word of ""${ac_ppu_toolchain_prefix}${prog}"", so it can be a program name with args.
+set dummy "${ac_ppu_toolchain_prefix}${prog}"; ac_word=$2
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
 $as_echo_n "checking for $ac_word... " >&6; }
-if ${ac_cv_path_host_AS+:} false; then :
+if ${ac_cv_path_ppu_AS+:} false; then :
   $as_echo_n "(cached) " >&6
 else
-  case $host_AS in
+  case $ppu_AS in
   [\\/]* | ?:[\\/]*)
-  ac_cv_path_host_AS="$host_AS" # Let the user override the test with a path.
+  ac_cv_path_ppu_AS="$ppu_AS" # Let the user override the test with a path.
   ;;
   *)
   as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
@@ -4977,7 +4976,7 @@ do
   test -z "$as_dir" && as_dir=.
     for ac_exec_ext in '' $ac_executable_extensions; do
   if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_test_x "$as_dir/$ac_word$ac_exec_ext"; }; then
-    ac_cv_path_host_AS="$as_dir/$ac_word$ac_exec_ext"
+    ac_cv_path_ppu_AS="$as_dir/$ac_word$ac_exec_ext"
     $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
     break 2
   fi
@@ -4988,31 +4987,31 @@ IFS=$as_save_IFS
   ;;
 esac
 fi
-host_AS=$ac_cv_path_host_AS
-if test -n "$host_AS"; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $host_AS" >&5
-$as_echo "$host_AS" >&6; }
+ppu_AS=$ac_cv_path_ppu_AS
+if test -n "$ppu_AS"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ppu_AS" >&5
+$as_echo "$ppu_AS" >&6; }
 else
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
 fi
 
 
-pop_toolchain_stack "ac_host_toolchain_stack" "PATH"
+pop_toolchain_stack "ac_ppu_toolchain_stack" "PATH"
 
 
-push_toolchain_stack "ac_host_toolchain_stack" "PATH" "${host_PATH}:${PATH}"
+push_toolchain_stack "ac_ppu_toolchain_stack" "PATH" "${ppu_PATH}:${PATH}"
 prog="strip"
-# Extract the first word of ""${ac_host_toolchain_prefix}${prog}"", so it can be a program name with args.
-set dummy "${ac_host_toolchain_prefix}${prog}"; ac_word=$2
+# Extract the first word of ""${ac_ppu_toolchain_prefix}${prog}"", so it can be a program name with args.
+set dummy "${ac_ppu_toolchain_prefix}${prog}"; ac_word=$2
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
 $as_echo_n "checking for $ac_word... " >&6; }
-if ${ac_cv_path_host_STRIP+:} false; then :
+if ${ac_cv_path_ppu_STRIP+:} false; then :
   $as_echo_n "(cached) " >&6
 else
-  case $host_STRIP in
+  case $ppu_STRIP in
   [\\/]* | ?:[\\/]*)
-  ac_cv_path_host_STRIP="$host_STRIP" # Let the user override the test with a path.
+  ac_cv_path_ppu_STRIP="$ppu_STRIP" # Let the user override the test with a path.
   ;;
   *)
   as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
@@ -5022,7 +5021,7 @@ do
   test -z "$as_dir" && as_dir=.
     for ac_exec_ext in '' $ac_executable_extensions; do
   if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_test_x "$as_dir/$ac_word$ac_exec_ext"; }; then
-    ac_cv_path_host_STRIP="$as_dir/$ac_word$ac_exec_ext"
+    ac_cv_path_ppu_STRIP="$as_dir/$ac_word$ac_exec_ext"
     $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
     break 2
   fi
@@ -5033,17 +5032,17 @@ IFS=$as_save_IFS
   ;;
 esac
 fi
-host_STRIP=$ac_cv_path_host_STRIP
-if test -n "$host_STRIP"; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $host_STRIP" >&5
-$as_echo "$host_STRIP" >&6; }
+ppu_STRIP=$ac_cv_path_ppu_STRIP
+if test -n "$ppu_STRIP"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ppu_STRIP" >&5
+$as_echo "$ppu_STRIP" >&6; }
 else
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
 fi
 
 
-pop_toolchain_stack "ac_host_toolchain_stack" "PATH"
+pop_toolchain_stack "ac_ppu_toolchain_stack" "PATH"
 
 
 # Find psl1ght:
@@ -5455,21 +5454,21 @@ PSL1GHT=${PSL1GHT:-"${PS3DEV}/libpsl1ght"}
 
 # Check for PSL1GHT's rsx/gcm_sys.h:
 
-push_toolchain_stack "ac_host_toolchain_stack" \
-		     "PATH" "${host_PATH}:${PATH}" \
-		     "PKG_CONFIG_PATH" "${host_PKG_CONFIG_PATH}:${PKG_CONFIG_PATH}" \
-		     "CPP" "${host_CPP}" \
-		     "CPPFLAGS" "${host_CPPFLAGS}" \
-		     "CC" "${host_CC}" \
-		     "CFLAGS" "${host_CFLAGS}" \
-		     "OBJC" "${host_OBJC}" \
-		     "OBJCPP" "${host_OBJCPP}" \
-		     "CXX" "${host_CXX}" \
-		     "CXXFLAGS" "${host_CXXFLAGS}" \
-		     "OBJCXX" "${host_OBJCXX}" \
-		     "OBJCXXCPP" "${host_OBJCXXCPP}" \
-		     "LDFLAGS" "${host_LDFLAGS}" \
-		     "LIBS" "${host_LIBS}"
+push_toolchain_stack "ac_ppu_toolchain_stack" \
+		     "PATH" "${ppu_PATH}:${PATH}" \
+		     "PKG_CONFIG_PATH" "${ppu_PKG_CONFIG_PATH}:${PKG_CONFIG_PATH}" \
+		     "CPP" "${ppu_CPP}" \
+		     "CPPFLAGS" "${ppu_CPPFLAGS}" \
+		     "CC" "${ppu_CC}" \
+		     "CFLAGS" "${ppu_CFLAGS}" \
+		     "OBJC" "${ppu_OBJC}" \
+		     "OBJCPP" "${ppu_OBJCPP}" \
+		     "CXX" "${ppu_CXX}" \
+		     "CXXFLAGS" "${ppu_CXXFLAGS}" \
+		     "OBJCXX" "${ppu_OBJCXX}" \
+		     "OBJCXXCPP" "${ppu_OBJCXXCPP}" \
+		     "LDFLAGS" "${ppu_LDFLAGS}" \
+		     "LIBS" "${ppu_LIBS}"
 
 CPPFLAGS="-I${PSL1GHT}/ppu/include ${CPPFLAGS}"
 ac_fn_cxx_check_header_mongrel "$LINENO" "rsx/gcm_sys.h" "ac_cv_header_rsx_gcm_sys_h" "$ac_includes_default"
@@ -5481,7 +5480,7 @@ fi
 
 
 
-pop_toolchain_stack "ac_host_toolchain_stack" "PATH" "PKG_CONFIG_PATH" "CPP" "CPPFLAGS" "CC" "CFLAGS" "OBJC" "OBJCPP" "CXX" "CXXFLAGS" "OBJCXX" "OBJCXXCPP" "LDFLAGS" "LIBS"
+pop_toolchain_stack "ac_ppu_toolchain_stack" "PATH" "PKG_CONFIG_PATH" "CPP" "CPPFLAGS" "CC" "CFLAGS" "OBJC" "OBJCPP" "CXX" "CXXFLAGS" "OBJCXX" "OBJCXXCPP" "LDFLAGS" "LIBS"
 
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: location of PSL1GHT is ${PSL1GHT}" >&5
@@ -5712,7 +5711,7 @@ fi
 
 # It wasn't specified - try to find it by querying g++ itself.
 if test -z "${PPU_CXXLIB}"; then
-   PPU_CXXLIB=`${host_CXX} -print-file-name=libstdc++.a`
+   PPU_CXXLIB=`${ppu_CXX} -print-file-name=libstdc++.a`
 elif test "${PPU_CXXLIB}" == "no"; then
    PPU_CXXLIB=""
 fi;
@@ -6007,16 +6006,16 @@ fi
 
 save_PKG_CONFIG_PATH="${PKG_CONFIG_PATH}"
 
-if test -n "${host_PKG_CONFIG_PATH}"; then PKG_CONFIG_PATH="${host_PKG_CONFIG_PATH}:${PKG_CONFIG_PATH}"; fi
+if test -n "${ppu_PKG_CONFIG_PATH}"; then PKG_CONFIG_PATH="${ppu_PKG_CONFIG_PATH}:${PKG_CONFIG_PATH}"; fi
 
 
 
 pkg_failed=no
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for host_libpng" >&5
-$as_echo_n "checking for host_libpng... " >&6; }
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for ppu_libpng" >&5
+$as_echo_n "checking for ppu_libpng... " >&6; }
 
-if test -n "$host_libpng_CPPFLAGS"; then
-    pkg_cv_host_libpng_CPPFLAGS="$host_libpng_CPPFLAGS"
+if test -n "$ppu_libpng_CPPFLAGS"; then
+    pkg_cv_ppu_libpng_CPPFLAGS="$ppu_libpng_CPPFLAGS"
  elif test -n "$PKG_CONFIG"; then
     if test -n "$PKG_CONFIG" && \
     { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libpng\""; } >&5
@@ -6024,7 +6023,7 @@ if test -n "$host_libpng_CPPFLAGS"; then
   ac_status=$?
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; then
-  pkg_cv_host_libpng_CPPFLAGS=`$PKG_CONFIG --cflags "libpng" 2>/dev/null`
+  pkg_cv_ppu_libpng_CPPFLAGS=`$PKG_CONFIG --cflags "libpng" 2>/dev/null`
 		      test "x$?" != "x0" && pkg_failed=yes
 else
   pkg_failed=yes
@@ -6032,8 +6031,8 @@ fi
  else
     pkg_failed=untried
 fi
-if test -n "$host_libpng_LDFLAGS"; then
-    pkg_cv_host_libpng_LDFLAGS="$host_libpng_LDFLAGS"
+if test -n "$ppu_libpng_LDFLAGS"; then
+    pkg_cv_ppu_libpng_LDFLAGS="$ppu_libpng_LDFLAGS"
  elif test -n "$PKG_CONFIG"; then
     if test -n "$PKG_CONFIG" && \
     { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libpng\""; } >&5
@@ -6041,7 +6040,7 @@ if test -n "$host_libpng_LDFLAGS"; then
   ac_status=$?
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; then
-  pkg_cv_host_libpng_LDFLAGS=`$PKG_CONFIG --libs-only-L "libpng" 2>/dev/null`
+  pkg_cv_ppu_libpng_LDFLAGS=`$PKG_CONFIG --libs-only-L "libpng" 2>/dev/null`
 		      test "x$?" != "x0" && pkg_failed=yes
 else
   pkg_failed=yes
@@ -6049,8 +6048,8 @@ fi
  else
     pkg_failed=untried
 fi
-if test -n "$host_libpng_LIBS"; then
-    pkg_cv_host_libpng_LIBS="$host_libpng_LIBS"
+if test -n "$ppu_libpng_LIBS"; then
+    pkg_cv_ppu_libpng_LIBS="$ppu_libpng_LIBS"
  elif test -n "$PKG_CONFIG"; then
     if test -n "$PKG_CONFIG" && \
     { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libpng\""; } >&5
@@ -6058,7 +6057,7 @@ if test -n "$host_libpng_LIBS"; then
   ac_status=$?
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; then
-  pkg_cv_host_libpng_LIBS=`$PKG_CONFIG --libs-only-l "libpng" 2>/dev/null`
+  pkg_cv_ppu_libpng_LIBS=`$PKG_CONFIG --libs-only-l "libpng" 2>/dev/null`
 		      test "x$?" != "x0" && pkg_failed=yes
 else
   pkg_failed=yes
@@ -6079,22 +6078,22 @@ else
         _pkg_short_errors_supported=no
 fi
         if test $_pkg_short_errors_supported = yes; then
-	        host_libpng_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "libpng" 2>&1`
+	        ppu_libpng_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "libpng" 2>&1`
         else
-	        host_libpng_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "libpng" 2>&1`
+	        ppu_libpng_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "libpng" 2>&1`
         fi
 	# Put the nasty error message in config.log where it belongs
-	echo "$host_libpng_PKG_ERRORS" >&5
+	echo "$ppu_libpng_PKG_ERRORS" >&5
 
 	as_fn_error $? "Package requirements (libpng) were not met:
 
-$host_libpng_PKG_ERRORS
+$ppu_libpng_PKG_ERRORS
 
 Consider adjusting the PKG_CONFIG_PATH environment variable if you
 installed software in a non-standard prefix.
 
-Alternatively, you may set the environment variables host_libpng_CPPFLAGS
-and host_libpng_LIBS to avoid the need to call pkg-config.
+Alternatively, you may set the environment variables ppu_libpng_CPPFLAGS
+and ppu_libpng_LIBS to avoid the need to call pkg-config.
 See the pkg-config man page for more details." "$LINENO" 5
 elif test $pkg_failed = untried; then
      	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
@@ -6105,16 +6104,16 @@ as_fn_error $? "The pkg-config script could not be found or is too old.  Make su
 is in your PATH or set the PKG_CONFIG environment variable to the full
 path to pkg-config.
 
-Alternatively, you may set the environment variables host_libpng_CPPFLAGS
-and host_libpng_LIBS to avoid the need to call pkg-config.
+Alternatively, you may set the environment variables ppu_libpng_CPPFLAGS
+and ppu_libpng_LIBS to avoid the need to call pkg-config.
 See the pkg-config man page for more details.
 
 To get pkg-config, see <http://pkg-config.freedesktop.org/>.
 See \`config.log' for more details" "$LINENO" 5; }
 else
-	host_libpng_CPPFLAGS=$pkg_cv_host_libpng_CPPFLAGS
-	host_libpng_LDFLAGS=$pkg_cv_host_libpng_LDFLAGS
-	host_libpng_LIBS=$pkg_cv_host_libpng_LIBS
+	ppu_libpng_CPPFLAGS=$pkg_cv_ppu_libpng_CPPFLAGS
+	ppu_libpng_LDFLAGS=$pkg_cv_ppu_libpng_LDFLAGS
+	ppu_libpng_LIBS=$pkg_cv_ppu_libpng_LIBS
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
 
@@ -6131,16 +6130,16 @@ PKG_CONFIG_PATH="${save_PKG_CONFIG_PATH}"
 
 save_PKG_CONFIG_PATH="${PKG_CONFIG_PATH}"
 
-if test -n "${host_PKG_CONFIG_PATH}"; then PKG_CONFIG_PATH="${host_PKG_CONFIG_PATH}:${PKG_CONFIG_PATH}"; fi
+if test -n "${ppu_PKG_CONFIG_PATH}"; then PKG_CONFIG_PATH="${ppu_PKG_CONFIG_PATH}:${PKG_CONFIG_PATH}"; fi
 
 
 
 pkg_failed=no
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for host_zlib" >&5
-$as_echo_n "checking for host_zlib... " >&6; }
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for ppu_zlib" >&5
+$as_echo_n "checking for ppu_zlib... " >&6; }
 
-if test -n "$host_zlib_CPPFLAGS"; then
-    pkg_cv_host_zlib_CPPFLAGS="$host_zlib_CPPFLAGS"
+if test -n "$ppu_zlib_CPPFLAGS"; then
+    pkg_cv_ppu_zlib_CPPFLAGS="$ppu_zlib_CPPFLAGS"
  elif test -n "$PKG_CONFIG"; then
     if test -n "$PKG_CONFIG" && \
     { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"zlib\""; } >&5
@@ -6148,7 +6147,7 @@ if test -n "$host_zlib_CPPFLAGS"; then
   ac_status=$?
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; then
-  pkg_cv_host_zlib_CPPFLAGS=`$PKG_CONFIG --cflags "zlib" 2>/dev/null`
+  pkg_cv_ppu_zlib_CPPFLAGS=`$PKG_CONFIG --cflags "zlib" 2>/dev/null`
 		      test "x$?" != "x0" && pkg_failed=yes
 else
   pkg_failed=yes
@@ -6156,8 +6155,8 @@ fi
  else
     pkg_failed=untried
 fi
-if test -n "$host_zlib_LDFLAGS"; then
-    pkg_cv_host_zlib_LDFLAGS="$host_zlib_LDFLAGS"
+if test -n "$ppu_zlib_LDFLAGS"; then
+    pkg_cv_ppu_zlib_LDFLAGS="$ppu_zlib_LDFLAGS"
  elif test -n "$PKG_CONFIG"; then
     if test -n "$PKG_CONFIG" && \
     { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"zlib\""; } >&5
@@ -6165,7 +6164,7 @@ if test -n "$host_zlib_LDFLAGS"; then
   ac_status=$?
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; then
-  pkg_cv_host_zlib_LDFLAGS=`$PKG_CONFIG --libs-only-L "zlib" 2>/dev/null`
+  pkg_cv_ppu_zlib_LDFLAGS=`$PKG_CONFIG --libs-only-L "zlib" 2>/dev/null`
 		      test "x$?" != "x0" && pkg_failed=yes
 else
   pkg_failed=yes
@@ -6173,8 +6172,8 @@ fi
  else
     pkg_failed=untried
 fi
-if test -n "$host_zlib_LIBS"; then
-    pkg_cv_host_zlib_LIBS="$host_zlib_LIBS"
+if test -n "$ppu_zlib_LIBS"; then
+    pkg_cv_ppu_zlib_LIBS="$ppu_zlib_LIBS"
  elif test -n "$PKG_CONFIG"; then
     if test -n "$PKG_CONFIG" && \
     { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"zlib\""; } >&5
@@ -6182,7 +6181,7 @@ if test -n "$host_zlib_LIBS"; then
   ac_status=$?
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; then
-  pkg_cv_host_zlib_LIBS=`$PKG_CONFIG --libs-only-l "zlib" 2>/dev/null`
+  pkg_cv_ppu_zlib_LIBS=`$PKG_CONFIG --libs-only-l "zlib" 2>/dev/null`
 		      test "x$?" != "x0" && pkg_failed=yes
 else
   pkg_failed=yes
@@ -6203,22 +6202,22 @@ else
         _pkg_short_errors_supported=no
 fi
         if test $_pkg_short_errors_supported = yes; then
-	        host_zlib_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "zlib" 2>&1`
+	        ppu_zlib_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "zlib" 2>&1`
         else
-	        host_zlib_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "zlib" 2>&1`
+	        ppu_zlib_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "zlib" 2>&1`
         fi
 	# Put the nasty error message in config.log where it belongs
-	echo "$host_zlib_PKG_ERRORS" >&5
+	echo "$ppu_zlib_PKG_ERRORS" >&5
 
 	as_fn_error $? "Package requirements (zlib) were not met:
 
-$host_zlib_PKG_ERRORS
+$ppu_zlib_PKG_ERRORS
 
 Consider adjusting the PKG_CONFIG_PATH environment variable if you
 installed software in a non-standard prefix.
 
-Alternatively, you may set the environment variables host_zlib_CPPFLAGS
-and host_zlib_LIBS to avoid the need to call pkg-config.
+Alternatively, you may set the environment variables ppu_zlib_CPPFLAGS
+and ppu_zlib_LIBS to avoid the need to call pkg-config.
 See the pkg-config man page for more details." "$LINENO" 5
 elif test $pkg_failed = untried; then
      	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
@@ -6229,16 +6228,16 @@ as_fn_error $? "The pkg-config script could not be found or is too old.  Make su
 is in your PATH or set the PKG_CONFIG environment variable to the full
 path to pkg-config.
 
-Alternatively, you may set the environment variables host_zlib_CPPFLAGS
-and host_zlib_LIBS to avoid the need to call pkg-config.
+Alternatively, you may set the environment variables ppu_zlib_CPPFLAGS
+and ppu_zlib_LIBS to avoid the need to call pkg-config.
 See the pkg-config man page for more details.
 
 To get pkg-config, see <http://pkg-config.freedesktop.org/>.
 See \`config.log' for more details" "$LINENO" 5; }
 else
-	host_zlib_CPPFLAGS=$pkg_cv_host_zlib_CPPFLAGS
-	host_zlib_LDFLAGS=$pkg_cv_host_zlib_LDFLAGS
-	host_zlib_LIBS=$pkg_cv_host_zlib_LIBS
+	ppu_zlib_CPPFLAGS=$pkg_cv_ppu_zlib_CPPFLAGS
+	ppu_zlib_LDFLAGS=$pkg_cv_ppu_zlib_LDFLAGS
+	ppu_zlib_LIBS=$pkg_cv_ppu_zlib_LIBS
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
 

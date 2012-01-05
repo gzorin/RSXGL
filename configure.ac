@@ -34,14 +34,14 @@ AC_LANG([C++])
 AC_PS3DEV
 
 # PPU tools:
-AC_TOOLCHAIN([host],[powerpc64-ps3-elf],[${PS3DEV}/ppu/bin],[${PS3DEV}/portlibs/ppu/lib/pkgconfig])
-AC_TOOLCHAIN_PREFIX([host],[${PS3DEV}/portlibs/ppu])
-AC_TOOLCHAIN_PROG_CC([host])
-AC_TOOLCHAIN_PROG_CXX([host])
-AC_TOOLCHAIN_PATH_TOOL([host],[AR],[ar])
-AC_TOOLCHAIN_PATH_TOOL([host],[RANLIB],[ranlib])
-AC_TOOLCHAIN_PATH_TOOL([host],[AS],[as])
-AC_TOOLCHAIN_PATH_TOOL([host],[STRIP],[strip])
+AC_TOOLCHAIN([ppu],[powerpc64-ps3-elf],[${PS3DEV}/ppu/bin],[${PS3DEV}/portlibs/ppu/lib/pkgconfig])
+AC_TOOLCHAIN_PREFIX([ppu],[${PS3DEV}/portlibs/ppu])
+AC_TOOLCHAIN_PROG_CC([ppu])
+AC_TOOLCHAIN_PROG_CXX([ppu])
+AC_TOOLCHAIN_PATH_TOOL([ppu],[AR],[ar])
+AC_TOOLCHAIN_PATH_TOOL([ppu],[RANLIB],[ranlib])
+AC_TOOLCHAIN_PATH_TOOL([ppu],[AS],[as])
+AC_TOOLCHAIN_PATH_TOOL([ppu],[STRIP],[strip])
 
 # Find psl1ght:
 AC_PSL1GHT
@@ -52,7 +52,7 @@ AC_ARG_WITH([ppu-cxxlib],AS_HELP_STRING([--with-ppu-cxxlib],[full path to a stat
 
 # It wasn't specified - try to find it by querying g++ itself.
 if test -z "${PPU_CXXLIB}"; then
-   PPU_CXXLIB=`${host_CXX} -print-file-name=libstdc++.a`
+   PPU_CXXLIB=`${ppu_CXX} -print-file-name=libstdc++.a`
 elif test "${PPU_CXXLIB}" == "no"; then
    PPU_CXXLIB=""
 fi;
@@ -112,10 +112,10 @@ AC_PATH_PROG([LFTP],[lftp])
 AC_MSG_NOTICE([path to the lftp utility is ${LFTP}])
 
 # Look for libpng:
-AC_TOOLCHAIN_EXTPKG([host],[libpng],[libpng])
+AC_TOOLCHAIN_EXTPKG([ppu],[libpng],[libpng])
 
 # Look for zlib:
-AC_TOOLCHAIN_EXTPKG([host],[zlib],[zlib])
+AC_TOOLCHAIN_EXTPKG([ppu],[zlib],[zlib])
 
 # Setup "extsrc" - "contributed" sources:
 AC_EXTSRC_INIT()

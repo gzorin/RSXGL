@@ -34,7 +34,7 @@ NORMAL_UNINSTALL = :
 PRE_UNINSTALL = :
 POST_UNINSTALL = :
 subdir = src/library
-DIST_COMMON = $(nobase_host_include_HEADERS) $(srcdir)/Makefile.am \
+DIST_COMMON = $(nobase_ppu_include_HEADERS) $(srcdir)/Makefile.am \
 	$(srcdir)/Makefile.in $(srcdir)/rsxgl_config.h.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/extpkg.m4 \
@@ -67,9 +67,9 @@ am__nobase_list = $(am__nobase_strip_setup); \
 am__base_list = \
   sed '$$!N;$$!N;$$!N;$$!N;$$!N;$$!N;$$!N;s/\n/ /g' | \
   sed '$$!N;$$!N;$$!N;$$!N;s/\n/ /g'
-am__installdirs = "$(DESTDIR)$(host_libdir)" \
-	"$(DESTDIR)$(host_includedir)"
-LIBRARIES = $(host_lib_LIBRARIES)
+am__installdirs = "$(DESTDIR)$(ppu_libdir)" \
+	"$(DESTDIR)$(ppu_includedir)"
+LIBRARIES = $(ppu_lib_LIBRARIES)
 ARFLAGS = cru
 libEGL_a_AR = $(AR) $(ARFLAGS)
 libEGL_a_LIBADD =
@@ -107,7 +107,7 @@ CXXLINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) $(LDFLAGS) \
 	-o $@
 SOURCES = $(libEGL_a_SOURCES) $(libGL_a_SOURCES)
 DIST_SOURCES = $(libEGL_a_SOURCES) $(libGL_a_SOURCES)
-HEADERS = $(nobase_host_include_HEADERS)
+HEADERS = $(nobase_ppu_include_HEADERS)
 ETAGS = etags
 CTAGS = ctags
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
@@ -117,15 +117,15 @@ AUTOCONF = @AUTOCONF@
 AUTOHEADER = @AUTOHEADER@
 AUTOMAKE = @AUTOMAKE@
 AWK = @AWK@
-CC = @host_CC@
+CC = @ppu_CC@
 CCDEPMODE = @CCDEPMODE@
-CFLAGS = -O1 @host_CFLAGS@
+CFLAGS = -O1 @ppu_CFLAGS@
 CGC = @CGC@
-CPPFLAGS = @host_CPPFLAGS@
-CXX = @host_CXX@
+CPPFLAGS = @ppu_CPPFLAGS@
+CXX = @ppu_CXX@
 CXXCPP = @CXXCPP@
 CXXDEPMODE = @CXXDEPMODE@
-CXXFLAGS = -O1 @host_CXXFLAGS@
+CXXFLAGS = -O1 @ppu_CXXFLAGS@
 CYGPATH_W = @CYGPATH_W@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
@@ -165,7 +165,7 @@ PS3DEV = @PS3DEV@
 PSL1GHT = @PSL1GHT@
 PSL1GHT_CPPFLAGS = @PSL1GHT_CPPFLAGS@
 PSL1GHT_LDFLAGS = @PSL1GHT_CPPFLAGS@
-RANLIB = @host_RANLIB@
+RANLIB = @ppu_RANLIB@
 RSXGL_CONFIG_RSX_compatibility = @RSXGL_CONFIG_RSX_compatibility@
 RSXGL_CONFIG_samples_host_ip = @RSXGL_CONFIG_samples_host_ip@
 RSXGL_CONFIG_samples_host_port = @RSXGL_CONFIG_samples_host_port@
@@ -201,35 +201,7 @@ exec_prefix = @exec_prefix@
 extsrc_build_commands = @extsrc_build_commands@
 extsrc_clean_commands = @extsrc_clean_commands@
 extsrcdir = @extsrcdir@
-host_AR = @host_AR@
-host_AS = @host_AS@
-host_CC = @host_CC@
-host_CFLAGS = @host_CFLAGS@
-host_CPPFLAGS = @host_CPPFLAGS@
-host_CXX = @host_CXX@
-host_CXXFLAGS = @host_CXXFLAGS@
-host_LDFLAGS = @host_LDFLAGS@
-host_LIBS = @host_LIBS@
-host_PATH = @host_PATH@
-host_PKG_CONFIG_PATH = @host_PKG_CONFIG_PATH@
-host_RANLIB = @host_RANLIB@
-host_STRIP = @host_STRIP@
 host_alias = @host_alias@
-host_bindir = @host_bindir@
-host_datadir = @host_datadir@
-host_datarootdir = @host_datarootdir@
-host_includedir = @host_includedir@
-host_libdir = @host_libdir@
-host_libpng_CPPFLAGS = @host_libpng_CPPFLAGS@
-host_libpng_LDFLAGS = @host_libpng_LDFLAGS@
-host_libpng_LIBS = @host_libpng_LIBS@
-host_mandir = @host_mandir@
-host_sbindir = @host_sbindir@
-host_sysconfdir = @host_sysconfdir@
-host_zlib_CPPFLAGS = @host_zlib_CPPFLAGS@
-host_zlib_LDFLAGS = @host_zlib_LDFLAGS@
-host_zlib_LIBS = @host_zlib_LIBS@
-hostprefix = @hostprefix@
 htmldir = @htmldir@
 includedir = @includedir@
 infodir = @infodir@
@@ -242,6 +214,34 @@ mandir = @mandir@
 mkdir_p = @mkdir_p@
 oldincludedir = @oldincludedir@
 pdfdir = @pdfdir@
+ppu_AR = @ppu_AR@
+ppu_AS = @ppu_AS@
+ppu_CC = @ppu_CC@
+ppu_CFLAGS = @ppu_CFLAGS@
+ppu_CPPFLAGS = @ppu_CPPFLAGS@
+ppu_CXX = @ppu_CXX@
+ppu_CXXFLAGS = @ppu_CXXFLAGS@
+ppu_LDFLAGS = @ppu_LDFLAGS@
+ppu_LIBS = @ppu_LIBS@
+ppu_PATH = @ppu_PATH@
+ppu_PKG_CONFIG_PATH = @ppu_PKG_CONFIG_PATH@
+ppu_RANLIB = @ppu_RANLIB@
+ppu_STRIP = @ppu_STRIP@
+ppu_bindir = @ppu_bindir@
+ppu_datadir = @ppu_datadir@
+ppu_datarootdir = @ppu_datarootdir@
+ppu_includedir = @ppu_includedir@
+ppu_libdir = @ppu_libdir@
+ppu_libpng_CPPFLAGS = @ppu_libpng_CPPFLAGS@
+ppu_libpng_LDFLAGS = @ppu_libpng_LDFLAGS@
+ppu_libpng_LIBS = @ppu_libpng_LIBS@
+ppu_mandir = @ppu_mandir@
+ppu_sbindir = @ppu_sbindir@
+ppu_sysconfdir = @ppu_sysconfdir@
+ppu_zlib_CPPFLAGS = @ppu_zlib_CPPFLAGS@
+ppu_zlib_LDFLAGS = @ppu_zlib_LDFLAGS@
+ppu_zlib_LIBS = @ppu_zlib_LIBS@
+ppuprefix = @ppuprefix@
 prefix = @prefix@
 program_transform_name = @program_transform_name@
 psdir = @psdir@
@@ -253,9 +253,9 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-AR = @host_AR@
-host_lib_LIBRARIES = libEGL.a libGL.a
-nobase_host_include_HEADERS = GL3/rsxgl.h GL3/gl3ext.h GL3/rsxgl3ext.h GL3/rsxgl_compatibility.h
+AR = @ppu_AR@
+ppu_lib_LIBRARIES = libEGL.a libGL.a
+nobase_ppu_include_HEADERS = GL3/rsxgl.h GL3/gl3ext.h GL3/rsxgl3ext.h GL3/rsxgl_compatibility.h
 dlmalloc_CPPFLAGS = -DMSPACES -DONLY_MSPACES -DHAVE_MMAP=0 -Dmalloc_getpagesize=4096
 libEGL_a_SOURCES = egl.c mem.c malloc.c
 libEGL_a_CFLAGS = -std=gnu99 -fgnu89-inline
@@ -307,38 +307,38 @@ $(ACLOCAL_M4):  $(am__aclocal_m4_deps)
 $(am__aclocal_m4_deps):
 rsxgl_config.h: $(top_builddir)/config.status $(srcdir)/rsxgl_config.h.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
-install-host_libLIBRARIES: $(host_lib_LIBRARIES)
+install-ppu_libLIBRARIES: $(ppu_lib_LIBRARIES)
 	@$(NORMAL_INSTALL)
-	test -z "$(host_libdir)" || $(MKDIR_P) "$(DESTDIR)$(host_libdir)"
-	@list='$(host_lib_LIBRARIES)'; test -n "$(host_libdir)" || list=; \
+	test -z "$(ppu_libdir)" || $(MKDIR_P) "$(DESTDIR)$(ppu_libdir)"
+	@list='$(ppu_lib_LIBRARIES)'; test -n "$(ppu_libdir)" || list=; \
 	list2=; for p in $$list; do \
 	  if test -f $$p; then \
 	    list2="$$list2 $$p"; \
 	  else :; fi; \
 	done; \
 	test -z "$$list2" || { \
-	  echo " $(INSTALL_DATA) $$list2 '$(DESTDIR)$(host_libdir)'"; \
-	  $(INSTALL_DATA) $$list2 "$(DESTDIR)$(host_libdir)" || exit $$?; }
+	  echo " $(INSTALL_DATA) $$list2 '$(DESTDIR)$(ppu_libdir)'"; \
+	  $(INSTALL_DATA) $$list2 "$(DESTDIR)$(ppu_libdir)" || exit $$?; }
 	@$(POST_INSTALL)
-	@list='$(host_lib_LIBRARIES)'; test -n "$(host_libdir)" || list=; \
+	@list='$(ppu_lib_LIBRARIES)'; test -n "$(ppu_libdir)" || list=; \
 	for p in $$list; do \
 	  if test -f $$p; then \
 	    $(am__strip_dir) \
-	    echo " ( cd '$(DESTDIR)$(host_libdir)' && $(RANLIB) $$f )"; \
-	    ( cd "$(DESTDIR)$(host_libdir)" && $(RANLIB) $$f ) || exit $$?; \
+	    echo " ( cd '$(DESTDIR)$(ppu_libdir)' && $(RANLIB) $$f )"; \
+	    ( cd "$(DESTDIR)$(ppu_libdir)" && $(RANLIB) $$f ) || exit $$?; \
 	  else :; fi; \
 	done
 
-uninstall-host_libLIBRARIES:
+uninstall-ppu_libLIBRARIES:
 	@$(NORMAL_UNINSTALL)
-	@list='$(host_lib_LIBRARIES)'; test -n "$(host_libdir)" || list=; \
+	@list='$(ppu_lib_LIBRARIES)'; test -n "$(ppu_libdir)" || list=; \
 	files=`for p in $$list; do echo $$p; done | sed -e 's|^.*/||'`; \
 	test -n "$$files" || exit 0; \
-	echo " ( cd '$(DESTDIR)$(host_libdir)' && rm -f "$$files" )"; \
-	cd "$(DESTDIR)$(host_libdir)" && rm -f $$files
+	echo " ( cd '$(DESTDIR)$(ppu_libdir)' && rm -f "$$files" )"; \
+	cd "$(DESTDIR)$(ppu_libdir)" && rm -f $$files
 
-clean-host_libLIBRARIES:
-	-test -z "$(host_lib_LIBRARIES)" || rm -f $(host_lib_LIBRARIES)
+clean-ppu_libLIBRARIES:
+	-test -z "$(ppu_lib_LIBRARIES)" || rm -f $(ppu_lib_LIBRARIES)
 libEGL.a: $(libEGL_a_OBJECTS) $(libEGL_a_DEPENDENCIES) 
 	-rm -f libEGL.a
 	$(libEGL_a_AR) libEGL.a $(libEGL_a_OBJECTS) $(libEGL_a_LIBADD)
@@ -772,29 +772,29 @@ libGL_a-dumb_migrate.obj: dumb_migrate.cc
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='dumb_migrate.cc' object='libGL_a-dumb_migrate.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libGL_a_CPPFLAGS) $(CPPFLAGS) $(libGL_a_CXXFLAGS) $(CXXFLAGS) -c -o libGL_a-dumb_migrate.obj `if test -f 'dumb_migrate.cc'; then $(CYGPATH_W) 'dumb_migrate.cc'; else $(CYGPATH_W) '$(srcdir)/dumb_migrate.cc'; fi`
-install-nobase_host_includeHEADERS: $(nobase_host_include_HEADERS)
+install-nobase_ppu_includeHEADERS: $(nobase_ppu_include_HEADERS)
 	@$(NORMAL_INSTALL)
-	test -z "$(host_includedir)" || $(MKDIR_P) "$(DESTDIR)$(host_includedir)"
-	@list='$(nobase_host_include_HEADERS)'; test -n "$(host_includedir)" || list=; \
+	test -z "$(ppu_includedir)" || $(MKDIR_P) "$(DESTDIR)$(ppu_includedir)"
+	@list='$(nobase_ppu_include_HEADERS)'; test -n "$(ppu_includedir)" || list=; \
 	$(am__nobase_list) | while read dir files; do \
 	  xfiles=; for file in $$files; do \
 	    if test -f "$$file"; then xfiles="$$xfiles $$file"; \
 	    else xfiles="$$xfiles $(srcdir)/$$file"; fi; done; \
 	  test -z "$$xfiles" || { \
 	    test "x$$dir" = x. || { \
-	      echo "$(MKDIR_P) '$(DESTDIR)$(host_includedir)/$$dir'"; \
-	      $(MKDIR_P) "$(DESTDIR)$(host_includedir)/$$dir"; }; \
-	    echo " $(INSTALL_HEADER) $$xfiles '$(DESTDIR)$(host_includedir)/$$dir'"; \
-	    $(INSTALL_HEADER) $$xfiles "$(DESTDIR)$(host_includedir)/$$dir" || exit $$?; }; \
+	      echo "$(MKDIR_P) '$(DESTDIR)$(ppu_includedir)/$$dir'"; \
+	      $(MKDIR_P) "$(DESTDIR)$(ppu_includedir)/$$dir"; }; \
+	    echo " $(INSTALL_HEADER) $$xfiles '$(DESTDIR)$(ppu_includedir)/$$dir'"; \
+	    $(INSTALL_HEADER) $$xfiles "$(DESTDIR)$(ppu_includedir)/$$dir" || exit $$?; }; \
 	done
 
-uninstall-nobase_host_includeHEADERS:
+uninstall-nobase_ppu_includeHEADERS:
 	@$(NORMAL_UNINSTALL)
-	@list='$(nobase_host_include_HEADERS)'; test -n "$(host_includedir)" || list=; \
+	@list='$(nobase_ppu_include_HEADERS)'; test -n "$(ppu_includedir)" || list=; \
 	$(am__nobase_strip_setup); files=`$(am__nobase_strip)`; \
 	test -n "$$files" || exit 0; \
-	echo " ( cd '$(DESTDIR)$(host_includedir)' && rm -f" $$files ")"; \
-	cd "$(DESTDIR)$(host_includedir)" && rm -f $$files
+	echo " ( cd '$(DESTDIR)$(ppu_includedir)' && rm -f" $$files ")"; \
+	cd "$(DESTDIR)$(ppu_includedir)" && rm -f $$files
 
 ID: $(HEADERS) $(SOURCES) $(LISP) $(TAGS_FILES)
 	list='$(SOURCES) $(HEADERS) $(LISP) $(TAGS_FILES)'; \
@@ -882,7 +882,7 @@ check-am: all-am
 check: check-am
 all-am: Makefile $(LIBRARIES) $(HEADERS)
 installdirs:
-	for dir in "$(DESTDIR)$(host_libdir)" "$(DESTDIR)$(host_includedir)"; do \
+	for dir in "$(DESTDIR)$(ppu_libdir)" "$(DESTDIR)$(ppu_includedir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
 	done
 install: install-am
@@ -912,7 +912,7 @@ maintainer-clean-generic:
 	@echo "it deletes files that may require special tools to rebuild."
 clean: clean-am
 
-clean-am: clean-generic clean-host_libLIBRARIES mostlyclean-am
+clean-am: clean-generic clean-ppu_libLIBRARIES mostlyclean-am
 
 distclean: distclean-am
 	-rm -rf ./$(DEPDIR)
@@ -932,8 +932,8 @@ info: info-am
 
 info-am:
 
-install-data-am: install-host_libLIBRARIES \
-	install-nobase_host_includeHEADERS
+install-data-am: install-nobase_ppu_includeHEADERS \
+	install-ppu_libLIBRARIES
 
 install-dvi: install-dvi-am
 
@@ -978,25 +978,24 @@ ps: ps-am
 
 ps-am:
 
-uninstall-am: uninstall-host_libLIBRARIES \
-	uninstall-nobase_host_includeHEADERS
+uninstall-am: uninstall-nobase_ppu_includeHEADERS \
+	uninstall-ppu_libLIBRARIES
 
 .MAKE: install-am install-strip
 
 .PHONY: CTAGS GTAGS all all-am check check-am clean clean-generic \
-	clean-host_libLIBRARIES ctags distclean distclean-compile \
+	clean-ppu_libLIBRARIES ctags distclean distclean-compile \
 	distclean-generic distclean-tags distdir dvi dvi-am html \
 	html-am info info-am install install-am install-data \
 	install-data-am install-dvi install-dvi-am install-exec \
-	install-exec-am install-host_libLIBRARIES install-html \
-	install-html-am install-info install-info-am install-man \
-	install-nobase_host_includeHEADERS install-pdf install-pdf-am \
-	install-ps install-ps-am install-strip installcheck \
-	installcheck-am installdirs maintainer-clean \
-	maintainer-clean-generic mostlyclean mostlyclean-compile \
-	mostlyclean-generic pdf pdf-am ps ps-am tags uninstall \
-	uninstall-am uninstall-host_libLIBRARIES \
-	uninstall-nobase_host_includeHEADERS
+	install-exec-am install-html install-html-am install-info \
+	install-info-am install-man install-nobase_ppu_includeHEADERS \
+	install-pdf install-pdf-am install-ppu_libLIBRARIES install-ps \
+	install-ps-am install-strip installcheck installcheck-am \
+	installdirs maintainer-clean maintainer-clean-generic \
+	mostlyclean mostlyclean-compile mostlyclean-generic pdf pdf-am \
+	ps ps-am tags uninstall uninstall-am \
+	uninstall-nobase_ppu_includeHEADERS uninstall-ppu_libLIBRARIES
 
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.

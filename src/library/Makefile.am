@@ -1,16 +1,16 @@
-CC = @host_CC@
-CXX = @host_CXX@
-AR = @host_AR@
-RANLIB = @host_RANLIB@
+CC = @ppu_CC@
+CXX = @ppu_CXX@
+AR = @ppu_AR@
+RANLIB = @ppu_RANLIB@
 
-CFLAGS = -O1 @host_CFLAGS@
-CXXFLAGS = -O1 @host_CXXFLAGS@
-CPPFLAGS = @host_CPPFLAGS@
+CFLAGS = -O1 @ppu_CFLAGS@
+CXXFLAGS = -O1 @ppu_CXXFLAGS@
+CPPFLAGS = @ppu_CPPFLAGS@
 PSL1GHT_CPPFLAGS = @PSL1GHT_CPPFLAGS@
 PSL1GHT_LDFLAGS = @PSL1GHT_CPPFLAGS@
 
-host_lib_LIBRARIES = libEGL.a libGL.a
-nobase_host_include_HEADERS = GL3/rsxgl.h GL3/gl3ext.h GL3/rsxgl3ext.h GL3/rsxgl_compatibility.h
+ppu_lib_LIBRARIES = libEGL.a libGL.a
+nobase_ppu_include_HEADERS = GL3/rsxgl.h GL3/gl3ext.h GL3/rsxgl3ext.h GL3/rsxgl_compatibility.h
 
 dlmalloc_CPPFLAGS = -DMSPACES -DONLY_MSPACES -DHAVE_MMAP=0 -Dmalloc_getpagesize=4096
 

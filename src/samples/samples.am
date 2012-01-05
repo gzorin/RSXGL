@@ -1,9 +1,9 @@
-CC = @host_CC@
-CXX = @host_CXX@
-AR = @host_AR@
-RANLIB = @host_RANLIB@
-AS		=	@host_AS@
-STRIP		=	@host_STRIP@
+CC = @ppu_CC@
+CXX = @ppu_CXX@
+AR = @ppu_AR@
+RANLIB = @ppu_RANLIB@
+AS		=	@ppu_AS@
+STRIP		=	@ppu_STRIP@
 
 PSL1GHT_CPPFLAGS = @PSL1GHT_CPPFLAGS@
 PSL1GHT_LDFLAGS = @PSL1GHT_LDFLAGS@

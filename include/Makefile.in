@@ -33,7 +33,7 @@ NORMAL_UNINSTALL = :
 PRE_UNINSTALL = :
 POST_UNINSTALL = :
 subdir = include
-DIST_COMMON = $(nobase_host_include_HEADERS) $(srcdir)/Makefile.am \
+DIST_COMMON = $(nobase_ppu_include_HEADERS) $(srcdir)/Makefile.am \
 	$(srcdir)/Makefile.in $(srcdir)/config.h.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/extpkg.m4 \
@@ -68,8 +68,8 @@ am__nobase_list = $(am__nobase_strip_setup); \
 am__base_list = \
   sed '$$!N;$$!N;$$!N;$$!N;$$!N;$$!N;$$!N;s/\n/ /g' | \
   sed '$$!N;$$!N;$$!N;$$!N;s/\n/ /g'
-am__installdirs = "$(DESTDIR)$(host_includedir)"
-HEADERS = $(nobase_host_include_HEADERS)
+am__installdirs = "$(DESTDIR)$(ppu_includedir)"
+HEADERS = $(nobase_ppu_include_HEADERS)
 ETAGS = etags
 CTAGS = ctags
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
@@ -163,35 +163,7 @@ exec_prefix = @exec_prefix@
 extsrc_build_commands = @extsrc_build_commands@
 extsrc_clean_commands = @extsrc_clean_commands@
 extsrcdir = @extsrcdir@
-host_AR = @host_AR@
-host_AS = @host_AS@
-host_CC = @host_CC@
-host_CFLAGS = @host_CFLAGS@
-host_CPPFLAGS = @host_CPPFLAGS@
-host_CXX = @host_CXX@
-host_CXXFLAGS = @host_CXXFLAGS@
-host_LDFLAGS = @host_LDFLAGS@
-host_LIBS = @host_LIBS@
-host_PATH = @host_PATH@
-host_PKG_CONFIG_PATH = @host_PKG_CONFIG_PATH@
-host_RANLIB = @host_RANLIB@
-host_STRIP = @host_STRIP@
 host_alias = @host_alias@
-host_bindir = @host_bindir@
-host_datadir = @host_datadir@
-host_datarootdir = @host_datarootdir@
-host_includedir = @host_includedir@
-host_libdir = @host_libdir@
-host_libpng_CPPFLAGS = @host_libpng_CPPFLAGS@
-host_libpng_LDFLAGS = @host_libpng_LDFLAGS@
-host_libpng_LIBS = @host_libpng_LIBS@
-host_mandir = @host_mandir@
-host_sbindir = @host_sbindir@
-host_sysconfdir = @host_sysconfdir@
-host_zlib_CPPFLAGS = @host_zlib_CPPFLAGS@
-host_zlib_LDFLAGS = @host_zlib_LDFLAGS@
-host_zlib_LIBS = @host_zlib_LIBS@
-hostprefix = @hostprefix@
 htmldir = @htmldir@
 includedir = @includedir@
 infodir = @infodir@
@@ -204,6 +176,34 @@ mandir = @mandir@
 mkdir_p = @mkdir_p@
 oldincludedir = @oldincludedir@
 pdfdir = @pdfdir@
+ppu_AR = @ppu_AR@
+ppu_AS = @ppu_AS@
+ppu_CC = @ppu_CC@
+ppu_CFLAGS = @ppu_CFLAGS@
+ppu_CPPFLAGS = @ppu_CPPFLAGS@
+ppu_CXX = @ppu_CXX@
+ppu_CXXFLAGS = @ppu_CXXFLAGS@
+ppu_LDFLAGS = @ppu_LDFLAGS@
+ppu_LIBS = @ppu_LIBS@
+ppu_PATH = @ppu_PATH@
+ppu_PKG_CONFIG_PATH = @ppu_PKG_CONFIG_PATH@
+ppu_RANLIB = @ppu_RANLIB@
+ppu_STRIP = @ppu_STRIP@
+ppu_bindir = @ppu_bindir@
+ppu_datadir = @ppu_datadir@
+ppu_datarootdir = @ppu_datarootdir@
+ppu_includedir = @ppu_includedir@
+ppu_libdir = @ppu_libdir@
+ppu_libpng_CPPFLAGS = @ppu_libpng_CPPFLAGS@
+ppu_libpng_LDFLAGS = @ppu_libpng_LDFLAGS@
+ppu_libpng_LIBS = @ppu_libpng_LIBS@
+ppu_mandir = @ppu_mandir@
+ppu_sbindir = @ppu_sbindir@
+ppu_sysconfdir = @ppu_sysconfdir@
+ppu_zlib_CPPFLAGS = @ppu_zlib_CPPFLAGS@
+ppu_zlib_LDFLAGS = @ppu_zlib_LDFLAGS@
+ppu_zlib_LIBS = @ppu_zlib_LIBS@
+ppuprefix = @ppuprefix@
 prefix = @prefix@
 program_transform_name = @program_transform_name@
 psdir = @psdir@
@@ -215,7 +215,7 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-nobase_host_include_HEADERS = EGL/egl.h EGL/eglext.h EGL/eglplatform.h GL3/gl3.h KHR/khrplatform.h
+nobase_ppu_include_HEADERS = EGL/egl.h EGL/eglext.h EGL/eglplatform.h GL3/gl3.h KHR/khrplatform.h
 all: all-am
 
 .SUFFIXES:
@@ -251,29 +251,29 @@ $(ACLOCAL_M4):  $(am__aclocal_m4_deps)
 $(am__aclocal_m4_deps):
 config.h: $(top_builddir)/config.status $(srcdir)/config.h.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
-install-nobase_host_includeHEADERS: $(nobase_host_include_HEADERS)
+install-nobase_ppu_includeHEADERS: $(nobase_ppu_include_HEADERS)
 	@$(NORMAL_INSTALL)
-	test -z "$(host_includedir)" || $(MKDIR_P) "$(DESTDIR)$(host_includedir)"
-	@list='$(nobase_host_include_HEADERS)'; test -n "$(host_includedir)" || list=; \
+	test -z "$(ppu_includedir)" || $(MKDIR_P) "$(DESTDIR)$(ppu_includedir)"
+	@list='$(nobase_ppu_include_HEADERS)'; test -n "$(ppu_includedir)" || list=; \
 	$(am__nobase_list) | while read dir files; do \
 	  xfiles=; for file in $$files; do \
 	    if test -f "$$file"; then xfiles="$$xfiles $$file"; \
 	    else xfiles="$$xfiles $(srcdir)/$$file"; fi; done; \
 	  test -z "$$xfiles" || { \
 	    test "x$$dir" = x. || { \
-	      echo "$(MKDIR_P) '$(DESTDIR)$(host_includedir)/$$dir'"; \
-	      $(MKDIR_P) "$(DESTDIR)$(host_includedir)/$$dir"; }; \
-	    echo " $(INSTALL_HEADER) $$xfiles '$(DESTDIR)$(host_includedir)/$$dir'"; \
-	    $(INSTALL_HEADER) $$xfiles "$(DESTDIR)$(host_includedir)/$$dir" || exit $$?; }; \
+	      echo "$(MKDIR_P) '$(DESTDIR)$(ppu_includedir)/$$dir'"; \
+	      $(MKDIR_P) "$(DESTDIR)$(ppu_includedir)/$$dir"; }; \
+	    echo " $(INSTALL_HEADER) $$xfiles '$(DESTDIR)$(ppu_includedir)/$$dir'"; \
+	    $(INSTALL_HEADER) $$xfiles "$(DESTDIR)$(ppu_includedir)/$$dir" || exit $$?; }; \
 	done
 
-uninstall-nobase_host_includeHEADERS:
+uninstall-nobase_ppu_includeHEADERS:
 	@$(NORMAL_UNINSTALL)
-	@list='$(nobase_host_include_HEADERS)'; test -n "$(host_includedir)" || list=; \
+	@list='$(nobase_ppu_include_HEADERS)'; test -n "$(ppu_includedir)" || list=; \
 	$(am__nobase_strip_setup); files=`$(am__nobase_strip)`; \
 	test -n "$$files" || exit 0; \
-	echo " ( cd '$(DESTDIR)$(host_includedir)' && rm -f" $$files ")"; \
-	cd "$(DESTDIR)$(host_includedir)" && rm -f $$files
+	echo " ( cd '$(DESTDIR)$(ppu_includedir)' && rm -f" $$files ")"; \
+	cd "$(DESTDIR)$(ppu_includedir)" && rm -f $$files
 
 ID: $(HEADERS) $(SOURCES) $(LISP) $(TAGS_FILES)
 	list='$(SOURCES) $(HEADERS) $(LISP) $(TAGS_FILES)'; \
@@ -361,7 +361,7 @@ check-am: all-am
 check: check-am
 all-am: Makefile $(HEADERS)
 installdirs:
-	for dir in "$(DESTDIR)$(host_includedir)"; do \
+	for dir in "$(DESTDIR)$(ppu_includedir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
 	done
 install: install-am
@@ -409,7 +409,7 @@ info: info-am
 
 info-am:
 
-install-data-am: install-nobase_host_includeHEADERS
+install-data-am: install-nobase_ppu_includeHEADERS
 
 install-dvi: install-dvi-am
 
@@ -453,7 +453,7 @@ ps: ps-am
 
 ps-am:
 
-uninstall-am: uninstall-nobase_host_includeHEADERS
+uninstall-am: uninstall-nobase_ppu_includeHEADERS
 
 .MAKE: install-am install-strip
 
@@ -463,12 +463,12 @@ uninstall-am: uninstall-nobase_host_includeHEADERS
 	install-data install-data-am install-dvi install-dvi-am \
 	install-exec install-exec-am install-html install-html-am \
 	install-info install-info-am install-man \
-	install-nobase_host_includeHEADERS install-pdf install-pdf-am \
+	install-nobase_ppu_includeHEADERS install-pdf install-pdf-am \
 	install-ps install-ps-am install-strip installcheck \
 	installcheck-am installdirs maintainer-clean \
 	maintainer-clean-generic mostlyclean mostlyclean-generic pdf \
 	pdf-am ps ps-am tags uninstall uninstall-am \
-	uninstall-nobase_host_includeHEADERS
+	uninstall-nobase_ppu_includeHEADERS
 
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
