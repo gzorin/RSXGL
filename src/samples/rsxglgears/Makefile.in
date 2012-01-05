@@ -37,7 +37,9 @@ DIST_COMMON = $(srcdir)/../samples.am $(srcdir)/Makefile.am \
 noinst_PROGRAMS = rsxglgears.elf$(EXEEXT)
 subdir = src/samples/rsxglgears
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
-am__aclocal_m4_deps = $(top_srcdir)/m4/extsrc.m4 \
+am__aclocal_m4_deps = $(top_srcdir)/m4/extpkg.m4 \
+	$(top_srcdir)/m4/extsrc.m4 $(top_srcdir)/m4/ps3dev.m4 \
+	$(top_srcdir)/m4/psl1ght.m4 $(top_srcdir)/m4/toolchain.m4 \
 	$(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
@@ -75,13 +77,13 @@ AUTOCONF = @AUTOCONF@
 AUTOHEADER = @AUTOHEADER@
 AUTOMAKE = @AUTOMAKE@
 AWK = @AWK@
-CC = @PPU_CC@
+CC = @host_CC@
 CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
 CGC := @CGC@
-CMAKE = @CMAKE@
 CPPFLAGS = @CPPFLAGS@
-CXX = @PPU_CXX@
+CXX = @host_CXX@
+CXXCPP = @CXXCPP@
 CXXDEPMODE = @CXXDEPMODE@
 CXXFLAGS = @CXXFLAGS@
 CYGPATH_W = @CYGPATH_W@
@@ -90,7 +92,9 @@ DEPDIR = @DEPDIR@
 ECHO_C = @ECHO_C@
 ECHO_N = @ECHO_N@
 ECHO_T = @ECHO_T@
+EGREP = @EGREP@
 EXEEXT = @EXEEXT@
+GREP = @GREP@
 INSTALL = @INSTALL@
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
@@ -112,33 +116,28 @@ PACKAGE_TARNAME = @PACKAGE_TARNAME@
 PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
-PORTLIBS = @PORTLIBS@
-PORTLIBS_PPU_CPPFLAGS = @PORTLIBS_PPU_CPPFLAGS@
-PORTLIBS_PPU_LDFLAGS = @PORTLIBS_PPU_LDFLAGS@
-PPU_AR = @PPU_AR@
-PPU_CC = @PPU_CC@
-PPU_CFLAGS = @PPU_CFLAGS@
-PPU_CPPFLAGS = @PPU_CPPFLAGS@
-PPU_CXX = @PPU_CXX@
-PPU_CXXFLAGS = @PPU_CXXFLAGS@
+PKG := @PKG@
+PKG_CONFIG = @PKG_CONFIG@
+PKG_CONFIG_LIBDIR = @PKG_CONFIG_LIBDIR@
+PKG_CONFIG_PATH = @PKG_CONFIG_PATH@
 PPU_CXXLIB = @PPU_CXXLIB@
-PPU_LD = @PPU_LD@
-PPU_RANLIB = @PPU_RANLIB@
 PS3DEV = @PS3DEV@
-PS3DEV_PPU_CPPFLAGS = @PS3DEV_PPU_CPPFLAGS@
-PS3DEV_PPU_LDFLAGS = @PS3DEV_PPU_LDFLAGS@
 PSL1GHT = @PSL1GHT@
-PSL1GHT_PPU_CPPFLAGS = @PSL1GHT_PPU_CPPFLAGS@
-PSL1GHT_PPU_LDFLAGS = @PSL1GHT_PPU_LDFLAGS@
-RANLIB = @PPU_RANLIB@
+PSL1GHT_CPPFLAGS = @PSL1GHT_CPPFLAGS@
+PSL1GHT_LDFLAGS = @PSL1GHT_LDFLAGS@
+RANLIB = @host_RANLIB@
 RSXGL_CONFIG_RSX_compatibility = @RSXGL_CONFIG_RSX_compatibility@
 RSXGL_CONFIG_samples_host_ip = @RSXGL_CONFIG_samples_host_ip@
 RSXGL_CONFIG_samples_host_port = @RSXGL_CONFIG_samples_host_port@
 RSXGL_SAMPLES = @RSXGL_SAMPLES@
 RSXGL_SUBDIRS = @RSXGL_SUBDIRS@
+SELF := @SELF@
+SELF_NPDRM := @SELF_NPDRM@
 SET_MAKE = @SET_MAKE@
+SFO := @SFO@
 SHELL = @SHELL@
-STRIP = $(PS3DEV)/ppu/bin/ppu-strip
+SPRX := @SPRX@
+STRIP = @host_STRIP@
 VERSION = @VERSION@
 abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
@@ -151,8 +150,6 @@ am__leading_dot = @am__leading_dot@
 am__quote = @am__quote@
 am__tar = @am__tar@
 am__untar = @am__untar@
-assimp_SOURCE_LOCATION = @assimp_SOURCE_LOCATION@
-assimp_source_found = @assimp_source_found@
 bindir = @bindir@
 build_alias = @build_alias@
 builddir = @builddir@
@@ -164,7 +161,35 @@ exec_prefix = @exec_prefix@
 extsrc_build_commands = @extsrc_build_commands@
 extsrc_clean_commands = @extsrc_clean_commands@
 extsrcdir = @extsrcdir@
+host_AR = @host_AR@
+host_AS = @host_AS@
+host_CC = @host_CC@
+host_CFLAGS = @host_CFLAGS@
+host_CPPFLAGS = @host_CPPFLAGS@
+host_CXX = @host_CXX@
+host_CXXFLAGS = @host_CXXFLAGS@
+host_LDFLAGS = @host_LDFLAGS@
+host_LIBS = @host_LIBS@
+host_PATH = @host_PATH@
+host_PKG_CONFIG_PATH = @host_PKG_CONFIG_PATH@
+host_RANLIB = @host_RANLIB@
+host_STRIP = @host_STRIP@
 host_alias = @host_alias@
+host_bindir = @host_bindir@
+host_datadir = @host_datadir@
+host_datarootdir = @host_datarootdir@
+host_includedir = @host_includedir@
+host_libdir = @host_libdir@
+host_libpng_CPPFLAGS = @host_libpng_CPPFLAGS@
+host_libpng_LDFLAGS = @host_libpng_LDFLAGS@
+host_libpng_LIBS = @host_libpng_LIBS@
+host_mandir = @host_mandir@
+host_sbindir = @host_sbindir@
+host_sysconfdir = @host_sysconfdir@
+host_zlib_CPPFLAGS = @host_zlib_CPPFLAGS@
+host_zlib_LDFLAGS = @host_zlib_LDFLAGS@
+host_zlib_LIBS = @host_zlib_LIBS@
+hostprefix = @hostprefix@
 htmldir = @htmldir@
 includedir = @includedir@
 infodir = @infodir@
@@ -188,21 +213,10 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-AR = @PPU_AR@
-LD = @PPU_LD@
-NV40ASM = $(top_builddir)/src/cgcomp/nv40asm
-eigen_LOCATION = $(top_srcdir)/extsrc/eigen
-eigen_CPPFLAGS = -I$(eigen_LOCATION)
-AS = $(PS3DEV)/ppu/bin/ppu-as
-PSL1GHT_BIN := $(PS3DEV)/bin
-FSELF := $(PSL1GHT_BIN)/fself.py
-SELF := $(FSELF)
-SELF_NPDRM := $(PSL1GHT_BIN)/make_self_npdrm
-SFO := $(PSL1GHT_BIN)/sfo.py
-PKG := $(PSL1GHT_BIN)/pkg.py
-SPRX := $(PSL1GHT_BIN)/sprxlinker
-SFOXML := $(PSL1GHT_BIN)/sfo.xml
-ICON0 := $(PSL1GHT_BIN)/ICON0.PNG
+AR = @host_AR@
+AS = @host_AS@
+SFOXML := @top_srcdir@/src/samples/sfo.xml
+ICON0 := @top_srcdir@/src/samples/brewcrab.png
 SUFFIXES = .bin _bin.o _bin.h .png _png.o _png.h .vcg .fcg .vert .frag _vpo.o _fpo.o _vpo.h _fpo.h .vpo .fpo
 vertex_shaders = $(filter %.vert,$(notdir $(1)))
 fragment_shaders = $(filter %.frag,$(notdir $(1)))
@@ -217,6 +231,9 @@ png_image_objs = $(1:.png=_png.o)
 png_image_headers = $(1:.png=_png.h)
 image_objs = $(call png_image_objs,$(call png_images,$(1)))
 image_headers = $(call png_image_headers,$(call png_images,$(1)))
+NV40ASM = $(top_builddir)/src/cgcomp/nv40asm
+eigen_LOCATION = $(top_srcdir)/extsrc/eigen
+eigen_CPPFLAGS = -I$(eigen_LOCATION)
 BUILT_SOURCES = rsxglgears_vpo.h rsxglgears_fpo.h
 CLEANFILES = rsxglgears_vpo.h rsxglgears_fpo.h rsxglgears_vpo.o rsxglgears_fpo.o
 sources = rsxglglears.c
@@ -228,10 +245,10 @@ rsxglgears_elf_SOURCES = ../rsxgltest/main.c	\
 	../rsxgltest/math3d.cc			\
 	rsxglgears.c rsxglgears.vert rsxglgears.frag
 
-rsxglgears_elf_CPPFLAGS = -D__RSX__ -I\$(top_srcdir)/include $(eigen_CPPFLAGS) $(PS3DEV_PPU_CPPFLAGS) $(PSL1GHT_PPU_CPPFLAGS) $(PORTLIBS_PPU_CPPFLAGS) -I$(top_srcdir)/include -I$(top_srcdir)/src/library -I$(top_builddir)/src/library -I$(top_srcdir)/src/samples/rsxgltest
+rsxglgears_elf_CPPFLAGS = -D__RSX__ -I\$(top_srcdir)/include $(eigen_CPPFLAGS) $(PSL1GHT_CPPFLAGS) -I$(top_srcdir)/include -I$(top_srcdir)/src/library -I$(top_builddir)/src/library -I$(top_srcdir)/src/samples/rsxgltest
 rsxglgears_elf_CFLAGS = -std=gnu99 -fgnu89-inline -O3
-rsxglgears_elf_LDFLAGS = $(PS3DEV_PPU_LDFLAGS) $(PSL1GHT_PPU_LDFLAGS) $(PORTLIBS_PPU_LDFLAGS) -L$(top_builddir)/src/library
-rsxglgears_elf_LDADD = $(objects) -lEGL -lGL -lrsx -lgcm_sys -lnet -lio -lsysutil -lsysmodule -lpng -lz -lstdc++ -lm -lrt -llv2
+rsxglgears_elf_LDFLAGS = $(PSL1GHT_LDFLAGS) -L$(top_builddir)/src/library
+rsxglgears_elf_LDADD = $(objects) -lEGL -lGL -lrsx -lgcm_sys -lnet -lio -lsysutil -lsysmodule -lrt -llv2
 TITLE := RSXGLGEARS
 APPID := TSTRSXGL1
 CONTENTID := UP0001-$(APPID)_00-0000000000000000
@@ -558,7 +575,6 @@ uninstall-am:
 	mostlyclean-generic pdf pdf-am ps ps-am tags uninstall \
 	uninstall-am
 
-#RAW2H		:=	$(PS3DEV)/bin/raw2h
 
 define bin2o
 	$(PS3DEV)/bin/bin2s -a 64 $< | $(AS) -o $(@)
@@ -566,7 +582,6 @@ define bin2o
 	echo "extern const uint8_t" `(echo $(<F) | sed -e 's/^\([0-9]\)/_\1/' | tr . _)`"[];" >> `(echo $(<F) | tr . _)`.h
 	echo "extern const uint32_t" `(echo $(<F) | sed -e 's/^\([0-9]\)/_\1/' | tr . _)`_size";" >> `(echo $(<F) | tr . _)`.h
 endef
-CGCOMP          ?= $(PSL1GHT_BIN)/cgcomp
 
 %.vpo: %.vcg
 	@echo "[Compiling Cg vertex program] $(notdir $<)"

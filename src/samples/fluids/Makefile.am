@@ -1,15 +1,9 @@
-CC = @PPU_CC@
-CXX = @PPU_CXX@
-AR = @PPU_AR@
-RANLIB = @PPU_RANLIB@
-LD = @PPU_LD@
+include $(srcdir)/../samples.am
 
 NV40ASM = $(top_builddir)/src/cgcomp/nv40asm
 
 eigen_LOCATION = $(top_srcdir)/extsrc/eigen
 eigen_CPPFLAGS = -I$(eigen_LOCATION)
-
-include $(srcdir)/../samples.am
 
 noinst_PROGRAMS = fluids.elf
 
@@ -30,10 +24,10 @@ fluids_elf_SOURCES = ../rsxgltest/main.c		\
 	../rsxgltest/math3d.cc ../rsxgltest/texture.c	\
 	$(sources)
 
-fluids_elf_CPPFLAGS = -D__RSX__ -I\$(top_srcdir)/include $(eigen_CPPFLAGS) $(PS3DEV_PPU_CPPFLAGS) $(PSL1GHT_PPU_CPPFLAGS) $(PORTLIBS_PPU_CPPFLAGS) -I$(top_srcdir)/include -I$(top_srcdir)/src/library -I$(top_builddir)/src/library -I$(top_srcdir)/src/samples/rsxgltest
+fluids_elf_CPPFLAGS = -D__RSX__ -I\$(top_srcdir)/include $(eigen_CPPFLAGS) $(PSL1GHT_CPPFLAGS) -I$(top_srcdir)/include -I$(top_srcdir)/src/library -I$(top_builddir)/src/library -I$(top_srcdir)/src/samples/rsxgltest @host_libpng_CPPFLAGS@ @host_zlib_CPPFLAGS@
 fluids_elf_CFLAGS = -std=gnu99 -fgnu89-inline -O3
-fluids_elf_LDFLAGS = $(PS3DEV_PPU_LDFLAGS) $(PSL1GHT_PPU_LDFLAGS) $(PORTLIBS_PPU_LDFLAGS) -L$(top_builddir)/src/library
-fluids_elf_LDADD = $(objects) -lEGL -lGL -lrsx -lgcm_sys -lnet -lio -lsysutil -lsysmodule -lpng -lz -lstdc++ -lm -lrt -llv2
+fluids_elf_LDFLAGS = $(PSL1GHT_LDFLAGS) -L$(top_builddir)/src/library @host_libpng_LDFLAGS@ @host_zlib_LDFLAGS@
+fluids_elf_LDADD = $(objects) -lEGL -lGL -lrsx -lgcm_sys -lnet -lio -lsysutil -lsysmodule -lrt -llv2 @host_libpng_LIBS@ @host_zlib_LIBS@
 
 TITLE           :=      FLUIDS
 APPID           :=      TSTRSXGL3

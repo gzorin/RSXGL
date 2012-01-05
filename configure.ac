@@ -5,7 +5,6 @@ AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE([foreign])
 AC_CONFIG_FILES(
 	include/config.h
-	ps3dev.cmake
 	Makefile
 	include/Makefile
 	src/cgcomp/Makefile
@@ -13,10 +12,6 @@ AC_CONFIG_FILES(
 	src/library/rsxgl_config.h
 	src/library/GL3/rsxgl3ext.h
 	src/library/GL3/rsxgl_compatibility.h
-	src/samples/Makefile
-	src/samples/rsxgltest/Makefile
-	src/samples/rsxglgears/Makefile
-	src/samples/fluids/Makefile
 	)
 
 # Which subdirectories get built:
@@ -35,59 +30,29 @@ AC_PROG_RANLIB
 AC_LANG([C])
 AC_LANG([C++])
 
-AC_ARG_ENABLE([ppu-debug],AS_HELP_STRING([--enable-ppu-debug],[emit debugging information in PPU object code]),[ppu_debug=$enableval],[ppu_debug=0])
-AC_ARG_ENABLE([ppu-optimize],AS_HELP_STRING([--enable-ppu-optimize],[turn on optimizations for PPU object code (-O3)]),[ppu_optimize=$enableval],[ppu_optimize=yes])
+# Get the PS3DEV environment variable:
+AC_PS3DEV
 
-PPU_CPPFLAGS=""
-PPU_C_CXXFLAGS=""
-if test "$ppu_debug" == "yes"; then
-   PPU_C_CXX_FLAGS="${PPU_C_CXXFLAGS} -g -O0";
-else
-   PPU_CPPFLAGS="${PPU_CPPFLAGS} -DNDEBUG";
-fi;
+# PPU tools:
+AC_TOOLCHAIN([host],[powerpc64-ps3-elf],[${PS3DEV}/ppu/bin],[${PS3DEV}/portlibs/ppu/lib/pkgconfig])
+AC_TOOLCHAIN_PREFIX([host],[${PS3DEV}/portlibs/ppu])
+AC_TOOLCHAIN_PROG_CC([host])
+AC_TOOLCHAIN_PROG_CXX([host])
+AC_TOOLCHAIN_PATH_TOOL([host],[AR],[ar])
+AC_TOOLCHAIN_PATH_TOOL([host],[RANLIB],[ranlib])
+AC_TOOLCHAIN_PATH_TOOL([host],[AS],[as])
+AC_TOOLCHAIN_PATH_TOOL([host],[STRIP],[strip])
 
-if test "$ppu_optimize" == "yes"; then
-   PPU_C_CXXFLAGS="${PPU_C_CXXFLAGS} -O3";
-fi;
-
-PPU_CFLAGS="${PPU_C_CXXFLAGS}"
-PPU_CXXFLAGS="${PPU_C_CXXFLAGS}"
-
-AC_SUBST([PPU_CPPFLAGS])
-AC_SUBST([PPU_CFLAGS])
-AC_SUBST([PPU_CXXFLAGS])
-
-# Where is the PS3DEV toolchain?
-AC_ARG_WITH([ps3dev],AS_HELP_STRING([--with-ps3dev],[location of compiled PS3 development toolchain]),[PS3DEV=$withval],[])
-AC_MSG_NOTICE([PS3DEV is set to ${PS3DEV}])
-
-PS3DEV=${PS3DEV:-"/usr/local/ps3dev"}
-PS3DEV_PPU_CPPFLAGS="-I\${PS3DEV}/ppu/include"
-PS3DEV_PPU_LDFLAGS="-L\${PS3DEV}/ppu/lib"
-
-AC_SUBST([PS3DEV])
-AC_SUBST([PS3DEV_PPU_CPPFLAGS])
-AC_SUBST([PS3DEV_PPU_LDFLAGS])
-
-PPU_CC=${PPU_CC:-"${PS3DEV}/ppu/bin/ppu-gcc"}
-PPU_CXX=${PPU_CXX:-"${PS3DEV}/ppu/bin/ppu-g++"}
-PPU_AR=${PPU_AR:-"${PS3DEV}/ppu/bin/ppu-ar"}
-PPU_RANLIB=${PPU_RANLIB:-"${PS3DEV}/ppu/bin/ppu-ranlib"}
-PPU_LD=${PPU_LD:-"${PS3DEV}/ppu/bin/ppu-ld"}
-
-AC_SUBST([PPU_CC])
-AC_SUBST([PPU_CXX])
-AC_SUBST([PPU_AR])
-AC_SUBST([PPU_RANLIB])
-AC_SUBST([PPU_LD])
+# Find psl1ght:
+AC_PSL1GHT
 
 # Path to the static C++ standard library, so that it can be added to libGL itself, and client programs written in C won't
-# need to link with g++.
+# need to link by using g++.
 AC_ARG_WITH([ppu-cxxlib],AS_HELP_STRING([--with-ppu-cxxlib],[full path to a static C++ standard library]),[PPU_CXXLIB=$withval],[PPU_CXXLIB=""])
 
 # It wasn't specified - try to find it by querying g++ itself.
 if test -z "${PPU_CXXLIB}"; then
-   PPU_CXXLIB=`${PPU_CXX} -print-file-name=libstdc++.a`
+   PPU_CXXLIB=`${host_CXX} -print-file-name=libstdc++.a`
 elif test "${PPU_CXXLIB}" == "no"; then
    PPU_CXXLIB=""
 fi;
@@ -105,7 +70,24 @@ fi;
 
 AC_SUBST([PPU_CXXLIB])
 
-# Configure capabilities of the library itself:
+# Should the sample programs be built?
+AC_ARG_ENABLE([samples],AS_HELP_STRING([--enable-samples],[build the OpenGL sample programs]),[if test "$enableval" == "yes"; then RSXGL_samples=1; else RSXGL_samples=0; fi],[RSXGL_samples=1])
+AM_CONDITIONAL([RSXGL_samples],[ test "$RSXGL_samples" == "1" ])
+
+AM_COND_IF([RSXGL_samples],[
+	AC_CONFIG_FILES([
+	src/samples/Makefile
+	src/samples/rsxgltest/Makefile
+	src/samples/rsxglgears/Makefile
+	src/samples/fluids/Makefile
+	])
+])
+
+if test "$RSXGL_samples" == "1"; then
+   RSXGL_SUBDIRS="${RSXGL_SUBDIRS} src/samples"
+fi
+
+# Configure capabilities of the library:
 RSXGL_CONFIG_RSX_compatibility=0
 AC_ARG_ENABLE([RSX-compatibility],AS_HELP_STRING([--enable-RSX-compatibility],[configure the library to support (minimal) compatibility with older OpenGL profiles]),[if test "$enableval" == "yes"; then RSXGL_CONFIG_RSX_compatibility=1; fi],[])
 AC_SUBST([RSXGL_CONFIG_RSX_compatibility])
@@ -121,10 +103,6 @@ fi;
 AC_SUBST([RSXGL_CONFIG_samples_host_ip])
 AC_SUBST([RSXGL_CONFIG_samples_host_port])
 
-# Find cmake:
-AC_PATH_PROG([CMAKE],[cmake])
-AC_MSG_NOTICE([path to the cmake is ${CMAKE}])
-
 # Find the Cg compiler:
 AC_PATH_PROG([CGC],[cgc])
 AC_MSG_NOTICE([path to the cgc compiler is ${CGC}])
@@ -133,74 +111,13 @@ AC_MSG_NOTICE([path to the cgc compiler is ${CGC}])
 AC_PATH_PROG([LFTP],[lftp])
 AC_MSG_NOTICE([path to the lftp utility is ${LFTP}])
 
-# Where is PSL1GHT?
-AC_ARG_WITH([psl1ght],AS_HELP_STRING([--with-psl1ght],[location of compiled PSL1GHT]),[PSL1GHT=$withval],[])
+# Look for libpng:
+AC_TOOLCHAIN_EXTPKG([host],[libpng],[libpng])
 
-PSL1GHT=${PSL1GHT:-"${PS3DEV}"}
-PSL1GHT_PPU_CPPFLAGS="-I\${PSL1GHT}/ppu/include"
-PSL1GHT_PPU_LDFLAGS="-L\${PSL1GHT}/ppu/lib"
-
-AC_MSG_NOTICE([location of PSL1GHT is ${PSL1GHT}])
-
-AC_SUBST([PSL1GHT])
-AC_SUBST([PSL1GHT_PPU_CPPFLAGS])
-AC_SUBST([PSL1GHT_PPU_LDFLAGS])
-
-# Where are the ported libraries?
-AC_ARG_WITH([portlibs],AS_HELP_STRING([--with-portlibs],[location of ported libraries]),[PORTLIBS=$withval],[])
-
-PORTLIBS=${PORTLIBS:-"${PS3DEV}/portlibs"}
-PORTLIBS_PPU_CPPFLAGS="-I\${PORTLIBS}/ppu/include"
-PORTLIBS_PPU_LDFLAGS="-L\${PORTLIBS}/ppu/lib"
-
-AC_MSG_NOTICE([PORTLIBS is set to ${PORTLIBS}])
-
-AC_SUBST([PORTLIBS])
-AC_SUBST([PORTLIBS_PPU_CPPFLAGS])
-AC_SUBST([PORTLIBS_PPU_LDFLAGS])
+# Look for zlib:
+AC_TOOLCHAIN_EXTPKG([host],[zlib],[zlib])
 
 # Setup "extsrc" - "contributed" sources:
 AC_EXTSRC_INIT()
-
-# Look for the Open Asset Import library:
-AC_EXTSRC([assimp],[the Open Asset Import library])
-AC_EXTSRC_CHECK([assimp],[include/assimp.h])
-
-AM_COND_IF([assimp_SOURCE_FOUND],[AC_CONFIG_FILES([src/glassimp/Makefile src/samples/glassview/Makefile])])
-
-if test "${assimp_source_found}" == "yes"; then
-   RSXGL_SUBDIRS="${RSXGL_SUBDIRS} src/assimp src/glassimp";
-   RSXGL_SAMPLES="${RSXGL_SAMPLES} glassview";
-   AC_CONFIG_COMMANDS([assimp],
-   [
-	mkdir -p "${abs_top_builddir}/src/assimp";
-	pushd "${abs_top_builddir}/src/assimp";
-	echo "${CMAKE}" -DCMAKE_TOOLCHAIN_FILE="${abs_top_builddir}/ps3dev.cmake" \
-		   -DCMAKE_C_FLAGS="-I${abs_srcdir}/src/assimp -include ${abs_srcdir}/src/assimp/lv2_port.h" \
-		   -DCMAKE_CXX_FLAGS="-I${abs_srcdir}/src/assimp\" -include \"${abs_srcdir}/src/assimp/lv2_port.h" \
-		   -DBUILD_ASSIMP_TOOLS=OFF -DBUILD_STATIC_LIB=ON -DENABLE_BOOST_WORKAROUND=ON -DCMAKE_INSTALL_PREFIX="${prefix}" \
-		   -DZLIB_INCLUDE_DIR="${PORTLIBS}/ppu/include" \
-		   -DZLIB_LIBRARY="${PORTLIBS}/ppu/lib/libz.a" \
-		   "${assimp_SOURCE_LOCATION}";
-	"${CMAKE}" -DCMAKE_TOOLCHAIN_FILE="${abs_top_builddir}/ps3dev.cmake" \
-		   -DCMAKE_C_FLAGS="-I${abs_srcdir}/src/assimp -include ${abs_srcdir}/src/assimp/lv2_port.h" \
-		   -DCMAKE_CXX_FLAGS="-I${abs_srcdir}/src/assimp -include ${abs_srcdir}/src/assimp/lv2_port.h" \
-		   -DBUILD_ASSIMP_TOOLS=OFF -DBUILD_STATIC_LIB=ON -DENABLE_BOOST_WORKAROUND=ON -DCMAKE_INSTALL_PREFIX="${prefix}" \
-		   -DZLIB_INCLUDE_DIR="${PORTLIBS}/ppu/include" \
-		   -DZLIB_LIBRARY="${PORTLIBS}/ppu/lib/libz.a" \
-		   "${assimp_SOURCE_LOCATION}";
-	popd;
-   	],
-   [
-	abs_top_builddir=`pwd`;
-	assimp_SOURCE_LOCATION=${assimp_SOURCE_LOCATION};
-	CMAKE="${CMAKE}";
-	prefix="${prefix}";
-	abs_srcdir=$(cd "${srcdir}"; /bin/pwd);
-	PORTLIBS="${PORTLIBS}";
-	])
-fi;
-
-RSXGL_SUBDIRS="${RSXGL_SUBDIRS} src/samples"
 
 AC_OUTPUT

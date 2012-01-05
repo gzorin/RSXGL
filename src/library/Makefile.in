@@ -34,10 +34,12 @@ NORMAL_UNINSTALL = :
 PRE_UNINSTALL = :
 POST_UNINSTALL = :
 subdir = src/library
-DIST_COMMON = $(nobase_include_HEADERS) $(srcdir)/Makefile.am \
+DIST_COMMON = $(nobase_host_include_HEADERS) $(srcdir)/Makefile.am \
 	$(srcdir)/Makefile.in $(srcdir)/rsxgl_config.h.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
-am__aclocal_m4_deps = $(top_srcdir)/m4/extsrc.m4 \
+am__aclocal_m4_deps = $(top_srcdir)/m4/extpkg.m4 \
+	$(top_srcdir)/m4/extsrc.m4 $(top_srcdir)/m4/ps3dev.m4 \
+	$(top_srcdir)/m4/psl1ght.m4 $(top_srcdir)/m4/toolchain.m4 \
 	$(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
@@ -65,8 +67,9 @@ am__nobase_list = $(am__nobase_strip_setup); \
 am__base_list = \
   sed '$$!N;$$!N;$$!N;$$!N;$$!N;$$!N;$$!N;s/\n/ /g' | \
   sed '$$!N;$$!N;$$!N;$$!N;s/\n/ /g'
-am__installdirs = "$(DESTDIR)$(libdir)" "$(DESTDIR)$(includedir)"
-LIBRARIES = $(lib_LIBRARIES)
+am__installdirs = "$(DESTDIR)$(host_libdir)" \
+	"$(DESTDIR)$(host_includedir)"
+LIBRARIES = $(host_lib_LIBRARIES)
 ARFLAGS = cru
 libEGL_a_AR = $(AR) $(ARFLAGS)
 libEGL_a_LIBADD =
@@ -74,6 +77,7 @@ am_libEGL_a_OBJECTS = libEGL_a-egl.$(OBJEXT) libEGL_a-mem.$(OBJEXT) \
 	libEGL_a-malloc.$(OBJEXT)
 libEGL_a_OBJECTS = $(am_libEGL_a_OBJECTS)
 libGL_a_AR = $(AR) $(ARFLAGS)
+libGL_a_DEPENDENCIES =
 am_libGL_a_OBJECTS = libGL_a-rsxgl_context.$(OBJEXT) \
 	libGL_a-rsxgl_object_context.$(OBJEXT) \
 	libGL_a-gl_fifo.$(OBJEXT) libGL_a-error.$(OBJEXT) \
@@ -85,7 +89,8 @@ am_libGL_a_OBJECTS = libGL_a-rsxgl_context.$(OBJEXT) \
 	libGL_a-attribs.$(OBJEXT) libGL_a-uniforms.$(OBJEXT) \
 	libGL_a-textures.$(OBJEXT) libGL_a-framebuffer.$(OBJEXT) \
 	libGL_a-ringbuffer_migrate.$(OBJEXT) \
-	libGL_a-dumb_migrate.$(OBJEXT) libGL_a-debug.$(OBJEXT)
+	libGL_a-dumb_migrate.$(OBJEXT) libGL_a-debug.$(OBJEXT) \
+	libGL_a-nv40vertprog.$(OBJEXT) libGL_a-nv40fragprog.$(OBJEXT)
 libGL_a_OBJECTS = $(am_libGL_a_OBJECTS)
 DEFAULT_INCLUDES = -I.@am__isrc@
 depcomp = $(SHELL) $(top_srcdir)/config/depcomp
@@ -102,7 +107,7 @@ CXXLINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) $(LDFLAGS) \
 	-o $@
 SOURCES = $(libEGL_a_SOURCES) $(libGL_a_SOURCES)
 DIST_SOURCES = $(libEGL_a_SOURCES) $(libGL_a_SOURCES)
-HEADERS = $(nobase_include_HEADERS)
+HEADERS = $(nobase_host_include_HEADERS)
 ETAGS = etags
 CTAGS = ctags
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
@@ -112,22 +117,24 @@ AUTOCONF = @AUTOCONF@
 AUTOHEADER = @AUTOHEADER@
 AUTOMAKE = @AUTOMAKE@
 AWK = @AWK@
-CC = @PPU_CC@
+CC = @host_CC@
 CCDEPMODE = @CCDEPMODE@
-CFLAGS = -O1 @PPU_CFLAGS@
+CFLAGS = -O1 @host_CFLAGS@
 CGC = @CGC@
-CMAKE = @CMAKE@
-CPPFLAGS = @PPU_CPPFLAGS@
-CXX = @PPU_CXX@
+CPPFLAGS = @host_CPPFLAGS@
+CXX = @host_CXX@
+CXXCPP = @CXXCPP@
 CXXDEPMODE = @CXXDEPMODE@
-CXXFLAGS = -O1 @PPU_CXXFLAGS@
+CXXFLAGS = -O1 @host_CXXFLAGS@
 CYGPATH_W = @CYGPATH_W@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
 ECHO_C = @ECHO_C@
 ECHO_N = @ECHO_N@
 ECHO_T = @ECHO_T@
+EGREP = @EGREP@
 EXEEXT = @EXEEXT@
+GREP = @GREP@
 INSTALL = @INSTALL@
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
@@ -149,32 +156,27 @@ PACKAGE_TARNAME = @PACKAGE_TARNAME@
 PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
-PORTLIBS = @PORTLIBS@
-PORTLIBS_PPU_CPPFLAGS = @PORTLIBS_PPU_CPPFLAGS@
-PORTLIBS_PPU_LDFLAGS = @PORTLIBS_PPU_LDFLAGS@
-PPU_AR = @PPU_AR@
-PPU_CC = @PPU_CC@
-PPU_CFLAGS = @PPU_CFLAGS@
-PPU_CPPFLAGS = @PPU_CPPFLAGS@
-PPU_CXX = @PPU_CXX@
-PPU_CXXFLAGS = @PPU_CXXFLAGS@
+PKG = @PKG@
+PKG_CONFIG = @PKG_CONFIG@
+PKG_CONFIG_LIBDIR = @PKG_CONFIG_LIBDIR@
+PKG_CONFIG_PATH = @PKG_CONFIG_PATH@
 PPU_CXXLIB = @PPU_CXXLIB@
-PPU_LD = @PPU_LD@
-PPU_RANLIB = @PPU_RANLIB@
 PS3DEV = @PS3DEV@
-PS3DEV_PPU_CPPFLAGS = @PS3DEV_PPU_CPPFLAGS@
-PS3DEV_PPU_LDFLAGS = @PS3DEV_PPU_LDFLAGS@
 PSL1GHT = @PSL1GHT@
-PSL1GHT_PPU_CPPFLAGS = @PSL1GHT_PPU_CPPFLAGS@
-PSL1GHT_PPU_LDFLAGS = @PSL1GHT_PPU_LDFLAGS@
-RANLIB = @PPU_RANLIB@
+PSL1GHT_CPPFLAGS = @PSL1GHT_CPPFLAGS@
+PSL1GHT_LDFLAGS = @PSL1GHT_CPPFLAGS@
+RANLIB = @host_RANLIB@
 RSXGL_CONFIG_RSX_compatibility = @RSXGL_CONFIG_RSX_compatibility@
 RSXGL_CONFIG_samples_host_ip = @RSXGL_CONFIG_samples_host_ip@
 RSXGL_CONFIG_samples_host_port = @RSXGL_CONFIG_samples_host_port@
 RSXGL_SAMPLES = @RSXGL_SAMPLES@
 RSXGL_SUBDIRS = @RSXGL_SUBDIRS@
+SELF = @SELF@
+SELF_NPDRM = @SELF_NPDRM@
 SET_MAKE = @SET_MAKE@
+SFO = @SFO@
 SHELL = @SHELL@
+SPRX = @SPRX@
 STRIP = @STRIP@
 VERSION = @VERSION@
 abs_builddir = @abs_builddir@
@@ -188,8 +190,6 @@ am__leading_dot = @am__leading_dot@
 am__quote = @am__quote@
 am__tar = @am__tar@
 am__untar = @am__untar@
-assimp_SOURCE_LOCATION = @assimp_SOURCE_LOCATION@
-assimp_source_found = @assimp_source_found@
 bindir = @bindir@
 build_alias = @build_alias@
 builddir = @builddir@
@@ -201,7 +201,35 @@ exec_prefix = @exec_prefix@
 extsrc_build_commands = @extsrc_build_commands@
 extsrc_clean_commands = @extsrc_clean_commands@
 extsrcdir = @extsrcdir@
+host_AR = @host_AR@
+host_AS = @host_AS@
+host_CC = @host_CC@
+host_CFLAGS = @host_CFLAGS@
+host_CPPFLAGS = @host_CPPFLAGS@
+host_CXX = @host_CXX@
+host_CXXFLAGS = @host_CXXFLAGS@
+host_LDFLAGS = @host_LDFLAGS@
+host_LIBS = @host_LIBS@
+host_PATH = @host_PATH@
+host_PKG_CONFIG_PATH = @host_PKG_CONFIG_PATH@
+host_RANLIB = @host_RANLIB@
+host_STRIP = @host_STRIP@
 host_alias = @host_alias@
+host_bindir = @host_bindir@
+host_datadir = @host_datadir@
+host_datarootdir = @host_datarootdir@
+host_includedir = @host_includedir@
+host_libdir = @host_libdir@
+host_libpng_CPPFLAGS = @host_libpng_CPPFLAGS@
+host_libpng_LDFLAGS = @host_libpng_LDFLAGS@
+host_libpng_LIBS = @host_libpng_LIBS@
+host_mandir = @host_mandir@
+host_sbindir = @host_sbindir@
+host_sysconfdir = @host_sysconfdir@
+host_zlib_CPPFLAGS = @host_zlib_CPPFLAGS@
+host_zlib_LDFLAGS = @host_zlib_LDFLAGS@
+host_zlib_LIBS = @host_zlib_LIBS@
+hostprefix = @hostprefix@
 htmldir = @htmldir@
 includedir = @includedir@
 infodir = @infodir@
@@ -225,24 +253,24 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-AR = @PPU_AR@
-lib_LIBRARIES = libEGL.a libGL.a
-nobase_include_HEADERS = GL3/rsxgl.h GL3/gl3ext.h GL3/rsxgl3ext.h GL3/rsxgl_compatibility.h
+AR = @host_AR@
+host_lib_LIBRARIES = libEGL.a libGL.a
+nobase_host_include_HEADERS = GL3/rsxgl.h GL3/gl3ext.h GL3/rsxgl3ext.h GL3/rsxgl_compatibility.h
 dlmalloc_CPPFLAGS = -DMSPACES -DONLY_MSPACES -DHAVE_MMAP=0 -Dmalloc_getpagesize=4096
 libEGL_a_SOURCES = egl.c mem.c malloc.c
 libEGL_a_CFLAGS = -std=gnu99 -fgnu89-inline
-libEGL_a_CPPFLAGS = -D__RSX__ -I\$(top_srcdir)/include ${CPPFLAGS} -Wall $(dlmalloc_CPPFLAGS) $(PS3DEV_PPU_CPPFLAGS) $(PSL1GHT_PPU_CPPFLAGS)
-libGL_a_DEPENDENCIES = ../cgcomp/libnv40.a
+libEGL_a_CPPFLAGS = -D__RSX__ -I\$(top_srcdir)/include -Wall $(dlmalloc_CPPFLAGS) $(PSL1GHT_CPPFLAGS)
 libGL_a_SOURCES = rsxgl_context.cc rsxgl_object_context.cc gl_fifo.c					\
 	error.cc get.cc state.cc enable.cc arena.cc buffer.cc clear.cc draw.cc	\
 	sync.cc query.cc							\
 	program.cc attribs.cc uniforms.cc textures.cc framebuffer.cc		\
-	ringbuffer_migrate.cc dumb_migrate.cc debug.c
+	ringbuffer_migrate.cc dumb_migrate.cc debug.c \
+	../cgcomp/source/nv40vertprog.c ../cgcomp/source/nv40fragprog.c
 
-libGL_a_CPPFLAGS = -D__RSX__ -I\$(top_srcdir)/include $(PS3DEV_PPU_CPPFLAGS) $(PSL1GHT_PPU_CPPFLAGS) -I$(top_srcdir)/src/cgcomp/include
+libGL_a_CPPFLAGS = -D__RSX__ -I\$(top_srcdir)/include $(PSL1GHT_CPPFLAGS) -I$(top_srcdir)/src/cgcomp/include
 libGL_a_CFLAGS = -std=gnu99 -fgnu89-inline
 libGL_a_CXXFLAGS = -I$(top_srcdir)/extsrc/boost -std=c++0x -fno-rtti
-libGL_a_LIBADD = ../cgcomp/libnv40.a @PPU_CXXLIB@
+libGL_a_LIBADD = @PPU_CXXLIB@
 all: all-am
 
 .SUFFIXES:
@@ -279,38 +307,38 @@ $(ACLOCAL_M4):  $(am__aclocal_m4_deps)
 $(am__aclocal_m4_deps):
 rsxgl_config.h: $(top_builddir)/config.status $(srcdir)/rsxgl_config.h.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
-install-libLIBRARIES: $(lib_LIBRARIES)
+install-host_libLIBRARIES: $(host_lib_LIBRARIES)
 	@$(NORMAL_INSTALL)
-	test -z "$(libdir)" || $(MKDIR_P) "$(DESTDIR)$(libdir)"
-	@list='$(lib_LIBRARIES)'; test -n "$(libdir)" || list=; \
+	test -z "$(host_libdir)" || $(MKDIR_P) "$(DESTDIR)$(host_libdir)"
+	@list='$(host_lib_LIBRARIES)'; test -n "$(host_libdir)" || list=; \
 	list2=; for p in $$list; do \
 	  if test -f $$p; then \
 	    list2="$$list2 $$p"; \
 	  else :; fi; \
 	done; \
 	test -z "$$list2" || { \
-	  echo " $(INSTALL_DATA) $$list2 '$(DESTDIR)$(libdir)'"; \
-	  $(INSTALL_DATA) $$list2 "$(DESTDIR)$(libdir)" || exit $$?; }
+	  echo " $(INSTALL_DATA) $$list2 '$(DESTDIR)$(host_libdir)'"; \
+	  $(INSTALL_DATA) $$list2 "$(DESTDIR)$(host_libdir)" || exit $$?; }
 	@$(POST_INSTALL)
-	@list='$(lib_LIBRARIES)'; test -n "$(libdir)" || list=; \
+	@list='$(host_lib_LIBRARIES)'; test -n "$(host_libdir)" || list=; \
 	for p in $$list; do \
 	  if test -f $$p; then \
 	    $(am__strip_dir) \
-	    echo " ( cd '$(DESTDIR)$(libdir)' && $(RANLIB) $$f )"; \
-	    ( cd "$(DESTDIR)$(libdir)" && $(RANLIB) $$f ) || exit $$?; \
+	    echo " ( cd '$(DESTDIR)$(host_libdir)' && $(RANLIB) $$f )"; \
+	    ( cd "$(DESTDIR)$(host_libdir)" && $(RANLIB) $$f ) || exit $$?; \
 	  else :; fi; \
 	done
 
-uninstall-libLIBRARIES:
+uninstall-host_libLIBRARIES:
 	@$(NORMAL_UNINSTALL)
-	@list='$(lib_LIBRARIES)'; test -n "$(libdir)" || list=; \
+	@list='$(host_lib_LIBRARIES)'; test -n "$(host_libdir)" || list=; \
 	files=`for p in $$list; do echo $$p; done | sed -e 's|^.*/||'`; \
 	test -n "$$files" || exit 0; \
-	echo " ( cd '$(DESTDIR)$(libdir)' && rm -f "$$files" )"; \
-	cd "$(DESTDIR)$(libdir)" && rm -f $$files
+	echo " ( cd '$(DESTDIR)$(host_libdir)' && rm -f "$$files" )"; \
+	cd "$(DESTDIR)$(host_libdir)" && rm -f $$files
 
-clean-libLIBRARIES:
-	-test -z "$(lib_LIBRARIES)" || rm -f $(lib_LIBRARIES)
+clean-host_libLIBRARIES:
+	-test -z "$(host_lib_LIBRARIES)" || rm -f $(host_lib_LIBRARIES)
 libEGL.a: $(libEGL_a_OBJECTS) $(libEGL_a_DEPENDENCIES) 
 	-rm -f libEGL.a
 	$(libEGL_a_AR) libEGL.a $(libEGL_a_OBJECTS) $(libEGL_a_LIBADD)
@@ -341,6 +369,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libGL_a-framebuffer.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libGL_a-get.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libGL_a-gl_fifo.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libGL_a-nv40fragprog.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libGL_a-nv40vertprog.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libGL_a-program.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libGL_a-query.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libGL_a-ringbuffer_migrate.Po@am__quote@
@@ -434,6 +464,34 @@ libGL_a-debug.obj: debug.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='debug.c' object='libGL_a-debug.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libGL_a_CPPFLAGS) $(CPPFLAGS) $(libGL_a_CFLAGS) $(CFLAGS) -c -o libGL_a-debug.obj `if test -f 'debug.c'; then $(CYGPATH_W) 'debug.c'; else $(CYGPATH_W) '$(srcdir)/debug.c'; fi`
+
+libGL_a-nv40vertprog.o: ../cgcomp/source/nv40vertprog.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libGL_a_CPPFLAGS) $(CPPFLAGS) $(libGL_a_CFLAGS) $(CFLAGS) -MT libGL_a-nv40vertprog.o -MD -MP -MF $(DEPDIR)/libGL_a-nv40vertprog.Tpo -c -o libGL_a-nv40vertprog.o `test -f '../cgcomp/source/nv40vertprog.c' || echo '$(srcdir)/'`../cgcomp/source/nv40vertprog.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libGL_a-nv40vertprog.Tpo $(DEPDIR)/libGL_a-nv40vertprog.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='../cgcomp/source/nv40vertprog.c' object='libGL_a-nv40vertprog.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libGL_a_CPPFLAGS) $(CPPFLAGS) $(libGL_a_CFLAGS) $(CFLAGS) -c -o libGL_a-nv40vertprog.o `test -f '../cgcomp/source/nv40vertprog.c' || echo '$(srcdir)/'`../cgcomp/source/nv40vertprog.c
+
+libGL_a-nv40vertprog.obj: ../cgcomp/source/nv40vertprog.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libGL_a_CPPFLAGS) $(CPPFLAGS) $(libGL_a_CFLAGS) $(CFLAGS) -MT libGL_a-nv40vertprog.obj -MD -MP -MF $(DEPDIR)/libGL_a-nv40vertprog.Tpo -c -o libGL_a-nv40vertprog.obj `if test -f '../cgcomp/source/nv40vertprog.c'; then $(CYGPATH_W) '../cgcomp/source/nv40vertprog.c'; else $(CYGPATH_W) '$(srcdir)/../cgcomp/source/nv40vertprog.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libGL_a-nv40vertprog.Tpo $(DEPDIR)/libGL_a-nv40vertprog.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='../cgcomp/source/nv40vertprog.c' object='libGL_a-nv40vertprog.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libGL_a_CPPFLAGS) $(CPPFLAGS) $(libGL_a_CFLAGS) $(CFLAGS) -c -o libGL_a-nv40vertprog.obj `if test -f '../cgcomp/source/nv40vertprog.c'; then $(CYGPATH_W) '../cgcomp/source/nv40vertprog.c'; else $(CYGPATH_W) '$(srcdir)/../cgcomp/source/nv40vertprog.c'; fi`
+
+libGL_a-nv40fragprog.o: ../cgcomp/source/nv40fragprog.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libGL_a_CPPFLAGS) $(CPPFLAGS) $(libGL_a_CFLAGS) $(CFLAGS) -MT libGL_a-nv40fragprog.o -MD -MP -MF $(DEPDIR)/libGL_a-nv40fragprog.Tpo -c -o libGL_a-nv40fragprog.o `test -f '../cgcomp/source/nv40fragprog.c' || echo '$(srcdir)/'`../cgcomp/source/nv40fragprog.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libGL_a-nv40fragprog.Tpo $(DEPDIR)/libGL_a-nv40fragprog.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='../cgcomp/source/nv40fragprog.c' object='libGL_a-nv40fragprog.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libGL_a_CPPFLAGS) $(CPPFLAGS) $(libGL_a_CFLAGS) $(CFLAGS) -c -o libGL_a-nv40fragprog.o `test -f '../cgcomp/source/nv40fragprog.c' || echo '$(srcdir)/'`../cgcomp/source/nv40fragprog.c
+
+libGL_a-nv40fragprog.obj: ../cgcomp/source/nv40fragprog.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libGL_a_CPPFLAGS) $(CPPFLAGS) $(libGL_a_CFLAGS) $(CFLAGS) -MT libGL_a-nv40fragprog.obj -MD -MP -MF $(DEPDIR)/libGL_a-nv40fragprog.Tpo -c -o libGL_a-nv40fragprog.obj `if test -f '../cgcomp/source/nv40fragprog.c'; then $(CYGPATH_W) '../cgcomp/source/nv40fragprog.c'; else $(CYGPATH_W) '$(srcdir)/../cgcomp/source/nv40fragprog.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libGL_a-nv40fragprog.Tpo $(DEPDIR)/libGL_a-nv40fragprog.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='../cgcomp/source/nv40fragprog.c' object='libGL_a-nv40fragprog.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libGL_a_CPPFLAGS) $(CPPFLAGS) $(libGL_a_CFLAGS) $(CFLAGS) -c -o libGL_a-nv40fragprog.obj `if test -f '../cgcomp/source/nv40fragprog.c'; then $(CYGPATH_W) '../cgcomp/source/nv40fragprog.c'; else $(CYGPATH_W) '$(srcdir)/../cgcomp/source/nv40fragprog.c'; fi`
 
 .cc.o:
 @am__fastdepCXX_TRUE@	$(CXXCOMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
@@ -714,29 +772,29 @@ libGL_a-dumb_migrate.obj: dumb_migrate.cc
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='dumb_migrate.cc' object='libGL_a-dumb_migrate.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libGL_a_CPPFLAGS) $(CPPFLAGS) $(libGL_a_CXXFLAGS) $(CXXFLAGS) -c -o libGL_a-dumb_migrate.obj `if test -f 'dumb_migrate.cc'; then $(CYGPATH_W) 'dumb_migrate.cc'; else $(CYGPATH_W) '$(srcdir)/dumb_migrate.cc'; fi`
-install-nobase_includeHEADERS: $(nobase_include_HEADERS)
+install-nobase_host_includeHEADERS: $(nobase_host_include_HEADERS)
 	@$(NORMAL_INSTALL)
-	test -z "$(includedir)" || $(MKDIR_P) "$(DESTDIR)$(includedir)"
-	@list='$(nobase_include_HEADERS)'; test -n "$(includedir)" || list=; \
+	test -z "$(host_includedir)" || $(MKDIR_P) "$(DESTDIR)$(host_includedir)"
+	@list='$(nobase_host_include_HEADERS)'; test -n "$(host_includedir)" || list=; \
 	$(am__nobase_list) | while read dir files; do \
 	  xfiles=; for file in $$files; do \
 	    if test -f "$$file"; then xfiles="$$xfiles $$file"; \
 	    else xfiles="$$xfiles $(srcdir)/$$file"; fi; done; \
 	  test -z "$$xfiles" || { \
 	    test "x$$dir" = x. || { \
-	      echo "$(MKDIR_P) '$(DESTDIR)$(includedir)/$$dir'"; \
-	      $(MKDIR_P) "$(DESTDIR)$(includedir)/$$dir"; }; \
-	    echo " $(INSTALL_HEADER) $$xfiles '$(DESTDIR)$(includedir)/$$dir'"; \
-	    $(INSTALL_HEADER) $$xfiles "$(DESTDIR)$(includedir)/$$dir" || exit $$?; }; \
+	      echo "$(MKDIR_P) '$(DESTDIR)$(host_includedir)/$$dir'"; \
+	      $(MKDIR_P) "$(DESTDIR)$(host_includedir)/$$dir"; }; \
+	    echo " $(INSTALL_HEADER) $$xfiles '$(DESTDIR)$(host_includedir)/$$dir'"; \
+	    $(INSTALL_HEADER) $$xfiles "$(DESTDIR)$(host_includedir)/$$dir" || exit $$?; }; \
 	done
 
-uninstall-nobase_includeHEADERS:
+uninstall-nobase_host_includeHEADERS:
 	@$(NORMAL_UNINSTALL)
-	@list='$(nobase_include_HEADERS)'; test -n "$(includedir)" || list=; \
+	@list='$(nobase_host_include_HEADERS)'; test -n "$(host_includedir)" || list=; \
 	$(am__nobase_strip_setup); files=`$(am__nobase_strip)`; \
 	test -n "$$files" || exit 0; \
-	echo " ( cd '$(DESTDIR)$(includedir)' && rm -f" $$files ")"; \
-	cd "$(DESTDIR)$(includedir)" && rm -f $$files
+	echo " ( cd '$(DESTDIR)$(host_includedir)' && rm -f" $$files ")"; \
+	cd "$(DESTDIR)$(host_includedir)" && rm -f $$files
 
 ID: $(HEADERS) $(SOURCES) $(LISP) $(TAGS_FILES)
 	list='$(SOURCES) $(HEADERS) $(LISP) $(TAGS_FILES)'; \
@@ -824,7 +882,7 @@ check-am: all-am
 check: check-am
 all-am: Makefile $(LIBRARIES) $(HEADERS)
 installdirs:
-	for dir in "$(DESTDIR)$(libdir)" "$(DESTDIR)$(includedir)"; do \
+	for dir in "$(DESTDIR)$(host_libdir)" "$(DESTDIR)$(host_includedir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
 	done
 install: install-am
@@ -854,7 +912,7 @@ maintainer-clean-generic:
 	@echo "it deletes files that may require special tools to rebuild."
 clean: clean-am
 
-clean-am: clean-generic clean-libLIBRARIES mostlyclean-am
+clean-am: clean-generic clean-host_libLIBRARIES mostlyclean-am
 
 distclean: distclean-am
 	-rm -rf ./$(DEPDIR)
@@ -874,13 +932,14 @@ info: info-am
 
 info-am:
 
-install-data-am: install-nobase_includeHEADERS
+install-data-am: install-host_libLIBRARIES \
+	install-nobase_host_includeHEADERS
 
 install-dvi: install-dvi-am
 
 install-dvi-am:
 
-install-exec-am: install-libLIBRARIES
+install-exec-am:
 
 install-html: install-html-am
 
@@ -919,24 +978,25 @@ ps: ps-am
 
 ps-am:
 
-uninstall-am: uninstall-libLIBRARIES uninstall-nobase_includeHEADERS
+uninstall-am: uninstall-host_libLIBRARIES \
+	uninstall-nobase_host_includeHEADERS
 
 .MAKE: install-am install-strip
 
 .PHONY: CTAGS GTAGS all all-am check check-am clean clean-generic \
-	clean-libLIBRARIES ctags distclean distclean-compile \
+	clean-host_libLIBRARIES ctags distclean distclean-compile \
 	distclean-generic distclean-tags distdir dvi dvi-am html \
 	html-am info info-am install install-am install-data \
 	install-data-am install-dvi install-dvi-am install-exec \
-	install-exec-am install-html install-html-am install-info \
-	install-info-am install-libLIBRARIES install-man \
-	install-nobase_includeHEADERS install-pdf install-pdf-am \
+	install-exec-am install-host_libLIBRARIES install-html \
+	install-html-am install-info install-info-am install-man \
+	install-nobase_host_includeHEADERS install-pdf install-pdf-am \
 	install-ps install-ps-am install-strip installcheck \
 	installcheck-am installdirs maintainer-clean \
 	maintainer-clean-generic mostlyclean mostlyclean-compile \
 	mostlyclean-generic pdf pdf-am ps ps-am tags uninstall \
-	uninstall-am uninstall-libLIBRARIES \
-	uninstall-nobase_includeHEADERS
+	uninstall-am uninstall-host_libLIBRARIES \
+	uninstall-nobase_host_includeHEADERS
 
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
