@@ -8,6 +8,7 @@ AC_CONFIG_FILES(
 	Makefile
 	include/Makefile
 	src/cgcomp/Makefile
+	src/cgcomp/nv40c
 	src/library/Makefile
 	src/library/rsxgl_config.h
 	src/library/GL3/rsxgl3ext.h

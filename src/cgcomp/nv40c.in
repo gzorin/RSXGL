@@ -1,0 +1,128 @@
+#!/bin/sh
+
+progname=`basename "${0}"`
+
+function error ()
+{
+    echo "${progname}: $*" >& 2;
+    exit 1;
+}
+
+# Find cgc:
+CGC=@CGC@
+
+if ! test -x "${CGC}"; then
+    CGC=`which cgc`
+fi;
+
+if ! test -x "${CGC}"; then
+    error "cgc command not found";
+fi;
+
+# Find nv40asm:
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+NV40ASM=@bindir@/nv40asm
+
+if ! test -x "${NV40ASM}"; then
+    NV40ASM=`dirname "${0}"`/nv40asm
+fi;
+
+if ! test -x "${NV40ASM}"; then
+    NV40ASM=`which nv40asm`
+fi;
+
+if ! test -x "${NV40ASM}"; then
+    error "nv40asm command not found";
+fi;
+
+CGC_opts=""
+NV40_opts=""
+
+shader=""
+language=""
+input=""
+output=""
+
+while test -n "$1"; do
+    case "$1" in
+	-v )
+	    shader="v"
+	    ;;
+	-f )
+	    shader="f"
+	    ;;
+	-x )
+	    shift
+	    language=`echo "$1" | tr '[A-Z]' '[a-z]'`
+	    ;;
+	-o )
+	    shift
+	    output="$1"
+	    ;;
+	-Xcgc )
+	    shift
+	    CGC_opts="$CGC_opts $1"
+	    ;;
+	-Xnv40asm )
+	    shift
+	    NV40ASM_opts="$NV40_opts $1"
+	    ;;
+	-* )
+	    ;;
+
+	*)
+	    break
+	    ;;
+    esac
+
+    shift
+done
+
+input="$1"
+
+if test -z "$input"; then
+    error "no input file";
+fi
+
+if ! test -f "$input"; then
+    error "cannot read input file \"$input\"";
+fi
+
+if test -z "$shader"; then
+    error "must specify program type: either vertex (-v) or fragment (-f)";
+fi
+
+if test -n "$language" -a "$language" != "cg" -a "$language" != "glsl"; then
+    error "unknown language \"$language\"; must be either cg or glsl";
+fi
+
+input_filename=`basename "${input}"`
+input_suffix=${input_filename##*.}
+input_filename=`basename ${input_filename%.*}`
+test "${input_filename}" == "${input_suffix}" && input_suffix=""
+echo filename:$input_filename suffix:$input_suffix 
+
+# Infer settings from input file suffix:
+if test -n "${input_suffix}" ; then
+
+    # Language selection:
+    if test -z "${language}"; then
+	case "${input_suffix}" in
+	    cg | vcg | fcg )
+		language="cg"
+		;;
+	    glsl | vert | frag )
+		language="glsl"
+		;;
+	esac
+    fi
+
+    # Output filename:
+    if test -z "${output}"; then
+    fi
+fi
+
+echo shader:${shader} language:${language} input:${input} output:${output}
+
+exit 0

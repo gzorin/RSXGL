@@ -2680,7 +2680,7 @@ am__tar='${AMTAR} chof - "$$tardir"'; am__untar='${AMTAR} xf -'
 
 
 
-ac_config_files="$ac_config_files include/config.h Makefile include/Makefile src/cgcomp/Makefile src/library/Makefile src/library/rsxgl_config.h src/library/GL3/rsxgl3ext.h src/library/GL3/rsxgl_compatibility.h"
+ac_config_files="$ac_config_files include/config.h Makefile include/Makefile src/cgcomp/Makefile src/cgcomp/nv40c src/library/Makefile src/library/rsxgl_config.h src/library/GL3/rsxgl3ext.h src/library/GL3/rsxgl_compatibility.h"
 
 
 # Which subdirectories get built:
@@ -7033,6 +7033,7 @@ do
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "include/Makefile") CONFIG_FILES="$CONFIG_FILES include/Makefile" ;;
     "src/cgcomp/Makefile") CONFIG_FILES="$CONFIG_FILES src/cgcomp/Makefile" ;;
+    "src/cgcomp/nv40c") CONFIG_FILES="$CONFIG_FILES src/cgcomp/nv40c" ;;
     "src/library/Makefile") CONFIG_FILES="$CONFIG_FILES src/library/Makefile" ;;
     "src/library/rsxgl_config.h") CONFIG_FILES="$CONFIG_FILES src/library/rsxgl_config.h" ;;
     "src/library/GL3/rsxgl3ext.h") CONFIG_FILES="$CONFIG_FILES src/library/GL3/rsxgl3ext.h" ;;
