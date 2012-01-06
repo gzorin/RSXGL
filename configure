@@ -563,6 +563,7 @@ PACKAGE_BUGREPORT=''
 PACKAGE_URL=''
 
 ac_unique_file="src/library/state.cc"
+ac_default_prefix=${PS3DEV}
 # Factoring default headers for most tests.
 ac_includes_default="\
 #include <stdio.h>
@@ -4165,6 +4166,8 @@ ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
 # Where is the PS3DEV toolchain?
 
 PS3DEV=${PS3DEV:-"/usr/local/ps3dev"}
+
+
 
 
 

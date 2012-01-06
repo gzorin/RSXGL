@@ -33,6 +33,8 @@ AC_LANG([C++])
 # Get the PS3DEV environment variable:
 AC_PS3DEV
 
+AC_PREFIX_DEFAULT([${PS3DEV}])
+
 # PPU tools:
 AC_TOOLCHAIN([ppu],[powerpc64-ps3-elf],[${PS3DEV}/ppu/bin],[${PS3DEV}/portlibs/ppu/lib/pkgconfig])
 AC_TOOLCHAIN_PREFIX([ppu],[${PS3DEV}/portlibs/ppu])
