@@ -41,23 +41,13 @@ AC_PSL1GHT
 # PPU tools:
 AC_TOOLCHAIN([ppu],[ppu],[${PS3DEV}/ppu/bin],[${PS3DEV}/portlibs/ppu/lib/pkgconfig])
 
-# Pick a decent default install location for PS3 executables:
-tmp_prefix="$prefix"
-test "$tmp_prefix" == "NONE" && tmp_prefix="$ac_default_prefix"
-if test -d "$tmp_prefix"; then
-   canonical_prefix=$(cd "${tmp_prefix}"; pwd)
-else
-   canonical_prefix="$tmp_prefix";
-fi
-canonical_PS3DEV=$(cd "${PS3DEV}"; pwd)
-
-if test "$canonical_prefix" == "$canonical_PS3DEV"; then
+if test "${prefix}" == "NONE"; then
 default_ppuprefix="${PS3DEV}/portlibs/ppu"
 else
-default_ppuprefix="${tmp_prefix}/ppu"
+default_ppuprefix="${prefix}/ppu"
 fi
 
-AC_TOOLCHAIN_PREFIX([ppu],[$default_ppuprefix])
+AC_TOOLCHAIN_PREFIX([ppu],[${default_ppuprefix}])
 AC_TOOLCHAIN_PROG_CC([ppu])
 AC_TOOLCHAIN_PROG_CXX([ppu])
 AC_TOOLCHAIN_PATH_TOOL([ppu],[AR],[ar])
