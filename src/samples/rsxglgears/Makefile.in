@@ -63,7 +63,6 @@ CCLD = $(CC)
 LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
 CXXCOMPILE = $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
 	$(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS)
-CXXLD = $(CXX)
 CXXLINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) $(LDFLAGS) \
 	-o $@
 SOURCES = $(rsxglgears_elf_SOURCES)
@@ -217,6 +216,7 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AR = @ppu_AR@
 AS = @ppu_AS@
+CXXLD = PSL1GHT="@PSL1GHT@" "@ppu_CXX@"
 SFOXML := @top_srcdir@/src/samples/sfo.xml
 ICON0 := @top_srcdir@/src/samples/brewcrab.png
 local_NV40ASM = $(top_builddir)/src/cgcomp/nv40asm
