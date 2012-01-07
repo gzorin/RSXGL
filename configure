@@ -4189,6 +4189,7 @@ if test "${with_ps3dev+set}" = set; then :
 fi
 
 
+export PS3DEV
 
 if test -z "${PS3DEV}" -o "${PS3DEV}" == "no"; then
 as_fn_error $? "location of PS3 homebrew development environment is unspecified (via either PS3DEV environment variable, or --with-ps3dev configure option)" "$LINENO" 5
@@ -4212,7 +4213,9 @@ if test "${with_psl1ght+set}" = set; then :
 fi
 
 
+export PSL1GHT
 
+export PSL1GHT_PATH
 
 PSL1GHT=${PSL1GHT:-"${PS3DEV}/libpsl1ght"}
 PSL1GHT_PATH=${PSL1GHT_PATH:-"${PS3DEV}/bin"}
@@ -4339,12 +4342,29 @@ create_toolchain_stack "ac_ppu_toolchain_stack" "PATH" "PKG_CONFIG_PATH" "CPP" "
 
 
 
+# Pick a decent default install location for PS3 executables:
+tmp_prefix="$prefix"
+test "$tmp_prefix" == "NONE" && tmp_prefix="$ac_default_prefix"
+if test -d "$tmp_prefix"; then
+   canonical_prefix=$(cd "${tmp_prefix}"; pwd)
+else
+   canonical_prefix="$tmp_prefix";
+fi
+canonical_PS3DEV=$(cd "${PS3DEV}"; pwd)
+
+if test "$canonical_prefix" == "$canonical_PS3DEV"; then
+default_ppuprefix="${PS3DEV}/portlibs/ppu"
+else
+default_ppuprefix="${tmp_prefix}/ppu"
+fi
+
+
 
 # Check whether --with-ppu-prefix was given.
 if test "${with_ppu_prefix+set}" = set; then :
   withval=$with_ppu_prefix; ppuprefix="${withval}"
 else
-  ppuprefix="${PS3DEV}/portlibs/ppu"
+  ppuprefix="$default_ppuprefix"
 fi
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: products built with \"ppu\" toolchain will be stored in: \"${ppuprefix}\"" >&5

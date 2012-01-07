@@ -3,7 +3,9 @@ AC_DEFUN([AC_PSL1GHT],[
 # Where is PSL1GHT?
 AC_ARG_WITH([psl1ght],AS_HELP_STRING([--with-psl1ght],[location of compiled PSL1GHT SDK]),[PSL1GHT="$withval"],[])
 AC_ARG_VAR([PSL1GHT],[location of compiled PSL1GHT SDK (default is ${PS3DEV}/libpsl1ght)])
+export PSL1GHT
 AC_ARG_VAR([PSL1GHT_PATH],[location of PSL1GHT SDK utility programs (e.g., make_self_npdrm; default is ${PS3DEV}/bin)])
+export PSL1GHT_PATH
 
 PSL1GHT=${PSL1GHT:-"${PS3DEV}/libpsl1ght"}
 PSL1GHT_PATH=${PSL1GHT_PATH:-"${PS3DEV}/bin"}
