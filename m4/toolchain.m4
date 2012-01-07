@@ -111,17 +111,19 @@ pop_toolchain_stack "ac_$1_toolchain_stack" "PATH" "PKG_CONFIG_PATH" "CPP" "CPPF
 
 AC_DEFUN([AC_TOOLCHAIN],[
 AC_REQUIRE([_AC_TOOLCHAIN_STACK])dnl
-AC_ARG_VAR([$1_PATH],      [path to use to search for "$1" toolchain programs])dnl
-AC_ARG_VAR([$1_PKG_CONFIG_PATH],[path to use to search for packages built for "$1" toolchain])dnl
+AC_ARG_VAR([$1_TOOLCHAIN_PREFIX],[name to prefix "$1" toolchain programs with (default is "$2")])dnl
+AC_ARG_VAR([$1_PATH],      [path to use to search for "$1" toolchain programs (default is "$3")])dnl
+AC_ARG_VAR([$1_PKG_CONFIG_PATH],[path to use to search for packages built for "$1" toolchain (default is "$4")])dnl
 
 # Defaults for PATH, PKG_CONFIG_PATH
+test -n "$2" && $1_TOOLCHAIN_PREFIX=${$1_TOOLCHAIN_PREFIX:-"$2"}
 test -n "$3" && $1_PATH=${$1_PATH:-"$3"}
 test -n "$4" && $1_PKG_CONFIG_PATH=${$1_PKG_CONFIG_PATH:-"$4"}
 
 ac_$1_toolchain=yes
 
-if test -n "$2"; then
-ac_$1_toolchain_prefix=$2-
+if test -n "$1_TOOLCHAIN_PREFIX"; then
+ac_$1_toolchain_prefix="${$1_TOOLCHAIN_PREFIX}-"
 else
 ac_$1_toolchain_prefix=""
 fi
@@ -130,13 +132,14 @@ ac_$1_toolchain_path=$3
 
 create_toolchain_stack "ac_$1_toolchain_stack" "PATH" "PKG_CONFIG_PATH" "CPP" "CPPFLAGS" "CC" "CFLAGS" "OBJC" "OBJCPP" "CXX" "CXXFLAGS" "OBJCXX" "OBJCXXCPP" "LDFLAGS" "LIBS"
 
+AC_SUBST([$1_TOOLCHAIN_PREFIX])
 AC_SUBST([$1_PATH])
 AC_SUBST([$1_PKG_CONFIG_PATH])
 ])
 
 AC_DEFUN([AC_TOOLCHAIN_PREFIX],[
 AC_ARG_WITH([$1-prefix],AS_HELP_STRING([--with-$1-prefix=PREFIX],[install products built with the "$1" toolchain in PREFIX]),[$1prefix="${withval}"],[$1prefix="$2"])
-AC_MSG_NOTICE([products built with "$1" toolchain will be stored in: ${$1prefix}])
+AC_MSG_NOTICE([products built with "$1" toolchain will be stored in: "${$1prefix}"])
 
 $1_bindir="${$1prefix}/bin"
 $1_libdir="${$1prefix}/lib"

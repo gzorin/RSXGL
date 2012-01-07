@@ -1,7 +1,5 @@
 include $(srcdir)/../samples.am
 
-NV40ASM = $(top_builddir)/src/cgcomp/nv40asm
-
 eigen_LOCATION = $(top_srcdir)/extsrc/eigen
 eigen_CPPFLAGS = -I$(eigen_LOCATION)
 

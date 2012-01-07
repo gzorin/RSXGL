@@ -190,6 +190,7 @@ ppu_PATH = @ppu_PATH@
 ppu_PKG_CONFIG_PATH = @ppu_PKG_CONFIG_PATH@
 ppu_RANLIB = @ppu_RANLIB@
 ppu_STRIP = @ppu_STRIP@
+ppu_TOOLCHAIN_PREFIX = @ppu_TOOLCHAIN_PREFIX@
 ppu_bindir = @ppu_bindir@
 ppu_datadir = @ppu_datadir@
 ppu_datarootdir = @ppu_datarootdir@

@@ -19,7 +19,7 @@ AC_CONFIG_FILES(
 RSXGL_SUBDIRS="include src/cgcomp src/library"
 
 # Determine which samples get built:
-RSXGL_SAMPLES="rsxgltest rsxglgears fluids"
+RSXGL_SAMPLES="rsxgltest rsxglgears"
 
 AC_SUBST([RSXGL_SUBDIRS])
 AC_SUBST([RSXGL_SAMPLES])
@@ -33,11 +33,13 @@ AC_LANG([C++])
 
 # Get the PS3DEV environment variable:
 AC_PS3DEV
-
 AC_PREFIX_DEFAULT([${PS3DEV}])
 
+# Find psl1ght:
+AC_PSL1GHT
+
 # PPU tools:
-AC_TOOLCHAIN([ppu],[powerpc64-ps3-elf],[${PS3DEV}/ppu/bin],[${PS3DEV}/portlibs/ppu/lib/pkgconfig])
+AC_TOOLCHAIN([ppu],[ppu],[${PS3DEV}/ppu/bin],[${PS3DEV}/portlibs/ppu/lib/pkgconfig])
 AC_TOOLCHAIN_PREFIX([ppu],[${PS3DEV}/portlibs/ppu])
 AC_TOOLCHAIN_PROG_CC([ppu])
 AC_TOOLCHAIN_PROG_CXX([ppu])
@@ -46,8 +48,8 @@ AC_TOOLCHAIN_PATH_TOOL([ppu],[RANLIB],[ranlib])
 AC_TOOLCHAIN_PATH_TOOL([ppu],[AS],[as])
 AC_TOOLCHAIN_PATH_TOOL([ppu],[STRIP],[strip])
 
-# Find psl1ght:
-AC_PSL1GHT
+AC_PSL1GHT_PATH_PROGS
+AC_PSL1GHT_CHECK_HEADERS
 
 # Path to the static C++ standard library, so that it can be added to libGL itself, and client programs written in C won't
 # need to link by using g++.
@@ -74,7 +76,7 @@ fi;
 AC_SUBST([PPU_CXXLIB])
 
 # Should the sample programs be built?
-AC_ARG_ENABLE([samples],AS_HELP_STRING([--enable-samples],[build the OpenGL sample programs]),[if test "$enableval" == "yes"; then RSXGL_samples=1; else RSXGL_samples=0; fi],[RSXGL_samples=1])
+AC_ARG_ENABLE([samples],AS_HELP_STRING([--disable-samples],[do not build the OpenGL sample programs]),[if test "$enableval" == "yes"; then RSXGL_samples=1; else RSXGL_samples=0; fi],[RSXGL_samples=1])
 AM_CONDITIONAL([RSXGL_samples],[ test "$RSXGL_samples" == "1" ])
 
 AM_COND_IF([RSXGL_samples],[
@@ -82,7 +84,6 @@ AM_COND_IF([RSXGL_samples],[
 	src/samples/Makefile
 	src/samples/rsxgltest/Makefile
 	src/samples/rsxglgears/Makefile
-	src/samples/fluids/Makefile
 	])
 ])
 
@@ -107,7 +108,7 @@ AC_SUBST([RSXGL_CONFIG_samples_host_ip])
 AC_SUBST([RSXGL_CONFIG_samples_host_port])
 
 # Set the default value of NV40ASM, passed to nv40c:
-NV40ASM="${bindir}/nv40asm"
+NV40ASM="\${bindir}/nv40asm"
 AC_SUBST([NV40ASM])
 
 # Find the Cg compiler:

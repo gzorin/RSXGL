@@ -22,6 +22,9 @@ if ! test -x "${CGC}"; then
 fi;
 
 # Find the default nv40asm:
+prefix="@prefix@"
+exec_prefix="@exec_prefix@"
+bindir="@bindir@"
 default_NV40ASM="@NV40ASM@"
 if ! test -x "${default_NV40ASM}"; then
     default_NV40ASM=`which nv40asm`

@@ -110,7 +110,7 @@ LIBS = @LIBS@
 LTLIBOBJS = @LTLIBOBJS@
 MAKEINFO = @MAKEINFO@
 MKDIR_P = @MKDIR_P@
-NV40ASM = $(top_builddir)/src/cgcomp/nv40asm
+NV40ASM = @NV40ASM@
 OBJEXT = @OBJEXT@
 PACKAGE = @PACKAGE@
 PACKAGE_BUGREPORT = @PACKAGE_BUGREPORT@
@@ -191,6 +191,7 @@ ppu_PATH = @ppu_PATH@
 ppu_PKG_CONFIG_PATH = @ppu_PKG_CONFIG_PATH@
 ppu_RANLIB = @ppu_RANLIB@
 ppu_STRIP = @ppu_STRIP@
+ppu_TOOLCHAIN_PREFIX = @ppu_TOOLCHAIN_PREFIX@
 ppu_bindir = @ppu_bindir@
 ppu_datadir = @ppu_datadir@
 ppu_datarootdir = @ppu_datarootdir@
@@ -221,6 +222,8 @@ AR = @ppu_AR@
 AS = @ppu_AS@
 SFOXML := @top_srcdir@/src/samples/sfo.xml
 ICON0 := @top_srcdir@/src/samples/brewcrab.png
+local_NV40ASM = $(top_builddir)/src/cgcomp/nv40asm
+NV40C = $(top_builddir)/src/cgcomp/nv40c
 SUFFIXES = .bin _bin.o _bin.h .png _png.o _png.h .vcg .fcg .vert .frag _vpo.o _fpo.o _vpo.h _fpo.h .vpo .fpo
 vertex_shaders = $(filter %.vert,$(notdir $(1)))
 fragment_shaders = $(filter %.frag,$(notdir $(1)))
@@ -658,19 +661,19 @@ endef
 
 %.vpo: %.vcg
 	@echo "[Compiling Cg vertex program] $(notdir $<)"
-	@$(CGC) -profile vp40 $^ | $(NV40ASM) -v > $@
+	@CGC=$(CGC) NV40ASM=$(local_NV40ASM) $(NV40C) -v -x cg -o $@ $^
 
 %.fpo: %.fcg
 	@echo "[Compiling Cg fragment program] $(notdir $<)"
-	@$(CGC) -profile fp40 $^ | $(NV40ASM) -f > $@
+	@CGC=$(CGC) NV40ASM=$(local_NV40ASM) $(NV40C) -f -x cg -o $@ $^
 
 %.vpo: %.vert
 	@echo "[Compiling GLSL vertex program] $(notdir $<)"
-	@$(CGC) -oglsl -profile vp40 $^ | $(NV40ASM) -v > $@
+	@CGC=$(CGC) NV40ASM=$(local_NV40ASM) $(NV40C) -v -x glsl -o $@ $^
 
 %.fpo: %.frag
 	@echo "[Compiling GLSL fragment program] $(notdir $<)"
-	@$(CGC) -oglsl -profile fp40 $^ | $(NV40ASM) -f > $@
+	@CGC=$(CGC) NV40ASM=$(local_NV40ASM) $(NV40C) -f -x glsl -o $@ $^
 
 %.self: %.elf
 	@echo "[SELF] $@"

@@ -26,23 +26,26 @@ LFTP		:= @LFTP@
 SFOXML		:= @top_srcdir@/src/samples/sfo.xml
 ICON0		:= @top_srcdir@/src/samples/brewcrab.png
 
+local_NV40ASM = $(top_builddir)/src/cgcomp/nv40asm
+NV40C = $(top_builddir)/src/cgcomp/nv40c
+
 SUFFIXES = .bin _bin.o _bin.h .png _png.o _png.h .vcg .fcg .vert .frag _vpo.o _fpo.o _vpo.h _fpo.h .vpo .fpo
 
 %.vpo: %.vcg
 	@echo "[Compiling Cg vertex program] $(notdir $<)"
-	@$(CGC) -profile vp40 $^ | $(NV40ASM) -v > $@
+	@CGC=$(CGC) NV40ASM=$(local_NV40ASM) $(NV40C) -v -x cg -o $@ $^
 
 %.fpo: %.fcg
 	@echo "[Compiling Cg fragment program] $(notdir $<)"
-	@$(CGC) -profile fp40 $^ | $(NV40ASM) -f > $@
+	@CGC=$(CGC) NV40ASM=$(local_NV40ASM) $(NV40C) -f -x cg -o $@ $^
 
 %.vpo: %.vert
 	@echo "[Compiling GLSL vertex program] $(notdir $<)"
-	@$(CGC) -oglsl -profile vp40 $^ | $(NV40ASM) -v > $@
+	@CGC=$(CGC) NV40ASM=$(local_NV40ASM) $(NV40C) -v -x glsl -o $@ $^
 
 %.fpo: %.frag
 	@echo "[Compiling GLSL fragment program] $(notdir $<)"
-	@$(CGC) -oglsl -profile fp40 $^ | $(NV40ASM) -f > $@
+	@CGC=$(CGC) NV40ASM=$(local_NV40ASM) $(NV40C) -f -x glsl -o $@ $^
 
 %.self: %.elf
 	@echo "[SELF] $@"

@@ -625,17 +625,14 @@ RSXGL_CONFIG_RSX_compatibility
 RSXGL_samples_FALSE
 RSXGL_samples_TRUE
 PPU_CXXLIB
+EGREP
+GREP
+CXXCPP
 SPRX
 PKG
 SFO
 SELF_NPDRM
 SELF
-PSL1GHT_LDFLAGS
-PSL1GHT_CPPFLAGS
-PSL1GHT
-EGREP
-GREP
-CXXCPP
 ppu_STRIP
 ppu_AS
 ppu_RANLIB
@@ -658,6 +655,10 @@ ppu_bindir
 ppuprefix
 ppu_PKG_CONFIG_PATH
 ppu_PATH
+ppu_TOOLCHAIN_PREFIX
+PSL1GHT_LDFLAGS
+PSL1GHT_CPPFLAGS
+PSL1GHT
 PS3DEV
 RANLIB
 am__fastdepCXX_FALSE
@@ -749,8 +750,9 @@ ac_subst_files=''
 ac_user_opts='
 enable_option_checking
 enable_dependency_tracking
-with_ppu_prefix
+with_ps3dev
 with_psl1ght
+with_ppu_prefix
 with_ppu_cxxlib
 enable_samples
 enable_RSX_compatibility
@@ -770,6 +772,8 @@ CXX
 CXXFLAGS
 CCC
 PS3DEV
+PSL1GHT
+ppu_TOOLCHAIN_PREFIX
 ppu_PATH
 ppu_PKG_CONFIG_PATH
 ppu_CC
@@ -1408,7 +1412,7 @@ Optional Features:
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
   --disable-dependency-tracking  speeds up one-time build
   --enable-dependency-tracking   do not reject slow dependency extractors
-  --enable-samples        build the OpenGL sample programs
+  --disable-samples       do not build the OpenGL sample programs
   --enable-RSX-compatibility
                           configure the library to support (minimal)
                           compatibility with older OpenGL profiles
@@ -1416,10 +1420,11 @@ Optional Features:
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
+  --with-ps3dev           location of PS3 homebrew development environment
+  --with-psl1ght          location of compiled PSL1GHT SDK
   --with-ppu-prefix=PREFIX
                           install products built with the "ppu" toolchain in
                           PREFIX
-  --with-psl1ght          location of compiled PSL1GHT
   --with-ppu-cxxlib       full path to a static C++ standard library
   --with-samples-host-ip  IP address of host for samples to send reporting to
   --with-samples-host-port
@@ -1436,10 +1441,15 @@ Some influential environment variables:
               you have headers in a nonstandard directory <include dir>
   CXX         C++ compiler command
   CXXFLAGS    C++ compiler flags
-  PS3DEV      location of compiled PS3 development toolchain
-  ppu_PATH    path to use to search for "ppu" toolchain programs
+  PS3DEV      location of PS3 homebrew development environment
+  PSL1GHT     location of compiled PSL1GHT SDK
+  ppu_TOOLCHAIN_PREFIX
+              name to prefix "ppu" toolchain programs with (default is "ppu")
+  ppu_PATH    path to use to search for "ppu" toolchain programs (default is
+              "${PS3DEV}/ppu/bin")
   ppu_PKG_CONFIG_PATH
               path to use to search for packages built for "ppu" toolchain
+              (default is "${PS3DEV}/portlibs/ppu/lib/pkgconfig")
   ppu_CC      C compiler command for "ppu" toolchain
   ppu_CFLAGS  C compiler flags for "ppu" toolchain
   ppu_LDFLAGS linker flags for "ppu" toolchain
@@ -2688,7 +2698,7 @@ ac_config_files="$ac_config_files include/config.h Makefile include/Makefile src
 RSXGL_SUBDIRS="include src/cgcomp src/library"
 
 # Determine which samples get built:
-RSXGL_SAMPLES="rsxgltest rsxglgears fluids"
+RSXGL_SAMPLES="rsxgltest rsxglgears"
 
 
 
@@ -4164,9 +4174,51 @@ ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
 
 # Get the PS3DEV environment variable:
 
+
 # Where is the PS3DEV toolchain?
 
-PS3DEV=${PS3DEV:-"/usr/local/ps3dev"}
+# Check whether --with-ps3dev was given.
+if test "${with_ps3dev+set}" = set; then :
+  withval=$with_ps3dev; PS3DEV="$withval"
+fi
+
+
+
+if test -z "${PS3DEV}" -o "${PS3DEV}" == "no"; then
+as_fn_error $? "location of PS3 homebrew development environment is unspecified (via either PS3DEV environment variable, or --with-ps3dev configure option)" "$LINENO" 5
+else
+{ $as_echo "$as_me:${as_lineno-$LINENO}: location of PS3 homebrew development environment is \"${PS3DEV}\"" >&5
+$as_echo "$as_me: location of PS3 homebrew development environment is \"${PS3DEV}\"" >&6;}
+fi
+
+
+
+
+
+# Find psl1ght:
+
+
+# Where is PSL1GHT?
+
+# Check whether --with-psl1ght was given.
+if test "${with_psl1ght+set}" = set; then :
+  withval=$with_psl1ght; PSL1GHT="$withval"
+fi
+
+
+
+PSL1GHT=${PSL1GHT:-"${PS3DEV}/libpsl1ght"}
+
+if test -z "${PSL1GHT}" -o "${PSL1GHT}" == "no"; then
+as_fn_error $? "location of PSL1GHT SDK is unspecified (via either PSL1GHT environment variable, or --with-psl1ght configure option)" "$LINENO" 5
+else
+{ $as_echo "$as_me:${as_lineno-$LINENO}: location of PSL1GHT SDK is \"${PSL1GHT}\"" >&5
+$as_echo "$as_me: location of PSL1GHT SDK is \"${PSL1GHT}\"" >&6;}
+fi
+
+PSL1GHT_CPPFLAGS="-I\${PSL1GHT}/ppu/include"
+PSL1GHT_LDFLAGS="-L\${PSL1GHT}/ppu/lib"
+
 
 
 
@@ -4258,13 +4310,14 @@ function pop_toolchain_stack ()
 
 
 # Defaults for PATH, PKG_CONFIG_PATH
+test -n "ppu" && ppu_TOOLCHAIN_PREFIX=${ppu_TOOLCHAIN_PREFIX:-"ppu"}
 test -n "${PS3DEV}/ppu/bin" && ppu_PATH=${ppu_PATH:-"${PS3DEV}/ppu/bin"}
 test -n "${PS3DEV}/portlibs/ppu/lib/pkgconfig" && ppu_PKG_CONFIG_PATH=${ppu_PKG_CONFIG_PATH:-"${PS3DEV}/portlibs/ppu/lib/pkgconfig"}
 
 ac_ppu_toolchain=yes
 
-if test -n "powerpc64-ps3-elf"; then
-ac_ppu_toolchain_prefix=powerpc64-ps3-elf-
+if test -n "ppu_TOOLCHAIN_PREFIX"; then
+ac_ppu_toolchain_prefix="${ppu_TOOLCHAIN_PREFIX}-"
 else
 ac_ppu_toolchain_prefix=""
 fi
@@ -4278,6 +4331,7 @@ create_toolchain_stack "ac_ppu_toolchain_stack" "PATH" "PKG_CONFIG_PATH" "CPP" "
 
 
 
+
 # Check whether --with-ppu-prefix was given.
 if test "${with_ppu_prefix+set}" = set; then :
   withval=$with_ppu_prefix; ppuprefix="${withval}"
@@ -4285,8 +4339,8 @@ else
   ppuprefix="${PS3DEV}/portlibs/ppu"
 fi
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: products built with \"ppu\" toolchain will be stored in: ${ppuprefix}" >&5
-$as_echo "$as_me: products built with \"ppu\" toolchain will be stored in: ${ppuprefix}" >&6;}
+{ $as_echo "$as_me:${as_lineno-$LINENO}: products built with \"ppu\" toolchain will be stored in: \"${ppuprefix}\"" >&5
+$as_echo "$as_me: products built with \"ppu\" toolchain will be stored in: \"${ppuprefix}\"" >&6;}
 
 ppu_bindir="${ppuprefix}/bin"
 ppu_libdir="${ppuprefix}/lib"
@@ -5049,7 +5103,211 @@ fi
 pop_toolchain_stack "ac_ppu_toolchain_stack" "PATH"
 
 
-# Find psl1ght:
+
+# Find various PSL1GHT tools:
+save_PATH="${PATH}"; PATH="${PSL1GHT}/bin:${PATH}"
+# Extract the first word of "fself.py", so it can be a program name with args.
+set dummy fself.py; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_path_SELF+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $SELF in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_SELF="$SELF" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_test_x "$as_dir/$ac_word$ac_exec_ext"; }; then
+    ac_cv_path_SELF="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+SELF=$ac_cv_path_SELF
+if test -n "$SELF"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $SELF" >&5
+$as_echo "$SELF" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+# Extract the first word of "make_self_npdrm", so it can be a program name with args.
+set dummy make_self_npdrm; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_path_SELF_NPDRM+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $SELF_NPDRM in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_SELF_NPDRM="$SELF_NPDRM" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_test_x "$as_dir/$ac_word$ac_exec_ext"; }; then
+    ac_cv_path_SELF_NPDRM="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+SELF_NPDRM=$ac_cv_path_SELF_NPDRM
+if test -n "$SELF_NPDRM"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $SELF_NPDRM" >&5
+$as_echo "$SELF_NPDRM" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+# Extract the first word of "sfo.py", so it can be a program name with args.
+set dummy sfo.py; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_path_SFO+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $SFO in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_SFO="$SFO" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_test_x "$as_dir/$ac_word$ac_exec_ext"; }; then
+    ac_cv_path_SFO="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+SFO=$ac_cv_path_SFO
+if test -n "$SFO"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $SFO" >&5
+$as_echo "$SFO" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+# Extract the first word of "pkg.py", so it can be a program name with args.
+set dummy pkg.py; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_path_PKG+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $PKG in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_PKG="$PKG" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_test_x "$as_dir/$ac_word$ac_exec_ext"; }; then
+    ac_cv_path_PKG="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+PKG=$ac_cv_path_PKG
+if test -n "$PKG"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $PKG" >&5
+$as_echo "$PKG" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+# Extract the first word of "sprxlinker", so it can be a program name with args.
+set dummy sprxlinker; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_path_SPRX+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $SPRX in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_SPRX="$SPRX" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_test_x "$as_dir/$ac_word$ac_exec_ext"; }; then
+    ac_cv_path_SPRX="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+SPRX=$ac_cv_path_SPRX
+if test -n "$SPRX"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $SPRX" >&5
+$as_echo "$SPRX" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+PATH="${save_PATH}"
+
 
 ac_ext=cpp
 ac_cpp='$CXXCPP $CPPFLAGS'
@@ -5445,17 +5703,6 @@ done
 
 
 
-
-# Where is PSL1GHT?
-
-# Check whether --with-psl1ght was given.
-if test "${with_psl1ght+set}" = set; then :
-  withval=$with_psl1ght; PSL1GHT=$withval
-fi
-
-
-PSL1GHT=${PSL1GHT:-"${PS3DEV}/libpsl1ght"}
-
 # Check for PSL1GHT's rsx/gcm_sys.h:
 
 push_toolchain_stack "ac_ppu_toolchain_stack" \
@@ -5485,220 +5732,6 @@ fi
 
 
 pop_toolchain_stack "ac_ppu_toolchain_stack" "PATH" "PKG_CONFIG_PATH" "CPP" "CPPFLAGS" "CC" "CFLAGS" "OBJC" "OBJCPP" "CXX" "CXXFLAGS" "OBJCXX" "OBJCXXCPP" "LDFLAGS" "LIBS"
-
-
-{ $as_echo "$as_me:${as_lineno-$LINENO}: location of PSL1GHT is ${PSL1GHT}" >&5
-$as_echo "$as_me: location of PSL1GHT is ${PSL1GHT}" >&6;}
-PSL1GHT_CPPFLAGS="-I\${PSL1GHT}/ppu/include"
-PSL1GHT_LDFLAGS="-L\${PSL1GHT}/ppu/lib"
-
-
-
-
-
-# Find various PSL1GHT tools:
-save_PATH="${PATH}"; PATH="${PSL1GHT}/bin:${PATH}"
-# Extract the first word of "fself.py", so it can be a program name with args.
-set dummy fself.py; ac_word=$2
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
-$as_echo_n "checking for $ac_word... " >&6; }
-if ${ac_cv_path_SELF+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  case $SELF in
-  [\\/]* | ?:[\\/]*)
-  ac_cv_path_SELF="$SELF" # Let the user override the test with a path.
-  ;;
-  *)
-  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
-for as_dir in $PATH
-do
-  IFS=$as_save_IFS
-  test -z "$as_dir" && as_dir=.
-    for ac_exec_ext in '' $ac_executable_extensions; do
-  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_test_x "$as_dir/$ac_word$ac_exec_ext"; }; then
-    ac_cv_path_SELF="$as_dir/$ac_word$ac_exec_ext"
-    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
-    break 2
-  fi
-done
-  done
-IFS=$as_save_IFS
-
-  ;;
-esac
-fi
-SELF=$ac_cv_path_SELF
-if test -n "$SELF"; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $SELF" >&5
-$as_echo "$SELF" >&6; }
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-fi
-
-
-# Extract the first word of "make_self_npdrm", so it can be a program name with args.
-set dummy make_self_npdrm; ac_word=$2
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
-$as_echo_n "checking for $ac_word... " >&6; }
-if ${ac_cv_path_SELF_NPDRM+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  case $SELF_NPDRM in
-  [\\/]* | ?:[\\/]*)
-  ac_cv_path_SELF_NPDRM="$SELF_NPDRM" # Let the user override the test with a path.
-  ;;
-  *)
-  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
-for as_dir in $PATH
-do
-  IFS=$as_save_IFS
-  test -z "$as_dir" && as_dir=.
-    for ac_exec_ext in '' $ac_executable_extensions; do
-  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_test_x "$as_dir/$ac_word$ac_exec_ext"; }; then
-    ac_cv_path_SELF_NPDRM="$as_dir/$ac_word$ac_exec_ext"
-    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
-    break 2
-  fi
-done
-  done
-IFS=$as_save_IFS
-
-  ;;
-esac
-fi
-SELF_NPDRM=$ac_cv_path_SELF_NPDRM
-if test -n "$SELF_NPDRM"; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $SELF_NPDRM" >&5
-$as_echo "$SELF_NPDRM" >&6; }
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-fi
-
-
-# Extract the first word of "sfo.py", so it can be a program name with args.
-set dummy sfo.py; ac_word=$2
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
-$as_echo_n "checking for $ac_word... " >&6; }
-if ${ac_cv_path_SFO+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  case $SFO in
-  [\\/]* | ?:[\\/]*)
-  ac_cv_path_SFO="$SFO" # Let the user override the test with a path.
-  ;;
-  *)
-  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
-for as_dir in $PATH
-do
-  IFS=$as_save_IFS
-  test -z "$as_dir" && as_dir=.
-    for ac_exec_ext in '' $ac_executable_extensions; do
-  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_test_x "$as_dir/$ac_word$ac_exec_ext"; }; then
-    ac_cv_path_SFO="$as_dir/$ac_word$ac_exec_ext"
-    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
-    break 2
-  fi
-done
-  done
-IFS=$as_save_IFS
-
-  ;;
-esac
-fi
-SFO=$ac_cv_path_SFO
-if test -n "$SFO"; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $SFO" >&5
-$as_echo "$SFO" >&6; }
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-fi
-
-
-# Extract the first word of "pkg.py", so it can be a program name with args.
-set dummy pkg.py; ac_word=$2
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
-$as_echo_n "checking for $ac_word... " >&6; }
-if ${ac_cv_path_PKG+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  case $PKG in
-  [\\/]* | ?:[\\/]*)
-  ac_cv_path_PKG="$PKG" # Let the user override the test with a path.
-  ;;
-  *)
-  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
-for as_dir in $PATH
-do
-  IFS=$as_save_IFS
-  test -z "$as_dir" && as_dir=.
-    for ac_exec_ext in '' $ac_executable_extensions; do
-  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_test_x "$as_dir/$ac_word$ac_exec_ext"; }; then
-    ac_cv_path_PKG="$as_dir/$ac_word$ac_exec_ext"
-    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
-    break 2
-  fi
-done
-  done
-IFS=$as_save_IFS
-
-  ;;
-esac
-fi
-PKG=$ac_cv_path_PKG
-if test -n "$PKG"; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $PKG" >&5
-$as_echo "$PKG" >&6; }
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-fi
-
-
-# Extract the first word of "sprxlinker", so it can be a program name with args.
-set dummy sprxlinker; ac_word=$2
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
-$as_echo_n "checking for $ac_word... " >&6; }
-if ${ac_cv_path_SPRX+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  case $SPRX in
-  [\\/]* | ?:[\\/]*)
-  ac_cv_path_SPRX="$SPRX" # Let the user override the test with a path.
-  ;;
-  *)
-  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
-for as_dir in $PATH
-do
-  IFS=$as_save_IFS
-  test -z "$as_dir" && as_dir=.
-    for ac_exec_ext in '' $ac_executable_extensions; do
-  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_test_x "$as_dir/$ac_word$ac_exec_ext"; }; then
-    ac_cv_path_SPRX="$as_dir/$ac_word$ac_exec_ext"
-    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
-    break 2
-  fi
-done
-  done
-IFS=$as_save_IFS
-
-  ;;
-esac
-fi
-SPRX=$ac_cv_path_SPRX
-if test -n "$SPRX"; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $SPRX" >&5
-$as_echo "$SPRX" >&6; }
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-fi
-
-
-PATH="${save_PATH}"
 
 
 
@@ -5755,7 +5788,7 @@ fi
 
 if  test "$RSXGL_samples" == "1" ; then
 
-	ac_config_files="$ac_config_files src/samples/Makefile src/samples/rsxgltest/Makefile src/samples/rsxglgears/Makefile src/samples/fluids/Makefile"
+	ac_config_files="$ac_config_files src/samples/Makefile src/samples/rsxgltest/Makefile src/samples/rsxglgears/Makefile"
 
 
 fi
@@ -5799,7 +5832,7 @@ fi;
 
 
 # Set the default value of NV40ASM, passed to nv40c:
-NV40ASM="${bindir}/nv40asm"
+NV40ASM="\${bindir}/nv40asm"
 
 
 # Find the Cg compiler:
@@ -7047,7 +7080,6 @@ do
     "src/samples/Makefile") CONFIG_FILES="$CONFIG_FILES src/samples/Makefile" ;;
     "src/samples/rsxgltest/Makefile") CONFIG_FILES="$CONFIG_FILES src/samples/rsxgltest/Makefile" ;;
     "src/samples/rsxglgears/Makefile") CONFIG_FILES="$CONFIG_FILES src/samples/rsxglgears/Makefile" ;;
-    "src/samples/fluids/Makefile") CONFIG_FILES="$CONFIG_FILES src/samples/fluids/Makefile" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
   esac
