@@ -658,6 +658,7 @@ ppu_PATH
 ppu_TOOLCHAIN_PREFIX
 PSL1GHT_LDFLAGS
 PSL1GHT_CPPFLAGS
+PSL1GHT_PATH
 PSL1GHT
 PS3DEV
 RANLIB
@@ -773,6 +774,7 @@ CXXFLAGS
 CCC
 PS3DEV
 PSL1GHT
+PSL1GHT_PATH
 ppu_TOOLCHAIN_PREFIX
 ppu_PATH
 ppu_PKG_CONFIG_PATH
@@ -1442,7 +1444,11 @@ Some influential environment variables:
   CXX         C++ compiler command
   CXXFLAGS    C++ compiler flags
   PS3DEV      location of PS3 homebrew development environment
-  PSL1GHT     location of compiled PSL1GHT SDK
+  PSL1GHT     location of compiled PSL1GHT SDK (default is
+              ${PS3DEV}/libpsl1ght)
+  PSL1GHT_PATH
+              location of PSL1GHT SDK utility programs (e.g., make_self_npdrm;
+              default is ${PS3DEV}/bin)
   ppu_TOOLCHAIN_PREFIX
               name to prefix "ppu" toolchain programs with (default is "ppu")
   ppu_PATH    path to use to search for "ppu" toolchain programs (default is
@@ -4207,7 +4213,9 @@ fi
 
 
 
+
 PSL1GHT=${PSL1GHT:-"${PS3DEV}/libpsl1ght"}
+PSL1GHT_PATH=${PSL1GHT_PATH:-"${PS3DEV}/bin"}
 
 if test -z "${PSL1GHT}" -o "${PSL1GHT}" == "no"; then
 as_fn_error $? "location of PSL1GHT SDK is unspecified (via either PSL1GHT environment variable, or --with-psl1ght configure option)" "$LINENO" 5
@@ -5105,7 +5113,9 @@ pop_toolchain_stack "ac_ppu_toolchain_stack" "PATH"
 
 
 # Find various PSL1GHT tools:
-save_PATH="${PATH}"; PATH="${PSL1GHT}/bin:${PATH}"
+{ $as_echo "$as_me:${as_lineno-$LINENO}: looking for PSL1GHT utility programs (PSL1GHT_PATH is \"${PSL1GHT_PATH}\")" >&5
+$as_echo "$as_me: looking for PSL1GHT utility programs (PSL1GHT_PATH is \"${PSL1GHT_PATH}\")" >&6;}
+save_PATH="${PATH}"; PATH="${PSL1GHT_PATH}:${PATH}"
 # Extract the first word of "fself.py", so it can be a program name with args.
 set dummy fself.py; ac_word=$2
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
@@ -5770,11 +5780,18 @@ fi;
 
 
 # Should the sample programs be built?
+test -x "${SELF}" && test -x "${SELF_NPDRM}" && test -x "${SFO}" && test -x "${PKG}" && test -x "${SPRX}" && RSXGL_samples_possible="1";
+
+if ! test "${RSXGL_samples_possible}" == "1"; then
+{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: cannot find one or more of the PSL1GHT SDK programs (e.g., make_self_npdrm), samples cannot be built" >&5
+$as_echo "$as_me: WARNING: cannot find one or more of the PSL1GHT SDK programs (e.g., make_self_npdrm), samples cannot be built" >&2;}
+fi
+
 # Check whether --enable-samples was given.
 if test "${enable_samples+set}" = set; then :
-  enableval=$enable_samples; if test "$enableval" == "yes"; then RSXGL_samples=1; else RSXGL_samples=0; fi
+  enableval=$enable_samples; if test "$enableval" == "yes"; then RSXGL_samples=$RSXGL_samples_possible; else RSXGL_samples=0; fi
 else
-  RSXGL_samples=1
+  RSXGL_samples=$RSXGL_samples_possible
 fi
 
  if  test "$RSXGL_samples" == "1" ; then

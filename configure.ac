@@ -76,7 +76,13 @@ fi;
 AC_SUBST([PPU_CXXLIB])
 
 # Should the sample programs be built?
-AC_ARG_ENABLE([samples],AS_HELP_STRING([--disable-samples],[do not build the OpenGL sample programs]),[if test "$enableval" == "yes"; then RSXGL_samples=1; else RSXGL_samples=0; fi],[RSXGL_samples=1])
+test -x "${SELF}" && test -x "${SELF_NPDRM}" && test -x "${SFO}" && test -x "${PKG}" && test -x "${SPRX}" && RSXGL_samples_possible="1";
+
+if ! test "${RSXGL_samples_possible}" == "1"; then
+AC_MSG_WARN([cannot find one or more of the PSL1GHT SDK programs (e.g., make_self_npdrm), samples cannot be built])
+fi
+
+AC_ARG_ENABLE([samples],AS_HELP_STRING([--disable-samples],[do not build the OpenGL sample programs]),[if test "$enableval" == "yes"; then RSXGL_samples=$RSXGL_samples_possible; else RSXGL_samples=0; fi],[RSXGL_samples=$RSXGL_samples_possible])
 AM_CONDITIONAL([RSXGL_samples],[ test "$RSXGL_samples" == "1" ])
 
 AM_COND_IF([RSXGL_samples],[
