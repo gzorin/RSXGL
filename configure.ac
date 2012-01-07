@@ -106,6 +106,10 @@ fi;
 AC_SUBST([RSXGL_CONFIG_samples_host_ip])
 AC_SUBST([RSXGL_CONFIG_samples_host_port])
 
+# Set the default value of NV40ASM, passed to nv40c:
+NV40ASM="${bindir}/nv40asm"
+AC_SUBST([NV40ASM])
+
 # Find the Cg compiler:
 AC_PATH_PROG([CGC],[cgc])
 AC_MSG_NOTICE([path to the cgc compiler is ${CGC}])

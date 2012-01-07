@@ -107,6 +107,7 @@ LIBS = @LIBS@
 LTLIBOBJS = @LTLIBOBJS@
 MAKEINFO = @MAKEINFO@
 MKDIR_P = @MKDIR_P@
+NV40ASM = $(top_builddir)/src/cgcomp/nv40asm
 OBJEXT = @OBJEXT@
 PACKAGE = @PACKAGE@
 PACKAGE_BUGREPORT = @PACKAGE_BUGREPORT@
@@ -231,7 +232,6 @@ png_image_objs = $(1:.png=_png.o)
 png_image_headers = $(1:.png=_png.h)
 image_objs = $(call png_image_objs,$(call png_images,$(1)))
 image_headers = $(call png_image_headers,$(call png_images,$(1)))
-NV40ASM = $(top_builddir)/src/cgcomp/nv40asm
 eigen_LOCATION = $(top_srcdir)/extsrc/eigen
 eigen_CPPFLAGS = -I$(eigen_LOCATION)
 BUILT_SOURCES = rsxglgears_vpo.h rsxglgears_fpo.h

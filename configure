@@ -618,6 +618,7 @@ PKG_CONFIG_PATH
 PKG_CONFIG
 LFTP
 CGC
+NV40ASM
 RSXGL_CONFIG_samples_host_port
 RSXGL_CONFIG_samples_host_ip
 RSXGL_CONFIG_RSX_compatibility
@@ -5795,6 +5796,10 @@ if test "$RSXGL_CONFIG_samples_host_ip" == "no" -o -z "$RSXGL_CONFIG_samples_hos
    RSXGL_CONFIG_samples_host_port=0
 fi;
 
+
+
+# Set the default value of NV40ASM, passed to nv40c:
+NV40ASM="${bindir}/nv40asm"
 
 
 # Find the Cg compiler:

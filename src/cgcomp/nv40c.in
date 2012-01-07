@@ -4,36 +4,34 @@ progname=`basename "${0}"`
 
 function error ()
 {
-    echo "${progname}: $*" >& 2;
+    printf "${progname}: $*\n" >& 2;
     exit 1;
 }
 
+# Find the default cgc:
+default_CGC="@CGC@"
+if ! test -x "${default_CGC}"; then
+    default_CGC=`which cgc`
+fi
+
 # Find cgc:
-CGC=@CGC@
+CGC=${CGC:-"${default_CGC}"}
 
 if ! test -x "${CGC}"; then
-    CGC=`which cgc`
+    error "cgc \"${CGC}\" command not found or not executable";
 fi;
 
-if ! test -x "${CGC}"; then
-    error "cgc command not found";
-fi;
+# Find the default nv40asm:
+default_NV40ASM="@NV40ASM@"
+if ! test -x "${default_NV40ASM}"; then
+    default_NV40ASM=`which nv40asm`
+fi
 
 # Find nv40asm:
-prefix=@prefix@
-exec_prefix=@exec_prefix@
-NV40ASM=@bindir@/nv40asm
+NV40ASM=${NV40ASM:-"${default_NV40ASM}"}
 
 if ! test -x "${NV40ASM}"; then
-    NV40ASM=`dirname "${0}"`/nv40asm
-fi;
-
-if ! test -x "${NV40ASM}"; then
-    NV40ASM=`which nv40asm`
-fi;
-
-if ! test -x "${NV40ASM}"; then
-    error "nv40asm command not found";
+    error "nv40asm \"${NV40ASM}\" command not found or not executable";
 fi;
 
 CGC_opts=""
@@ -101,10 +99,9 @@ input_filename=`basename "${input}"`
 input_suffix=${input_filename##*.}
 input_filename=`basename ${input_filename%.*}`
 test "${input_filename}" == "${input_suffix}" && input_suffix=""
-echo filename:$input_filename suffix:$input_suffix 
 
 # Infer settings from input file suffix:
-if test -n "${input_suffix}" ; then
+if test -n "${input_suffix}"; then
 
     # Language selection:
     if test -z "${language}"; then
@@ -117,12 +114,46 @@ if test -n "${input_suffix}" ; then
 		;;
 	esac
     fi
+fi
+
+# Infer settings from input file base:
+if test -n "${input_filename}"; then
 
     # Output filename:
     if test -z "${output}"; then
+	case "${shader}" in
+	    v )
+		output="${input_filename}.vpo"
+		;;
+	    f )
+		output="${input_filename}.fpo"
+		;;
+	esac
     fi
 fi
 
-echo shader:${shader} language:${language} input:${input} output:${output}
+# Setup command line options:
+case "$shader" in
+    v )
+	CGC_opts="-profile vp40 $CGC_opts"
+	NV40ASM_opts="-v ${NV40ASM_opts}"
+	shader_pretty="vertex"
+	;;
+
+    f )
+	CGC_opts="-profile fp40 $CGC_opts"
+	NV40ASM_opts="-f ${NV40ASM_opts}"
+	shader_pretty="fragment"
+	;;
+esac
+
+case "$language" in
+    glsl )
+	CGC_opts="-oglsl ${CGC_opts}"
+	;;
+esac
+
+printf "compiling ${language} ${shader_pretty} program \"${input}\"..." >& 2
+"${CGC}" ${CGC_opts} "${input}" | "${NV40ASM}" ${NV40ASM_opts} > "${output}"
 
 exit 0
