@@ -563,7 +563,7 @@ PACKAGE_BUGREPORT=''
 PACKAGE_URL=''
 
 ac_unique_file="src/library/state.cc"
-ac_default_prefix=${PS3DEV}
+ac_default_prefix=${PS3DEV}/ppu
 # Factoring default headers for most tests.
 ac_includes_default="\
 #include <stdio.h>
@@ -1444,8 +1444,7 @@ Some influential environment variables:
   CXX         C++ compiler command
   CXXFLAGS    C++ compiler flags
   PS3DEV      location of PS3 homebrew development environment
-  PSL1GHT     location of compiled PSL1GHT SDK (default is
-              ${PS3DEV}/libpsl1ght)
+  PSL1GHT     location of compiled PSL1GHT SDK (default is ${PS3DEV})
   PSL1GHT_PATH
               location of PSL1GHT SDK utility programs (e.g., make_self_npdrm;
               default is ${PS3DEV}/bin)
@@ -4191,12 +4190,10 @@ fi
 
 export PS3DEV
 
-if test -z "${PS3DEV}" -o "${PS3DEV}" == "no"; then
-as_fn_error $? "location of PS3 homebrew development environment is unspecified (via either PS3DEV environment variable, or --with-ps3dev configure option)" "$LINENO" 5
-else
+PS3DEV=${PS3DEV:-"/usr/local/ps3dev"}
+
 { $as_echo "$as_me:${as_lineno-$LINENO}: location of PS3 homebrew development environment is \"${PS3DEV}\"" >&5
 $as_echo "$as_me: location of PS3 homebrew development environment is \"${PS3DEV}\"" >&6;}
-fi
 
 
 
@@ -4217,7 +4214,7 @@ export PSL1GHT
 
 export PSL1GHT_PATH
 
-PSL1GHT=${PSL1GHT:-"${PS3DEV}/libpsl1ght"}
+PSL1GHT=${PSL1GHT:-"${PS3DEV}"}
 PSL1GHT_PATH=${PSL1GHT_PATH:-"${PS3DEV}/bin"}
 
 if test -z "${PSL1GHT}" -o "${PSL1GHT}" == "no"; then
@@ -4227,8 +4224,8 @@ else
 $as_echo "$as_me: location of PSL1GHT SDK is \"${PSL1GHT}\"" >&6;}
 fi
 
-PSL1GHT_CPPFLAGS="-I\${PSL1GHT}/ppu/include"
-PSL1GHT_LDFLAGS="-L\${PSL1GHT}/ppu/lib"
+PSL1GHT_CPPFLAGS="-I${PSL1GHT}/ppu/include"
+PSL1GHT_LDFLAGS="-L${PSL1GHT}/ppu/lib"
 
 
 
@@ -4343,7 +4340,7 @@ create_toolchain_stack "ac_ppu_toolchain_stack" "PATH" "PKG_CONFIG_PATH" "CPP" "
 
 
 if test "${prefix}" == "NONE"; then
-default_ppuprefix="${PS3DEV}/portlibs/ppu"
+default_ppuprefix="${PS3DEV}/ppu"
 else
 default_ppuprefix="${prefix}/ppu"
 fi
@@ -5741,7 +5738,7 @@ push_toolchain_stack "ac_ppu_toolchain_stack" \
 		     "LDFLAGS" "${ppu_LDFLAGS}" \
 		     "LIBS" "${ppu_LIBS}"
 
-CPPFLAGS="-I${PSL1GHT}/ppu/include ${CPPFLAGS}"
+CPPFLAGS="${PSL1GHT_CPPFLAGS} ${CPPFLAGS}"
 ac_fn_cxx_check_header_mongrel "$LINENO" "rsx/gcm_sys.h" "ac_cv_header_rsx_gcm_sys_h" "$ac_includes_default"
 if test "x$ac_cv_header_rsx_gcm_sys_h" = xyes; then :
 
@@ -5957,6 +5954,7 @@ $as_echo "$as_me: path to the lftp utility is ${LFTP}" >&6;}
 
 
 
+
 if test "x$ac_cv_env_PKG_CONFIG_set" != "xset"; then
 	if test -n "$ac_tool_prefix"; then
   # Extract the first word of "${ac_tool_prefix}pkg-config", so it can be a program name with args.
@@ -6091,6 +6089,7 @@ if test -n "$ppu_libpng_CPPFLAGS"; then
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; then
   pkg_cv_ppu_libpng_CPPFLAGS=`$PKG_CONFIG --cflags "libpng" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
 else
   pkg_failed=yes
 fi
@@ -6107,6 +6106,7 @@ if test -n "$ppu_libpng_LDFLAGS"; then
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; then
   pkg_cv_ppu_libpng_LDFLAGS=`$PKG_CONFIG --libs-only-L "libpng" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
 else
   pkg_failed=yes
 fi
@@ -6123,6 +6123,7 @@ if test -n "$ppu_libpng_LIBS"; then
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; then
   pkg_cv_ppu_libpng_LIBS=`$PKG_CONFIG --libs-only-l "libpng" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
 else
   pkg_failed=yes
 fi
@@ -6212,6 +6213,7 @@ if test -n "$ppu_zlib_CPPFLAGS"; then
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; then
   pkg_cv_ppu_zlib_CPPFLAGS=`$PKG_CONFIG --cflags "zlib" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
 else
   pkg_failed=yes
 fi
@@ -6228,6 +6230,7 @@ if test -n "$ppu_zlib_LDFLAGS"; then
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; then
   pkg_cv_ppu_zlib_LDFLAGS=`$PKG_CONFIG --libs-only-L "zlib" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
 else
   pkg_failed=yes
 fi
@@ -6244,6 +6247,7 @@ if test -n "$ppu_zlib_LIBS"; then
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; then
   pkg_cv_ppu_zlib_LIBS=`$PKG_CONFIG --libs-only-l "zlib" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
 else
   pkg_failed=yes
 fi

@@ -33,7 +33,7 @@ AC_LANG([C++])
 
 # Get the PS3DEV environment variable:
 AC_PS3DEV
-AC_PREFIX_DEFAULT([${PS3DEV}])
+AC_PREFIX_DEFAULT([${PS3DEV}/ppu])
 
 # Find psl1ght:
 AC_PSL1GHT
@@ -42,7 +42,7 @@ AC_PSL1GHT
 AC_TOOLCHAIN([ppu],[ppu],[${PS3DEV}/ppu/bin],[${PS3DEV}/portlibs/ppu/lib/pkgconfig])
 
 if test "${prefix}" == "NONE"; then
-default_ppuprefix="${PS3DEV}/portlibs/ppu"
+default_ppuprefix="${PS3DEV}/ppu"
 else
 default_ppuprefix="${prefix}/ppu"
 fi

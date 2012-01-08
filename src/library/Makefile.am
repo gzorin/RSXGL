@@ -7,7 +7,7 @@ CFLAGS = -O1 @ppu_CFLAGS@
 CXXFLAGS = -O1 @ppu_CXXFLAGS@
 CPPFLAGS = @ppu_CPPFLAGS@
 PSL1GHT_CPPFLAGS = @PSL1GHT_CPPFLAGS@
-PSL1GHT_LDFLAGS = @PSL1GHT_CPPFLAGS@
+PSL1GHT_LDFLAGS = @PSL1GHT_LDFLAGS@
 
 ppu_lib_LIBRARIES = libEGL.a libGL.a
 nobase_ppu_include_HEADERS = GL3/rsxgl.h GL3/gl3ext.h GL3/rsxgl3ext.h GL3/rsxgl_compatibility.h
