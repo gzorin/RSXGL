@@ -313,10 +313,5 @@ AC_LANG_POP(C++)dnl
 
 #AC_TOOLCHAIN_EXTPKG(toolchain-tag,variable-prefix,modules)
 AC_DEFUN([AC_TOOLCHAIN_EXTPKG],[
-save_PKG_CONFIG_PATH="${PKG_CONFIG_PATH}"
-
-if test -n "${$1_PKG_CONFIG_PATH}"; then export PKG_CONFIG_PATH="${$1_PKG_CONFIG_PATH}:${PKG_CONFIG_PATH}"; fi
-AC_EXTPKG([$1_$2],[$3])
-
-export PKG_CONFIG_PATH="${save_PKG_CONFIG_PATH}"
+AC_EXTPKG([$1_$2],[$3],[$4:${$1_PKG_CONFIG_PATH}])
 ])

@@ -5,12 +5,21 @@ AC_ARG_VAR([$1][_CPPFLAGS],[C preprocessor flags for $1, overriding pkg-config])
 AC_ARG_VAR([$1][_LDFLAGS],[linker flags for $1, overriding pkg-config])dnl
 AC_ARG_VAR([$1][_LIBS],[library flags for $1, overriding pkg-config])dnl
 
-pkg_failed=no
-AC_MSG_CHECKING([for $1])
+if test -n "$3"; then
+   tmp_PKG_CONFIG_PATH="$3"
+else
+   tmp_PKG_CONFIG_PATH="${PKG_CONFIG_PATH}"
+fi
 
+pkg_failed=no
+AC_MSG_CHECKING([for $1 (PKG_CONFIG_PATH is "${tmp_PKG_CONFIG_PATH}")])
+
+save_PKG_CONFIG_PATH="${PKG_CONFIG_PATH}";
+export PKG_CONFIG_PATH="${tmp_PKG_CONFIG_PATH}"
 _PKG_CONFIG([$1][_CPPFLAGS],[cflags],[$2])
 _PKG_CONFIG([$1][_LDFLAGS],[libs-only-L],[$2])
 _PKG_CONFIG([$1][_LIBS],[libs-only-l],[$2])
+export PKG_CONFIG_PATH="${save_PKG_CONFIG_PATH}"
 
 m4_define([_PKG_TEXT], [Alternatively, you may set the environment variables $1[]_CPPFLAGS
 and $1[]_LIBS to avoid the need to call pkg-config.
@@ -20,9 +29,9 @@ if test $pkg_failed = yes; then
    	AC_MSG_RESULT([no])
         _PKG_SHORT_ERRORS_SUPPORTED
         if test $_pkg_short_errors_supported = yes; then
-	        $1[]_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "$2" 2>&1`
+	        $1[]_PKG_ERRORS=`PKG_CONFIG_PATH="${tmp_PKG_CONFIG_PATH}" $PKG_CONFIG --short-errors --print-errors --cflags --libs "$2" 2>&1`
         else 
-	        $1[]_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "$2" 2>&1`
+	        $1[]_PKG_ERRORS=`PKG_CONFIG_PATH="${tmp_PKG_CONFIG_PATH}" $PKG_CONFIG --print-errors --cflags --libs "$2" 2>&1`
         fi
 	# Put the nasty error message in config.log where it belongs
 	echo "$$1[]_PKG_ERRORS" >&AS_MESSAGE_LOG_FD
@@ -56,7 +65,6 @@ else
 	AC_SUBST($1[]_CPPFLAGS)
 	AC_SUBST($1[]_LDFLAGS)
 	AC_SUBST($1[]_LIBS)
-	$3
 fi[]dnl
 
 ])

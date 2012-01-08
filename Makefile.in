@@ -231,6 +231,7 @@ ppu_libpng_CPPFLAGS = @ppu_libpng_CPPFLAGS@
 ppu_libpng_LDFLAGS = @ppu_libpng_LDFLAGS@
 ppu_libpng_LIBS = @ppu_libpng_LIBS@
 ppu_mandir = @ppu_mandir@
+ppu_portlibs_PKG_CONFIG_PATH = @ppu_portlibs_PKG_CONFIG_PATH@
 ppu_sbindir = @ppu_sbindir@
 ppu_sysconfdir = @ppu_sysconfdir@
 ppu_zlib_CPPFLAGS = @ppu_zlib_CPPFLAGS@

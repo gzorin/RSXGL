@@ -616,6 +616,7 @@ ppu_libpng_CPPFLAGS
 PKG_CONFIG_LIBDIR
 PKG_CONFIG_PATH
 PKG_CONFIG
+ppu_portlibs_PKG_CONFIG_PATH
 LFTP
 CGC
 NV40ASM
@@ -787,6 +788,7 @@ ppu_CXX
 ppu_CXXFLAGS
 ppu_CCC
 CXXCPP
+ppu_portlibs_PKG_CONFIG_PATH
 PKG_CONFIG
 PKG_CONFIG_PATH
 PKG_CONFIG_LIBDIR
@@ -1454,7 +1456,7 @@ Some influential environment variables:
               "${PS3DEV}/ppu/bin")
   ppu_PKG_CONFIG_PATH
               path to use to search for packages built for "ppu" toolchain
-              (default is "${PS3DEV}/portlibs/ppu/lib/pkgconfig")
+              (default is "${PS3DEV}/ppu/lib/pkgconfig")
   ppu_CC      C compiler command for "ppu" toolchain
   ppu_CFLAGS  C compiler flags for "ppu" toolchain
   ppu_LDFLAGS linker flags for "ppu" toolchain
@@ -1465,6 +1467,9 @@ Some influential environment variables:
   ppu_CXXFLAGS
               C++ compiler flags for "ppu" toolchain
   CXXCPP      C++ preprocessor
+  ppu_portlibs_PKG_CONFIG_PATH
+              pkg-config search paths for PS3 ported libraries (default is
+              "${PS3DEV}/portlibs/ppu/lib/pkgconfig")
   PKG_CONFIG  path to pkg-config utility
   PKG_CONFIG_PATH
               directories to add to pkg-config's search path
@@ -4320,7 +4325,7 @@ function pop_toolchain_stack ()
 # Defaults for PATH, PKG_CONFIG_PATH
 test -n "ppu" && ppu_TOOLCHAIN_PREFIX=${ppu_TOOLCHAIN_PREFIX:-"ppu"}
 test -n "${PS3DEV}/ppu/bin" && ppu_PATH=${ppu_PATH:-"${PS3DEV}/ppu/bin"}
-test -n "${PS3DEV}/portlibs/ppu/lib/pkgconfig" && ppu_PKG_CONFIG_PATH=${ppu_PKG_CONFIG_PATH:-"${PS3DEV}/portlibs/ppu/lib/pkgconfig"}
+test -n "${PS3DEV}/ppu/lib/pkgconfig" && ppu_PKG_CONFIG_PATH=${ppu_PKG_CONFIG_PATH:-"${PS3DEV}/ppu/lib/pkgconfig"}
 
 ac_ppu_toolchain=yes
 
@@ -5947,6 +5952,12 @@ fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: path to the lftp utility is ${LFTP}" >&5
 $as_echo "$as_me: path to the lftp utility is ${LFTP}" >&6;}
 
+# Look for libraries normally stored under "${PS3DEV}/portlibs"
+
+ppu_portlibs_PKG_CONFIG_PATH=${ppu_portlibs_PKG_CONFIG_PATH:-"${PS3DEV}/portlibs/ppu/lib/pkgconfig"}
+{ $as_echo "$as_me:${as_lineno-$LINENO}: pkg-config search paths for PPU ported libraries are \"${ppu_portlibs_PKG_CONFIG_PATH}\"" >&5
+$as_echo "$as_me: pkg-config search paths for PPU ported libraries are \"${ppu_portlibs_PKG_CONFIG_PATH}\"" >&6;}
+
 # Look for libpng:
 
 
@@ -6069,16 +6080,21 @@ $as_echo "no" >&6; }
 	fi
 fi
 
-save_PKG_CONFIG_PATH="${PKG_CONFIG_PATH}"
-
-if test -n "${ppu_PKG_CONFIG_PATH}"; then export PKG_CONFIG_PATH="${ppu_PKG_CONFIG_PATH}:${PKG_CONFIG_PATH}"; fi
 
 
+
+if test -n "${ppu_portlibs_PKG_CONFIG_PATH}:${ppu_PKG_CONFIG_PATH}"; then
+   tmp_PKG_CONFIG_PATH="${ppu_portlibs_PKG_CONFIG_PATH}:${ppu_PKG_CONFIG_PATH}"
+else
+   tmp_PKG_CONFIG_PATH="${PKG_CONFIG_PATH}"
+fi
 
 pkg_failed=no
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for ppu_libpng" >&5
-$as_echo_n "checking for ppu_libpng... " >&6; }
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for ppu_libpng (PKG_CONFIG_PATH is \"${tmp_PKG_CONFIG_PATH}\")" >&5
+$as_echo_n "checking for ppu_libpng (PKG_CONFIG_PATH is \"${tmp_PKG_CONFIG_PATH}\")... " >&6; }
 
+save_PKG_CONFIG_PATH="${PKG_CONFIG_PATH}";
+export PKG_CONFIG_PATH="${tmp_PKG_CONFIG_PATH}"
 if test -n "$ppu_libpng_CPPFLAGS"; then
     pkg_cv_ppu_libpng_CPPFLAGS="$ppu_libpng_CPPFLAGS"
  elif test -n "$PKG_CONFIG"; then
@@ -6130,6 +6146,7 @@ fi
  else
     pkg_failed=untried
 fi
+export PKG_CONFIG_PATH="${save_PKG_CONFIG_PATH}"
 
 
 
@@ -6143,9 +6160,9 @@ else
         _pkg_short_errors_supported=no
 fi
         if test $_pkg_short_errors_supported = yes; then
-	        ppu_libpng_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "libpng" 2>&1`
+	        ppu_libpng_PKG_ERRORS=`PKG_CONFIG_PATH="${tmp_PKG_CONFIG_PATH}" $PKG_CONFIG --short-errors --print-errors --cflags --libs "libpng" 2>&1`
         else
-	        ppu_libpng_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "libpng" 2>&1`
+	        ppu_libpng_PKG_ERRORS=`PKG_CONFIG_PATH="${tmp_PKG_CONFIG_PATH}" $PKG_CONFIG --print-errors --cflags --libs "libpng" 2>&1`
         fi
 	# Put the nasty error message in config.log where it belongs
 	echo "$ppu_libpng_PKG_ERRORS" >&5
@@ -6184,25 +6201,27 @@ $as_echo "yes" >&6; }
 
 
 
-
 fi
 
-
-export PKG_CONFIG_PATH="${save_PKG_CONFIG_PATH}"
 
 
 # Look for zlib:
 
-save_PKG_CONFIG_PATH="${PKG_CONFIG_PATH}"
-
-if test -n "${ppu_PKG_CONFIG_PATH}"; then export PKG_CONFIG_PATH="${ppu_PKG_CONFIG_PATH}:${PKG_CONFIG_PATH}"; fi
 
 
+
+if test -n "${ppu_portlibs_PKG_CONFIG_PATH}:${ppu_PKG_CONFIG_PATH}"; then
+   tmp_PKG_CONFIG_PATH="${ppu_portlibs_PKG_CONFIG_PATH}:${ppu_PKG_CONFIG_PATH}"
+else
+   tmp_PKG_CONFIG_PATH="${PKG_CONFIG_PATH}"
+fi
 
 pkg_failed=no
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for ppu_zlib" >&5
-$as_echo_n "checking for ppu_zlib... " >&6; }
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for ppu_zlib (PKG_CONFIG_PATH is \"${tmp_PKG_CONFIG_PATH}\")" >&5
+$as_echo_n "checking for ppu_zlib (PKG_CONFIG_PATH is \"${tmp_PKG_CONFIG_PATH}\")... " >&6; }
 
+save_PKG_CONFIG_PATH="${PKG_CONFIG_PATH}";
+export PKG_CONFIG_PATH="${tmp_PKG_CONFIG_PATH}"
 if test -n "$ppu_zlib_CPPFLAGS"; then
     pkg_cv_ppu_zlib_CPPFLAGS="$ppu_zlib_CPPFLAGS"
  elif test -n "$PKG_CONFIG"; then
@@ -6254,6 +6273,7 @@ fi
  else
     pkg_failed=untried
 fi
+export PKG_CONFIG_PATH="${save_PKG_CONFIG_PATH}"
 
 
 
@@ -6267,9 +6287,9 @@ else
         _pkg_short_errors_supported=no
 fi
         if test $_pkg_short_errors_supported = yes; then
-	        ppu_zlib_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "zlib" 2>&1`
+	        ppu_zlib_PKG_ERRORS=`PKG_CONFIG_PATH="${tmp_PKG_CONFIG_PATH}" $PKG_CONFIG --short-errors --print-errors --cflags --libs "zlib" 2>&1`
         else
-	        ppu_zlib_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "zlib" 2>&1`
+	        ppu_zlib_PKG_ERRORS=`PKG_CONFIG_PATH="${tmp_PKG_CONFIG_PATH}" $PKG_CONFIG --print-errors --cflags --libs "zlib" 2>&1`
         fi
 	# Put the nasty error message in config.log where it belongs
 	echo "$ppu_zlib_PKG_ERRORS" >&5
@@ -6308,11 +6328,8 @@ $as_echo "yes" >&6; }
 
 
 
-
 fi
 
-
-export PKG_CONFIG_PATH="${save_PKG_CONFIG_PATH}"
 
 
 # Setup "extsrc" - "contributed" sources:

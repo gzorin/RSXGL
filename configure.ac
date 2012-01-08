@@ -39,7 +39,7 @@ AC_PREFIX_DEFAULT([${PS3DEV}/ppu])
 AC_PSL1GHT
 
 # PPU tools:
-AC_TOOLCHAIN([ppu],[ppu],[${PS3DEV}/ppu/bin],[${PS3DEV}/portlibs/ppu/lib/pkgconfig])
+AC_TOOLCHAIN([ppu],[ppu],[${PS3DEV}/ppu/bin],[${PS3DEV}/ppu/lib/pkgconfig])
 
 if test "${prefix}" == "NONE"; then
 default_ppuprefix="${PS3DEV}/ppu"
@@ -132,11 +132,16 @@ AC_MSG_NOTICE([path to the cgc compiler is ${CGC}])
 AC_PATH_PROG([LFTP],[lftp])
 AC_MSG_NOTICE([path to the lftp utility is ${LFTP}])
 
+# Look for libraries normally stored under "${PS3DEV}/portlibs"
+AC_ARG_VAR([ppu_portlibs_PKG_CONFIG_PATH],[pkg-config search paths for PS3 ported libraries (default is "${PS3DEV}/portlibs/ppu/lib/pkgconfig")])
+ppu_portlibs_PKG_CONFIG_PATH=${ppu_portlibs_PKG_CONFIG_PATH:-"${PS3DEV}/portlibs/ppu/lib/pkgconfig"}
+AC_MSG_NOTICE([pkg-config search paths for PPU ported libraries are "${ppu_portlibs_PKG_CONFIG_PATH}"])
+
 # Look for libpng:
-AC_TOOLCHAIN_EXTPKG([ppu],[libpng],[libpng])
+AC_TOOLCHAIN_EXTPKG([ppu],[libpng],[libpng],[${ppu_portlibs_PKG_CONFIG_PATH}])
 
 # Look for zlib:
-AC_TOOLCHAIN_EXTPKG([ppu],[zlib],[zlib])
+AC_TOOLCHAIN_EXTPKG([ppu],[zlib],[zlib],[${ppu_portlibs_PKG_CONFIG_PATH}])
 
 # Setup "extsrc" - "contributed" sources:
 AC_EXTSRC_INIT()
