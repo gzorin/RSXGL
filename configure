@@ -755,8 +755,6 @@ with_ppu_prefix
 with_ppu_cxxlib
 enable_samples
 enable_RSX_compatibility
-with_samples_host_ip
-with_samples_host_port
 '
       ac_precious_vars='build_alias
 host_alias
@@ -784,6 +782,8 @@ ppu_CXX
 ppu_CXXFLAGS
 ppu_CCC
 CXXCPP
+RSXGL_CONFIG_samples_host_ip
+RSXGL_CONFIG_samples_host_port
 ppu_portlibs_PKG_CONFIG_PATH
 PKG_CONFIG
 PKG_CONFIG_PATH
@@ -1426,9 +1426,6 @@ Optional Packages:
                           install products built with the "ppu" toolchain in
                           PREFIX
   --with-ppu-cxxlib       full path to a static C++ standard library
-  --with-samples-host-ip  IP address of host for samples to send reporting to
-  --with-samples-host-port
-                          port number on host for samples to send reporting to
 
 Some influential environment variables:
   CC          C compiler command
@@ -1462,6 +1459,11 @@ Some influential environment variables:
   ppu_CXXFLAGS
               C++ compiler flags for "ppu" toolchain
   CXXCPP      C++ preprocessor
+  RSXGL_CONFIG_samples_host_ip
+              IP address of host for samples to send reporting to
+  RSXGL_CONFIG_samples_host_port
+              port number on host for samples to send reporting to (default is
+              9000)
   ppu_portlibs_PKG_CONFIG_PATH
               pkg-config search paths for PS3 ported libraries (default is
               "${PS3DEV}/portlibs/ppu/lib/pkgconfig")
@@ -5833,25 +5835,14 @@ fi
 # Samples can send debugging information back to the host used to build them; set its IP here,
 # or leave it unset & it won't try to phone home:
 
-# Check whether --with-samples-host-ip was given.
-if test "${with_samples_host_ip+set}" = set; then :
-  withval=$with_samples_host_ip; RSXGL_CONFIG_samples_host_ip="$withval"
-else
-  RSXGL_CONFIG_samples_host_ip="no"
+
+
+if test -z "${RSXGL_CONFIG_samples_host_ip}"; then
+RSXGL_CONFIG_samples_host_port=0
+elif test -z "${RSXGL_CONFIG_samples_host_port}"; then
+RSXGL_CONFIG_samples_host_port=9000
 fi
 
-
-# Check whether --with-samples-host-port was given.
-if test "${with_samples_host_port+set}" = set; then :
-  withval=$with_samples_host_port; RSXGL_CONFIG_samples_host_port="$withval"
-else
-  RSXGL_CONFIG_samples_host_port=9000
-fi
-
-if test "$RSXGL_CONFIG_samples_host_ip" == "no" -o -z "$RSXGL_CONFIG_samples_host_ip"; then
-   RSXGL_CONFIG_samples_host_ip=""
-   RSXGL_CONFIG_samples_host_port=0
-fi;
 
 
 

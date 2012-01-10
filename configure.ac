@@ -111,12 +111,15 @@ AC_SUBST([RSXGL_CONFIG_RSX_compatibility])
 
 # Samples can send debugging information back to the host used to build them; set its IP here,
 # or leave it unset & it won't try to phone home:
-AC_ARG_WITH([samples-host-ip],AS_HELP_STRING([--with-samples-host-ip],[IP address of host for samples to send reporting to]),[RSXGL_CONFIG_samples_host_ip="$withval"],[RSXGL_CONFIG_samples_host_ip="no"])
-AC_ARG_WITH([samples-host-port],AS_HELP_STRING([--with-samples-host-port],[port number on host for samples to send reporting to]),[RSXGL_CONFIG_samples_host_port="$withval"],[RSXGL_CONFIG_samples_host_port=9000])
-if test "$RSXGL_CONFIG_samples_host_ip" == "no" -o -z "$RSXGL_CONFIG_samples_host_ip"; then
-   RSXGL_CONFIG_samples_host_ip=""
-   RSXGL_CONFIG_samples_host_port=0
-fi;
+AC_ARG_VAR([RSXGL_CONFIG_samples_host_ip],[IP address of host for samples to send reporting to])
+AC_ARG_VAR([RSXGL_CONFIG_samples_host_port],[port number on host for samples to send reporting to (default is 9000)])
+
+if test -z "${RSXGL_CONFIG_samples_host_ip}"; then
+RSXGL_CONFIG_samples_host_port=0
+elif test -z "${RSXGL_CONFIG_samples_host_port}"; then
+RSXGL_CONFIG_samples_host_port=9000
+fi
+
 AC_SUBST([RSXGL_CONFIG_samples_host_ip])
 AC_SUBST([RSXGL_CONFIG_samples_host_port])
 
