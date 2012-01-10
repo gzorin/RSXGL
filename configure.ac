@@ -143,7 +143,4 @@ AC_TOOLCHAIN_EXTPKG([ppu],[libpng],[libpng],[${ppu_portlibs_PKG_CONFIG_PATH}])
 # Look for zlib:
 AC_TOOLCHAIN_EXTPKG([ppu],[zlib],[zlib],[${ppu_portlibs_PKG_CONFIG_PATH}])
 
-# Setup "extsrc" - "contributed" sources:
-AC_EXTSRC_INIT()
-
 AC_OUTPUT

@@ -1150,7 +1150,6 @@ AC_SUBST([am__untar])
 ]) # _AM_PROG_TAR
 
 m4_include([m4/extpkg.m4])
-m4_include([m4/extsrc.m4])
 m4_include([m4/ps3dev.m4])
 m4_include([m4/psl1ght.m4])
 m4_include([m4/toolchain.m4])

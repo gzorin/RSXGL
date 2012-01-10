@@ -604,9 +604,6 @@ ac_subst_vars='am__EXEEXT_FALSE
 am__EXEEXT_TRUE
 LTLIBOBJS
 LIBOBJS
-extsrc_clean_commands
-extsrc_build_commands
-extsrcdir
 ppu_zlib_LIBS
 ppu_zlib_LDFLAGS
 ppu_zlib_CPPFLAGS
@@ -760,7 +757,6 @@ enable_samples
 enable_RSX_compatibility
 with_samples_host_ip
 with_samples_host_port
-with_extsrc
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1433,7 +1429,6 @@ Optional Packages:
   --with-samples-host-ip  IP address of host for samples to send reporting to
   --with-samples-host-port
                           port number on host for samples to send reporting to
-  --with-extsrc           set path to external package sources
 
 Some influential environment variables:
   CC          C compiler command
@@ -6329,29 +6324,6 @@ $as_echo "yes" >&6; }
 
 
 fi
-
-
-
-# Setup "extsrc" - "contributed" sources:
-
-	_extsrcdir=
-	_abs_srcdir=$(cd "${srcdir}"; /bin/pwd)
-	default_extsrcdir=${_extsrcdir:-"${_abs_srcdir}/extsrc"}
-
-# Check whether --with-extsrc was given.
-if test "${with_extsrc+set}" = set; then :
-  withval=$with_extsrc; extsrcdir="$withval"
-else
-  extsrcdir="${default_extsrcdir}"
-fi
-
-	{ $as_echo "$as_me:${as_lineno-$LINENO}: location of external package sources is ${extsrcdir}" >&5
-$as_echo "$as_me: location of external package sources is ${extsrcdir}" >&6;}
-
-	extsrc_build_commands=""
-	extsrc_clean_commands=""
-
-
 
 
 

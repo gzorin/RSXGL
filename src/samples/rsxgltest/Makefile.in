@@ -38,9 +38,8 @@ noinst_PROGRAMS = rsxgltest.elf$(EXEEXT)
 subdir = src/samples/rsxgltest
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/extpkg.m4 \
-	$(top_srcdir)/m4/extsrc.m4 $(top_srcdir)/m4/ps3dev.m4 \
-	$(top_srcdir)/m4/psl1ght.m4 $(top_srcdir)/m4/toolchain.m4 \
-	$(top_srcdir)/configure.ac
+	$(top_srcdir)/m4/ps3dev.m4 $(top_srcdir)/m4/psl1ght.m4 \
+	$(top_srcdir)/m4/toolchain.m4 $(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
@@ -162,9 +161,6 @@ datarootdir = @datarootdir@
 docdir = @docdir@
 dvidir = @dvidir@
 exec_prefix = @exec_prefix@
-extsrc_build_commands = @extsrc_build_commands@
-extsrc_clean_commands = @extsrc_clean_commands@
-extsrcdir = @extsrcdir@
 host_alias = @host_alias@
 htmldir = @htmldir@
 includedir = @includedir@
