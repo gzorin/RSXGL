@@ -122,7 +122,7 @@ test -n "$4" && $1_PKG_CONFIG_PATH=${$1_PKG_CONFIG_PATH:-"$4"}
 
 ac_$1_toolchain=yes
 
-if test -n "$1_TOOLCHAIN_PREFIX"; then
+if test -n "${$1_TOOLCHAIN_PREFIX}"; then
 ac_$1_toolchain_prefix="${$1_TOOLCHAIN_PREFIX}-"
 else
 ac_$1_toolchain_prefix=""
@@ -165,10 +165,8 @@ AC_SUBST([$1_mandir])
 
 #AC_TOOLCHAIN_PATH_TOOL(tag,var,prog,value-if-not-found)
 AC_DEFUN([AC_TOOLCHAIN_PATH_TOOL],[
-push_toolchain_stack "ac_$1_toolchain_stack" "PATH" "${$1_PATH}:${PATH}"
 prog="$3"
-AC_PATH_PROG($1_$2,"${ac_$1_toolchain_prefix}${prog}",$4)
-pop_toolchain_stack "ac_$1_toolchain_stack" "PATH"
+AC_PATH_PROG([$1_$2],["${ac_$1_toolchain_prefix}${prog}"],[$4],["${$1_PATH}:{$PATH}"])
 ])
 
 #AC_TOOLCHAIN_PATH_TOOLS(tag,var,progs,value-if-not-found)
@@ -178,6 +176,10 @@ progs=""
 for prog in $3; do
     progs="${progs} ${ac_$1_toolchain_prefix}${prog}"
 done
+
+echo PATH is: "${PATH}"
+echo progs are: "${progs}"
+
 AC_PATH_PROGS([$1_$2],${progs},$4)
 pop_toolchain_stack "ac_$1_toolchain_stack" "PATH"
 ])
