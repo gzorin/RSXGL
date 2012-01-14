@@ -29,64 +29,16 @@
 #include "program.h"
 #include "loop_analysis.h"
 
-extern "C" struct gl_shader *
-_abetts_new_shader(struct gl_context *ctx, GLuint name, GLenum type);
-
-extern "C" struct gl_program *
-_abetts_new_program(struct gl_context *ctx, GLenum target, GLuint id);
-
-extern "C" GLboolean
-_abetts_program_string_notify( struct gl_context *ctx,
-			       GLenum target,
-			       struct gl_program *prog );
+extern "C"
+void nvfxc_initialize_context_to_defaults(struct gl_context *ctx, gl_api api);
 
 extern "C"
 void nvfxc(struct gl_context *ctx,struct gl_shader_program *whole_program);
 
-static
-void initialize_context_to_defaults(struct gl_context *ctx, gl_api api)
-{
-   memset(ctx, 0, sizeof(*ctx));
-
-   ctx->API = api;
-
-   ctx->Extensions.dummy_false = false;
-   ctx->Extensions.dummy_true = true;
-   ctx->Extensions.ARB_ES2_compatibility = true;
-   ctx->Extensions.ARB_draw_instanced = true;
-   ctx->Extensions.ARB_fragment_coord_conventions = true;
-   ctx->Extensions.EXT_texture_array = true;
-   ctx->Extensions.NV_texture_rectangle = true;
-   ctx->Extensions.EXT_texture3D = true;
-   ctx->Extensions.OES_EGL_image_external = true;
-
-   ctx->Const.GLSLVersion = 120;
-
-   /* 1.20 minimums. */
-   ctx->Const.MaxLights = 8;
-   ctx->Const.MaxClipPlanes = 6;
-   ctx->Const.MaxTextureUnits = 2;
-   ctx->Const.MaxTextureCoordUnits = 2;
-   ctx->Const.VertexProgram.MaxAttribs = 16;
-
-   ctx->Const.VertexProgram.MaxUniformComponents = 512;
-   ctx->Const.MaxVarying = 8; /* == gl_MaxVaryingFloats / 4 */
-   ctx->Const.MaxVertexTextureImageUnits = 0;
-   ctx->Const.MaxCombinedTextureImageUnits = 2;
-   ctx->Const.MaxTextureImageUnits = 2;
-   ctx->Const.FragmentProgram.MaxUniformComponents = 64;
-
-   ctx->Const.MaxDrawBuffers = 1;
-
-   ctx->Driver.NewShader = _abetts_new_shader;
-   ctx->Driver.NewProgram = _abetts_new_program;
-   ctx->Driver.ProgramStringNotify = _abetts_program_string_notify;
-}
-
 static void
 initialize_context(struct gl_context *ctx, gl_api api)
 {
-   initialize_context_to_defaults(ctx, api);
+  nvfxc_initialize_context_to_defaults(ctx, api);
 
    /* GLSL 1.30 isn't fully supported, but we need to advertise 1.30 so that
     * the built-in functions for 1.30 can be built.

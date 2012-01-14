@@ -18,8 +18,8 @@ nvfx_fragprog_translate(struct nvfx_context *nvfx,
                         struct nvfx_pipe_fragment_program *pfp,
                         boolean emulate_sprite_flipping);
 
-struct gl_shader *
-_abetts_new_shader(struct gl_context *ctx, GLuint name, GLenum type)
+static struct gl_shader *
+nvfxc_new_shader(struct gl_context *ctx, GLuint name, GLenum type)
 {
    struct gl_shader *shader;
 
@@ -39,8 +39,8 @@ _abetts_new_shader(struct gl_context *ctx, GLuint name, GLenum type)
  * Called via ctx->Driver.NewProgram() to allocate a new vertex or
  * fragment program.
  */
-struct gl_program *
-_abetts_new_program(struct gl_context *ctx, GLenum target, GLuint id)
+static struct gl_program *
+nvfxc_new_program(struct gl_context *ctx, GLenum target, GLuint id)
 {
   switch (target) {
   case GL_VERTEX_PROGRAM_ARB: {
@@ -70,12 +70,163 @@ _abetts_new_program(struct gl_context *ctx, GLenum target, GLuint id)
  * Called when the program's text/code is changed.  We have to free
  * all shader variants and corresponding gallium shaders when this happens.
  */
-GLboolean
-_abetts_program_string_notify( struct gl_context *ctx,
+static GLboolean
+nvfxc_program_string_notify( struct gl_context *ctx,
                                            GLenum target,
                                            struct gl_program *prog )
 {
    return GL_TRUE;
+}
+
+static int
+nvfxc_screen_get_shader_param(struct pipe_screen *pscreen, unsigned shader, enum pipe_shader_cap param)
+{
+	struct nvfx_screen *screen = nvfx_screen(pscreen);
+
+	switch(shader) {
+	case PIPE_SHADER_FRAGMENT:
+		switch(param) {
+		case PIPE_SHADER_CAP_MAX_INSTRUCTIONS:
+		case PIPE_SHADER_CAP_MAX_ALU_INSTRUCTIONS:
+		case PIPE_SHADER_CAP_MAX_TEX_INSTRUCTIONS:
+		case PIPE_SHADER_CAP_MAX_TEX_INDIRECTIONS:
+			return 4096;
+		case PIPE_SHADER_CAP_MAX_CONTROL_FLOW_DEPTH:
+			/* FIXME: is it the dynamic (nv30:0/nv40:24) or the static
+			 value (nv30:0/nv40:4) ? */
+			return screen->use_nv4x ? 4 : 0;
+		case PIPE_SHADER_CAP_MAX_INPUTS:
+			return screen->use_nv4x ? 12 : 10;
+		case PIPE_SHADER_CAP_MAX_CONSTS:
+			return screen->use_nv4x ? 224 : 32;
+		case PIPE_SHADER_CAP_MAX_CONST_BUFFERS:
+		    return 1;
+		case PIPE_SHADER_CAP_MAX_TEMPS:
+			return 32;
+		case PIPE_SHADER_CAP_MAX_ADDRS:
+			return screen->use_nv4x ? 1 : 0;
+		case PIPE_SHADER_CAP_MAX_PREDS:
+			return 0; /* we could expose these, but nothing uses them */
+		case PIPE_SHADER_CAP_TGSI_CONT_SUPPORTED:
+		    return 0;
+		case PIPE_SHADER_CAP_INDIRECT_INPUT_ADDR:
+		case PIPE_SHADER_CAP_INDIRECT_OUTPUT_ADDR:
+		case PIPE_SHADER_CAP_INDIRECT_TEMP_ADDR:
+		case PIPE_SHADER_CAP_INDIRECT_CONST_ADDR:
+			return 0;
+		case PIPE_SHADER_CAP_SUBROUTINES:
+			return screen->use_nv4x ? 1 : 0;
+		case PIPE_SHADER_CAP_MAX_TEXTURE_SAMPLERS:
+			return 16;
+		default:
+			break;
+		}
+		break;
+	case PIPE_SHADER_VERTEX:
+		switch(param) {
+		case PIPE_SHADER_CAP_MAX_INSTRUCTIONS:
+		case PIPE_SHADER_CAP_MAX_ALU_INSTRUCTIONS:
+			return screen->use_nv4x ? 512 : 256;
+		case PIPE_SHADER_CAP_MAX_TEX_INSTRUCTIONS:
+		case PIPE_SHADER_CAP_MAX_TEX_INDIRECTIONS:
+			return screen->use_nv4x ? 512 : 0;
+		case PIPE_SHADER_CAP_MAX_CONTROL_FLOW_DEPTH:
+			/* FIXME: is it the dynamic (nv30:24/nv40:24) or the static
+			 value (nv30:1/nv40:4) ? */
+			return screen->use_nv4x ? 4 : 1;
+		case PIPE_SHADER_CAP_MAX_INPUTS:
+			return 16;
+		case PIPE_SHADER_CAP_MAX_CONSTS:
+			/* - 6 is for clip planes; Gallium should be fixed to put
+			 * them in the vertex shader itself, so we don't need to reserve these */
+			return (screen->use_nv4x ? 468 : 256) - 6;
+	             case PIPE_SHADER_CAP_MAX_CONST_BUFFERS:
+	                    return 1;
+		case PIPE_SHADER_CAP_MAX_TEMPS:
+			return screen->use_nv4x ? 32 : 13;
+		case PIPE_SHADER_CAP_MAX_ADDRS:
+			return 2;
+		case PIPE_SHADER_CAP_MAX_PREDS:
+			return 0; /* we could expose these, but nothing uses them */
+		case PIPE_SHADER_CAP_TGSI_CONT_SUPPORTED:
+                        return 1;
+		case PIPE_SHADER_CAP_INDIRECT_INPUT_ADDR:
+		case PIPE_SHADER_CAP_INDIRECT_OUTPUT_ADDR:
+		case PIPE_SHADER_CAP_INDIRECT_TEMP_ADDR:
+			return 0;
+		case PIPE_SHADER_CAP_INDIRECT_CONST_ADDR:
+			return 1;
+		case PIPE_SHADER_CAP_SUBROUTINES:
+			return 1;
+		case PIPE_SHADER_CAP_INTEGERS:
+			return 0;
+		case PIPE_SHADER_CAP_MAX_TEXTURE_SAMPLERS:
+			return 0; /* We have 4 on nv40 - but unsupported currently */
+		default:
+			break;
+		}
+		break;
+	default:
+		break;
+	}
+	return 0;
+}
+
+void
+nvfxc_initialize_context_to_defaults(struct gl_context *ctx, gl_api api)
+{
+   memset(ctx, 0, sizeof(*ctx));
+
+   ctx->API = api;
+
+   ctx->Extensions.dummy_false = false;
+   ctx->Extensions.dummy_true = true;
+   ctx->Extensions.ARB_ES2_compatibility = true;
+   ctx->Extensions.ARB_draw_instanced = true;
+   ctx->Extensions.ARB_fragment_coord_conventions = true;
+   ctx->Extensions.EXT_texture_array = true;
+   ctx->Extensions.NV_texture_rectangle = true;
+   ctx->Extensions.EXT_texture3D = true;
+   ctx->Extensions.OES_EGL_image_external = true;
+
+   ctx->Const.GLSLVersion = 120;
+
+   /* 1.20 minimums. */
+   ctx->Const.MaxLights = 8;
+   ctx->Const.MaxClipPlanes = 6;
+   ctx->Const.MaxTextureUnits = 2;
+   ctx->Const.MaxTextureCoordUnits = 2;
+   ctx->Const.VertexProgram.MaxAttribs = 16;
+
+   ctx->Const.VertexProgram.MaxUniformComponents = 512;
+   ctx->Const.MaxVarying = 8; /* == gl_MaxVaryingFloats / 4 */
+   ctx->Const.MaxVertexTextureImageUnits = 0;
+   ctx->Const.MaxCombinedTextureImageUnits = 2;
+   ctx->Const.MaxTextureImageUnits = 2;
+   ctx->Const.FragmentProgram.MaxUniformComponents = 64;
+
+   ctx->Const.MaxDrawBuffers = 1;
+
+   ctx->Driver.NewShader = nvfxc_new_shader;
+   ctx->Driver.NewProgram = nvfxc_new_program;
+   ctx->Driver.ProgramStringNotify = nvfxc_program_string_notify;
+
+   struct nvfx_screen * screen = rzalloc(NULL,struct nvfx_screen);
+   screen -> base.base.get_shader_param = nvfxc_screen_get_shader_param;
+   
+   struct nvfx_context * nvfx_ctx = rzalloc(NULL,struct nvfx_context);
+   nvfx_ctx -> pipe.screen = &screen -> base.base;
+
+   nvfx_ctx -> is_nv4x = ~0;
+   nvfx_ctx -> use_nv4x = ~0;
+   nvfx_ctx -> use_vp_clipping = TRUE;
+   nvfx_ctx -> screen = screen;
+
+   struct st_context * st = rzalloc(NULL,struct st_context);
+   st -> pipe = &nvfx_ctx -> pipe;
+   ctx -> st = st;
+
+   //st_context(ctx) -> pipe = 
 }
 
 static unsigned
@@ -157,6 +308,7 @@ void nvfxc(struct gl_context *ctx,struct gl_shader_program *whole_program)
 	struct tgsi_shader_info info;
 	tgsi_scan_shader(tgsi.tokens,&info);
 	
+#if 0
 	// now call nvfx stuff:
 	struct nvfx_context nvfx;
 	nvfx.is_nv4x = ~0;
@@ -164,6 +316,9 @@ void nvfxc(struct gl_context *ctx,struct gl_shader_program *whole_program)
 	nvfx.use_vp_clipping = TRUE;
 
 	struct nvfx_vertex_program * nvfx_vp = nvfx_vertprog_translate(&nvfx,&tgsi,&info);
+#endif
+
+	struct nvfx_vertex_program * nvfx_vp = nvfx_vertprog_translate((struct nvfx_context *)(st_context(ctx) -> pipe),&tgsi,&info);
       }
     }
     
@@ -396,6 +551,7 @@ void nvfxc(struct gl_context *ctx,struct gl_shader_program *whole_program)
 	fp.pipe.tokens = stfp->tgsi.tokens;
 	tgsi_scan_shader(stfp->tgsi.tokens,&fp.info);
 
+#if 0
 	// now call nvfx stuff:
 	struct nvfx_context nvfx;
 	nvfx.is_nv4x = ~0;
@@ -403,6 +559,9 @@ void nvfxc(struct gl_context *ctx,struct gl_shader_program *whole_program)
 	nvfx.use_vp_clipping = TRUE;
 
 	struct nvfx_fragment_program * nvfx_fp = nvfx_fragprog_translate(&nvfx,&fp,FALSE);
+#endif
+
+	struct nvfx_fragment_program * nvfx_fp = nvfx_fragprog_translate((struct nvfx_context *)(st_context(ctx) -> pipe),&fp,FALSE);
       }
 
       ureg_destroy( ureg );
