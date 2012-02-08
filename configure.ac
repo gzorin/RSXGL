@@ -9,6 +9,7 @@ AC_CONFIG_FILES(
 	include/Makefile
 	src/cgcomp/Makefile
 	src/cgcomp/nv40c
+	src/nvfxc/Makefile
 	src/library/Makefile
 	src/library/rsxgl_config.h
 	src/library/GL3/rsxgl3ext.h
@@ -145,5 +146,7 @@ AC_TOOLCHAIN_EXTPKG([ppu],[libpng],[libpng],[${ppu_portlibs_PKG_CONFIG_PATH}])
 
 # Look for zlib:
 AC_TOOLCHAIN_EXTPKG([ppu],[zlib],[zlib],[${ppu_portlibs_PKG_CONFIG_PATH}])
+
+AC_ARG_VAR([MESA_LOCATION],[location of Mesa library, compiled for RSX])
 
 AC_OUTPUT
