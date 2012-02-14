@@ -86,21 +86,23 @@ state_t::state_t()
   lineWidth = 1.0f;
   pointSize = 1.0f;
 
-  pixel_store.pack_swap_bytes = 0;
-  pixel_store.pack_lsb_first = 0;
-  pixel_store.pack_alignment = RSXGL_PIXEL_STORE_ALIGNMENT_4;
-  pixel_store.unpack_swap_bytes = 0;
-  pixel_store.unpack_lsb_first = 0;
-  pixel_store.unpack_alignment = RSXGL_PIXEL_STORE_ALIGNMENT_4;
-  pixel_store.pack_row_length = 0;
-  pixel_store.pack_image_height = 0;
-  pixel_store.pack_skip_pixels = 0;
-  pixel_store.pack_skip_rows = 0;
-  pixel_store.pack_skip_images = 0;
-  pixel_store.unpack_row_length = 0;
-  pixel_store.unpack_image_height = 0;
-  pixel_store.unpack_skip_pixels = 0;
-  pixel_store.unpack_skip_rows = 0;
+  pixelstore_pack.swap_bytes = 0;
+  pixelstore_pack.lsb_first = 0;
+  pixelstore_pack.alignment = RSXGL_PIXEL_STORE_ALIGNMENT_4;
+  pixelstore_pack.row_length = 0;
+  pixelstore_pack.image_height = 0;
+  pixelstore_pack.skip_pixels = 0;
+  pixelstore_pack.skip_rows = 0;
+  pixelstore_pack.skip_images = 0;
+
+  pixelstore_unpack.swap_bytes = 0;
+  pixelstore_unpack.lsb_first = 0;
+  pixelstore_unpack.alignment = RSXGL_PIXEL_STORE_ALIGNMENT_4;
+  pixelstore_unpack.row_length = 0;
+  pixelstore_unpack.image_height = 0;
+  pixelstore_unpack.skip_pixels = 0;
+  pixelstore_unpack.skip_rows = 0;
+  pixelstore_unpack.skip_images = 0;
 
   enable.primitive_restart = 0;
   primitiveRestartIndex = 0;
@@ -1390,7 +1392,6 @@ glPolygonOffset (GLfloat factor, GLfloat units)
   ctx -> state.invalid.parts.polygon_offset = 1;
 }
 
-
 static inline void
 rsxgl_pixel_store(rsxgl_context_t * ctx,GLenum pname,uint32_t param)
 {
@@ -1413,76 +1414,88 @@ rsxgl_pixel_store(rsxgl_context_t * ctx,GLenum pname,uint32_t param)
   }
 
   if(pname == GL_PACK_SWAP_BYTES) {
-    ctx -> state.pixel_store.pack_swap_bytes = param;
+    ctx -> state.pixelstore_pack.swap_bytes = param;
   }
   else if(pname == GL_PACK_LSB_FIRST) {
-    ctx -> state.pixel_store.pack_lsb_first = param;
+    ctx -> state.pixelstore_pack.lsb_first = param;
   }
   else if(pname == GL_PACK_ROW_LENGTH) {
-    ctx -> state.pixel_store.pack_row_length = param;
+    ctx -> state.pixelstore_pack.row_length = param;
   }
   else if(pname == GL_PACK_IMAGE_HEIGHT) {
-    ctx -> state.pixel_store.pack_image_height = param;
+    ctx -> state.pixelstore_pack.image_height = param;
   }
   else if(pname == GL_PACK_SKIP_PIXELS) {
-    ctx -> state.pixel_store.pack_skip_pixels = param;
+    ctx -> state.pixelstore_pack.skip_pixels = param;
   }
   else if(pname == GL_PACK_SKIP_ROWS) {
-    ctx -> state.pixel_store.pack_skip_rows = param;
+    ctx -> state.pixelstore_pack.skip_rows = param;
   }
   else if(pname == GL_PACK_SKIP_IMAGES) {
-    ctx -> state.pixel_store.pack_skip_images = param;
+    ctx -> state.pixelstore_pack.skip_images = param;
   }
   else if(pname == GL_PACK_ALIGNMENT) {
     if(param == 1) {
-      ctx -> state.pixel_store.pack_alignment = RSXGL_PIXEL_STORE_ALIGNMENT_1;
+      ctx -> state.pixelstore_pack.alignment = RSXGL_PIXEL_STORE_ALIGNMENT_1;
     }
     else if(param == 2) {
-      ctx -> state.pixel_store.pack_alignment = RSXGL_PIXEL_STORE_ALIGNMENT_2;
+      ctx -> state.pixelstore_pack.alignment = RSXGL_PIXEL_STORE_ALIGNMENT_2;
     }
     else if(param == 4) {
-      ctx -> state.pixel_store.pack_alignment = RSXGL_PIXEL_STORE_ALIGNMENT_4;
+      ctx -> state.pixelstore_pack.alignment = RSXGL_PIXEL_STORE_ALIGNMENT_4;
     }
     else if(param == 8) {
-      ctx -> state.pixel_store.pack_alignment = RSXGL_PIXEL_STORE_ALIGNMENT_8;
+      ctx -> state.pixelstore_pack.alignment = RSXGL_PIXEL_STORE_ALIGNMENT_8;
     }
     else {
       RSXGL_ERROR_(GL_INVALID_VALUE);
     }
   }
   else if(pname == GL_UNPACK_SWAP_BYTES) {
-    ctx -> state.pixel_store.unpack_swap_bytes = param;
+    ctx -> state.pixelstore_unpack.swap_bytes = param;
   }
   else if(pname == GL_UNPACK_LSB_FIRST) {
-    ctx -> state.pixel_store.unpack_lsb_first = param;
+    ctx -> state.pixelstore_unpack.lsb_first = param;
   }
   else if(pname == GL_UNPACK_ROW_LENGTH) {
-    ctx -> state.pixel_store.unpack_row_length = param;
+    ctx -> state.pixelstore_unpack.row_length = param;
   }
   else if(pname == GL_UNPACK_IMAGE_HEIGHT) {
-    ctx -> state.pixel_store.unpack_image_height = param;
+    ctx -> state.pixelstore_unpack.image_height = param;
   }
   else if(pname == GL_UNPACK_SKIP_PIXELS) {
-    ctx -> state.pixel_store.unpack_skip_pixels = param;
+    ctx -> state.pixelstore_unpack.skip_pixels = param;
   }
   else if(pname == GL_UNPACK_SKIP_ROWS) {
-    ctx -> state.pixel_store.unpack_skip_rows = param;
+    ctx -> state.pixelstore_unpack.skip_rows = param;
   }
   else if(pname == GL_UNPACK_ALIGNMENT) {
     if(param == 1) {
-      ctx -> state.pixel_store.unpack_alignment = RSXGL_PIXEL_STORE_ALIGNMENT_1;
+      ctx -> state.pixelstore_unpack.alignment = RSXGL_PIXEL_STORE_ALIGNMENT_1;
     }
     else if(param == 2) {
-      ctx -> state.pixel_store.unpack_alignment = RSXGL_PIXEL_STORE_ALIGNMENT_2;
+      ctx -> state.pixelstore_unpack.alignment = RSXGL_PIXEL_STORE_ALIGNMENT_2;
     }
     else if(param == 4) {
-      ctx -> state.pixel_store.unpack_alignment = RSXGL_PIXEL_STORE_ALIGNMENT_4;
+      ctx -> state.pixelstore_unpack.alignment = RSXGL_PIXEL_STORE_ALIGNMENT_4;
     }
     else if(param == 8) {
-      ctx -> state.pixel_store.unpack_alignment = RSXGL_PIXEL_STORE_ALIGNMENT_8;
+      ctx -> state.pixelstore_unpack.alignment = RSXGL_PIXEL_STORE_ALIGNMENT_8;
     }
     else {
       RSXGL_ERROR_(GL_INVALID_VALUE);
     }
   }
+}
+
+GLAPI void APIENTRY
+glPixelStoref (GLenum pname, GLfloat param)
+{
+  rsxgl_pixel_store(current_ctx(),pname,param);
+}
+
+GLAPI void APIENTRY
+glPixelStorei (GLenum pname, GLint param)
+{
+  rsxgl_pixel_store(current_ctx(),pname,param);
 }

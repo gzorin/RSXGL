@@ -166,10 +166,9 @@ struct state_t {
   } polygon;
 
   struct {
-    uint32_t pack_swap_bytes:1, pack_lsb_first:1, pack_alignment:2, unpack_swap_bytes:1, unpack_lsb_first:1, unpack_alignment:2;
-    uint32_t pack_row_length, pack_image_height, pack_skip_pixels, pack_skip_rows, pack_skip_images;
-    uint32_t unpack_row_length, unpack_image_height, unpack_skip_pixels, unpack_skip_rows;
-  } pixel_store;
+    uint8_t swap_bytes:1,lsb_first:1,alignment;
+    uint32_t row_length, image_height, skip_pixels, skip_rows, skip_images;
+  } pixelstore_pack, pixelstore_unpack;
 
   float lineWidth;
   float pointSize;
