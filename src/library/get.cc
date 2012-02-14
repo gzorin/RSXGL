@@ -8,35 +8,52 @@
 
 #include "rsxgl_context.h"
 #include "error.h"
+#include "gl_constants.h"
 
 #if defined(GLAPI)
 #undef GLAPI
 #endif
 #define GLAPI extern "C"
 
+template< typename T >
+static inline void
+rsxgl_get(rsxgl_context_t * ctx,const GLenum pname, T * params)
+{
+  if(pname == GL_MAX_TEXTURE_IMAGE_UNITS) {
+    *params = RSXGL_MAX_TEXTURE_IMAGE_UNITS;
+  }
+  else if(pname == GL_MAX_TEXTURE_SIZE) {
+    *params = RSXGL_MAX_TEXTURE_SIZE;
+  }
+  else {
+    RSXGL_ERROR_(GL_INVALID_ENUM);
+  }
+
+  RSXGL_NOERROR_();
+}
+
 GLAPI void APIENTRY
 glGetBooleanv (GLenum pname, GLboolean *params)
 {
+  rsxgl_get(current_ctx(),pname,params);
 }
 
 GLAPI void APIENTRY
 glGetDoublev (GLenum pname, GLdouble *params)
 {
+  rsxgl_get(current_ctx(),pname,params);
 }
 
 GLAPI void APIENTRY
 glGetFloatv (GLenum pname, GLfloat *params)
 {
+  rsxgl_get(current_ctx(),pname,params);
 }
 
 GLAPI void APIENTRY
 glGetIntegerv (GLenum pname, GLint *params)
 {
-}
-
-GLAPI void APIENTRY
-glGetInteger64v (GLenum pname, GLint64 *params)
-{
+  rsxgl_get(current_ctx(),pname,params);
 }
 
 GLAPI const GLubyte * APIENTRY
@@ -49,7 +66,7 @@ glGetString (GLenum name)
     RSXGL_NOERROR((const GLubyte *)"NV40");
   }
   else if(name == GL_VERSION) {
-    RSXGL_NOERROR((const GLubyte *)"3.1");
+    RSXGL_NOERROR((const GLubyte *)"3.1.0 RSXGL");
   }
   else if(name == GL_SHADING_LANGUAGE_VERSION) {
     RSXGL_NOERROR((const GLubyte *)"1.30");
