@@ -6,6 +6,7 @@ AM_INIT_AUTOMAKE([foreign])
 AC_CONFIG_FILES(
 	include/config.h
 	Makefile
+	src/mesa/configs/rsx
 	include/Makefile
 	src/cgcomp/Makefile
 	src/cgcomp/nv40c
@@ -17,7 +18,7 @@ AC_CONFIG_FILES(
 	)
 
 # Which subdirectories get built:
-RSXGL_SUBDIRS="include src/cgcomp src/library"
+RSXGL_SUBDIRS="extsrc/mesa include src/cgcomp src/nvfxc src/library"
 
 # Determine which samples get built:
 RSXGL_SAMPLES="rsxgltest rsxglgears"
@@ -28,6 +29,10 @@ AC_SUBST([RSXGL_SAMPLES])
 AC_PROG_CC
 AC_PROG_CXX
 AC_PROG_RANLIB
+AC_PATH_PROG([XARGS],[xargs])
+AC_PATH_PROG([PWDCMD],[pwd])
+AC_PATH_PROG([RSYNC],[rsync])
+AC_PATH_PROG([PATCH],[patch])
 
 AC_LANG([C])
 AC_LANG([C++])
@@ -147,6 +152,33 @@ AC_TOOLCHAIN_EXTPKG([ppu],[libpng],[libpng],[${ppu_portlibs_PKG_CONFIG_PATH}])
 # Look for zlib:
 AC_TOOLCHAIN_EXTPKG([ppu],[zlib],[zlib],[${ppu_portlibs_PKG_CONFIG_PATH}])
 
-AC_ARG_VAR([MESA_LOCATION],[location of Mesa library, compiled for RSX])
+# Deal with mesa:
+AC_ARG_VAR([MESA_LOCATION],[location of Mesa sources])
+
+AC_CONFIG_COMMANDS([mesa],
+[	mesa_builddir="${_abs_top_builddir}/extsrc/mesa";
+	if ! test -a "$mesa_builddir"; then
+	   mkdir -p "$mesa_builddir";
+	fi
+
+	mesa_srcdir=$(cd "$MESA_LOCATION"; ${PWDCMD});
+	mesa_builddir=$(cd "$mesa_builddir"; ${PWDCMD});
+
+	if test "$mesa_srcdir" != "$mesa_builddir"; then
+	   echo "Copying Mesa files from source directory \"$mesa_srcdir\" to build directory \"$mesa_builddir\"...";
+	   #cat "$_abs_top_srcdir/extsrc/mesa/rsxgl/files" | xargs -I % echo "file=\"%\"; dir=\$(dirname \$file); mkdir -p \"$mesa_builddir/\$dir\"; cp -a \"$mesa_srcdir/\$file\" \"$mesa_builddir/\$file\";" | sh;
+	   "$RSYNC" -av --files-from="$_abs_top_srcdir/src/mesa/files" "$mesa_srcdir" "$mesa_builddir";
+	fi;
+
+	cp "$mesa_builddir/configs/rsx" "$mesa_builddir/configs/current";
+	cp "$_abs_top_srcdir/extsrc/mesa/rsxgl/Makefile-builtins" "$mesa_builddir/src/glsl/";
+],
+[       MESA_LOCATION="$MESA_LOCATION";
+	_abs_top_builddir=$(cd "${builddir}"; ${PWDCMD});
+	_abs_top_srcdir=$(cd "${srcdir}"; ${PWDCMD});
+	XARGS="${XARGS}"
+	PWDCMD="${PWDCMD}"
+	RSYNC="${RSYNC}"
+])
 
 AC_OUTPUT

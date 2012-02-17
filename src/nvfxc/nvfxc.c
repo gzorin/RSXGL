@@ -225,8 +225,6 @@ nvfxc_initialize_context_to_defaults(struct gl_context *ctx, gl_api api)
    struct st_context * st = rzalloc(NULL,struct st_context);
    st -> pipe = &nvfx_ctx -> pipe;
    ctx -> st = st;
-
-   //st_context(ctx) -> pipe = 
 }
 
 static unsigned
@@ -307,17 +305,6 @@ void nvfxc(struct gl_context *ctx,struct gl_shader_program *whole_program)
 	//
 	struct tgsi_shader_info info;
 	tgsi_scan_shader(tgsi.tokens,&info);
-	
-#if 0
-	// now call nvfx stuff:
-	struct nvfx_context nvfx;
-	nvfx.is_nv4x = ~0;
-	nvfx.use_nv4x = ~0;
-	nvfx.use_vp_clipping = TRUE;
-
-	struct nvfx_vertex_program * nvfx_vp = nvfx_vertprog_translate(&nvfx,&tgsi,&info);
-#endif
-
 	struct nvfx_vertex_program * nvfx_vp = nvfx_vertprog_translate((struct nvfx_context *)(st_context(ctx) -> pipe),&tgsi,&info);
       }
     }
@@ -550,17 +537,6 @@ void nvfxc(struct gl_context *ctx,struct gl_shader_program *whole_program)
 
 	fp.pipe.tokens = stfp->tgsi.tokens;
 	tgsi_scan_shader(stfp->tgsi.tokens,&fp.info);
-
-#if 0
-	// now call nvfx stuff:
-	struct nvfx_context nvfx;
-	nvfx.is_nv4x = ~0;
-	nvfx.use_nv4x = ~0;
-	nvfx.use_vp_clipping = TRUE;
-
-	struct nvfx_fragment_program * nvfx_fp = nvfx_fragprog_translate(&nvfx,&fp,FALSE);
-#endif
-
 	struct nvfx_fragment_program * nvfx_fp = nvfx_fragprog_translate((struct nvfx_context *)(st_context(ctx) -> pipe),&fp,FALSE);
       }
 

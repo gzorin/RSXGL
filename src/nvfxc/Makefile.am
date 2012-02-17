@@ -19,19 +19,17 @@ CFLAGS = @ppu_CFLAGS@
 CXXFLAGS = @ppu_CXXFLAGS@
 CPPFLAGS = @ppu_CPPFLAGS@
 
-noinst_PROGRAMS = nvfxc
+noinst_LIBRARIES = libnvfxc.a
 
-nvfxc_SOURCES = main.cpp nvfxc.c dlfcn.c
-nvfxc_CPPFLAGS = -I$(MESA_LOCATION)/src/glsl -I$(MESA_LOCATION)/src/mesa -I$(MESA_LOCATION)/src/mapi -I$(MESA_LOCATION)/include -I$(MESA_LOCATION)/src/gallium/include -I$(MESA_LOCATION)/src/gallium/auxiliary \
+libnvfxc_a_SOURCES = nvfxcc.cc nvfxc.c dlfcn.c
+libnvfxc_a_CPPFLAGS = -I$(MESA_LOCATION)/src/glsl -I$(MESA_LOCATION)/src/mesa -I$(MESA_LOCATION)/src/mapi -I$(MESA_LOCATION)/include -I$(MESA_LOCATION)/src/gallium/include -I$(MESA_LOCATION)/src/gallium/auxiliary \
 	-I$(MESA_LOCATION)/src/gallium/drivers $(LIBDRM_CFLAGS)
-nvfxc_CFLAGS = $(MESA_CFLAGS)
-nvfxc_CXXFLAGS = $(MESA_CXXFLAGS)
-nvfxc_LDFLAGS = -L$(MESA_LOCATION)/src/glsl \
-	-L$(MESA_LOCATION)/src/gallium/drivers/nvfx \
-	-L$(MESA_LOCATION)/src/gallium/drivers/nouveau \
-	-L$(MESA_LOCATION)/src/mesa \
-	-L$(MESA_LOCATION)/src/mapi/glapi \
-	-L$(MESA_LOCATION)/src/gallium/auxiliary
-nvfxc_LDADD = -lglsl -lnvfx -lnouveau -lmesagallium -lglapi -lgallium
-
-
+libnvfxc_a_CFLAGS = $(MESA_CFLAGS)
+libnvfxc_a_CXXFLAGS = $(MESA_CXXFLAGS)
+libnvfxc_a_LIBADD = \
+	$(MESA_LOCATION)/src/glsl/libglsl.a \
+	$(MESA_LOCATION)/src/gallium/drivers/nvfx/libnvfx.a \
+	$(MESA_LOCATION)/src/gallium/drivers/nouveau/libnouveau.a \
+	$(MESA_LOCATION)/src/mesa/libmesagallium.a \
+	$(MESA_LOCATION)/src/mapi/glapi/libglapi.a \
+	$(MESA_LOCATION)/src/gallium/auxiliary/libgallium.a

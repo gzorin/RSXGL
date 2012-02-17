@@ -8,6 +8,9 @@
 #include "cxxutil.h"
 #include "GL3/rsxgl.h"
 
+// Related to Mesa GLSL:
+//#include "nvfxc.h"
+
 #include <malloc.h>
 #include <stdint.h>
 #include <string.h>
@@ -44,6 +47,8 @@ rsxgl_context_t::rsxgl_context_t(const struct rsxegl_config_t * config,gcmContex
   timestamp_sync = rsxgl_sync_object_allocate();
   rsxgl_assert(timestamp_sync != 0);
   rsxgl_sync_cpu_signal(timestamp_sync,0);
+
+  //rsxgl_nvfxc();
 }
 
 rsxgl_context_t::~rsxgl_context_t()

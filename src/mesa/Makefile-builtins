@@ -1,0 +1,80 @@
+#-*-Makefile-*-
+
+TOP = ../..
+
+include $(TOP)/configs/current
+
+CC = $(BUILD_CC)
+CXX = $(BUILD_CXX)
+DEFINES = $(BUILD_DEFINES)
+APP_CXX = $(BUILD_APP_CXX)
+
+include Makefile.sources
+
+C_SOURCES = \
+	$(LIBGLCPP_GENERATED_SOURCES) \
+	$(LIBGLCPP_SOURCES) \
+	$(LIBGLSL_SOURCES)
+
+# common sources for builtin_compiler and libglsl
+CXX_SOURCES = \
+	$(BUILTIN_COMPILER_GENERATED_CXX_SOURCES) \
+	$(LIBGLSL_CXX_SOURCES)
+
+OBJECTS = \
+	$(C_SOURCES:.c=.o) \
+	$(CXX_SOURCES:.cpp=.o)
+
+GLSL2_C_SOURCES = \
+	../mesa/program/hash_table.c \
+	../mesa/program/symbol_table.c
+GLSL2_CXX_SOURCES = \
+	$(GLSL_COMPILER_CXX_SOURCES)
+
+DEFINES += \
+	$(LIBRARY_DEFINES) \
+	$(API_DEFINES)
+
+INCLUDES = \
+	-I. \
+	-I../mesa \
+	-I../mapi \
+	-I../../include \
+	$(LIBRARY_INCLUDES)
+
+GLSL2_OBJECTS = \
+	$(GLSL2_C_SOURCES:.c=.o) \
+	$(GLSL2_CXX_SOURCES:.cpp=.o)
+
+build_objs = $(join $(dir $(1)),$(addprefix build-,$(notdir $(1))))
+
+define build_compile_c_rule
+$(dir $(1))$(addprefix build-,$(patsubst %.c,%.o,$(notdir $(1)))): $(1)
+	$(CC) -c $(INCLUDES) $(CFLAGS) $(DEFINES) $$< -o $$@
+endef
+
+define build_compile_cxx_rule
+$(dir $(1))$(addprefix build-,$(patsubst %.cpp,%.o,$(notdir $(1)))): $(1)
+	$(CXX) -c $(INCLUDES) $(CXXFLAGS) $(DEFINES) $$< -o $$@
+endef
+
+$(foreach src,$(C_SOURCES),$(eval $(call build_compile_c_rule,$(src))))
+$(foreach src,$(CXX_SOURCES),$(eval $(call build_compile_cxx_rule,$(src))))
+$(foreach src,$(GLSL2_C_SOURCES),$(eval $(call build_compile_c_rule,$(src))))
+$(foreach src,$(GLSL2_CXX_SOURCES),$(eval $(call build_compile_cxx_rule,$(src))))
+$(eval $(call build_compile_cxx_rule,builtin_stubs.cpp))
+
+build_GLSL2_OBJECTS = $(call build_objs,$(GLSL2_OBJECTS))
+build_OBJECTS = $(call build_objs,$(OBJECTS))
+
+dumb: $(call build_objs,$(GLSL2_OBJECTS)) $(call build_objs,$(OBJECTS))
+
+depend: $(ALL_SOURCES) Makefile
+	rm -f depend
+	touch depend
+	$(MKDEP) $(MKDEP_OPTIONS) $(INCLUDES) $(ALL_SOURCES) 2> /dev/null
+	$(MKDEP) $(MKDEP_OPTIONS) -a -p $(DRICORE_OBJ_DIR)/ $(INCLUDES) $(ALL_SOURCES) 2> /dev/null
+
+builtin_compiler: $(build_GLSL2_OBJECTS) $(build_OBJECTS) build-builtin_stubs.o
+	@echo $^
+	$(APP_CXX) $(INCLUDES) $(CXXFLAGS) $(LDFLAGS) $(build_OBJECTS) $(build_GLSL2_OBJECTS) build-builtin_stubs.o -o $@

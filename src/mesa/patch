@@ -1,0 +1,163 @@
+diff --git configs/default configs/default
+index 2ca6fe4..93fc3c9 100644
+--- configs/default
++++ configs/default
+@@ -47,7 +47,7 @@ MINSTALL = $(SHELL) $(TOP)/bin/minstall
+ INSTALL = $(MINSTALL)
+ 
+ # Tools for regenerating glapi (generally only needed by the developers)
+-PYTHON2 = python
++PYTHON2 = /opt/local/bin/python2.7
+ PYTHON_FLAGS = -t -O -O
+ INDENT = indent
+ INDENT_FLAGS = -i4 -nut -br -brs -npcs -ce -T GLubyte -T GLbyte -T Bool
+diff --git src/gallium/auxiliary/os/os_time.c src/gallium/auxiliary/os/os_time.c
+index 3e9d50a..65ac874 100644
+--- src/gallium/auxiliary/os/os_time.c
++++ src/gallium/auxiliary/os/os_time.c
+@@ -35,7 +35,7 @@
+ 
+ #include "pipe/p_config.h"
+ 
+-#if defined(PIPE_OS_UNIX)
++#if defined(PIPE_OS_UNIX) || defined(PIPE_OS_LV2)
+ #  include <sys/time.h> /* timeval */
+ #elif defined(PIPE_SUBSYSTEM_WINDOWS_USER)
+ #  include <windows.h>
+diff --git src/gallium/drivers/nvfx/nvfx_fragprog.c src/gallium/drivers/nvfx/nvfx_fragprog.c
+index dbd7c77..d3a2dcc 100644
+--- src/gallium/drivers/nvfx/nvfx_fragprog.c
++++ src/gallium/drivers/nvfx/nvfx_fragprog.c
+@@ -1046,7 +1046,7 @@ out_err:
+ 
+ DEBUG_GET_ONCE_BOOL_OPTION(nvfx_dump_fp, "NVFX_DUMP_FP", FALSE)
+ 
+-static struct nvfx_fragment_program*
++struct nvfx_fragment_program*
+ nvfx_fragprog_translate(struct nvfx_context *nvfx,
+ 			struct nvfx_pipe_fragment_program *pfp,
+ 			boolean emulate_sprite_flipping)
+@@ -1229,6 +1229,7 @@ nvfx_fp_memcpy(void* dst, const void* src, size_t len)
+  * patch if they are the same (this could perhaps be removed).
+  */
+ 
++#if !defined(__lv2ppu__)
+ void
+ nvfx_fragprog_validate(struct nvfx_context *nvfx)
+ {
+@@ -1621,3 +1622,4 @@ nvfx_init_fragprog_functions(struct nvfx_context *nvfx)
+         nvfx->pipe.bind_fs_state = nvfx_fp_state_bind;
+         nvfx->pipe.delete_fs_state = nvfx_fp_state_delete;
+ }
++#endif
+diff --git src/gallium/drivers/nvfx/nvfx_vertprog.c src/gallium/drivers/nvfx/nvfx_vertprog.c
+index a11941f..2d951dd 100644
+--- src/gallium/drivers/nvfx/nvfx_vertprog.c
++++ src/gallium/drivers/nvfx/nvfx_vertprog.c
+@@ -974,7 +974,7 @@ nvfx_vertprog_prepare(struct nvfx_context* nvfx, struct nvfx_vpc *vpc)
+ 
+ DEBUG_GET_ONCE_BOOL_OPTION(nvfx_dump_vp, "NVFX_DUMP_VP", FALSE)
+ 
+-static struct nvfx_vertex_program*
++struct nvfx_vertex_program*
+ nvfx_vertprog_translate(struct nvfx_context *nvfx, const struct pipe_shader_state* vps, struct tgsi_shader_info* info)
+ {
+ 	struct tgsi_parse_context parse;
+@@ -1177,6 +1177,7 @@ nvfx_vertprog_translate_draw_vp(struct nvfx_context *nvfx, struct nvfx_pipe_vert
+ 	return vp;
+ }
+ 
++#if !defined(__lv2ppu__)
+ boolean
+ nvfx_vertprog_validate(struct nvfx_context *nvfx)
+ {
+@@ -1451,3 +1452,4 @@ nvfx_init_vertprog_functions(struct nvfx_context *nvfx)
+         nvfx->pipe.bind_vs_state = nvfx_vp_state_bind;
+         nvfx->pipe.delete_vs_state = nvfx_vp_state_delete;
+ }
++#endif
+diff --git src/gallium/include/pipe/p_config.h src/gallium/include/pipe/p_config.h
+index d63eccd..822a393 100644
+--- src/gallium/include/pipe/p_config.h
++++ src/gallium/include/pipe/p_config.h
+@@ -218,6 +218,11 @@
+ #define PIPE_OS_UNIX
+ #endif
+ 
++#if defined(__lv2ppu__)
++//#define PIPE_OS_UNIX
++#define PIPE_OS_LV2
++#endif
++
+ /*
+  * Try to auto-detect the subsystem.
+  * 
+diff --git src/glsl/Makefile src/glsl/Makefile
+index d9ecbc8..953c53e 100644
+--- src/glsl/Makefile
++++ src/glsl/Makefile
+@@ -162,8 +162,11 @@ glcpp/glcpp-lex.c: glcpp/glcpp-lex.l
+ glcpp/glcpp-parse.c: glcpp/glcpp-parse.y
+ 	$(BISON) -v -o "$@" --defines=glcpp/glcpp-parse.h $<
+ 
+-builtin_compiler: $(GLSL2_OBJECTS) $(OBJECTS) builtin_stubs.o
+-	$(APP_CXX) $(INCLUDES) $(CXXFLAGS) $(LDFLAGS) $(OBJECTS) $(GLSL2_OBJECTS) builtin_stubs.o -o $@
++#builtin_compiler: $(GLSL2_OBJECTS) $(OBJECTS) builtin_stubs.o
++#	$(APP_CXX) $(INCLUDES) $(CXXFLAGS) $(LDFLAGS) $(OBJECTS) $(GLSL2_OBJECTS) builtin_stubs.o -o $@
++
++builtin_compiler:
++	$(MAKE) -f Makefile-builtins builtin_compiler
+ 
+ builtin_function.cpp: builtins/profiles/* builtins/ir/* builtins/tools/generate_builtins.py builtins/tools/texture_builtins.py builtin_compiler
+ 	@echo Regenerating builtin_function.cpp...
+diff --git src/glsl/strtod.c src/glsl/strtod.c
+index ff34591..2e42e3a 100644
+--- src/glsl/strtod.c
++++ src/glsl/strtod.c
+@@ -44,7 +44,7 @@
+ double
+ glsl_strtod(const char *s, char **end)
+ {
+-#if defined(_GNU_SOURCE) && !defined(__CYGWIN__) && !defined(__FreeBSD__)
++#if defined(_GNU_SOURCE) && !defined(__CYGWIN__) && !defined(__FreeBSD__) && !defined(__lv2ppu__)
+    static locale_t loc = NULL;
+    if (!loc) {
+       loc = newlocale(LC_CTYPE_MASK, "C", NULL);
+diff --git src/mesa/main/imports.c src/mesa/main/imports.c
+index bbc6ac6..7df7481 100644
+--- src/mesa/main/imports.c
++++ src/mesa/main/imports.c
+@@ -764,6 +764,7 @@ float
+ _mesa_strtof( const char *s, char **end )
+ {
+ #if defined(_GNU_SOURCE) && !defined(__CYGWIN__) && !defined(__FreeBSD__) && \
++  !defined(__lv2ppu__) && \
+     !defined(ANDROID)
+    static locale_t loc = NULL;
+    if (!loc) {
+diff --git src/mesa/main/imports.h src/mesa/main/imports.h
+index ce7b45d..03383f6 100644
+--- src/mesa/main/imports.h
++++ src/mesa/main/imports.h
+@@ -571,7 +571,7 @@ _mesa_init_sqrt_table(void);
+ #define FFS_DEFINED 1
+ #ifdef __GNUC__
+ 
+-#if defined(__MINGW32__) || defined(__CYGWIN__) || defined(ANDROID) || defined(__APPLE__)
++#if defined(__MINGW32__) || defined(__CYGWIN__) || defined(ANDROID) || defined(__APPLE__) || defined(__lv2ppu__)
+ #define ffs __builtin_ffs
+ #define ffsll __builtin_ffsll
+ #endif
+diff --git src/mesa/main/querymatrix.c src/mesa/main/querymatrix.c
+index 2843d55..a66090b 100644
+--- src/mesa/main/querymatrix.c
++++ src/mesa/main/querymatrix.c
+@@ -70,7 +70,7 @@ fpclassify(double x)
+     }
+ }
+ 
+-#elif defined(__APPLE__) || defined(__CYGWIN__) || defined(__FreeBSD__) || \
++#elif defined(__APPLE__) || defined(__CYGWIN__) || defined(__FreeBSD__) || defined(__lv2ppu__) || \
+      defined(__OpenBSD__) || defined(__NetBSD__) || defined(__DragonFly__) || \
+      (defined(__sun) && defined(__C99FEATURES__)) || defined(__MINGW32__) || \
+      (defined(__sun) && defined(__GNUC__)) || defined(ANDROID) || defined(__HAIKU__)
