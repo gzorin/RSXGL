@@ -1177,7 +1177,6 @@ nvfx_vertprog_translate_draw_vp(struct nvfx_context *nvfx, struct nvfx_pipe_vert
 	return vp;
 }
 
-#if !defined(__lv2ppu__)
 boolean
 nvfx_vertprog_validate(struct nvfx_context *nvfx)
 {
@@ -1452,4 +1451,3 @@ nvfx_init_vertprog_functions(struct nvfx_context *nvfx)
         nvfx->pipe.bind_vs_state = nvfx_vp_state_bind;
         nvfx->pipe.delete_vs_state = nvfx_vp_state_delete;
 }
-#endif

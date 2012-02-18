@@ -6,7 +6,7 @@ CONFIG_NAME = rsx
 CC = @ppu_CC@
 CXX = @ppu_CXX@
 DEFINES = -D_GNU_SOURCE
-MKLIB = $(SHELL) @abs_top_srcdir@/extsrc/mesa/rsxgl/mklib-rsx
+MKLIB = $(SHELL) @abs_top_srcdir@/src/mesa/mklib-rsx
 
 BUILD_CC = @CC@
 BUILD_CXX = @CXX@
@@ -15,7 +15,7 @@ BUILD_APP_CXX = @CXX@
 
 #OPT_FLAGS = -O3 -mcpu=603 -fsigned-char -funroll-loops
 
-RSX_INCLUDES = -I@abs_top_srcdir@/extsrc/mesa/src/rsx/include
+RSX_INCLUDES = -I@abs_top_srcdir@/src/mesa/src/rsx/include
 
 CFLAGS = -Wall -Wmissing-prototypes -Wdeclaration-after-statement \
 	-Wpointer-arith $(OPT_FLAGS) $(PIC_FLAGS) $(ARCH_FLAGS) \
@@ -29,7 +29,4 @@ GLU_DIRS =
 DRIVER_DIRS =
 DRI_DIRS =
 GALLIUM_DIRS = auxiliary drivers
-GALLIUM_DRIVERS_DIRS = nouveau nvfx
-
-DRM = $(HOME)/drm
-LIBDRM_CFLAGS = -I$(DRM) -I$(DRM)/include -I$(DRM)/include/drm -I$(DRM)/nouveau
+GALLIUM_DRIVERS_DIRS = 

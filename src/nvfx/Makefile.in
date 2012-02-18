@@ -63,7 +63,8 @@ am_libnvfx_a_OBJECTS = libnvfx_a-nv04_2d.$(OBJEXT) \
 	libnvfx_a-nvfx_state_fb.$(OBJEXT) \
 	libnvfx_a-nvfx_surface.$(OBJEXT) \
 	libnvfx_a-nvfx_transfer.$(OBJEXT) libnvfx_a-nvfx_vbo.$(OBJEXT) \
-	libnvfx_a-nvfx_vertprog.$(OBJEXT)
+	libnvfx_a-nvfx_vertprog.$(OBJEXT) \
+	libnvfx_a-alloca_stub.$(OBJEXT)
 libnvfx_a_OBJECTS = $(am_libnvfx_a_OBJECTS)
 DEFAULT_INCLUDES = -I.@am__isrc@
 depcomp = $(SHELL) $(top_srcdir)/config/depcomp
@@ -250,7 +251,8 @@ libnvfx_a_SOURCES = nv04_2d.c \
 	nvfx_surface.c \
 	nvfx_transfer.c \
 	nvfx_vbo.c \
-	nvfx_vertprog.c
+	nvfx_vertprog.c \
+	alloca_stub.c
 
 libnvfx_a_CPPFLAGS = \
 	-I$(LIBDRM_LOCATION) -I$(LIBDRM_LOCATION)/include -I$(LIBDRM_LOCATION)/include/drm -I$(LIBDRM_LOCATION)/nouveau \
@@ -306,6 +308,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libnvfx_a-alloca_stub.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libnvfx_a-nv04_2d.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libnvfx_a-nv30_fragtex.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libnvfx_a-nv40_fragtex.Po@am__quote@
@@ -635,6 +638,20 @@ libnvfx_a-nvfx_vertprog.obj: nvfx_vertprog.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='nvfx_vertprog.c' object='libnvfx_a-nvfx_vertprog.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libnvfx_a_CPPFLAGS) $(CPPFLAGS) $(libnvfx_a_CFLAGS) $(CFLAGS) -c -o libnvfx_a-nvfx_vertprog.obj `if test -f 'nvfx_vertprog.c'; then $(CYGPATH_W) 'nvfx_vertprog.c'; else $(CYGPATH_W) '$(srcdir)/nvfx_vertprog.c'; fi`
+
+libnvfx_a-alloca_stub.o: alloca_stub.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libnvfx_a_CPPFLAGS) $(CPPFLAGS) $(libnvfx_a_CFLAGS) $(CFLAGS) -MT libnvfx_a-alloca_stub.o -MD -MP -MF $(DEPDIR)/libnvfx_a-alloca_stub.Tpo -c -o libnvfx_a-alloca_stub.o `test -f 'alloca_stub.c' || echo '$(srcdir)/'`alloca_stub.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libnvfx_a-alloca_stub.Tpo $(DEPDIR)/libnvfx_a-alloca_stub.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='alloca_stub.c' object='libnvfx_a-alloca_stub.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libnvfx_a_CPPFLAGS) $(CPPFLAGS) $(libnvfx_a_CFLAGS) $(CFLAGS) -c -o libnvfx_a-alloca_stub.o `test -f 'alloca_stub.c' || echo '$(srcdir)/'`alloca_stub.c
+
+libnvfx_a-alloca_stub.obj: alloca_stub.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libnvfx_a_CPPFLAGS) $(CPPFLAGS) $(libnvfx_a_CFLAGS) $(CFLAGS) -MT libnvfx_a-alloca_stub.obj -MD -MP -MF $(DEPDIR)/libnvfx_a-alloca_stub.Tpo -c -o libnvfx_a-alloca_stub.obj `if test -f 'alloca_stub.c'; then $(CYGPATH_W) 'alloca_stub.c'; else $(CYGPATH_W) '$(srcdir)/alloca_stub.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libnvfx_a-alloca_stub.Tpo $(DEPDIR)/libnvfx_a-alloca_stub.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='alloca_stub.c' object='libnvfx_a-alloca_stub.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libnvfx_a_CPPFLAGS) $(CPPFLAGS) $(libnvfx_a_CFLAGS) $(CFLAGS) -c -o libnvfx_a-alloca_stub.obj `if test -f 'alloca_stub.c'; then $(CYGPATH_W) 'alloca_stub.c'; else $(CYGPATH_W) '$(srcdir)/alloca_stub.c'; fi`
 
 ID: $(HEADERS) $(SOURCES) $(LISP) $(TAGS_FILES)
 	list='$(SOURCES) $(HEADERS) $(LISP) $(TAGS_FILES)'; \

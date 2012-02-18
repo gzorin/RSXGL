@@ -33,7 +33,8 @@ libnvfx_a_SOURCES = nv04_2d.c \
 	nvfx_surface.c \
 	nvfx_transfer.c \
 	nvfx_vbo.c \
-	nvfx_vertprog.c
+	nvfx_vertprog.c \
+	alloca_stub.c
 libnvfx_a_CPPFLAGS = \
 	-I$(LIBDRM_LOCATION) -I$(LIBDRM_LOCATION)/include -I$(LIBDRM_LOCATION)/include/drm -I$(LIBDRM_LOCATION)/nouveau \
 	-I$(MESA_LOCATION)/src/gallium/include -I$(MESA_LOCATION)/src/gallium/auxiliary -I$(top_srcdir)/src \

@@ -7,9 +7,9 @@ CFLAGS = -O1 @ppu_CFLAGS@
 CXXFLAGS = -O1 @ppu_CXXFLAGS@
 CPPFLAGS = @ppu_CPPFLAGS@
 
-noinst_LIBRARIES = libdrm_nouveau.a
-
 LIBDRM_LOCATION = @LIBDRM_LOCATION@
+
+noinst_LIBRARIES = libdrm_nouveau.a
 
 libdrm_nouveau_a_SOURCES = $(LIBDRM_LOCATION)/nouveau/nouveau_device.c	\
 	$(LIBDRM_LOCATION)/nouveau/nouveau_channel.c			\

@@ -1229,7 +1229,6 @@ nvfx_fp_memcpy(void* dst, const void* src, size_t len)
  * patch if they are the same (this could perhaps be removed).
  */
 
-#if !defined(__lv2ppu__)
 void
 nvfx_fragprog_validate(struct nvfx_context *nvfx)
 {
@@ -1622,4 +1621,3 @@ nvfx_init_fragprog_functions(struct nvfx_context *nvfx)
         nvfx->pipe.bind_fs_state = nvfx_fp_state_bind;
         nvfx->pipe.delete_fs_state = nvfx_fp_state_delete;
 }
-#endif
