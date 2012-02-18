@@ -145,7 +145,7 @@ struct texture_t {
 
   // --- Cold:
   struct level_t {
-    uint8_t invalid_contents:1, internalformat:5, dims:2;
+    uint8_t invalid_contents:1, dims:2;
     pipe_format pformat;
     dimension_size_type size[3];
     void * data;
@@ -156,7 +156,7 @@ struct texture_t {
     ~level_t();
   } levels[max_levels];
 
-  uint16_t invalid:1,valid:1,immutable:1,internalformat:5, cube:1, rect:1, max_level:4, dims:2;
+  uint16_t invalid:1, valid:1, immutable:1, cube:1, rect:1, max_level:4, dims:2;
   pipe_format pformat;
 
   // --- Hot:

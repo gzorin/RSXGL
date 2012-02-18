@@ -589,7 +589,7 @@ texture_t::storage_type & texture_t::storage()
 }
 
 texture_t::texture_t()
-  : deleted(0), timestamp(0), ref_count(0), invalid(0), valid(0), immutable(0), internalformat(RSXGL_MAX_TEX_FORMATS), cube(0), rect(0), max_level(0), dims(0), pformat(PIPE_FORMAT_NONE), format(0), pitch(0), remap(0)
+  : deleted(0), timestamp(0), ref_count(0), invalid(0), valid(0), immutable(0), cube(0), rect(0), max_level(0), dims(0), pformat(PIPE_FORMAT_NONE), format(0), pitch(0), remap(0)
 {
   size[0] = 0;
   size[1] = 0;
@@ -604,7 +604,7 @@ texture_t::~texture_t()
 }
 
 texture_t::level_t::level_t()
-  : invalid_contents(0), internalformat(RSXGL_MAX_TEX_FORMATS), pformat(PIPE_FORMAT_NONE), dims(0), data(0)
+  : invalid_contents(0), pformat(PIPE_FORMAT_NONE), dims(0), data(0)
 {
   size[0] = 0;
   size[1] = 0;
@@ -953,137 +953,6 @@ glTexParameteriv (GLenum target, GLenum pname, const GLint *params)
   rsxgl_tex_parameteri(ctx,ctx -> texture_binding.names[ctx -> active_texture],pname,*params);
 }
 
-// Map GL_* tokens passed as internalformat to RSXGL_TEX_FORMAT_* tokens:
-static inline uint8_t
-rsxgl_tex_format(GLint internalformat)
-{
-  if(internalformat == GL_RGBA || internalformat == GL_RGBA8) {
-    return RSXGL_TEX_FORMAT_A8R8G8B8;
-  }
-  else if(internalformat == GL_RGB || internalformat == GL_RGB8) {
-    return RSXGL_TEX_FORMAT_D8R8G8B8;
-  }
-  else if(internalformat == GL_RED || internalformat == GL_R8) {
-    return RSXGL_TEX_FORMAT_B8;
-  }
-  else if(internalformat == GL_RG || internalformat == GL_RG8) {
-    return RSXGL_TEX_FORMAT_G8B8;
-  }
-  else if(internalformat == GL_DEPTH_COMPONENT16 || internalformat == GL_DEPTH_COMPONENT) {
-    return RSXGL_TEX_FORMAT_DEPTH16;
-  }
-  else if(internalformat == GL_DEPTH_COMPONENT24) {
-    return RSXGL_TEX_FORMAT_DEPTH24_D8;
-  }
-  else if(internalformat == GL_DEPTH_COMPONENT32F) {
-    return RSXGL_TEX_FORMAT_DEPTH24_D8_FLOAT;
-  }
-  else if(internalformat == GL_RGBA32F) {
-    return RSXGL_TEX_FORMAT_W32_Z32_Y32_X32_FLOAT;
-  }
-  else if(internalformat == GL_R32F) {
-    return RSXGL_TEX_FORMAT_X32_FLOAT;
-  }
-  else {
-    return RSXGL_MAX_TEX_FORMATS;
-  }
-}
-
-// Map RSXGL_TEX_FORMAT_* tokens to format values used by hardware:
-static const uint8_t rsxgl_texture_nv40_format[RSXGL_MAX_TEX_FORMATS] = {
-  0x81,
-  0x82,
-  0x83,
-  0x84,
-  0x85,
-  0x86,
-  0x87,
-  0x88,
-  0x8B,
-  0x8F,
-  0x90,
-  0x91,
-  0x92,
-  0x93,
-  0x94,
-  0x95,
-  0x97,
-  0x98,
-  0x99,
-  0x9A,
-  0x9B,
-  0x9C,
-  0x9D,
-  0x9E,
-  0x9F,
-  0xAD,
-  0xAE
-};
-
-// Lookup per-pixel storage requirements for RSXGL_TEX_FORMAT_* tokens:
-static const uint8_t
-rsxgl_tex_bytesPerPixel[RSXGL_MAX_TEX_FORMATS] = {
-  1,
-  2,
-  2,
-  2,
-  4,
-  0,
-  0,
-  0,
-  2,
-  2,
-  4,
-  4,
-  2,
-  2,
-  2,
-  4,
-  2,
-  0,
-  0,
-  8,
-  16,
-  4,
-  2,
-  4,
-  4,
-  0,
-  0
-};
-
-// Map RSXGL_TEX_FORMAT_* tokens to Mesa's PIPE_FORMAT_* tokens:
-static const pipe_format
-rsxgl_texture_pipe_format[RSXGL_MAX_TEX_FORMATS] = {
-  PIPE_FORMAT_R8_UNORM,
-  PIPE_FORMAT_B5G5R5A1_UNORM,
-  PIPE_FORMAT_B4G4R4A4_UNORM,
-  PIPE_FORMAT_B5G6R5_UNORM,
-  PIPE_FORMAT_B8G8R8A8_UNORM,
-  PIPE_FORMAT_DXT1_RGB,
-  PIPE_FORMAT_DXT3_RGBA,
-  PIPE_FORMAT_DXT5_RGBA,
-  PIPE_FORMAT_R8G8_UNORM,
-  PIPE_FORMAT_B5G6R5_UNORM,
-  PIPE_FORMAT_X8Z24_UNORM,
-  PIPE_FORMAT_Z32_FLOAT,
-  PIPE_FORMAT_Z16_UNORM,
-  PIPE_FORMAT_NONE,
-  PIPE_FORMAT_R16_FLOAT,
-  PIPE_FORMAT_R16G16_FLOAT,
-  PIPE_FORMAT_NONE,
-  PIPE_FORMAT_NONE,
-  PIPE_FORMAT_NONE,
-  PIPE_FORMAT_R16G16B16A16_FLOAT,
-  PIPE_FORMAT_R32G32B32A32_FLOAT,
-  PIPE_FORMAT_R32_FLOAT,
-  PIPE_FORMAT_B5G5R5X1_UNORM,
-  PIPE_FORMAT_B8G8R8X8_UNORM,
-  PIPE_FORMAT_R16G16_FLOAT,
-  PIPE_FORMAT_R8G8_B8G8_UNORM,
-  PIPE_FORMAT_G8R8_G8B8_UNORM
-};
-
 static inline uint32_t
 rsxgl_tex_remap(uint32_t op0,uint32_t op1,uint32_t op2,uint32_t op3,
 		uint32_t src0,uint32_t src1,uint32_t src2,uint32_t src3)
@@ -1099,227 +968,13 @@ rsxgl_tex_remap(uint32_t op0,uint32_t op1,uint32_t op2,uint32_t op3,
     (src3 << 0);
 }
 
-#if 0
-static inline void
-rsxgl_tex_copy_image(void * dst,uint32_t dstRowPitch,uint32_t dstX,uint32_t dstY,uint32_t dstZ,
-		     const void * src,uint32_t srcRowPitch,uint32_t srcX,uint32_t srcY,uint32_t srcZ,
-		     uint32_t width,uint32_t height,uint32_t depth,uint32_t bytesPerPixel)
-{
-  uint8_t * pdst = (uint8_t *)dst + (dstZ * height * dstRowPitch) + (dstY * dstRowPitch) + (dstX * bytesPerPixel);
-  const uint8_t * psrc = (const uint8_t *)src + (srcZ * height * srcRowPitch) + (srcY * srcRowPitch) + (srcX * bytesPerPixel);
-  const uint32_t bytesPerLine = bytesPerPixel * width;
-
-  for(size_t k = 0;k < depth;++k) {
-    for(size_t j = 0;j < height;++j) {
-      memcpy(pdst,psrc,bytesPerLine);
-      pdst += dstRowPitch;
-      psrc += srcRowPitch;
-    }
-  }
-}
-
-static inline void
-rsxgl_tex_transfer_image(gcmContextData * context,
-			 const memory_t & dst,uint32_t dstRowPitch,uint32_t dstX,uint32_t dstY,uint32_t dstZ,
-			 const memory_t & src,uint32_t srcRowPitch,uint32_t srcX,uint32_t srcY,uint32_t srcZ,
-			 uint32_t width,uint32_t height,uint32_t depth,uint32_t bytesPerPixel)
-{
-  const uint32_t linelength = width * bytesPerPixel;
-
-  const uint32_t
-    srcincr = height * srcRowPitch,
-    dstincr = height * dstRowPitch;
-
-  uint32_t
-    srcoffset = src.offset + (srcZ * srcincr) + (srcY * srcRowPitch) + (srcX * bytesPerPixel),
-    dstoffset = dst.offset + (dstZ * dstincr) + (dstY * dstRowPitch) + (dstX * bytesPerPixel);
-
-  uint32_t * buffer = gcm_reserve(context,3 + (9 * depth));
-
-  gcm_emit_channel_method(&buffer,1,0x184,2);
-  gcm_emit(&buffer,(src.location == RSXGL_MEMORY_LOCATION_LOCAL) ? 0xFEED0000 : 0xFEED0001);
-  gcm_emit(&buffer,(dst.location == RSXGL_MEMORY_LOCATION_LOCAL) ? 0xFEED0000 : 0xFEED0001);
-
-  for(;depth > 0;--depth,srcoffset += srcincr,dstoffset += dstincr) {
-    gcm_emit_channel_method(&buffer,1,0x30c,8);
-    gcm_emit(&buffer,srcoffset);
-    gcm_emit(&buffer,dstoffset);
-    gcm_emit(&buffer,srcRowPitch);
-    gcm_emit(&buffer,dstRowPitch);
-    gcm_emit(&buffer,linelength);
-    gcm_emit(&buffer,height);
-    gcm_emit(&buffer,((uint32_t)1 << 8) | 1);
-    gcm_emit(&buffer,0);
-  }
-
-  gcm_finish_commands(context,&buffer);
-}
-
-// given the format and type parameters passed to the likes of glTexImage*, return the "internal format"
-// that can represent it:
-static inline uint8_t
-rsxgl_tex_internalformat(GLenum format,GLenum type)
-{
-  if(format == GL_RED) {
-    if(type == GL_UNSIGNED_BYTE || type == GL_BYTE) {
-      return RSXGL_TEX_FORMAT_B8;
-    }
-    else if(type == GL_UNSIGNED_SHORT || type == GL_SHORT) {
-      return RSXGL_TEX_FORMAT_X16;
-    }
-    else if(type == GL_FLOAT) {
-      return RSXGL_TEX_FORMAT_X32_FLOAT;
-    }
-  }
-  else if(format == GL_RG) {
-    if(type == GL_UNSIGNED_BYTE || type == GL_BYTE) {
-      return RSXGL_TEX_FORMAT_G8B8;
-    }
-    else if(type == GL_UNSIGNED_SHORT || type == GL_SHORT) {
-      return RSXGL_TEX_FORMAT_Y16_X16;
-    }
-    else if(type == GL_HALF_FLOAT) {
-      return RSXGL_TEX_FORMAT_Y16_X16;
-    }
-  }
-  else if(format == GL_BGRA) {
-    if(type == GL_UNSIGNED_BYTE || type == GL_BYTE) {
-      return RSXGL_TEX_FORMAT_A8R8G8B8;
-    }
-  }
-  else if(format == GL_BGR) {
-    if(type == GL_UNSIGNED_BYTE || type == GL_BYTE) {
-      return RSXGL_TEX_FORMAT_D8R8G8B8;
-    }
-  }
-  return RSXGL_MAX_TEX_FORMATS;
-}
-
-static inline void
-rsxgl_tex_set_image(uint8_t internalformat,uint32_t pitch,GLvoid * dstdata,
-		    GLenum format,GLenum type,const GLvoid * srcdata,
-		    uint32_t width,uint32_t height,uint32_t depth)
-{
-  uint32_t bytesPerPixel = 0;
-
-  if(internalformat == RSXGL_TEX_FORMAT_B8) {
-    if(format == GL_RED && (type == GL_UNSIGNED_BYTE || type == GL_BYTE)) {
-      bytesPerPixel = sizeof(uint8_t);
-    }
-  }
-  else if(internalformat == RSXGL_TEX_FORMAT_A1R5G5B5) {
-    if(format == GL_BGRA && (type == GL_UNSIGNED_SHORT_5_5_5_1)) {
-      bytesPerPixel = sizeof(uint16_t);
-    }
-  }
-  else if(internalformat == RSXGL_TEX_FORMAT_A4R4G4B4) {
-    if(format == GL_BGRA && (type == GL_UNSIGNED_SHORT_4_4_4_4)) {
-      bytesPerPixel = sizeof(uint16_t);
-    }
-  }
-  else if(internalformat == RSXGL_TEX_FORMAT_R5G6B5) {
-    if(format == GL_BGR && (type == GL_UNSIGNED_SHORT_5_6_5)) {
-      bytesPerPixel = sizeof(uint16_t);
-    }
-  }
-  else if(internalformat == RSXGL_TEX_FORMAT_A8R8G8B8) {
-    if(format == GL_BGRA && (type == GL_UNSIGNED_BYTE || type == GL_BYTE)) {
-      bytesPerPixel = sizeof(uint8_t) * 4;
-    }
-  }
-  else if(internalformat == RSXGL_TEX_FORMAT_G8B8) {
-    if(format == GL_RG && (type == GL_UNSIGNED_BYTE || type == GL_BYTE)) {
-      bytesPerPixel = sizeof(uint8_t) * 2;
-    }
-  }
-  else if(internalformat == RSXGL_TEX_FORMAT_DEPTH24_D8) {
-    if(format == GL_DEPTH_COMPONENT && (type == GL_UNSIGNED_INT || type == GL_INT)) {
-      bytesPerPixel = sizeof(uint32_t);
-    }
-  }
-  else if(internalformat == RSXGL_TEX_FORMAT_DEPTH24_D8_FLOAT) {
-    if(format == GL_DEPTH_COMPONENT && (type == GL_FLOAT)) {
-      bytesPerPixel = sizeof(float);
-    }
-  }
-  else if(internalformat == RSXGL_TEX_FORMAT_DEPTH16) {
-    if(format == GL_DEPTH_COMPONENT && (type == GL_UNSIGNED_SHORT || type == GL_SHORT)) {
-      bytesPerPixel = sizeof(uint16_t);
-    }
-  }
-  else if(internalformat == RSXGL_TEX_FORMAT_DEPTH16_FLOAT) {
-    if(format == GL_DEPTH_COMPONENT && (type == GL_HALF_FLOAT)) {
-      bytesPerPixel = sizeof(float) / 2;
-    }
-  }
-  else if(internalformat == RSXGL_TEX_FORMAT_X16) {
-    if(format == GL_RED && (type == GL_UNSIGNED_SHORT || type == GL_SHORT)) {
-      bytesPerPixel = sizeof(uint16_t);
-    }
-  }
-  else if(internalformat == RSXGL_TEX_FORMAT_Y16_X16) {
-    if(format == GL_RG && (type == GL_UNSIGNED_SHORT || type == GL_SHORT)) {
-      bytesPerPixel = sizeof(uint16_t) * 2;
-    }
-  }
-  else if(internalformat == RSXGL_TEX_FORMAT_R5G5B5A1) {
-    if(format == GL_BGRA && (type == GL_UNSIGNED_SHORT_1_5_5_5_REV)) {
-      bytesPerPixel = sizeof(uint16_t);
-    }
-  }
-  else if(internalformat == RSXGL_TEX_FORMAT_W16_Z16_Y16_X16_FLOAT) {
-    if(format == GL_BGRA && (type == GL_HALF_FLOAT)) {
-      bytesPerPixel = sizeof(float) / 2 * 4;
-    }
-  }
-  else if(internalformat == RSXGL_TEX_FORMAT_W32_Z32_Y32_X32_FLOAT) {
-    if(format == GL_BGRA && (type == GL_FLOAT)) {
-      bytesPerPixel = sizeof(float) * 4;
-    }
-  }
-  else if(internalformat == RSXGL_TEX_FORMAT_X32_FLOAT) {
-    if(format == GL_RED && (type == GL_FLOAT)) {
-      bytesPerPixel = sizeof(float);
-    }
-  }
-  else if(internalformat == RSXGL_TEX_FORMAT_D1R5G5B5) {
-    if((format == GL_BGRA || format == GL_BGR) && (type == GL_UNSIGNED_SHORT_5_6_5)) {
-      bytesPerPixel = sizeof(uint16_t);
-    }
-  }
-  else if(internalformat == RSXGL_TEX_FORMAT_D8R8G8B8) {
-    if(format == GL_BGRA && (type == GL_UNSIGNED_BYTE || type == GL_BYTE)) {
-      bytesPerPixel = sizeof(uint8_t) * 4;
-    }
-  }
-  else if(internalformat == RSXGL_TEX_FORMAT_Y16_X16_FLOAT) {
-    if(format == GL_RG && (type == GL_HALF_FLOAT)) {
-      bytesPerPixel = sizeof(float) / 2 * 2;
-    }
-  }
-
-  // if we get here, then invoke an "efficient" transfer without type conversion or channel reordering:
-  if(bytesPerPixel > 0) {
-    rsxgl_tex_copy_image(dstdata,pitch,0,0,0,
-			 srcdata,width * bytesPerPixel,0,0,0,
-			 width,height,depth,bytesPerPixel);
-  }
-  else {
-    rsxgl_debug_printf("texture image transfer could not be handled efficiently for: %u %x %x\n",internalformat,(uint32_t)format,(uint32_t)type);
-  }
-}
-#endif
-
 static inline uint32_t
-rsxgl_tex_pixel_offset(const texture_t & texture,size_t level,uint32_t x,uint32_t y,uint32_t z,texture_t::dimension_size_type size[3])
+rsxgl_tex_level_offset(const texture_t & texture,size_t level)
 {
-  uint32_t offset = 0;
-  const uint32_t bytesPerPixel = rsxgl_tex_bytesPerPixel[texture.internalformat];
-  const uint32_t pitch = texture.pitch;
+  texture_t::dimension_size_type size[3] = { texture.size[0], texture.size[1], texture.size[2] };
+  const uint32_t pitch = util_format_get_stride(texture.pformat,size[0]);
 
-  size[0] = texture.size[0];
-  size[1] = texture.size[1];
-  size[2] = texture.size[2];
+  uint32_t offset = 0;
 
   for(size_t i = 0,n = std::min((size_t)texture.max_level,level);i < n;++i) {
     offset += pitch * size[1] * size[2];
@@ -1329,7 +984,7 @@ rsxgl_tex_pixel_offset(const texture_t & texture,size_t level,uint32_t x,uint32_
     size[2] = std::max(size[2] >> 1,1);
   }
 
-  return offset + (z * size[2] * pitch) + (y * pitch) + (x * bytesPerPixel);
+  return offset;
 }
 
 static inline void
@@ -1345,9 +1000,16 @@ rsxgl_tex_image(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,con
     RSXGL_ERROR_(GL_INVALID_VALUE);
   }
 
-  const uint8_t internalformat = rsxgl_tex_format(glinternalformat);
+  const pipe_format pformat = rsxgl_choose_format(ctx -> screen(),
+						  glinternalformat,format,type,
+						  (dims == 1) ? PIPE_TEXTURE_1D :
+						  (dims == 2) ? (cube ? PIPE_TEXTURE_CUBE : (rect ? PIPE_TEXTURE_RECT : PIPE_TEXTURE_2D)) :
+						  (dims == 3) ? PIPE_TEXTURE_2D :
+						  PIPE_MAX_TEXTURE_TYPES,
+						  1,
+						  PIPE_BIND_SAMPLER_VIEW);
 
-  if(internalformat == RSXGL_MAX_TEX_FORMATS) {
+  if(pformat == PIPE_FORMAT_NONE) {
     RSXGL_ERROR_(GL_INVALID_VALUE);
   }
 
@@ -1360,16 +1022,6 @@ rsxgl_tex_image(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,con
   if(texture.immutable) {
     RSXGL_ERROR_(GL_INVALID_OPERATION);
   }
-
-  const pipe_format pformat = rsxgl_choose_format(ctx -> screen(),
-						  glinternalformat,format,type,
-						  (dims == 1) ? PIPE_TEXTURE_1D :
-						  (dims == 2) ? (cube ? PIPE_TEXTURE_CUBE : (rect ? PIPE_TEXTURE_RECT : PIPE_TEXTURE_2D)) :
-						  (dims == 3) ? PIPE_TEXTURE_2D :
-						  PIPE_MAX_TEXTURE_TYPES,
-						  1,
-						  PIPE_BIND_SAMPLER_VIEW);
-  rsxgl_debug_printf("pipe_format: %u\n",(unsigned int)pformat);
 
 #if 0
   // TODO - Orphan the texture
@@ -1385,13 +1037,12 @@ rsxgl_tex_image(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,con
 
   if(texture.dims == 0) {
     texture.dims = dims;
-    texture.internalformat = internalformat;
     texture.cube = cube;
     texture.rect = rect;
     texture.pformat = pformat;
   }
   else if(texture.dims != dims ||
-	  texture.internalformat != internalformat ||
+	  texture.pformat != pformat ||
 	  texture.cube != cube ||
 	  texture.rect != rect ||
 	  texture.pformat != pformat) {
@@ -1404,7 +1055,6 @@ rsxgl_tex_image(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,con
   texture.valid = 0;
 
   // set the size for the mipmap level
-  texture.levels[level].internalformat = internalformat;
   texture.levels[level].dims = dims;
   texture.levels[level].pformat = pformat;
 
@@ -1436,7 +1086,6 @@ rsxgl_tex_image(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,con
   else if(data != 0) {
     const size_t stride = util_format_get_stride(pformat,width);
     const size_t nbytes = util_format_get_2d_size(pformat,stride,height);
-    rsxgl_debug_printf("temporary texture bytes: %u\n",(unsigned int)nbytes);
 
     texture.levels[level].data = malloc(nbytes);
 
@@ -1458,7 +1107,7 @@ rsxgl_tex_image(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,con
 }
 
 static inline void
-rsxgl_tex_storage(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,const bool cube,const bool rect,GLsizei levels,uint8_t internalformat,GLsizei width,GLsizei height,GLsizei depth)
+rsxgl_tex_storage(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,const bool cube,const bool rect,GLsizei levels,GLint glinternalformat,GLsizei width,GLsizei height,GLsizei depth)
 {
   rsxgl_assert(dims > 0);
   rsxgl_assert(width > 0);
@@ -1478,7 +1127,16 @@ rsxgl_tex_storage(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,c
     RSXGL_ERROR_(GL_INVALID_VALUE);
   }
 
-  if(internalformat == RSXGL_MAX_TEX_FORMATS) {
+  const pipe_format pformat = rsxgl_choose_format(ctx -> screen(),
+						  glinternalformat,GL_NONE,GL_NONE,
+						  (dims == 1) ? PIPE_TEXTURE_1D :
+						  (dims == 2) ? (cube ? PIPE_TEXTURE_CUBE : (rect ? PIPE_TEXTURE_RECT : PIPE_TEXTURE_2D)) :
+						  (dims == 3) ? PIPE_TEXTURE_2D :
+						  PIPE_MAX_TEXTURE_TYPES,
+						  1,
+						  PIPE_BIND_SAMPLER_VIEW);
+
+  if(pformat == PIPE_FORMAT_NONE) {
     RSXGL_ERROR_(GL_INVALID_ENUM);
   }
 
@@ -1516,25 +1174,22 @@ rsxgl_tex_storage(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,c
   texture.invalid = 0;
   texture.valid = 1;
   texture.immutable = 1;
-  texture.internalformat = internalformat;
+  texture.pformat = pformat;
   texture.cube = cube;
   texture.rect = rect;
   texture.max_level = levels;
-
-  texture.format;
 
   texture.size[0] = width;
   texture.size[1] = height;
   texture.size[2] = depth;
 
-  const uint32_t bytesPerPixel = rsxgl_tex_bytesPerPixel[internalformat];
-  const uint32_t pitch = align_pot< uint32_t, 64 >(width * bytesPerPixel);
+  const uint32_t pitch = util_format_get_stride(pformat,width);
   texture.pitch = pitch;
 
   texture.remap = rsxgl_tex_remap(RSXGL_TEXTURE_REMAP_REMAP,RSXGL_TEXTURE_REMAP_REMAP,RSXGL_TEXTURE_REMAP_REMAP,RSXGL_TEXTURE_REMAP_REMAP,RSXGL_TEXTURE_REMAP_FROM_A,RSXGL_TEXTURE_REMAP_FROM_B,RSXGL_TEXTURE_REMAP_FROM_G,RSXGL_TEXTURE_REMAP_FROM_R);
 
   texture_t::dimension_size_type unused_size[3];
-  uint32_t nbytes = rsxgl_tex_pixel_offset(texture,texture.max_level,0,0,0,unused_size);
+  const uint32_t nbytes = rsxgl_tex_level_offset(texture,texture.max_level);
 
   const memory_arena_t::name_type arena = ctx -> arena_binding.names[RSXGL_TEXTURE_ARENA];
   texture.memory = rsxgl_arena_allocate(memory_arena_t::storage().at(arena),128,nbytes,0);
@@ -1543,12 +1198,15 @@ rsxgl_tex_storage(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,c
   }
   texture.arena = arena;
 
+  const nvfx_texture_format * pfmt = nvfx_get_texture_format(pformat);
+  const uint32_t fmt = pfmt -> fmt[4] | NV40_3D_TEX_FORMAT_LINEAR | (texture.rect ? NV40_3D_TEX_FORMAT_RECT : 0) | 0x8000;
+
   texture.format =
     ((texture.memory.location == 0) ? NV30_3D_TEX_FORMAT_DMA0 : NV30_3D_TEX_FORMAT_DMA1) |
     ((texture.cube) ? NV30_3D_TEX_FORMAT_CUBIC : 0) |
     NV30_3D_TEX_FORMAT_NO_BORDER |
     ((uint32_t)texture.dims << NV30_3D_TEX_FORMAT_DIMS__SHIFT) |
-    ((uint32_t)(rsxgl_texture_nv40_format[texture.internalformat] | RSXGL_TEX_FORMAT_LN | (texture.rect ? RSXGL_TEX_FORMAT_UN : 0)) << NV30_3D_TEX_FORMAT_FORMAT__SHIFT) |
+    fmt |
     ((uint32_t)texture.max_level << NV40_3D_TEX_FORMAT_MIPMAP_COUNT__SHIFT)
     ;
 
@@ -1574,6 +1232,117 @@ rsxgl_tex_subimage(rsxgl_context_t * ctx,texture_t & texture,GLint level,GLint x
     RSXGL_ERROR_(GL_INVALID_VALUE);
   }
 
+  // pick a format:
+  pipe_format psrcformat = PIPE_FORMAT_NONE;
+
+  if(format == GL_RED) {
+    if(type == GL_UNSIGNED_BYTE) {
+      psrcformat = PIPE_FORMAT_R8_UNORM;
+    }
+    else if(type == GL_BYTE) {
+      psrcformat = PIPE_FORMAT_R8_SNORM;
+    }
+    else if(type == GL_UNSIGNED_SHORT) {
+      psrcformat = PIPE_FORMAT_R16_UNORM;
+    }
+    else if(type == GL_SHORT) {
+      psrcformat = PIPE_FORMAT_R16_SNORM;
+    }
+    else if(type == GL_UNSIGNED_INT) {
+      psrcformat = PIPE_FORMAT_R32_UNORM;
+    }
+    else if(type == GL_INT) {
+      psrcformat = PIPE_FORMAT_R32_SNORM;
+    }
+    else if(type == GL_FLOAT) {
+      psrcformat = PIPE_FORMAT_R32_FLOAT;
+    }
+  }
+  else if(format == GL_RG) {
+    if(type == GL_UNSIGNED_BYTE) {
+      psrcformat = PIPE_FORMAT_R8G8_UNORM;
+    }
+    else if(type == GL_BYTE) {
+      psrcformat = PIPE_FORMAT_R8G8_SNORM;
+    }
+    else if(type == GL_UNSIGNED_SHORT) {
+      psrcformat = PIPE_FORMAT_R16G16_UNORM;
+    }
+    else if(type == GL_SHORT) {
+      psrcformat = PIPE_FORMAT_R16G16_SNORM;
+    }
+    else if(type == GL_UNSIGNED_INT) {
+      psrcformat = PIPE_FORMAT_R32G32_UNORM;
+    }
+    else if(type == GL_INT) {
+      psrcformat = PIPE_FORMAT_R32G32_SNORM;
+    }
+    else if(type == GL_FLOAT) {
+      psrcformat = PIPE_FORMAT_R32G32_FLOAT;
+    }
+  }
+  else if(format == GL_RGB) {
+    if(type == GL_UNSIGNED_BYTE) {
+      psrcformat = PIPE_FORMAT_R8G8B8_UNORM;
+    }
+    else if(type == GL_BYTE) {
+      psrcformat = PIPE_FORMAT_R8G8B8_SNORM;
+    }
+    else if(type == GL_UNSIGNED_SHORT) {
+      psrcformat = PIPE_FORMAT_R16G16B16_UNORM;
+    }
+    else if(type == GL_SHORT) {
+      psrcformat = PIPE_FORMAT_R16G16B16_SNORM;
+    }
+    else if(type == GL_UNSIGNED_INT) {
+      psrcformat = PIPE_FORMAT_R32G32B32_UNORM;
+    }
+    else if(type == GL_INT) {
+      psrcformat = PIPE_FORMAT_R32G32B32_SNORM;
+    }
+    else if(type == GL_FLOAT) {
+      psrcformat = PIPE_FORMAT_R32G32B32_FLOAT;
+    }
+  }
+  else if(format == GL_BGR) {
+    if(type == GL_UNSIGNED_BYTE) {
+      psrcformat = PIPE_FORMAT_X8R8G8B8_UNORM;
+    }
+    
+  }
+  else if(format == GL_RGBA) {
+    if(type == GL_UNSIGNED_BYTE) {
+      psrcformat = PIPE_FORMAT_R8G8B8A8_UNORM;
+    }
+    else if(type == GL_BYTE) {
+      psrcformat = PIPE_FORMAT_R8G8B8A8_SNORM;
+    }
+    else if(type == GL_UNSIGNED_SHORT) {
+      psrcformat = PIPE_FORMAT_R16G16B16A16_UNORM;
+    }
+    else if(type == GL_SHORT) {
+      psrcformat = PIPE_FORMAT_R16G16B16A16_SNORM;
+    }
+    else if(type == GL_UNSIGNED_INT) {
+      psrcformat = PIPE_FORMAT_R32G32B32A32_UNORM;
+    }
+    else if(type == GL_INT) {
+      psrcformat = PIPE_FORMAT_R32G32B32A32_SNORM;
+    }
+    else if(type == GL_FLOAT) {
+      psrcformat = PIPE_FORMAT_R32G32B32A32_FLOAT;
+    }
+  }
+  else if(format == GL_BGRA) {
+    if(type == GL_UNSIGNED_BYTE) {
+      psrcformat = PIPE_FORMAT_A8R8G8B8_UNORM;
+    }
+  }
+
+  if(psrcformat == PIPE_FORMAT_NONE) {
+    RSXGL_ERROR_(GL_INVALID_ENUM);
+  }
+
   // GL spec doesn't say what should happen if there's no data source, but clearly need to bail out:
   if(data == 0 && 
      ((ctx -> buffer_binding.names[RSXGL_PIXEL_UNPACK_BUFFER] == 0) || 
@@ -1582,7 +1351,7 @@ rsxgl_tex_subimage(rsxgl_context_t * ctx,texture_t & texture,GLint level,GLint x
   }
 
   texture_t::dimension_size_type size[3] = { 0,0,0 };
-  uint8_t internalformat = RSXGL_MAX_TEX_FORMATS;
+  pipe_format pdstformat = PIPE_FORMAT_NONE;
   uint32_t bytesPerPixel = 0, pitch = 0;
 
   memory_t srcmem, dstmem;
@@ -1598,24 +1367,23 @@ rsxgl_tex_subimage(rsxgl_context_t * ctx,texture_t & texture,GLint level,GLint x
       texture.timestamp = 0;
     }
 
-    internalformat = texture.internalformat;
-    bytesPerPixel = rsxgl_tex_bytesPerPixel[internalformat];
+    pdstformat = texture.pformat;
     pitch = texture.pitch;
 
     // there is a pixel buffer object attached - can do DMA:
     if(ctx -> buffer_binding.names[RSXGL_PIXEL_UNPACK_BUFFER] != 0) {
       srcmem = ctx -> buffer_binding[RSXGL_PIXEL_UNPACK_BUFFER].memory + rsxgl_pointer_to_offset(data);
-      dstmem = texture.memory + rsxgl_tex_pixel_offset(texture,level,0,0,0,size);
+      dstmem = texture.memory + rsxgl_tex_level_offset(texture,level);
     }
     // source is client memory - just do a memcpy:
     else {
       srcaddress = data;
-      dstaddress = (uint8_t *)rsxgl_arena_address(memory_arena_t::storage().at(texture.arena),texture.memory + rsxgl_tex_pixel_offset(texture,level,x,y,z,size));
+      dstaddress = (uint8_t *)rsxgl_arena_address(memory_arena_t::storage().at(texture.arena),texture.memory + rsxgl_tex_level_offset(texture,level));
     }
   }
   // rsxgl_tex_image was called to request that a texture level be allocated, but that hasn't been done yet
   // allocate the temporary buffer for that level if it hasn't been already
-  else if(texture.invalid && texture.levels[level].internalformat != RSXGL_MAX_TEX_FORMATS) {
+  else if(texture.invalid && texture.levels[level].pformat != PIPE_FORMAT_NONE) {
     // there is a pixel buffer object attached - obtain pointer to it, then memcpy:
     if(ctx -> buffer_binding.names[RSXGL_PIXEL_UNPACK_BUFFER] != 0) {
       srcaddress = rsxgl_arena_address(memory_arena_t::storage().at(ctx -> buffer_binding[RSXGL_PIXEL_UNPACK_BUFFER].arena),
@@ -1630,14 +1398,14 @@ rsxgl_tex_subimage(rsxgl_context_t * ctx,texture_t & texture,GLint level,GLint x
     size[1] = texture.levels[level].size[1];
     size[2] = texture.levels[level].size[2];
 
-    internalformat = texture.levels[level].internalformat;
-    bytesPerPixel = rsxgl_tex_bytesPerPixel[internalformat];
-    pitch = bytesPerPixel * size[0];
+    pdstformat = texture.levels[level].pformat;
+    pitch = util_format_get_stride(pdstformat,size[0]);
 
     if(texture.levels[level].data == 0) {
-      const size_t nbytes = pitch * size[1] * size[2];
+      const size_t nbytes = util_format_get_2d_size(pdstformat,size[0],size[1]) * size[2];
       texture.levels[level].data = malloc(nbytes);
     }
+
     dstaddress = texture.levels[level].data;
   }
   else {
@@ -1650,6 +1418,8 @@ rsxgl_tex_subimage(rsxgl_context_t * ctx,texture_t & texture,GLint level,GLint x
 
   if(srcaddress != 0 && dstaddress != 0) {
     // util_format_translate: (format,type) -> internalformat
+    util_format_translate(pdstformat,dstaddress,pitch,x,y,
+			  psrcformat,srcaddress,util_format_get_stride(psrcformat,width),0,0,width,height);
   }
   else if(srcmem && dstmem) {
     // util_format_translate: (format,type) -> internalformat
@@ -1669,7 +1439,6 @@ glTexImage1D (GLenum target, GLint level, GLint internalformat, GLsizei width, G
   rsxgl_context_t * ctx = current_ctx();
   texture_t & texture = ctx -> texture_binding[ctx -> active_texture];
 
-  //uint8_t rsx_format = rsxgl_tex_format(internalformat);
   rsxgl_tex_image(ctx,texture,1,false,false,level,internalformat,std::max(width,1),1,1,format,type,pixels);
 }
 
@@ -1686,7 +1455,6 @@ glTexImage2D (GLenum target, GLint level, GLint internalformat, GLsizei width, G
   rsxgl_context_t * ctx = current_ctx();
   texture_t & texture = ctx -> texture_binding[ctx -> active_texture];
 
-  //uint8_t rsx_format = rsxgl_tex_format(internalformat);
   rsxgl_tex_image(ctx,texture,2,target == GL_TEXTURE_CUBE_MAP, target == GL_TEXTURE_RECTANGLE,level,internalformat,std::max(width,1),std::max(height,1),1,format,type,pixels);
 }
 
@@ -1701,7 +1469,6 @@ glTexImage3D (GLenum target, GLint level, GLint internalformat, GLsizei width, G
   rsxgl_context_t * ctx = current_ctx();
   texture_t & texture = ctx -> texture_binding[ctx -> active_texture];
 
-  //uint8_t rsx_format = rsxgl_tex_format(internalformat);
   rsxgl_tex_image(ctx,texture,3,false,false,level,internalformat,std::max(width,1),std::max(height,1),std::max(depth,1),format,type,pixels);
 }
 
@@ -1715,8 +1482,7 @@ glTexStorage1D(GLenum target, GLsizei levels,GLenum internalformat,GLsizei width
   rsxgl_context_t * ctx = current_ctx();
   texture_t & texture = ctx -> texture_binding[ctx -> active_texture];
 
-  uint8_t rsx_format = rsxgl_tex_format(internalformat);
-  rsxgl_tex_storage(ctx,texture,1,false,false,levels,rsx_format,std::max(width,1),1,1);
+  rsxgl_tex_storage(ctx,texture,1,false,false,levels,internalformat,std::max(width,1),1,1);
 }
 
 GLAPI void APIENTRY
@@ -1732,8 +1498,7 @@ glTexStorage2D(GLenum target, GLsizei levels,GLenum internalformat,GLsizei width
   rsxgl_context_t * ctx = current_ctx();
   texture_t & texture = ctx -> texture_binding[ctx -> active_texture];
 
-  uint8_t rsx_format = rsxgl_tex_format(internalformat);
-  rsxgl_tex_storage(ctx,texture,2,target == GL_TEXTURE_CUBE_MAP,target == GL_TEXTURE_RECTANGLE,levels,rsx_format,std::max(width,1),std::max(height,1),1);
+  rsxgl_tex_storage(ctx,texture,2,target == GL_TEXTURE_CUBE_MAP,target == GL_TEXTURE_RECTANGLE,levels,internalformat,std::max(width,1),std::max(height,1),1);
 }
 
 GLAPI void APIENTRY
@@ -1747,8 +1512,7 @@ glTexStorage3D(GLenum target, GLsizei levels,GLenum internalformat,GLsizei width
   rsxgl_context_t * ctx = current_ctx();
   texture_t & texture = ctx -> texture_binding[ctx -> active_texture];
 
-  uint8_t rsx_format = rsxgl_tex_format(internalformat);
-  rsxgl_tex_storage(ctx,texture,3,false,false,levels,rsx_format,std::max(width,1),std::max(height,1),std::max(depth,1));
+  rsxgl_tex_storage(ctx,texture,3,false,false,levels,internalformat,std::max(width,1),std::max(height,1),std::max(depth,1));
 }
 
 GLAPI void APIENTRY
@@ -1944,10 +1708,6 @@ rsxgl_texture_validate(rsxgl_context_t * ctx,texture_t & texture,const uint32_t 
     size_t level = 0, levels = 0, ntransfer = 0;
     texture_t::dimension_size_type expected_size[3] = { 0,0,0 };
     for(;level < texture_t::max_levels;++level,++plevel) {
-      rsxgl_debug_printf("\t\t\t%u: format:%u %ux%ux%u\n",
-			 level,
-			 (unsigned int)plevel -> pformat,
-			 plevel -> size[0],plevel -> size[1],plevel -> size[2]);
       if(plevel -> pformat == PIPE_FORMAT_NONE && plevel -> dims == 0) break;
       
       // is the size what we expected? if not, fail:
@@ -2005,21 +1765,9 @@ rsxgl_texture_validate(rsxgl_context_t * ctx,texture_t & texture,const uint32_t 
 	  ((texture.cube) ? NV30_3D_TEX_FORMAT_CUBIC : 0) |
 	  NV30_3D_TEX_FORMAT_NO_BORDER |
 	  ((uint32_t)texture.dims << NV30_3D_TEX_FORMAT_DIMS__SHIFT) |
-	  //((uint32_t)(rsxgl_texture_nv40_format[texture.internalformat] | RSXGL_TEX_FORMAT_LN | (texture.rect ? RSXGL_TEX_FORMAT_UN : 0)) << NV30_3D_TEX_FORMAT_FORMAT__SHIFT) |
 	  fmt |
 	  ((uint32_t)texture.max_level << NV40_3D_TEX_FORMAT_MIPMAP_COUNT__SHIFT)
 	  ;
-	
-#if 0	      
-	rsxgl_debug_printf("\t\tsuccess dims: %u format: %u (%x) size: %u,%u,%u bytes: %u pitch: %u max_level: %u remap: %x offset: %u\n",
-			   texture.dims,
-			   texture.internalformat,(uint32_t)rsxgl_texture_nv40_format[texture.internalformat],
-			   texture.size[0],texture.size[1],texture.size[2],
-			   nbytes,texture.pitch,
-			   texture.max_level,
-			   texture.remap,
-			   texture.memory.offset);
-#endif
 	
 	// upload initial texture values:
 	if(ntransfer > 0) {
@@ -2132,8 +1880,8 @@ rsxgl_textures_validate(rsxgl_context_t * ctx,program_t & program,const uint32_t
 	const uint32_t format_format = (format & NV30_3D_TEX_FORMAT_FORMAT__MASK);
 
 	static const uint32_t
-	  RGBA32F_format = (rsxgl_texture_nv40_format[RSXGL_TEX_FORMAT_W32_Z32_Y32_X32_FLOAT] << NV30_3D_TEX_FORMAT_FORMAT__SHIFT) | NV40_3D_TEX_FORMAT_LINEAR,
-	  R32F_format = (rsxgl_texture_nv40_format[RSXGL_TEX_FORMAT_X32_FLOAT] << NV30_3D_TEX_FORMAT_FORMAT__SHIFT) | NV40_3D_TEX_FORMAT_LINEAR;
+	  RGBA32F_format = NV40_3D_TEX_FORMAT_FORMAT_RGBA32F | NV40_3D_TEX_FORMAT_LINEAR | 0x9000,
+	  R32F_format = 0x1b00 | NV40_3D_TEX_FORMAT_LINEAR | 0x9000;
 
 	if(format_format == RGBA32F_format || format_format == R32F_format) {
 	  // activate the texture:
