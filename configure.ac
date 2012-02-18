@@ -11,6 +11,7 @@ AC_CONFIG_FILES(
 	src/cgcomp/Makefile
 	src/cgcomp/nv40c
 	src/drm/Makefile
+	src/nouveau/Makefile
 	src/nvfxc/Makefile
 	src/library/Makefile
 	src/library/rsxgl_config.h
@@ -19,7 +20,7 @@ AC_CONFIG_FILES(
 	)
 
 # Which subdirectories get built:
-RSXGL_SUBDIRS="extsrc/mesa include src/cgcomp src/drm src/nvfxc src/library"
+RSXGL_SUBDIRS="extsrc/mesa include src/cgcomp src/drm src/nouveau src/nvfxc src/library"
 
 # Determine which samples get built:
 RSXGL_SAMPLES="rsxgltest rsxglgears"
