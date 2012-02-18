@@ -20,6 +20,8 @@
 #include "cxxutil.h"
 #include "timestamp.h"
 
+#include "util/u_format.h"
+
 #include <malloc.h>
 #include <string.h>
 
@@ -937,6 +939,7 @@ glTexParameteriv (GLenum target, GLenum pname, const GLint *params)
   rsxgl_tex_parameteri(ctx,ctx -> texture_binding.names[ctx -> active_texture],pname,*params);
 }
 
+// Map GL_* tokens passed as internalformat to RSXGL_TEX_FORMAT_* tokens:
 static inline uint8_t
 rsxgl_tex_format(GLint internalformat)
 {
@@ -972,6 +975,7 @@ rsxgl_tex_format(GLint internalformat)
   }
 }
 
+// Map RSXGL_TEX_FORMAT_* tokens to format values used by hardware:
 static const uint8_t rsxgl_texture_nv40_format[RSXGL_MAX_TEX_FORMATS] = {
   0x81,
   0x82,
@@ -1002,6 +1006,7 @@ static const uint8_t rsxgl_texture_nv40_format[RSXGL_MAX_TEX_FORMATS] = {
   0xAE
 };
 
+// Lookup per-pixel storage requirements for RSXGL_TEX_FORMAT_* tokens:
 static const uint8_t
 rsxgl_tex_bytesPerPixel[RSXGL_MAX_TEX_FORMATS] = {
   1,
@@ -1033,6 +1038,38 @@ rsxgl_tex_bytesPerPixel[RSXGL_MAX_TEX_FORMATS] = {
   0
 };
 
+// Map RSXGL_TEX_FORMAT_* tokens to Mesa's PIPE_FORMAT_* tokens:
+static const pipe_format
+rsxgl_texture_pipe_format[RSXGL_MAX_TEX_FORMATS] = {
+  PIPE_FORMAT_R8_UNORM,
+  PIPE_FORMAT_B5G5R5A1_UNORM,
+  PIPE_FORMAT_B4G4R4A4_UNORM,
+  PIPE_FORMAT_B5G6R5_UNORM,
+  PIPE_FORMAT_B8G8R8A8_UNORM,
+  PIPE_FORMAT_DXT1_RGB,
+  PIPE_FORMAT_DXT3_RGBA,
+  PIPE_FORMAT_DXT5_RGBA,
+  PIPE_FORMAT_R8G8_UNORM,
+  PIPE_FORMAT_B5G6R5_UNORM,
+  PIPE_FORMAT_X8Z24_UNORM,
+  PIPE_FORMAT_Z32_FLOAT,
+  PIPE_FORMAT_Z16_UNORM,
+  PIPE_FORMAT_NONE,
+  PIPE_FORMAT_R16_FLOAT,
+  PIPE_FORMAT_R16G16_FLOAT,
+  PIPE_FORMAT_NONE,
+  PIPE_FORMAT_NONE,
+  PIPE_FORMAT_NONE,
+  PIPE_FORMAT_R16G16B16A16_FLOAT,
+  PIPE_FORMAT_R32G32B32A32_FLOAT,
+  PIPE_FORMAT_R32_FLOAT,
+  PIPE_FORMAT_B5G5R5X1_UNORM,
+  PIPE_FORMAT_B8G8R8X8_UNORM,
+  PIPE_FORMAT_R16G16_FLOAT,
+  PIPE_FORMAT_R8G8_B8G8_UNORM,
+  PIPE_FORMAT_G8R8_G8B8_UNORM
+};
+
 static inline uint32_t
 rsxgl_tex_remap(uint32_t op0,uint32_t op1,uint32_t op2,uint32_t op3,
 		uint32_t src0,uint32_t src1,uint32_t src2,uint32_t src3)
@@ -1048,6 +1085,7 @@ rsxgl_tex_remap(uint32_t op0,uint32_t op1,uint32_t op2,uint32_t op3,
     (src3 << 0);
 }
 
+#if 0
 static inline void
 rsxgl_tex_copy_image(void * dst,uint32_t dstRowPitch,uint32_t dstX,uint32_t dstY,uint32_t dstZ,
 		     const void * src,uint32_t srcRowPitch,uint32_t srcX,uint32_t srcY,uint32_t srcZ,
@@ -1256,6 +1294,7 @@ rsxgl_tex_set_image(uint8_t internalformat,uint32_t pitch,GLvoid * dstdata,
     rsxgl_debug_printf("texture image transfer could not be handled efficiently for: %u %x %x\n",internalformat,(uint32_t)format,(uint32_t)type);
   }
 }
+#endif
 
 static inline uint32_t
 rsxgl_tex_pixel_offset(const texture_t & texture,size_t level,uint32_t x,uint32_t y,uint32_t z,texture_t::dimension_size_type size[3])
@@ -1371,9 +1410,8 @@ rsxgl_tex_image(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,con
     const uint32_t pitch = bytesPerPixel * width;
     const size_t nbytes = bytesPerPixel * width * height * depth;
     texture.levels[level].data = malloc(nbytes);
-    rsxgl_tex_set_image(internalformat,pitch,texture.levels[level].data,
-			format,type,data,
-			width,height,depth);
+
+    // util_format_translate: (format,type) -> internalformat
   }
 
   // for a pixel organized as 0,1,2,3, this appears to transfer channels un-swizzled to an XRGB framebuffer:
@@ -1581,20 +1619,14 @@ rsxgl_tex_subimage(rsxgl_context_t * ctx,texture_t & texture,GLint level,GLint x
   }
 
   if(srcaddress != 0 && dstaddress != 0) {
-    rsxgl_tex_set_image(internalformat,pitch,dstaddress,
-			format,type,srcaddress,
-			width,height,depth);
+    // util_format_translate: (format,type) -> internalformat
   }
   else if(srcmem && dstmem) {
-    rsxgl_tex_transfer_image(ctx -> base.gcm_context,
-			     dstmem,pitch,
-			     x,y,z,
-			     srcmem,width * bytesPerPixel,
-			     0,0,0,
-			     width,height,depth,bytesPerPixel);
+    // util_format_translate: (format,type) -> internalformat
+    // use RSX DMA
   }
-
-   RSXGL_NOERROR_();
+  
+  RSXGL_NOERROR_();
 }
 
 GLAPI void APIENTRY
@@ -1967,17 +1999,12 @@ rsxgl_texture_validate(rsxgl_context_t * ctx,texture_t & texture,const uint32_t 
 	  for(level = 0;level < levels;++level,++plevel) {
 	    // transfer from main memory:
 	    if(plevel -> data != 0) {
-	      rsxgl_tex_copy_image((uint8_t *)address + offset,pitch,0,0,0,
-				   plevel -> data,bytesPerPixel * plevel -> size[0],0,0,0,
-				   size[0],size[1],size[2],bytesPerPixel);
+	      // util_format_translate: plevel -> internalformat, texture.internalformat
 	    }
 	    // transfer with RSX DMA:
 	    else if(plevel -> memory.offset != 0) {
-	      //rsxgl_debug_printf("\t\ttransfer from RSX memory offset: %u:%u\n",texture.levels[level].memory.location,texture.levels[level].memory.offset);
-	      rsxgl_tex_transfer_image(context,
-				       texture.memory + offset,pitch,0,0,0,
-				       plevel -> memory,bytesPerPixel * plevel -> size[0],0,0,0,
-				       size[0],size[1],size[2],bytesPerPixel);
+	      // util_format_translate: plevel -> internalformat, texture.internalformat
+	      // use RSX DMA
 	    }
 	    
 	    offset += pitch * size[1] * size[2];

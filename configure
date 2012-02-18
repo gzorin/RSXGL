@@ -604,6 +604,7 @@ ac_subst_vars='am__EXEEXT_FALSE
 am__EXEEXT_TRUE
 LTLIBOBJS
 LIBOBJS
+LIBDRM_LOCATION
 MESA_LOCATION
 ppu_zlib_LIBS
 ppu_zlib_LDFLAGS
@@ -800,7 +801,8 @@ ppu_libpng_LIBS
 ppu_zlib_CPPFLAGS
 ppu_zlib_LDFLAGS
 ppu_zlib_LIBS
-MESA_LOCATION'
+MESA_LOCATION
+LIBDRM_LOCATION'
 
 
 # Initialize some variables set by options.
@@ -1493,6 +1495,8 @@ Some influential environment variables:
               library flags for ppu_zlib, overriding pkg-config
   MESA_LOCATION
               location of Mesa sources
+  LIBDRM_LOCATION
+              location of the libdrm sources
 
 Use these variables to override the choices made by `configure' or to help
 it to find libraries and programs with nonstandard names/locations.
@@ -2707,11 +2711,11 @@ am__tar='${AMTAR} chof - "$$tardir"'; am__untar='${AMTAR} xf -'
 
 
 
-ac_config_files="$ac_config_files include/config.h Makefile src/mesa/configs/rsx include/Makefile src/cgcomp/Makefile src/cgcomp/nv40c src/nvfxc/Makefile src/library/Makefile src/library/rsxgl_config.h src/library/GL3/rsxgl3ext.h src/library/GL3/rsxgl_compatibility.h"
+ac_config_files="$ac_config_files include/config.h Makefile src/mesa/configs/rsx src/mesa/mklib-rsx include/Makefile src/cgcomp/Makefile src/cgcomp/nv40c src/drm/Makefile src/nouveau/Makefile src/nvfx/Makefile src/nvfxc/Makefile src/library/Makefile src/library/rsxgl_config.h src/library/GL3/rsxgl3ext.h src/library/GL3/rsxgl_compatibility.h"
 
 
 # Which subdirectories get built:
-RSXGL_SUBDIRS="extsrc/mesa include src/cgcomp src/nvfxc src/library"
+RSXGL_SUBDIRS="extsrc/mesa include src/cgcomp src/drm src/nouveau src/nvfx src/nvfxc src/library"
 
 # Determine which samples get built:
 RSXGL_SAMPLES="rsxgltest rsxglgears"
@@ -6492,6 +6496,7 @@ fi
 # Deal with mesa:
 
 
+
 ac_config_commands="$ac_config_commands mesa"
 
 
@@ -7258,9 +7263,13 @@ do
     "include/config.h") CONFIG_FILES="$CONFIG_FILES include/config.h" ;;
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "src/mesa/configs/rsx") CONFIG_FILES="$CONFIG_FILES src/mesa/configs/rsx" ;;
+    "src/mesa/mklib-rsx") CONFIG_FILES="$CONFIG_FILES src/mesa/mklib-rsx" ;;
     "include/Makefile") CONFIG_FILES="$CONFIG_FILES include/Makefile" ;;
     "src/cgcomp/Makefile") CONFIG_FILES="$CONFIG_FILES src/cgcomp/Makefile" ;;
     "src/cgcomp/nv40c") CONFIG_FILES="$CONFIG_FILES src/cgcomp/nv40c" ;;
+    "src/drm/Makefile") CONFIG_FILES="$CONFIG_FILES src/drm/Makefile" ;;
+    "src/nouveau/Makefile") CONFIG_FILES="$CONFIG_FILES src/nouveau/Makefile" ;;
+    "src/nvfx/Makefile") CONFIG_FILES="$CONFIG_FILES src/nvfx/Makefile" ;;
     "src/nvfxc/Makefile") CONFIG_FILES="$CONFIG_FILES src/nvfxc/Makefile" ;;
     "src/library/Makefile") CONFIG_FILES="$CONFIG_FILES src/library/Makefile" ;;
     "src/library/rsxgl_config.h") CONFIG_FILES="$CONFIG_FILES src/library/rsxgl_config.h" ;;
@@ -7809,8 +7818,8 @@ $as_echo X"$file" |
 	   "$RSYNC" -av --files-from="$_abs_top_srcdir/src/mesa/files" "$mesa_srcdir" "$mesa_builddir";
 	fi;
 
-	cp "$mesa_builddir/configs/rsx" "$mesa_builddir/configs/current";
-	cp "$_abs_top_srcdir/extsrc/mesa/rsxgl/Makefile-builtins" "$mesa_builddir/src/glsl/";
+	cp "$_abs_top_builddir/src/mesa/configs/rsx" "$mesa_builddir/configs/current";
+	cp "$_abs_top_srcdir/src/mesa/Makefile-builtins" "$mesa_builddir/src/glsl/";
  ;;
 
   esac

@@ -49,8 +49,8 @@ expand_archives() {
                     /*) ;;
                     *)  FILE="$ORIG_DIR/$FILE" ;;
                 esac
-                MEMBERS=`ppu-ar t $FILE`
-                ppu-ar x $FILE
+                MEMBERS=`@ppu_AR@ t $FILE`
+                @ppu_AR@ x $FILE
                 for MEMBER in $MEMBERS ; do
                     NEWFILES="$NEWFILES $DIR/$MEMBER"
                 done
@@ -66,10 +66,10 @@ expand_archives() {
 }
 
 
-# Make static library with 'ppu-ar'
+# Make static library with '@ppu_AR@'
 # params:
-#    options to ppu-ar
-#    1 or 0 to indicate if ppu-ranlib should be run
+#    options to @ppu_AR@
+#    1 or 0 to indicate if @ppu_RANLIB@ should be run
 #    libname to make
 #    list of object files
 # Return name of library we made
@@ -87,11 +87,11 @@ make_ar_static_lib() {
     rm -f ${LIBNAME}
 
     # make static lib
-    ppu-ar ${OPTS} ${LIBNAME} ${OBJECTS}
+    @ppu_AR@ ${OPTS} ${LIBNAME} ${OBJECTS}
 
-    # run ppu-ranlib
+    # run @ppu_RANLIB@
     if [ ${RANLIB} = 1 ] ; then
-        ppu-ranlib ${LIBNAME}
+        @ppu_RANLIB@ ${LIBNAME}
     fi
 
     echo ${LIBNAME}
@@ -307,7 +307,7 @@ fi
 #
 case $ARCH in
 
-    'Linux' | 'OpenBSD' | 'DragonFly' | 'GNU' | GNU/* | 'NetBSD')
+    'Linux' | 'OpenBSD' | 'DragonFly' | 'GNU' | GNU/* | 'NetBSD' | 'PS3')
 	# we assume gcc
 
 	if [ "x$LINK" = "x" ] ; then
@@ -691,7 +691,7 @@ case $ARCH in
 		cc -G ${OPTS} ${LDFLAGS} -o ${LIBNAME} ${OBJECTS} ${DEPS}
 	    else
 		cc ${OPTS} ${LDFLAGS} -o ${OFILE} ${OBJECTS} ${DEPS}
-		ppu-ar ${X64} -r ${LIBNAME} ${OFILE}
+		@ppu_AR@ ${X64} -r ${LIBNAME} ${OFILE}
 	    fi
 
             FINAL_LIBS="${LIBNAME}"
@@ -824,7 +824,7 @@ case $ARCH in
 
         if [ $STATIC = 1 ] ; then
             echo "mklib: Making Intel ICC static library: " ${LIBNAME}.a
-            LINK="ppu-ar"
+            LINK="@ppu_AR@"
             OPTS="-ruv"
             if [ "${ALTOPTS}" ] ; then
                 OPTS=${ALTOPTS}

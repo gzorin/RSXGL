@@ -36,7 +36,8 @@ DIST_COMMON = $(am__configure_deps) $(srcdir)/Makefile.am \
 	$(srcdir)/Makefile.in $(top_srcdir)/configure \
 	$(top_srcdir)/src/library/GL3/rsxgl3ext.h.in \
 	$(top_srcdir)/src/library/GL3/rsxgl_compatibility.h.in \
-	$(top_srcdir)/src/mesa/configs/rsx.in AUTHORS TODO \
+	$(top_srcdir)/src/mesa/configs/rsx.in \
+	$(top_srcdir)/src/mesa/mklib-rsx.in AUTHORS TODO \
 	config/depcomp config/install-sh config/missing
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/extpkg.m4 \
@@ -47,7 +48,8 @@ am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 am__CONFIG_DISTCLEAN_FILES = config.status config.cache config.log \
  configure.lineno config.status.lineno
 mkinstalldirs = $(install_sh) -d
-CONFIG_CLEAN_FILES = src/mesa/configs/rsx src/library/GL3/rsxgl3ext.h \
+CONFIG_CLEAN_FILES = src/mesa/configs/rsx src/mesa/mklib-rsx \
+	src/library/GL3/rsxgl3ext.h \
 	src/library/GL3/rsxgl_compatibility.h
 CONFIG_CLEAN_VPATH_FILES =
 SOURCES =
@@ -136,6 +138,7 @@ INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 LDFLAGS = @LDFLAGS@
 LFTP = @LFTP@
+LIBDRM_LOCATION = @LIBDRM_LOCATION@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
 LTLIBOBJS = @LTLIBOBJS@
@@ -293,6 +296,8 @@ $(ACLOCAL_M4):  $(am__aclocal_m4_deps)
 	$(am__cd) $(srcdir) && $(ACLOCAL) $(ACLOCAL_AMFLAGS)
 $(am__aclocal_m4_deps):
 src/mesa/configs/rsx: $(top_builddir)/config.status $(top_srcdir)/src/mesa/configs/rsx.in
+	cd $(top_builddir) && $(SHELL) ./config.status $@
+src/mesa/mklib-rsx: $(top_builddir)/config.status $(top_srcdir)/src/mesa/mklib-rsx.in
 	cd $(top_builddir) && $(SHELL) ./config.status $@
 src/library/GL3/rsxgl3ext.h: $(top_builddir)/config.status $(top_srcdir)/src/library/GL3/rsxgl3ext.h.in
 	cd $(top_builddir) && $(SHELL) ./config.status $@

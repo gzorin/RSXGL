@@ -77,7 +77,7 @@ public:
   // Should be initialized to 0:
   uint32_t cached_timestamp;
 
-  rsxgl_context_t(const struct rsxegl_config_t *,gcmContextData *,struct rsxgl_object_context_t *);
+  rsxgl_context_t(const struct rsxegl_config_t *,gcmContextData *,struct nvfx_screen *,struct rsxgl_object_context_t *);
   ~rsxgl_context_t();
 
   inline

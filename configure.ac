@@ -7,6 +7,7 @@ AC_CONFIG_FILES(
 	include/config.h
 	Makefile
 	src/mesa/configs/rsx
+	src/mesa/mklib-rsx
 	include/Makefile
 	src/cgcomp/Makefile
 	src/cgcomp/nv40c

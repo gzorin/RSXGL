@@ -7,6 +7,8 @@
 
 #include "gcm.h"
 
+#include "nvfx/nvfx_screen.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif

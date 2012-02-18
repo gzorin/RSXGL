@@ -8,9 +8,6 @@
 #include "cxxutil.h"
 #include "GL3/rsxgl.h"
 
-// Related to Mesa GLSL:
-//#include "nvfxc.h"
-
 #include <malloc.h>
 #include <stdint.h>
 #include <string.h>
@@ -19,9 +16,10 @@ rsxgl_context_t * rsxgl_ctx = 0;
 
 extern "C"
 void *
-rsxgl_context_create(const struct rsxegl_config_t * config,gcmContextData * gcm_context,rsxgl_object_context_t * object_context)
+rsxgl_context_create(const struct rsxegl_config_t * config,gcmContextData * gcm_context,struct nvfx_screen * screen,rsxgl_object_context_t * object_context)
 {
-  return new rsxgl_context_t(config,gcm_context,object_context);
+  rsxgl_debug_printf("%s\n",__PRETTY_FUNCTION__);
+  return new rsxgl_context_t(config,gcm_context,screen,object_context);
 }
 
 extern "C"
@@ -31,7 +29,7 @@ rsxgl_object_context_create()
   return new rsxgl_object_context_t();
 }
 
-rsxgl_context_t::rsxgl_context_t(const struct rsxegl_config_t * config,gcmContextData * gcm_context,struct rsxgl_object_context_t * _object_context)
+rsxgl_context_t::rsxgl_context_t(const struct rsxegl_config_t * config,gcmContextData * gcm_context,struct nvfx_screen * screen,struct rsxgl_object_context_t * _object_context)
   : m_object_context(_object_context), active_texture(0), any_samples_passed_query(RSXGL_MAX_QUERY_OBJECTS), ref(0), timestamp_sync(0), next_timestamp(1), last_timestamp(0), cached_timestamp(0)
 {
   base.api = EGL_OPENGL_API;
@@ -42,13 +40,13 @@ rsxgl_context_t::rsxgl_context_t(const struct rsxegl_config_t * config,gcmContex
   base.valid = 1;
   base.callback = rsxgl_context_t::egl_callback;
 
+  rsxgl_debug_printf("screen: %lx\n",(unsigned long)screen);
+
   ++m_object_context -> m_refCount;
 
   timestamp_sync = rsxgl_sync_object_allocate();
   rsxgl_assert(timestamp_sync != 0);
   rsxgl_sync_cpu_signal(timestamp_sync,0);
-
-  //rsxgl_nvfxc();
 }
 
 rsxgl_context_t::~rsxgl_context_t()

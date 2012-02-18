@@ -46,7 +46,7 @@ mkinstalldirs = $(install_sh) -d
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 PROGRAMS = $(noinst_PROGRAMS)
-am__objects_1 = rsxgltest_elf-fbo.$(OBJEXT) \
+am__objects_1 = rsxgltest_elf-texcube.$(OBJEXT) \
 	rsxgltest_elf-texture.$(OBJEXT)
 am__objects_2 = $(am__objects_1)
 am_rsxgltest_elf_OBJECTS = rsxgltest_elf-main.$(OBJEXT) \
@@ -103,6 +103,7 @@ INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 LDFLAGS = @LDFLAGS@
 LFTP := @LFTP@
+LIBDRM_LOCATION = @LIBDRM_LOCATION@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
 LTLIBOBJS = @LTLIBOBJS@
@@ -285,8 +286,8 @@ occlusion_objects = occlusion_vpo.o occlusion_fpo.o
 occlusion_sources = occlusion.cc occlusion.vert occlusion.frag
 occlusion2_objects = occlusion_vpo.o occlusion_fpo.o
 occlusion2_sources = occlusion2.cc occlusion.vert occlusion.frag
-objects = $(fbo_objects)
-sources = $(fbo_sources)
+objects = $(texcube_objects)
+sources = $(texcube_sources)
 rsxgltest_elf_DEPENDENCIES = $(top_builddir)/src/library/libEGL.a $(top_builddir)/src/library/libGL.a	\
 	$(objects)
 
@@ -296,7 +297,7 @@ rsxgltest_elf_SOURCES = main.c			\
 
 rsxgltest_elf_CPPFLAGS = -D__RSX__ -I\$(top_srcdir)/include $(eigen_CPPFLAGS) $(PSL1GHT_CPPFLAGS) -I$(top_srcdir)/include -I$(top_srcdir)/src/library -I$(top_builddir)/src/library @ppu_libpng_CPPFLAGS@ @ppu_zlib_CPPFLAGS@
 rsxgltest_elf_CFLAGS = -std=gnu99 -fgnu89-inline -O3
-rsxgltest_elf_LDFLAGS = $(PSL1GHT_LDFLAGS) -L$(top_builddir)/src/library @ppu_libpng_LDFLAGS@ @ppu_zlib_LDFLAGS@
+rsxgltest_elf_LDFLAGS = -L$(top_builddir)/src/library $(PSL1GHT_LDFLAGS) @ppu_libpng_LDFLAGS@ @ppu_zlib_LDFLAGS@
 rsxgltest_elf_LDADD = $(objects) -lEGL -lGL -lrsx -lgcm_sys -lnet -lio -lsysutil -lsysmodule -lrt -llv2 @ppu_libpng_LIBS@ @ppu_zlib_LIBS@
 TITLE := RSXGL Test
 APPID := TSTRSXGL0
@@ -350,10 +351,10 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/rsxgltest_elf-fbo.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/rsxgltest_elf-main.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/rsxgltest_elf-math3d.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/rsxgltest_elf-sine_wave.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/rsxgltest_elf-texcube.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/rsxgltest_elf-texture.Po@am__quote@
 
 .c.o:
@@ -440,19 +441,19 @@ rsxgltest_elf-math3d.obj: math3d.cc
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(rsxgltest_elf_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o rsxgltest_elf-math3d.obj `if test -f 'math3d.cc'; then $(CYGPATH_W) 'math3d.cc'; else $(CYGPATH_W) '$(srcdir)/math3d.cc'; fi`
 
-rsxgltest_elf-fbo.o: fbo.cc
-@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(rsxgltest_elf_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT rsxgltest_elf-fbo.o -MD -MP -MF $(DEPDIR)/rsxgltest_elf-fbo.Tpo -c -o rsxgltest_elf-fbo.o `test -f 'fbo.cc' || echo '$(srcdir)/'`fbo.cc
-@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/rsxgltest_elf-fbo.Tpo $(DEPDIR)/rsxgltest_elf-fbo.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='fbo.cc' object='rsxgltest_elf-fbo.o' libtool=no @AMDEPBACKSLASH@
+rsxgltest_elf-texcube.o: texcube.cc
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(rsxgltest_elf_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT rsxgltest_elf-texcube.o -MD -MP -MF $(DEPDIR)/rsxgltest_elf-texcube.Tpo -c -o rsxgltest_elf-texcube.o `test -f 'texcube.cc' || echo '$(srcdir)/'`texcube.cc
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/rsxgltest_elf-texcube.Tpo $(DEPDIR)/rsxgltest_elf-texcube.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='texcube.cc' object='rsxgltest_elf-texcube.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(rsxgltest_elf_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o rsxgltest_elf-fbo.o `test -f 'fbo.cc' || echo '$(srcdir)/'`fbo.cc
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(rsxgltest_elf_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o rsxgltest_elf-texcube.o `test -f 'texcube.cc' || echo '$(srcdir)/'`texcube.cc
 
-rsxgltest_elf-fbo.obj: fbo.cc
-@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(rsxgltest_elf_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT rsxgltest_elf-fbo.obj -MD -MP -MF $(DEPDIR)/rsxgltest_elf-fbo.Tpo -c -o rsxgltest_elf-fbo.obj `if test -f 'fbo.cc'; then $(CYGPATH_W) 'fbo.cc'; else $(CYGPATH_W) '$(srcdir)/fbo.cc'; fi`
-@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/rsxgltest_elf-fbo.Tpo $(DEPDIR)/rsxgltest_elf-fbo.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='fbo.cc' object='rsxgltest_elf-fbo.obj' libtool=no @AMDEPBACKSLASH@
+rsxgltest_elf-texcube.obj: texcube.cc
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(rsxgltest_elf_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT rsxgltest_elf-texcube.obj -MD -MP -MF $(DEPDIR)/rsxgltest_elf-texcube.Tpo -c -o rsxgltest_elf-texcube.obj `if test -f 'texcube.cc'; then $(CYGPATH_W) 'texcube.cc'; else $(CYGPATH_W) '$(srcdir)/texcube.cc'; fi`
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/rsxgltest_elf-texcube.Tpo $(DEPDIR)/rsxgltest_elf-texcube.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='texcube.cc' object='rsxgltest_elf-texcube.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(rsxgltest_elf_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o rsxgltest_elf-fbo.obj `if test -f 'fbo.cc'; then $(CYGPATH_W) 'fbo.cc'; else $(CYGPATH_W) '$(srcdir)/fbo.cc'; fi`
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(rsxgltest_elf_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o rsxgltest_elf-texcube.obj `if test -f 'texcube.cc'; then $(CYGPATH_W) 'texcube.cc'; else $(CYGPATH_W) '$(srcdir)/texcube.cc'; fi`
 
 ID: $(HEADERS) $(SOURCES) $(LISP) $(TAGS_FILES)
 	list='$(SOURCES) $(HEADERS) $(LISP) $(TAGS_FILES)'; \

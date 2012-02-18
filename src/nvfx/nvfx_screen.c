@@ -21,6 +21,8 @@
 #define NV4X_GRCLASS4497_CHIPSETS 0x00005450
 #define NV6X_GRCLASS4497_CHIPSETS 0x00000088
 
+extern void rsxgl_debug_printf(const char * fmt,...);
+
 static int
 nvfx_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 {
@@ -213,7 +215,7 @@ nvfx_screen_get_paramf(struct pipe_screen *pscreen, enum pipe_capf param)
 	}
 }
 
-#if 0
+#if !defined(__RSXGL__)
 static int
 nvfx_screen_get_video_param(struct pipe_screen *screen,
 				enum pipe_video_profile profile,
@@ -324,7 +326,7 @@ nvfx_screen_destroy(struct pipe_screen *pscreen)
 {
 	struct nvfx_screen *screen = nvfx_screen(pscreen);
 
-#if 0
+#if !defined(__RSXGL__)
 	nouveau_resource_destroy(&screen->vp_exec_heap);
 	nouveau_resource_destroy(&screen->vp_data_heap);
 	nouveau_resource_destroy(&screen->query_heap);
@@ -340,7 +342,7 @@ nvfx_screen_destroy(struct pipe_screen *pscreen)
 	FREE(pscreen);
 }
 
-#if 0
+#if !defined(__RSXGL__)
 static void nv30_screen_init(struct nvfx_screen *screen)
 {
 	struct nouveau_channel *chan = screen->base.channel;
@@ -445,6 +447,7 @@ static void nv40_screen_init(struct nvfx_screen *screen)
 static unsigned
 nvfx_screen_get_vertex_buffer_flags(struct nvfx_screen* screen)
 {
+#if !defined(__RSXGL__)
 	int vram_hack_default = 0;
 	int vram_hack;
 	// TODO: this is a bit of a guess; also add other cards that may need this hack.
@@ -457,6 +460,9 @@ nvfx_screen_get_vertex_buffer_flags(struct nvfx_screen* screen)
 	vram_hack = debug_get_bool_option("NOUVEAU_VTXIDX_IN_VRAM", vram_hack_default);
 
 	return vram_hack ? NOUVEAU_BO_VRAM : NOUVEAU_BO_GART;
+#endif
+
+	return NOUVEAU_BO_VRAM;
 }
 
 static void nvfx_channel_flush_notify(struct nouveau_channel* chan)
@@ -480,35 +486,37 @@ nvfx_screen_create(struct nouveau_device *dev)
 	if (!screen)
 		return NULL;
 
+	rsxgl_debug_printf("%s\n",__PRETTY_FUNCTION__);
+
 	pscreen = &screen->base.base;
 
-#if 0
+#if !defined(__RSXGL__)
 	ret = nouveau_screen_init(&screen->base, dev);
 	if (ret) {
 		nvfx_screen_destroy(pscreen);
 		return NULL;
 	}
-#endif
 
 	chan = screen->base.channel;
 	screen->cur_ctx = NULL;
 	chan->user_private = screen;
 	chan->flush_notify = nvfx_channel_flush_notify;
+#endif
 
 	pscreen->destroy = nvfx_screen_destroy;
 	pscreen->get_param = nvfx_screen_get_param;
 	pscreen->get_shader_param = nvfx_screen_get_shader_param;
 	pscreen->get_paramf = nvfx_screen_get_paramf;
-#if 0
+#if !defined(__RSXGL__)
 	pscreen->get_video_param = nvfx_screen_get_video_param;
 #endif
 	pscreen->is_format_supported = nvfx_screen_is_format_supported;
-#if 0
+#if !defined(__RSXGL__)
 	pscreen->is_video_format_supported = vl_video_buffer_is_format_supported;
 #endif
 	pscreen->context_create = nvfx_create;
 
-#if 0
+#if !defined(__RSXGL__)
 	ret = nouveau_bo_new(dev, NOUVEAU_BO_VRAM, 0, 4096, &screen->fence);
 	if (ret) {
 		nvfx_screen_destroy(pscreen);
@@ -583,7 +591,7 @@ nvfx_screen_create(struct nouveau_device *dev)
 	if(!screen->force_swtnl && screen->vertex_buffer_reloc_flags == screen->index_buffer_reloc_flags)
 		screen->base.vertex_buffer_flags = screen->base.index_buffer_flags = screen->vertex_buffer_reloc_flags;
 
-#if 0
+#if !defined(__RSXGL__)
 	nvfx_screen_init_resource_functions(pscreen);
 
 	ret = nouveau_grobj_alloc(chan, 0xbeef3097, eng3d_class, &screen->eng3d);
