@@ -10,6 +10,7 @@ AC_CONFIG_FILES(
 	include/Makefile
 	src/cgcomp/Makefile
 	src/cgcomp/nv40c
+	src/drm/Makefile
 	src/nvfxc/Makefile
 	src/library/Makefile
 	src/library/rsxgl_config.h
@@ -18,7 +19,7 @@ AC_CONFIG_FILES(
 	)
 
 # Which subdirectories get built:
-RSXGL_SUBDIRS="extsrc/mesa include src/cgcomp src/nvfxc src/library"
+RSXGL_SUBDIRS="extsrc/mesa include src/cgcomp src/drm src/nvfxc src/library"
 
 # Determine which samples get built:
 RSXGL_SAMPLES="rsxgltest rsxglgears"
@@ -154,6 +155,7 @@ AC_TOOLCHAIN_EXTPKG([ppu],[zlib],[zlib],[${ppu_portlibs_PKG_CONFIG_PATH}])
 
 # Deal with mesa:
 AC_ARG_VAR([MESA_LOCATION],[location of Mesa sources])
+AC_ARG_VAR([LIBDRM_LOCATION],[location of the libdrm sources])
 
 AC_CONFIG_COMMANDS([mesa],
 [	mesa_builddir="${_abs_top_builddir}/extsrc/mesa";
@@ -170,8 +172,8 @@ AC_CONFIG_COMMANDS([mesa],
 	   "$RSYNC" -av --files-from="$_abs_top_srcdir/src/mesa/files" "$mesa_srcdir" "$mesa_builddir";
 	fi;
 
-	cp "$mesa_builddir/configs/rsx" "$mesa_builddir/configs/current";
-	cp "$_abs_top_srcdir/extsrc/mesa/rsxgl/Makefile-builtins" "$mesa_builddir/src/glsl/";
+	cp "$_abs_top_builddir/src/mesa/configs/rsx" "$mesa_builddir/configs/current";
+	cp "$_abs_top_srcdir/src/mesa/Makefile-builtins" "$mesa_builddir/src/glsl/";
 ],
 [       MESA_LOCATION="$MESA_LOCATION";
 	_abs_top_builddir=$(cd "${builddir}"; ${PWDCMD});
