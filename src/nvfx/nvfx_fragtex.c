@@ -357,3 +357,9 @@ nvfx_texture_formats[PIPE_FORMAT_COUNT] = {
 	_(R32G32B32A32_FLOAT,		RGBA32F,	T, T, T, T, X, Y, Z, W, UNORM, 0),
 	_(R32_FLOAT,		R32F,	T, 0, 0, 1, X, X, X, X, UNORM, 0)
 };
+
+struct nvfx_texture_format *
+nvfx_get_texture_format(enum pipe_format format)
+{
+  return &nvfx_texture_formats[format];
+}

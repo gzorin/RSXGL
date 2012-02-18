@@ -15,6 +15,7 @@
 #include "rsxgl_config.h"
 #include "rsxgl_limits.h"
 
+#include "pipe/p_screen.h"
 #include "nouveau/nouveau_winsys.h"
 
 static EGLint rsxegl_error = EGL_SUCCESS;
@@ -122,7 +123,7 @@ rsxglConfigure(struct rsxgl_init_parameters_t const * parameters)
 
 gcmContextData * rsx_gcm_context = 0;
 
-static struct nvfx_screen * rsx_screen = 0;
+static struct pipe_screen * rsx_screen = 0;
 
 EGLAPI EGLBoolean EGLAPIENTRY
 eglInitialize(EGLDisplay dpy,EGLint * major,EGLint * minor)
@@ -149,7 +150,7 @@ eglInitialize(EGLDisplay dpy,EGLint * major,EGLint * minor)
     gcmResetFlipStatus();
 
     //
-    rsx_screen = nvfx_screen(nvfx_screen_create(0));
+    rsx_screen = nvfx_screen_create(0);
 
     rsxegl_initialized = 1;
   }
@@ -742,7 +743,7 @@ eglQueryAPI()
 
 struct rsxgl_object_context_t;
 
-extern struct rsxegl_context_t * rsxgl_context_create(const struct rsxegl_config_t *,gcmContextData *,struct nvfx_screen *,struct rsxgl_object_context_t *);
+extern struct rsxegl_context_t * rsxgl_context_create(const struct rsxegl_config_t *,gcmContextData *,struct pipe_screen *,struct rsxgl_object_context_t *);
 extern struct rsxgl_object_context_t * rsxgl_object_context_create();
 
 static struct rsxegl_context_t * current_rsxgl_ctx = 0;

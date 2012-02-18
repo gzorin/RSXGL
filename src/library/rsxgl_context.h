@@ -28,6 +28,7 @@ struct rsxgl_context_t {
 private:
 
   rsxgl_object_context_t * m_object_context;
+  struct pipe_screen * m_screen;
 
 public:
 
@@ -77,7 +78,7 @@ public:
   // Should be initialized to 0:
   uint32_t cached_timestamp;
 
-  rsxgl_context_t(const struct rsxegl_config_t *,gcmContextData *,struct nvfx_screen *,struct rsxgl_object_context_t *);
+  rsxgl_context_t(const struct rsxegl_config_t *,gcmContextData *,struct pipe_screen *,struct rsxgl_object_context_t *);
   ~rsxgl_context_t();
 
   inline
@@ -90,6 +91,12 @@ public:
   rsxgl_object_context_t * object_context() {
     rsxgl_assert(m_object_context != 0);
     return m_object_context;
+  }
+
+  inline
+  struct pipe_screen * screen() {
+    rsxgl_assert(m_screen != 0);
+    return m_screen;
   }
 
   static void egl_callback(rsxegl_context_t *,const uint8_t);

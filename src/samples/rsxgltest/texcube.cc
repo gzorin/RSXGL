@@ -307,8 +307,6 @@ extern "C"
 int
 rsxgltest_draw()
 {
-  tcp_printf("%s\n",__PRETTY_FUNCTION__);
-
   float rgb[3] = {
     compute_sine_wave(rgb_waves,rsxgltest_elapsed_time),
     compute_sine_wave(rgb_waves + 1,rsxgltest_elapsed_time),

@@ -20,10 +20,24 @@
 #include "cxxutil.h"
 #include "timestamp.h"
 
+#include "pipe/p_defines.h"
 #include "util/u_format.h"
+
+extern "C" {
+#include "nvfx/nvfx_tex.h"
+}
 
 #include <malloc.h>
 #include <string.h>
+
+extern "C" enum pipe_format
+rsxgl_choose_format(struct pipe_screen *screen, GLenum internalFormat,
+                 GLenum format, GLenum type,
+                 enum pipe_texture_target target, unsigned sample_count,
+                 unsigned bindings);
+
+extern "C" struct nvfx_texture_format *
+nvfx_get_texture_format(enum pipe_format format);
 
 #if defined(GLAPI)
 #undef GLAPI
@@ -575,7 +589,7 @@ texture_t::storage_type & texture_t::storage()
 }
 
 texture_t::texture_t()
-  : deleted(0), timestamp(0), ref_count(0), invalid(0), valid(0), immutable(0), internalformat(RSXGL_MAX_TEX_FORMATS), cube(0), rect(0), max_level(0), dims(0), format(0), pitch(0), remap(0)
+  : deleted(0), timestamp(0), ref_count(0), invalid(0), valid(0), immutable(0), internalformat(RSXGL_MAX_TEX_FORMATS), cube(0), rect(0), max_level(0), dims(0), pformat(PIPE_FORMAT_NONE), format(0), pitch(0), remap(0)
 {
   size[0] = 0;
   size[1] = 0;
@@ -590,7 +604,7 @@ texture_t::~texture_t()
 }
 
 texture_t::level_t::level_t()
-  : invalid_contents(0), internalformat(RSXGL_MAX_TEX_FORMATS), dims(0), data(0)
+  : invalid_contents(0), internalformat(RSXGL_MAX_TEX_FORMATS), pformat(PIPE_FORMAT_NONE), dims(0), data(0)
 {
   size[0] = 0;
   size[1] = 0;
@@ -1319,7 +1333,7 @@ rsxgl_tex_pixel_offset(const texture_t & texture,size_t level,uint32_t x,uint32_
 }
 
 static inline void
-rsxgl_tex_image(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,const bool cube,const bool rect,GLint level,uint8_t internalformat,GLsizei width,GLsizei height,GLsizei depth,
+rsxgl_tex_image(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,const bool cube,const bool rect,GLint level,GLint glinternalformat,GLsizei width,GLsizei height,GLsizei depth,
 		GLenum format,GLenum type,const GLvoid * data)
 {
   rsxgl_assert(dims > 0);
@@ -1330,6 +1344,8 @@ rsxgl_tex_image(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,con
   if(level < 0 || (boost::static_log2_argument_type)level >= texture_t::max_levels) {
     RSXGL_ERROR_(GL_INVALID_VALUE);
   }
+
+  const uint8_t internalformat = rsxgl_tex_format(glinternalformat);
 
   if(internalformat == RSXGL_MAX_TEX_FORMATS) {
     RSXGL_ERROR_(GL_INVALID_VALUE);
@@ -1344,6 +1360,16 @@ rsxgl_tex_image(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,con
   if(texture.immutable) {
     RSXGL_ERROR_(GL_INVALID_OPERATION);
   }
+
+  const pipe_format pformat = rsxgl_choose_format(ctx -> screen(),
+						  glinternalformat,format,type,
+						  (dims == 1) ? PIPE_TEXTURE_1D :
+						  (dims == 2) ? (cube ? PIPE_TEXTURE_CUBE : (rect ? PIPE_TEXTURE_RECT : PIPE_TEXTURE_2D)) :
+						  (dims == 3) ? PIPE_TEXTURE_2D :
+						  PIPE_MAX_TEXTURE_TYPES,
+						  1,
+						  PIPE_BIND_SAMPLER_VIEW);
+  rsxgl_debug_printf("pipe_format: %u\n",(unsigned int)pformat);
 
 #if 0
   // TODO - Orphan the texture
@@ -1362,11 +1388,13 @@ rsxgl_tex_image(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,con
     texture.internalformat = internalformat;
     texture.cube = cube;
     texture.rect = rect;
+    texture.pformat = pformat;
   }
   else if(texture.dims != dims ||
 	  texture.internalformat != internalformat ||
 	  texture.cube != cube ||
-	  texture.rect != rect) {
+	  texture.rect != rect ||
+	  texture.pformat != pformat) {
     // TODO - Provide an error, or something, I don't think this is standard behavior.
     return;
   }
@@ -1378,6 +1406,7 @@ rsxgl_tex_image(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,con
   // set the size for the mipmap level
   texture.levels[level].internalformat = internalformat;
   texture.levels[level].dims = dims;
+  texture.levels[level].pformat = pformat;
 
   texture.levels[level].size[0] = width;
   texture.levels[level].size[1] = height;
@@ -1405,13 +1434,14 @@ rsxgl_tex_image(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,con
   }
   // - else if data != 0, then:
   else if(data != 0) {
-    //   - allocate intermediate buffer to store the image data, copy data to it
-    const uint32_t bytesPerPixel = rsxgl_tex_bytesPerPixel[internalformat];
-    const uint32_t pitch = bytesPerPixel * width;
-    const size_t nbytes = bytesPerPixel * width * height * depth;
+    const size_t stride = util_format_get_stride(pformat,width);
+    const size_t nbytes = util_format_get_2d_size(pformat,stride,height);
+    rsxgl_debug_printf("temporary texture bytes: %u\n",(unsigned int)nbytes);
+
     texture.levels[level].data = malloc(nbytes);
 
-    // util_format_translate: (format,type) -> internalformat
+    util_format_translate(pformat,texture.levels[level].data,stride,0,0,
+			  pformat,data,stride,0,0,width,height);
   }
 
   // for a pixel organized as 0,1,2,3, this appears to transfer channels un-swizzled to an XRGB framebuffer:
@@ -1639,8 +1669,8 @@ glTexImage1D (GLenum target, GLint level, GLint internalformat, GLsizei width, G
   rsxgl_context_t * ctx = current_ctx();
   texture_t & texture = ctx -> texture_binding[ctx -> active_texture];
 
-  uint8_t rsx_format = rsxgl_tex_format(internalformat);
-  rsxgl_tex_image(ctx,texture,1,false,false,level,rsx_format,std::max(width,1),1,1,format,type,pixels);
+  //uint8_t rsx_format = rsxgl_tex_format(internalformat);
+  rsxgl_tex_image(ctx,texture,1,false,false,level,internalformat,std::max(width,1),1,1,format,type,pixels);
 }
 
 GLAPI void APIENTRY
@@ -1656,8 +1686,8 @@ glTexImage2D (GLenum target, GLint level, GLint internalformat, GLsizei width, G
   rsxgl_context_t * ctx = current_ctx();
   texture_t & texture = ctx -> texture_binding[ctx -> active_texture];
 
-  uint8_t rsx_format = rsxgl_tex_format(internalformat);
-  rsxgl_tex_image(ctx,texture,2,target == GL_TEXTURE_CUBE_MAP, target == GL_TEXTURE_RECTANGLE,level,rsx_format,std::max(width,1),std::max(height,1),1,format,type,pixels);
+  //uint8_t rsx_format = rsxgl_tex_format(internalformat);
+  rsxgl_tex_image(ctx,texture,2,target == GL_TEXTURE_CUBE_MAP, target == GL_TEXTURE_RECTANGLE,level,internalformat,std::max(width,1),std::max(height,1),1,format,type,pixels);
 }
 
 GLAPI void APIENTRY
@@ -1671,8 +1701,8 @@ glTexImage3D (GLenum target, GLint level, GLint internalformat, GLsizei width, G
   rsxgl_context_t * ctx = current_ctx();
   texture_t & texture = ctx -> texture_binding[ctx -> active_texture];
 
-  uint8_t rsx_format = rsxgl_tex_format(internalformat);
-  rsxgl_tex_image(ctx,texture,3,false,false,level,rsx_format,std::max(width,1),std::max(height,1),std::max(depth,1),format,type,pixels);
+  //uint8_t rsx_format = rsxgl_tex_format(internalformat);
+  rsxgl_tex_image(ctx,texture,3,false,false,level,internalformat,std::max(width,1),std::max(height,1),std::max(depth,1),format,type,pixels);
 }
 
 GLAPI void APIENTRY
@@ -1905,7 +1935,8 @@ rsxgl_texture_validate(rsxgl_context_t * ctx,texture_t & texture,const uint32_t 
       texture.memory = memory_t();
     }
     
-    uint32_t nbytes = 0, bytesPerPixel = 0,pitch = 0, format = RSXGL_MAX_TEX_FORMATS;
+    uint32_t nbytes = 0, bytesPerPixel = 0,pitch = 0;
+    pipe_format pformat = PIPE_FORMAT_NONE;
     memory_arena_t::name_type arena = 0;
     
     uint8_t dims = 0;
@@ -1913,16 +1944,14 @@ rsxgl_texture_validate(rsxgl_context_t * ctx,texture_t & texture,const uint32_t 
     size_t level = 0, levels = 0, ntransfer = 0;
     texture_t::dimension_size_type expected_size[3] = { 0,0,0 };
     for(;level < texture_t::max_levels;++level,++plevel) {
-#if 0
-      rsxgl_debug_printf("\t\t\t%u: format:%x %ux%ux%u\n",
+      rsxgl_debug_printf("\t\t\t%u: format:%u %ux%ux%u\n",
 			 level,
-			 plevel -> internalformat,
+			 (unsigned int)plevel -> pformat,
 			 plevel -> size[0],plevel -> size[1],plevel -> size[2]);
-#endif
-      if(plevel -> internalformat == RSXGL_MAX_TEX_FORMATS && plevel -> dims == 0) break;
+      if(plevel -> pformat == PIPE_FORMAT_NONE && plevel -> dims == 0) break;
       
       // is the size what we expected? if not, fail:
-      if(levels > 0 && (plevel -> internalformat != format ||
+      if(levels > 0 && (plevel -> pformat != pformat ||
 			plevel -> dims != dims ||
 			plevel -> size[0] != expected_size[0] || plevel -> size[1] != expected_size[1] || plevel -> size[2] ||
 			plevel -> arena != arena)) break;
@@ -1930,11 +1959,10 @@ rsxgl_texture_validate(rsxgl_context_t * ctx,texture_t & texture,const uint32_t 
       // fill in the expected size:
       if(levels == 0) {
 	dims = plevel -> dims;
-	format = plevel -> internalformat;
-	bytesPerPixel = rsxgl_tex_bytesPerPixel[format];
+	pformat = plevel -> pformat;
 	
 	// pitch is a multiple of 64, to make it compatible with framebuffer objects:
-	pitch = align_pot< uint32_t, 64 >(plevel -> size[0] * bytesPerPixel);
+	pitch = util_format_get_stride(pformat,plevel -> size[0]);
 	arena = plevel -> arena;
 	
 	expected_size[0] = std::max(plevel -> size[0] >> 1,1);
@@ -1948,7 +1976,7 @@ rsxgl_texture_validate(rsxgl_context_t * ctx,texture_t & texture,const uint32_t 
       }
       
       // accumulate storage requirements:
-      nbytes += pitch * plevel -> size[1] * plevel -> size[2];
+      nbytes += util_format_get_2d_size(pformat,pitch,plevel -> size[1]) * plevel -> size[2];
       
       if(plevel -> data != 0 || plevel -> memory.offset != 0) ++ntransfer;
       
@@ -1968,13 +1996,17 @@ rsxgl_texture_validate(rsxgl_context_t * ctx,texture_t & texture,const uint32_t 
 	texture.size[2] = texture.levels[0].size[2];
 	texture.pitch = pitch;
 	texture.arena = arena;
+
+	const nvfx_texture_format * pfmt = nvfx_get_texture_format(pformat);
+	const uint32_t fmt = pfmt -> fmt[4] | NV40_3D_TEX_FORMAT_LINEAR | (texture.rect ? NV40_3D_TEX_FORMAT_RECT : 0) | 0x8000;
 	
 	texture.format =
 	  ((texture.memory.location == 0) ? NV30_3D_TEX_FORMAT_DMA0 : NV30_3D_TEX_FORMAT_DMA1) |
 	  ((texture.cube) ? NV30_3D_TEX_FORMAT_CUBIC : 0) |
 	  NV30_3D_TEX_FORMAT_NO_BORDER |
 	  ((uint32_t)texture.dims << NV30_3D_TEX_FORMAT_DIMS__SHIFT) |
-	  ((uint32_t)(rsxgl_texture_nv40_format[texture.internalformat] | RSXGL_TEX_FORMAT_LN | (texture.rect ? RSXGL_TEX_FORMAT_UN : 0)) << NV30_3D_TEX_FORMAT_FORMAT__SHIFT) |
+	  //((uint32_t)(rsxgl_texture_nv40_format[texture.internalformat] | RSXGL_TEX_FORMAT_LN | (texture.rect ? RSXGL_TEX_FORMAT_UN : 0)) << NV30_3D_TEX_FORMAT_FORMAT__SHIFT) |
+	  fmt |
 	  ((uint32_t)texture.max_level << NV40_3D_TEX_FORMAT_MIPMAP_COUNT__SHIFT)
 	  ;
 	
@@ -1999,15 +2031,17 @@ rsxgl_texture_validate(rsxgl_context_t * ctx,texture_t & texture,const uint32_t 
 	  for(level = 0;level < levels;++level,++plevel) {
 	    // transfer from main memory:
 	    if(plevel -> data != 0) {
-	      // util_format_translate: plevel -> internalformat, texture.internalformat
+	      util_format_translate(pformat,(uint8_t *)address + offset,pitch,0,0,
+				    plevel -> pformat,plevel -> data,util_format_get_stride(plevel -> pformat,plevel -> size[0]),0,0,plevel -> size[0],plevel -> size[1]);
 	    }
 	    // transfer with RSX DMA:
 	    else if(plevel -> memory.offset != 0) {
+	      // TODO - do this with RSX DMA:
 	      // util_format_translate: plevel -> internalformat, texture.internalformat
 	      // use RSX DMA
 	    }
 	    
-	    offset += pitch * size[1] * size[2];
+	    offset += util_format_get_2d_size(pformat,pitch,size[1]) * size[2];
 	    
 	    size[0] = std::max(size[0] >> 1,1);
 	    size[1] = std::max(size[1] >> 1,1);

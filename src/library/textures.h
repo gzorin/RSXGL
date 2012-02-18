@@ -14,6 +14,8 @@
 #include "arena.h"
 #include "program.h"
 
+#include "pipe/p_format.h"
+
 #include <boost/integer/static_log2.hpp>
 
 // These numbers correspond to what the RSX hardware expects. They are different from the numbers
@@ -144,6 +146,7 @@ struct texture_t {
   // --- Cold:
   struct level_t {
     uint8_t invalid_contents:1, internalformat:5, dims:2;
+    pipe_format pformat;
     dimension_size_type size[3];
     void * data;
     memory_t memory;
@@ -154,6 +157,7 @@ struct texture_t {
   } levels[max_levels];
 
   uint16_t invalid:1,valid:1,immutable:1,internalformat:5, cube:1, rect:1, max_level:4, dims:2;
+  pipe_format pformat;
 
   // --- Hot:
   uint32_t format;

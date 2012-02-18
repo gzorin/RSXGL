@@ -82,7 +82,7 @@ am_libEGL_a_OBJECTS = libEGL_a-egl.$(OBJEXT) libEGL_a-mem.$(OBJEXT) \
 	libEGL_a-malloc.$(OBJEXT)
 libEGL_a_OBJECTS = $(am_libEGL_a_OBJECTS)
 libGL_a_AR = $(AR) $(ARFLAGS)
-libGL_a_DEPENDENCIES =
+libGL_a_LIBADD =
 am_libGL_a_OBJECTS = libGL_a-rsxgl_context.$(OBJEXT) \
 	libGL_a-rsxgl_object_context.$(OBJEXT) \
 	libGL_a-gl_fifo.$(OBJEXT) libGL_a-error.$(OBJEXT) \
@@ -95,7 +95,8 @@ am_libGL_a_OBJECTS = libGL_a-rsxgl_context.$(OBJEXT) \
 	libGL_a-textures.$(OBJEXT) libGL_a-framebuffer.$(OBJEXT) \
 	libGL_a-ringbuffer_migrate.$(OBJEXT) \
 	libGL_a-dumb_migrate.$(OBJEXT) libGL_a-debug.$(OBJEXT) \
-	libGL_a-nv40vertprog.$(OBJEXT) libGL_a-nv40fragprog.$(OBJEXT)
+	libGL_a-nv40vertprog.$(OBJEXT) libGL_a-nv40fragprog.$(OBJEXT) \
+	libGL_a-st_format.$(OBJEXT)
 libGL_a_OBJECTS = $(am_libGL_a_OBJECTS)
 DEFAULT_INCLUDES = -I.@am__isrc@
 depcomp = $(SHELL) $(top_srcdir)/config/depcomp
@@ -276,13 +277,19 @@ MESA_CPPFLAGS = -I$(MESA_LOCATION)/src/glsl \
 	-I$(MESA_LOCATION)/include \
 	-I$(MESA_LOCATION)/src/gallium/include \
 	-I$(MESA_LOCATION)/src/gallium/auxiliary \
-	-I$(MESA_LOCATION)/src/gallium/drivers
+	-I$(MESA_LOCATION)/src/gallium/drivers \
+	-DPIPE_OS_UNIX
 
 LIBDRM_CPPFLAGS = -I$(LIBDRM_LOCATION) -I$(LIBDRM_LOCATION)/include -I$(LIBDRM_LOCATION)/include/drm -I$(LIBDRM_LOCATION)/nouveau
 libEGL_a_SOURCES = egl.c mem.c malloc.c
 libEGL_a_CFLAGS = -std=gnu99 -fgnu89-inline
 libEGL_a_CPPFLAGS = -D__RSX__ -I\$(top_srcdir)/include -Wall $(dlmalloc_CPPFLAGS) $(PSL1GHT_CPPFLAGS) \
 	$(MESA_CPPFLAGS) $(LIBDRM_CPPFLAGS) -I$(MESA_LOCATION)/src/gallium/drivers/nvfx
+
+libEGL_a_DEPENDENCIES = $(top_builddir)/src/nvfx/libnvfx.a \
+	$(top_builddir)/src/nouveau/libnouveau.a \
+	$(top_builddir)/src/drm/libdrm_nouveau.a \
+	$(top_builddir)/extsrc/mesa/src/gallium/auxiliary/libgallium.a
 
 DUMB = $(top_builddir)/extsrc/mesa/src/glsl/libglsl.a \
 	$(top_builddir)/extsrc/mesa/src/mapi/glapi/libglapi.a \
@@ -293,14 +300,15 @@ libGL_a_SOURCES = rsxgl_context.cc rsxgl_object_context.cc gl_fifo.c					\
 	sync.cc query.cc							\
 	program.cc attribs.cc uniforms.cc textures.cc framebuffer.cc		\
 	ringbuffer_migrate.cc dumb_migrate.cc debug.c \
-	../cgcomp/source/nv40vertprog.c ../cgcomp/source/nv40fragprog.c
+	../cgcomp/source/nv40vertprog.c ../cgcomp/source/nv40fragprog.c \
+	st_format.c
 
 libGL_a_CPPFLAGS = -D__RSX__ -I\$(top_srcdir)/include $(PSL1GHT_CPPFLAGS) -I$(top_srcdir)/src/cgcomp/include -I$(top_srcdir)/src/nvfxc \
 	$(MESA_CPPFLAGS)
 
 libGL_a_CFLAGS = -std=gnu99 -fgnu89-inline
 libGL_a_CXXFLAGS = -I$(top_srcdir)/extsrc/boost -std=c++0x -fno-rtti
-libGL_a_LIBADD = @PPU_CXXLIB@
+libGL_a_DEPENDENCIES = libEGL.a
 all: all-am
 
 .SUFFIXES:
@@ -367,10 +375,6 @@ uninstall-ppu_libLIBRARIES:
 
 clean-ppu_libLIBRARIES:
 	-test -z "$(ppu_lib_LIBRARIES)" || rm -f $(ppu_lib_LIBRARIES)
-libGL.a: $(libGL_a_OBJECTS) $(libGL_a_DEPENDENCIES) 
-	-rm -f libGL.a
-	$(libGL_a_AR) libGL.a $(libGL_a_OBJECTS) $(libGL_a_LIBADD)
-	$(RANLIB) libGL.a
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -400,6 +404,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libGL_a-ringbuffer_migrate.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libGL_a-rsxgl_context.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libGL_a-rsxgl_object_context.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libGL_a-st_format.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libGL_a-state.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libGL_a-sync.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libGL_a-textures.Po@am__quote@
@@ -516,6 +521,20 @@ libGL_a-nv40fragprog.obj: ../cgcomp/source/nv40fragprog.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='../cgcomp/source/nv40fragprog.c' object='libGL_a-nv40fragprog.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libGL_a_CPPFLAGS) $(CPPFLAGS) $(libGL_a_CFLAGS) $(CFLAGS) -c -o libGL_a-nv40fragprog.obj `if test -f '../cgcomp/source/nv40fragprog.c'; then $(CYGPATH_W) '../cgcomp/source/nv40fragprog.c'; else $(CYGPATH_W) '$(srcdir)/../cgcomp/source/nv40fragprog.c'; fi`
+
+libGL_a-st_format.o: st_format.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libGL_a_CPPFLAGS) $(CPPFLAGS) $(libGL_a_CFLAGS) $(CFLAGS) -MT libGL_a-st_format.o -MD -MP -MF $(DEPDIR)/libGL_a-st_format.Tpo -c -o libGL_a-st_format.o `test -f 'st_format.c' || echo '$(srcdir)/'`st_format.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libGL_a-st_format.Tpo $(DEPDIR)/libGL_a-st_format.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='st_format.c' object='libGL_a-st_format.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libGL_a_CPPFLAGS) $(CPPFLAGS) $(libGL_a_CFLAGS) $(CFLAGS) -c -o libGL_a-st_format.o `test -f 'st_format.c' || echo '$(srcdir)/'`st_format.c
+
+libGL_a-st_format.obj: st_format.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libGL_a_CPPFLAGS) $(CPPFLAGS) $(libGL_a_CFLAGS) $(CFLAGS) -MT libGL_a-st_format.obj -MD -MP -MF $(DEPDIR)/libGL_a-st_format.Tpo -c -o libGL_a-st_format.obj `if test -f 'st_format.c'; then $(CYGPATH_W) 'st_format.c'; else $(CYGPATH_W) '$(srcdir)/st_format.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libGL_a-st_format.Tpo $(DEPDIR)/libGL_a-st_format.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='st_format.c' object='libGL_a-st_format.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libGL_a_CPPFLAGS) $(CPPFLAGS) $(libGL_a_CFLAGS) $(CFLAGS) -c -o libGL_a-st_format.obj `if test -f 'st_format.c'; then $(CYGPATH_W) 'st_format.c'; else $(CYGPATH_W) '$(srcdir)/st_format.c'; fi`
 
 .cc.o:
 @am__fastdepCXX_TRUE@	$(CXXCOMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
@@ -1024,13 +1043,16 @@ uninstall-am: uninstall-nobase_ppu_includeHEADERS \
 	ps ps-am tags uninstall uninstall-am \
 	uninstall-nobase_ppu_includeHEADERS uninstall-ppu_libLIBRARIES
 
-libEGL.a :  $(libEGL_a_OBJECTS) $(libEGL_a_DEPENDENCIES)
+libEGL.a: $(libEGL_a_OBJECTS) $(libEGL_a_DEPENDENCIES)
 	@. $(MKLIB) -static -arch PS3 -o EGL \
 	$(libEGL_a_OBJECTS) \
 	$(top_builddir)/src/nvfx/libnvfx.a \
 	$(top_builddir)/src/nouveau/libnouveau.a \
 	$(top_builddir)/src/drm/libdrm_nouveau.a \
 	$(top_builddir)/extsrc/mesa/src/gallium/auxiliary/libgallium.a
+libGL.a: $(libGL_a_OBJECTS) $(libGL_a_DEPENDENCIES)
+	@. $(MKLIB) -static -arch PS3 -cplusplus -o GL \
+	$(libGL_a_OBJECTS)
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
