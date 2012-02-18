@@ -16,6 +16,10 @@
 #include "gl_fifo.h"
 #include "cxxutil.h"
 
+#include "pipe/p_defines.h"
+#include "pipe/p_screen.h"
+#include "util/u_format.h"
+
 #if defined(GLAPI)
 #undef GLAPI
 #endif
@@ -1135,28 +1139,38 @@ rsxgl_framebuffer_validate(rsxgl_context_t * ctx,framebuffer_t & framebuffer,con
 
 	  enabled |= (NV30_3D_RT_ENABLE_COLOR0 << i);
 	}
-	else if(type == RSXGL_ATTACHMENT_TYPE_TEXTURE && rsxgl_framebuffer_rsx_format_is_color(rsxgl_texture_framebuffer_format[texture_t::storage().at(framebuffer.attachments[i]).internalformat])) {
+	else if(type == RSXGL_ATTACHMENT_TYPE_TEXTURE) {
 	  texture_t & texture = texture_t::storage().at(framebuffer.attachments[i]);
 
-	  // If rsx_format hasn't been set yet, set it to this texture's format:
-	  if(rsx_format == RSXGL_MAX_FRAMEBUFFER_FORMATS) {
-	    rsx_format = rsxgl_texture_framebuffer_format[texture.internalformat];
+	  if(texture.dims == 2 &&
+	     !util_format_is_depth_or_stencil(texture.pformat) &&
+	     ctx -> screen() -> is_format_supported(ctx -> screen(),
+						    texture.pformat,
+						    texture.rect ? PIPE_TEXTURE_RECT : PIPE_TEXTURE_2D,
+						    1,
+						    PIPE_BIND_SAMPLER_VIEW | PIPE_BIND_RENDER_TARGET)) {
+#if 0
+	    // If rsx_format hasn't been set yet, set it to this texture's format:
+	    if(rsx_format == RSXGL_MAX_FRAMEBUFFER_FORMATS) {
+	      rsx_format = rsxgl_texture_framebuffer_format[texture.internalformat];
+	    }
+	    // If rsx_format has been set, but it's not equal to this texture's format, then it's
+	    // a problem. Unset rsx_format & terminate the loop:
+	    else if(rsx_format != rsxgl_texture_framebuffer_format[texture.internalformat]) {
+	      rsx_format = RSXGL_MAX_FRAMEBUFFER_FORMATS;
+	      break;
+	    }
+#endif
+
+	    // TODO - Do something with level and layer settings.
+	    
+	    surfaces[i].pitch = texture.pitch;
+	    surfaces[i].memory = texture.memory;
+	    w = std::min(w,texture.size[0]);
+	    h = std::min(h,texture.size[1]);
+	    
+	    enabled |= (NV30_3D_RT_ENABLE_COLOR0 << i);
 	  }
-	  // If rsx_format has been set, but it's not equal to this texture's format, then it's
-	  // a problem. Unset rsx_format & terminate the loop:
-	  else if(rsx_format != rsxgl_texture_framebuffer_format[texture.internalformat]) {
-	    rsx_format = RSXGL_MAX_FRAMEBUFFER_FORMATS;
-	    break;
-	  }
-
-	  // TODO - Do something with level and layer settings.
-
-	  surfaces[i].pitch = texture.pitch;
-	  surfaces[i].memory = texture.memory;
-	  w = std::min(w,texture.size[0]);
-	  h = std::min(h,texture.size[1]);
-
-	  enabled |= (NV30_3D_RT_ENABLE_COLOR0 << i);
 	}
       }
 
@@ -1170,21 +1184,31 @@ rsxgl_framebuffer_validate(rsxgl_context_t * ctx,framebuffer_t & framebuffer,con
 	if(type == RSXGL_ATTACHMENT_TYPE_RENDERBUFFER && rsxgl_framebuffer_rsx_format_is_depth(renderbuffer_t::storage().at(framebuffer.attachments[4]).format)) {
 	  renderbuffer_t & renderbuffer = renderbuffer_t::storage().at(framebuffer.attachments[4]);
 
+	  depth_format = rsxgl_framebuffer_nv40_format[renderbuffer.format];
+
 	  surfaces[4] = renderbuffer.surface;
 	  w = std::min(w,renderbuffer.size[0]);
 	  h = std::min(h,renderbuffer.size[1]);
-	  
-	  depth_format = rsxgl_framebuffer_nv40_format[renderbuffer.format];
 	}
-	else if(type == RSXGL_ATTACHMENT_TYPE_TEXTURE && rsxgl_framebuffer_rsx_format_is_depth(rsxgl_texture_framebuffer_format[texture_t::storage().at(framebuffer.attachments[4]).internalformat])) {
+	else if(type == RSXGL_ATTACHMENT_TYPE_TEXTURE) {
 	  texture_t & texture = texture_t::storage().at(framebuffer.attachments[4]);
+	  
+	  if(texture.dims == 2 &&
+	     util_format_is_depth_or_stencil(texture.pformat) &&
+	     ctx -> screen() -> is_format_supported(ctx -> screen(),
+						    texture.pformat,
+						    texture.rect ? PIPE_TEXTURE_RECT : PIPE_TEXTURE_2D,
+						    1,
+						    PIPE_BIND_SAMPLER_VIEW | PIPE_BIND_RENDER_TARGET)) {
+#if 0
+	    depth_format = rsxgl_framebuffer_nv40_format[rsxgl_texture_framebuffer_format[texture_t::storage().at(framebuffer.attachments[4]).internalformat]];
+#endif
 
-	  surfaces[4].pitch = texture.pitch;
-	  surfaces[4].memory = texture.memory;
-	  w = std::min(w,texture.size[0]);
-	  h = std::min(h,texture.size[1]);
-
-	  depth_format = rsxgl_framebuffer_nv40_format[rsxgl_texture_framebuffer_format[texture_t::storage().at(framebuffer.attachments[4]).internalformat]];
+	    surfaces[4].pitch = texture.pitch;
+	    surfaces[4].memory = texture.memory;
+	    w = std::min(w,texture.size[0]);
+	    h = std::min(h,texture.size[1]);
+	  }
 	}
       }
     }

@@ -15,6 +15,8 @@
 #include "arena.h"
 #include "textures.h"
 
+#include "pipe/p_format.h"
+
 #include <boost/mpl/list.hpp>
 #include <boost/mpl/transform_view.hpp>
 #include <boost/mpl/max_element.hpp>
