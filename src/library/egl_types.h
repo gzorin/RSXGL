@@ -7,6 +7,8 @@
 
 #include "gcm.h"
 
+#include "pipe/p_format.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -28,10 +30,12 @@ struct rsxegl_config_t {
 
   // Gets passed to the RSX:
   uint8_t video_format;
-  uint32_t format;
+  enum pipe_format color_pformat, depth_pformat;
 };
 
 struct rsxegl_surface_t {
+  struct rsxegl_config_t * config;
+
   // Is it double-buffered or not?
   EGLenum double_buffered;
 
@@ -39,7 +43,7 @@ struct rsxegl_surface_t {
   uint32_t buffer;
 
   //
-  uint32_t format;
+  enum pipe_format color_pformat, depth_pformat;
   uint16_t width, height, x, y;
   uint32_t color_pitch, depth_pitch;
   uint32_t color_pixel_size, depth_pixel_size;

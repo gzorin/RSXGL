@@ -16,7 +16,21 @@
 #include "rsxgl_limits.h"
 
 #include "pipe/p_screen.h"
+#include "util/u_format.h"
 #include "nouveau/nouveau_winsys.h"
+
+//
+#if !defined(NDEBUG)
+
+#include "rsxgl_assert.h"
+
+#if defined(assert)
+#undef assert
+#endif
+
+#define assert rsxgl_assert
+
+#endif
 
 static EGLint rsxegl_error = EGL_SUCCESS;
 static int rsxegl_initialized = 0;
@@ -228,10 +242,11 @@ struct rsxegl_config_t rsxegl_configs[] = {
     .egl_stencil_size = 0,
 
     .color_pixel_size = 4,
-    .depth_pixel_size = 4,
+    .depth_pixel_size = 2,
 
     .video_format = VIDEO_BUFFER_FORMAT_XRGB,
-    .format = NV30_3D_RT_FORMAT_COLOR_A8R8G8B8 | NV30_3D_RT_FORMAT_ZETA_Z16 | NV30_3D_RT_FORMAT_TYPE_LINEAR
+    .color_pformat = PIPE_FORMAT_R8G8B8A8_UNORM,
+    .depth_pformat = PIPE_FORMAT_Z16_UNORM
   },
 
   {
@@ -241,14 +256,15 @@ struct rsxegl_config_t rsxegl_configs[] = {
     .egl_green_size = 8,
     .egl_blue_size = 8,
     .egl_alpha_size = 8,
-    .egl_depth_size = 16,
+    .egl_depth_size = 24,
     .egl_stencil_size = 8,
 
     .color_pixel_size = 4,
     .depth_pixel_size = 4,
 
     .video_format = VIDEO_BUFFER_FORMAT_XRGB,
-    .format = NV30_3D_RT_FORMAT_COLOR_A8R8G8B8 | NV30_3D_RT_FORMAT_ZETA_Z24S8 | NV30_3D_RT_FORMAT_TYPE_LINEAR
+    .color_pformat = PIPE_FORMAT_B8G8R8A8_UNORM,
+    .depth_pformat = PIPE_FORMAT_S8_UINT_Z24_UNORM
   },
 
   {
@@ -262,10 +278,11 @@ struct rsxegl_config_t rsxegl_configs[] = {
     .egl_stencil_size = 0,
 
     .color_pixel_size = 4,
-    .depth_pixel_size = 4,
+    .depth_pixel_size = 2,
 
     .video_format = VIDEO_BUFFER_FORMAT_XRGB,
-    .format = NV30_3D_RT_FORMAT_COLOR_X8R8G8B8 | NV30_3D_RT_FORMAT_ZETA_Z16 | NV30_3D_RT_FORMAT_TYPE_LINEAR
+    .color_pformat = PIPE_FORMAT_B8G8R8X8_UNORM,
+    .depth_pformat = PIPE_FORMAT_Z16_UNORM
   },
 
   {
@@ -275,35 +292,17 @@ struct rsxegl_config_t rsxegl_configs[] = {
     .egl_green_size = 8,
     .egl_blue_size = 8,
     .egl_alpha_size = 0,
-    .egl_depth_size = 16,
+    .egl_depth_size = 24,
     .egl_stencil_size = 8,
 
     .color_pixel_size = 4,
     .depth_pixel_size = 4,
 
     .video_format = VIDEO_BUFFER_FORMAT_XRGB,
-    .format = NV30_3D_RT_FORMAT_COLOR_X8R8G8B8 | NV30_3D_RT_FORMAT_ZETA_Z24S8 | NV30_3D_RT_FORMAT_TYPE_LINEAR
+    .color_pformat = PIPE_FORMAT_B8G8R8X8_UNORM,
+    .depth_pformat = PIPE_FORMAT_S8_UINT_Z24_UNORM
   },
 
-#if 0
-  // floating point buffer:
-  {
-    .egl_config_id = 4,
-    .egl_buffer_size = 64,
-    .egl_red_size = 16,
-    .egl_green_size = 16,
-    .egl_blue_size = 16,
-    .egl_alpha_size = 16,
-    .egl_depth_size = 16,
-    .egl_stencil_size = 0,
-
-    .color_pixel_size = 8,
-    .depth_pixel_size = 2,
-
-    .video_format = VIDEO_BUFFER_FORMAT_FLOAT,
-    .format = NV30_3D_RT_FORMAT_COLOR_A16B16G16R16_FLOAT | NV30_3D_RT_FORMAT_ZETA_Z16 | NV30_3D_RT_FORMAT_TYPE_LINEAR
-  }
-#endif
 
 };
 
@@ -512,34 +511,12 @@ eglChooseConfig(EGLDisplay dpy,const EGLint * attrib_list,EGLConfig * configs,EG
   RSXEGL_NOERROR(EGL_TRUE);
 }
 
-struct rsxegl_surface_t rsxegl_screen_surface = {
-  .double_buffered = EGL_BACK_BUFFER,
-  .buffer = 0,
-
-  .format = 0,
-  .width = 0,
-  .height = 0,
-  .x = 0,
-  .y = 0,
-  .color_pitch = 0,
-  .depth_pitch = 0,
-
-  .color_buffer = { 
-    { .location = 0,
-      .offset = 0,
-      .owner = 0 },
-    { .location = 0,
-      .offset = 0,
-      .owner = 0 }
-  },
-  .depth_buffer = {
-    .location = 0,
-    .offset = 0,
-    .owner = 0
-  }
-};
-
-static int rsxegl_created_screen_surface = 0;
+static inline uint32_t
+align64(const uint32_t n)
+{
+  const uint32_t tmp = n & 63;
+  return tmp ? (n + 64 - tmp) : n;
+}
 
 EGLAPI EGLSurface EGLAPIENTRY
 eglCreateWindowSurface(EGLDisplay _dpy,EGLConfig _config,EGLNativeWindowType win,const EGLint * attrib_list)
@@ -547,116 +524,112 @@ eglCreateWindowSurface(EGLDisplay _dpy,EGLConfig _config,EGLNativeWindowType win
   RSXEGL_CHECK_DISPLAY(_dpy,EGL_NO_SURFACE);
   RSXEGL_CHECK_INITIALIZED(EGL_NO_SURFACE);
 
-  if(rsxegl_created_screen_surface == 1) {
+  struct rsxegl_display_t * dpy = (struct rsxegl_display_t *)_dpy;
+  struct rsxegl_config_t * config = (struct rsxegl_config_t *)_config;
+  
+  // Configure the buffer format to xRGB
+  videoConfiguration vconfig;
+  memset(&vconfig, 0, sizeof(videoConfiguration));
+  vconfig.resolution = dpy -> state.displayMode.resolution;
+  vconfig.format = config -> video_format;
+  vconfig.pitch = config -> color_pixel_size * dpy -> resolution.width;
+  vconfig.aspect = VIDEO_ASPECT_AUTO;
+  
+  if(videoConfigure(0, &vconfig, NULL, 0)) {
     RSXEGL_ERROR(EGL_BAD_ALLOC,EGL_NO_SURFACE);
   }
-  else {
-    struct rsxegl_display_t * dpy = (struct rsxegl_display_t *)_dpy;
-    struct rsxegl_config_t * config = (struct rsxegl_config_t *)_config;
-    struct rsxegl_surface_t * surface = (struct rsxegl_surface_t *)&rsxegl_screen_surface;
-
-    surface -> format = config -> format;
-
-    // Configure the buffer format to xRGB
-    videoConfiguration vconfig;
-    memset(&vconfig, 0, sizeof(videoConfiguration));
-    vconfig.resolution = dpy -> state.displayMode.resolution;
-    vconfig.format = config -> video_format;
-    vconfig.pitch = config -> color_pixel_size * dpy -> resolution.width;
-    vconfig.aspect = VIDEO_ASPECT_AUTO;
-
-    if(videoConfigure(0, &vconfig, NULL, 0)) {
-      RSXEGL_ERROR(EGL_BAD_ALLOC,EGL_NO_SURFACE);
-    }
-
-    if(videoGetState(0, 0, &dpy -> state)) {
-      RSXEGL_ERROR(EGL_BAD_ALLOC,EGL_NO_SURFACE);
-    }
-
-    // Fill-in resolution, etc:
-    surface -> width = dpy -> resolution.width;
-    surface -> height = dpy -> resolution.height;
-    surface -> x = 0;
-    surface -> y = 0;
-
-    // Allocate buffers:
-    surface -> color_pitch = config -> color_pixel_size * surface -> width;
-    surface -> depth_pitch = config -> depth_pixel_size * surface -> width;
-
-    surface -> color_pixel_size = config -> color_pixel_size;
-    surface -> depth_pixel_size = config -> depth_pixel_size;
-
-    uint32_t
-      color_buffer_size = surface -> color_pitch * surface -> height,
-      depth_buffer_size = surface -> depth_pitch * surface -> height;
-
-    rsx_ptr_t buffers[] = {
-      rsxgl_rsx_memalign(64,color_buffer_size),
-      rsxgl_rsx_memalign(64,color_buffer_size),
-      rsxgl_rsx_memalign(64,depth_buffer_size)
-    };
-
-    if(buffers[0] == 0) {
-      RSXEGL_ERROR(EGL_BAD_ALLOC,EGL_NO_SURFACE);
-    }
-    if(buffers[1] == 0) {
-      RSXEGL_ERROR(EGL_BAD_ALLOC,EGL_NO_SURFACE);
-    }
-    if(buffers[2] == 0) {
-      RSXEGL_ERROR(EGL_BAD_ALLOC,EGL_NO_SURFACE);
-    }
-
-    uint32_t offsets[] = { 0,0,0 };
-
-    if(gcmAddressToOffset(buffers[0],offsets + 0) != 0) {
-      RSXEGL_ERROR(EGL_BAD_ALLOC,EGL_NO_SURFACE);
-    }
-    if(gcmAddressToOffset(buffers[1],offsets + 1) != 0) {
-      RSXEGL_ERROR(EGL_BAD_ALLOC,EGL_NO_SURFACE);
-    }
-    if(gcmAddressToOffset(buffers[2],offsets + 2) != 0) {
-      RSXEGL_ERROR(EGL_BAD_ALLOC,EGL_NO_SURFACE);
-    }
-
-    surface -> color_buffer[0].offset = offsets[0];
-    surface -> color_buffer[0].location = 0;
-
-    surface -> color_buffer[1].offset = offsets[1];
-    surface -> color_buffer[1].location = 0;
-
-    surface -> depth_buffer.offset = offsets[2];
-    surface -> depth_buffer.location = 0;
-
-    if(gcmSetDisplayBuffer(0, surface -> color_buffer[0].offset, surface -> color_pitch, surface -> width, surface -> height) != 0) {
-      RSXEGL_ERROR(EGL_BAD_ALLOC,EGL_NO_SURFACE);
-    }
-    if(gcmSetDisplayBuffer(1, surface -> color_buffer[1].offset, surface -> color_pitch, surface -> width, surface -> height) != 0) {
-      RSXEGL_ERROR(EGL_BAD_ALLOC,EGL_NO_SURFACE);
-    }
-
-    gcmResetFlipStatus();
-
-    assert(rsx_gcm_context != 0);
-    int r = gcmSetFlip(rsx_gcm_context,1);
-    assert(r == 0);
-    rsx_flush(rsx_gcm_context);
-    gcmSetWaitFlip(rsx_gcm_context); // Prevent the RSX from continuing until the flip has finished.
-
-    rsxegl_created_screen_surface = 1;
-    RSXEGL_NOERROR(surface);
+  
+  if(videoGetState(0, 0, &dpy -> state)) {
+    RSXEGL_ERROR(EGL_BAD_ALLOC,EGL_NO_SURFACE);
   }
-}
 
-static inline int
-is_EGLSurface_valid(EGLSurface surface)
-{
-  return (surface == &rsxegl_screen_surface);
+  //
+  struct rsxegl_surface_t * surface = (struct rsxegl_surface_t *)malloc(sizeof(struct rsxegl_surface_t));
+
+  surface -> config = config;
+
+  surface -> double_buffered = EGL_BACK_BUFFER;
+  surface -> buffer = 0;
+
+  surface -> color_pformat = config -> color_pformat;
+  surface -> depth_pformat = config -> depth_pformat;
+  
+  // Fill-in resolution, etc:
+  surface -> width = dpy -> resolution.width;
+  surface -> height = dpy -> resolution.height;
+  surface -> x = 0;
+  surface -> y = 0;
+  
+  // Allocate buffers:
+  surface -> color_pitch = align64(util_format_get_stride(config -> color_pformat,surface -> width));
+  surface -> depth_pitch = align64(util_format_get_stride(config -> depth_pformat,surface -> width));
+  
+  surface -> color_pixel_size = config -> color_pixel_size;
+  surface -> depth_pixel_size = config -> depth_pixel_size;
+  
+  uint32_t
+    color_buffer_size = util_format_get_2d_size(config -> color_pformat,surface -> width,surface -> height),
+    depth_buffer_size = util_format_get_2d_size(config -> depth_pformat,surface -> width,surface -> height);
+  
+  rsx_ptr_t buffers[] = {
+    rsxgl_rsx_memalign(64,color_buffer_size),
+    rsxgl_rsx_memalign(64,color_buffer_size),
+    rsxgl_rsx_memalign(64,depth_buffer_size)
+  };
+  
+  if(buffers[0] == 0) {
+    RSXEGL_ERROR(EGL_BAD_ALLOC,EGL_NO_SURFACE);
+  }
+  if(buffers[1] == 0) {
+    RSXEGL_ERROR(EGL_BAD_ALLOC,EGL_NO_SURFACE);
+  }
+  if(buffers[2] == 0) {
+    RSXEGL_ERROR(EGL_BAD_ALLOC,EGL_NO_SURFACE);
+  }
+  
+  uint32_t offsets[] = { 0,0,0 };
+  
+  if(gcmAddressToOffset(buffers[0],offsets + 0) != 0) {
+    RSXEGL_ERROR(EGL_BAD_ALLOC,EGL_NO_SURFACE);
+  }
+  if(gcmAddressToOffset(buffers[1],offsets + 1) != 0) {
+    RSXEGL_ERROR(EGL_BAD_ALLOC,EGL_NO_SURFACE);
+  }
+  if(gcmAddressToOffset(buffers[2],offsets + 2) != 0) {
+    RSXEGL_ERROR(EGL_BAD_ALLOC,EGL_NO_SURFACE);
+  }
+  
+  surface -> color_buffer[0].offset = offsets[0];
+  surface -> color_buffer[0].location = 0;
+  
+  surface -> color_buffer[1].offset = offsets[1];
+  surface -> color_buffer[1].location = 0;
+  
+  surface -> depth_buffer.offset = offsets[2];
+  surface -> depth_buffer.location = 0;
+  
+  if(gcmSetDisplayBuffer(0, surface -> color_buffer[0].offset, surface -> color_pitch, surface -> width, surface -> height) != 0) {
+    RSXEGL_ERROR(EGL_BAD_ALLOC,EGL_NO_SURFACE);
+  }
+  if(gcmSetDisplayBuffer(1, surface -> color_buffer[1].offset, surface -> color_pitch, surface -> width, surface -> height) != 0) {
+    RSXEGL_ERROR(EGL_BAD_ALLOC,EGL_NO_SURFACE);
+  }
+  
+  gcmResetFlipStatus();
+  
+  assert(rsx_gcm_context != 0);
+  int r = gcmSetFlip(rsx_gcm_context,1);
+  assert(r == 0);
+  rsx_flush(rsx_gcm_context);
+  gcmSetWaitFlip(rsx_gcm_context); // Prevent the RSX from continuing until the flip has finished.
+  
+  RSXEGL_NOERROR(surface);
 }
 
 #define RSXEGL_CHECK_SURFACE(SURFACE,RETURN)	\
-if(!is_EGLSurface_valid((SURFACE))) {		\
-  RSXEGL_ERROR(EGL_BAD_SURFACE,(RETURN));	\
- }
+  if((SURFACE) == 0) {				\
+    RSXEGL_ERROR(EGL_BAD_SURFACE,(RETURN));	\
+  }
 
 EGLAPI EGLBoolean EGLAPIENTRY
 eglDestroySurface(EGLDisplay dpy,EGLSurface surface)
@@ -664,9 +637,8 @@ eglDestroySurface(EGLDisplay dpy,EGLSurface surface)
   RSXEGL_CHECK_DISPLAY(dpy,EGL_FALSE);
   RSXEGL_CHECK_INITIALIZED(EGL_FALSE);
 
-  if(is_EGLSurface_valid(surface)) {
-    // Set RSX's display buffers to 0?
-
+  if(surface != 0) {
+    // TODO - delete the buffers:
     RSXEGL_NOERROR(EGL_TRUE);
   }
   else {
@@ -681,9 +653,10 @@ eglQuerySurface(EGLDisplay dpy, EGLSurface _surface,
   RSXEGL_CHECK_DISPLAY(dpy,EGL_FALSE);
   RSXEGL_CHECK_INITIALIZED(EGL_FALSE);
 
-  if(is_EGLSurface_valid(_surface)) {
+  if(_surface != 0) {
     struct rsxegl_surface_t * surface = (struct rsxegl_surface_t *)_surface;
 
+    // TODO - finish these:
     switch(attribute) {
     case EGL_CONFIG_ID:
       break;

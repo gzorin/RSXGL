@@ -30,21 +30,6 @@ union write_mask_t {
   } parts;
 };
 
-enum rsxgl_framebuffer_formats {
-  RSXGL_FRAMEBUFFER_FORMAT_R5G6B5 = 0,
-  RSXGL_FRAMEBUFFER_FORMAT_X8R8G8B8 = 1,
-  RSXGL_FRAMEBUFFER_FORMAT_A8R8G8B8 = 2,
-  RSXGL_FRAMEBUFFER_FORMAT_B8 = 3,
-  RSXGL_FRAMEBUFFER_FORMAT_A16B16G16R16_FLOAT = 4,
-  RSXGL_FRAMEBUFFER_FORMAT_A32B32G32R32_FLOAT = 5,
-  RSXGL_FRAMEBUFFER_FORMAT_R32_FLOAT = 6,
-  RSXGL_FRAMEBUFFER_FORMAT_X8B8G8R8 = 7,
-  RSXGL_FRAMEBUFFER_FORMAT_A8B8G8R8 = 8,
-  RSXGL_FRAMEBUFFER_FORMAT_DEPTH24_D8 = 9,
-  RSXGL_FRAMEBUFFER_FORMAT_DEPTH16 = 10,
-  RSXGL_MAX_FRAMEBUFFER_FORMATS = 11
-};
-
 enum rsxgl_renderbuffer_target {
   RSXGL_RENDERBUFFER = 0,
   RSXGL_MAX_RENDERBUFFER_TARGETS = 1
@@ -75,7 +60,10 @@ struct renderbuffer_t {
   uint32_t deleted:1, timestamp:31;
   uint32_t ref_count;
 
-  uint8_t format, samples;
+  uint32_t glformat;
+
+  pipe_format pformat;
+  uint8_t samples;
   framebuffer_dimension_size_type size[2];
   surface_t surface;
   memory_arena_t::name_type arena;

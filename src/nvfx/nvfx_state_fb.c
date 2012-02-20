@@ -327,3 +327,67 @@ nvfx_framebuffer_relocate(struct nvfx_context *nvfx)
 	DO_(nvfx->hw_zeta, NV30, ZETA);
 	nvfx->relocs_needed &=~ NVFX_RELOCATE_FRAMEBUFFER;
 }
+
+uint32_t
+nvfx_get_framebuffer_format(enum pipe_format cformat,enum pipe_format zformat)
+{
+  uint32_t format = 0;
+
+  if(cformat != PIPE_FORMAT_NONE) {
+    switch (cformat) {
+    case PIPE_FORMAT_B8G8R8X8_UNORM:
+      format |= NV30_3D_RT_FORMAT_COLOR_X8R8G8B8;
+      break;
+    case PIPE_FORMAT_B8G8R8A8_UNORM:
+    case 0:
+      format |= NV30_3D_RT_FORMAT_COLOR_A8R8G8B8;
+      break;
+    case PIPE_FORMAT_R8G8B8X8_UNORM:
+      format |= NV30_3D_RT_FORMAT_COLOR_X8B8G8R8;
+      break;
+    case PIPE_FORMAT_R8G8B8A8_UNORM:
+      format |= NV30_3D_RT_FORMAT_COLOR_A8B8G8R8;
+      break;
+    case PIPE_FORMAT_B5G6R5_UNORM:
+      format |= NV30_3D_RT_FORMAT_COLOR_R5G6B5;
+      break;
+    case PIPE_FORMAT_R32G32B32A32_FLOAT:
+      format |= NV30_3D_RT_FORMAT_COLOR_A32B32G32R32_FLOAT;
+      break;
+    case PIPE_FORMAT_R16G16B16A16_FLOAT:
+      format |= NV30_3D_RT_FORMAT_COLOR_A16B16G16R16_FLOAT;
+      break;
+    default:
+      assert(0);
+    }
+  }
+  else if(zformat != PIPE_FORMAT_NONE && util_format_get_blocksize(zformat) == 2) {
+    format |= NV30_3D_RT_FORMAT_COLOR_R5G6B5;
+  }
+  else {
+    format |= NV30_3D_RT_FORMAT_COLOR_A8R8G8B8;
+  }
+
+  if(zformat != PIPE_FORMAT_NONE) {
+    switch (zformat) {
+    case PIPE_FORMAT_Z16_UNORM:
+      format |= NV30_3D_RT_FORMAT_ZETA_Z16;
+      break;
+    case PIPE_FORMAT_S8_UINT_Z24_UNORM:
+    case PIPE_FORMAT_X8Z24_UNORM:
+    case 0:
+      format |= NV30_3D_RT_FORMAT_ZETA_Z24S8;
+      break;
+    default:
+      assert(0);
+    }
+  }
+  else if(cformat != PIPE_FORMAT_NONE && util_format_get_blocksize(cformat) == 2) {
+    format |= NV30_3D_RT_FORMAT_ZETA_Z16;
+  }
+  else {
+    format |= NV30_3D_RT_FORMAT_ZETA_Z24S8;
+  }
+
+  return format;
+}

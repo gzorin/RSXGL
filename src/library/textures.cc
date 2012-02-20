@@ -30,14 +30,16 @@ extern "C" {
 #include <malloc.h>
 #include <string.h>
 
-extern "C" enum pipe_format
-rsxgl_choose_format(struct pipe_screen *screen, GLenum internalFormat,
-                 GLenum format, GLenum type,
-                 enum pipe_texture_target target, unsigned sample_count,
-                 unsigned bindings);
+extern "C" {
+  enum pipe_format
+  rsxgl_choose_format(struct pipe_screen *screen, GLenum internalFormat,
+		      GLenum format, GLenum type,
+		      enum pipe_texture_target target, unsigned sample_count,
+		      unsigned bindings);
 
-extern "C" struct nvfx_texture_format *
-nvfx_get_texture_format(enum pipe_format format);
+  struct nvfx_texture_format *
+  nvfx_get_texture_format(enum pipe_format format);
+}
 
 #if defined(GLAPI)
 #undef GLAPI

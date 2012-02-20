@@ -387,61 +387,67 @@ main(int argc, const char ** argv)
 
 	    // Initialize:
 	    result = eglMakeCurrent(dpy,surface,surface,ctx);
-	    tcp_printf("eglMakeCurrent\n");
-	    rsxgltest_init(argc,argv);
 
-	    gettimeofday(&start_time,0);
-	    rsxgltest_last_time = 0.0f;
-   
-	    while(running) {
-	      gettimeofday(&current_time,0);
-
-	      struct timeval elapsed_time;
-	      timersub(&current_time,&start_time,&elapsed_time);
-	      rsxgltest_elapsed_time = ((float)(elapsed_time.tv_sec)) + ((float)(elapsed_time.tv_usec) / 1.0e6f);
-	      rsxgltest_delta_time = rsxgltest_elapsed_time - rsxgltest_last_time;
-
-	      rsxgltest_last_time = rsxgltest_elapsed_time;
-
-	      //result = eglMakeCurrent(dpy,surface,surface,ctx);
-
-	      ioPadGetInfo(&padinfo);
-	      for(size_t i = 0;i < MAX_PADS;++i) {
-		if(padinfo.status[i]) {
-		  ioPadGetData(i,&paddata);
-		  rsxgltest_pad(i,&paddata);
+	    if(result == EGL_TRUE) {
+	      tcp_printf("eglMakeCurrent\n");
+	      rsxgltest_init(argc,argv);
+	      
+	      gettimeofday(&start_time,0);
+	      rsxgltest_last_time = 0.0f;
+	      
+	      while(running) {
+		gettimeofday(&current_time,0);
+		
+		struct timeval elapsed_time;
+		timersub(&current_time,&start_time,&elapsed_time);
+		rsxgltest_elapsed_time = ((float)(elapsed_time.tv_sec)) + ((float)(elapsed_time.tv_usec) / 1.0e6f);
+		rsxgltest_delta_time = rsxgltest_elapsed_time - rsxgltest_last_time;
+		
+		rsxgltest_last_time = rsxgltest_elapsed_time;
+		
+		//result = eglMakeCurrent(dpy,surface,surface,ctx);
+		
+		ioPadGetInfo(&padinfo);
+		for(size_t i = 0;i < MAX_PADS;++i) {
+		  if(padinfo.status[i]) {
+		    ioPadGetData(i,&paddata);
+		    rsxgltest_pad(i,&paddata);
+		    break;
+		  }
+		}
+		
+		if(drawing) {
+		  result = rsxgltest_draw();
+		  if(!result) break;
+		}
+		
+		result = eglSwapBuffers(dpy,surface);
+		
+		EGLint e = eglGetError();
+		if(!result) {
+		  tcp_printf("Swap sync timed-out: %x\n",e);
 		  break;
 		}
-	      }
-	      
-	      if(drawing) {
-		result = rsxgltest_draw();
-		if(!result) break;
-	      }
-	      
-	      result = eglSwapBuffers(dpy,surface);
-
-	      EGLint e = eglGetError();
-	      if(!result) {
-		tcp_printf("Swap sync timed-out: %x\n",e);
-		break;
-	      }
-	      else {
-		struct timeval t, elapsed_time;
-		gettimeofday(&t,0);
-		timersub(&t,&current_time,&elapsed_time);
-		
-		if(timercmp(&elapsed_time,&frame_time,<)) {
-		  struct timeval sleep_time;
-		  timersub(&frame_time,&elapsed_time,&sleep_time);
-		  usleep((sleep_time.tv_sec * 1e6) + sleep_time.tv_usec);
+		else {
+		  struct timeval t, elapsed_time;
+		  gettimeofday(&t,0);
+		  timersub(&t,&current_time,&elapsed_time);
+		  
+		  if(timercmp(&elapsed_time,&frame_time,<)) {
+		    struct timeval sleep_time;
+		    timersub(&frame_time,&elapsed_time,&sleep_time);
+		    usleep((sleep_time.tv_sec * 1e6) + sleep_time.tv_usec);
+		  }
+		  
+		  sysUtilCheckCallback();
 		}
-		
-		sysUtilCheckCallback();
 	      }
-	    }
 	    
-	    rsxgltest_exit();
+	      rsxgltest_exit();
+	    }
+	    else {
+	      tcp_printf("eglMakeCurrent failed: %x\n",eglGetError());
+	    }
 
 	    result = eglDestroyContext(dpy,ctx);
 	    tcp_printf("eglDestroyContext:%i\n",(int)result);
