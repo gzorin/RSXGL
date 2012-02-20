@@ -179,7 +179,7 @@ rsxgl_renderbuffer_storage(rsxgl_context_t * ctx,const renderbuffer_t::name_type
   memory_arena_t::name_type arena = ctx -> arena_binding.names[RSXGL_RENDERBUFFER_ARENA];
 
   const uint32_t pitch = align_pot< uint32_t, 64 >(util_format_get_stride(pformat,width));
-  const uint32_t nbytes = util_format_get_2d_size(pformat,width,height);
+  const uint32_t nbytes = util_format_get_2d_size(pformat,pitch,height);
 
   surface.memory = rsxgl_arena_allocate(memory_arena_t::storage().at(arena),128,nbytes);
   if(surface.memory.offset == 0) {
@@ -950,8 +950,6 @@ rsxgl_framebuffer_validate(rsxgl_context_t * ctx,framebuffer_t & framebuffer,con
   }
     
   if(framebuffer.invalid) {
-    //rsxgl_debug_printf("%s %u\n",__PRETTY_FUNCTION__,(uint32_t)framebuffer.is_default);
-
     uint16_t enabled = 0;
     framebuffer_dimension_size_type w = ~0, h = ~0;
     surface_t surfaces[RSXGL_MAX_ATTACHMENTS];
@@ -1084,7 +1082,6 @@ rsxgl_framebuffer_validate(rsxgl_context_t * ctx,framebuffer_t & framebuffer,con
     rsxgl_assert(depth_pformat == PIPE_FORMAT_NONE || util_format_is_depth_or_stencil(depth_pformat));
 
     framebuffer.format = (uint16_t)nvfx_get_framebuffer_format(color_pformat,depth_pformat) | (uint16_t)NV30_3D_RT_FORMAT_TYPE_LINEAR;
-    rsxgl_debug_printf("color_pformat: %u depth_pformat: %u format: %x\n",(unsigned int)color_pformat,(unsigned int)depth_pformat,(unsigned int)framebuffer.format);
 
     framebuffer.enabled = (enabled != 0 ? enabled : (uint16_t)NV30_3D_RT_ENABLE_COLOR0);
     framebuffer.size[0] = w;
@@ -1139,9 +1136,7 @@ rsxgl_draw_framebuffer_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
   if(ctx -> invalid.parts.draw_framebuffer) {
     gcmContextData * context = ctx -> gcm_context();
 
-    rsxgl_debug_printf("%s %u format: %x enabled: %x\n",__PRETTY_FUNCTION__,(uint32_t)framebuffer.is_default,(uint32_t)framebuffer.format,(uint32_t)framebuffer.enabled);
     for(framebuffer_t::attachment_size_type i = 0;i < RSXGL_MAX_ATTACHMENTS;++i) {
-      rsxgl_debug_printf("\t%u: %u %u\n",(uint32_t)i,framebuffer.surfaces[i].memory.offset,framebuffer.surfaces[i].pitch);
       rsxgl_emit_surface(context,i,framebuffer.surfaces[i]);
     }
 

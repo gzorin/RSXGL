@@ -532,7 +532,7 @@ eglCreateWindowSurface(EGLDisplay _dpy,EGLConfig _config,EGLNativeWindowType win
   memset(&vconfig, 0, sizeof(videoConfiguration));
   vconfig.resolution = dpy -> state.displayMode.resolution;
   vconfig.format = config -> video_format;
-  vconfig.pitch = config -> color_pixel_size * dpy -> resolution.width;
+  vconfig.pitch = util_format_get_stride(config -> color_pformat,dpy -> resolution.width); //config -> color_pixel_size * dpy -> resolution.width;
   vconfig.aspect = VIDEO_ASPECT_AUTO;
   
   if(videoConfigure(0, &vconfig, NULL, 0)) {
@@ -568,9 +568,9 @@ eglCreateWindowSurface(EGLDisplay _dpy,EGLConfig _config,EGLNativeWindowType win
   surface -> depth_pixel_size = config -> depth_pixel_size;
   
   uint32_t
-    color_buffer_size = util_format_get_2d_size(config -> color_pformat,surface -> width,surface -> height),
-    depth_buffer_size = util_format_get_2d_size(config -> depth_pformat,surface -> width,surface -> height);
-  
+    color_buffer_size = util_format_get_2d_size(config -> color_pformat,surface -> color_pitch,surface -> height),
+    depth_buffer_size = util_format_get_2d_size(config -> depth_pformat,surface -> depth_pitch,surface -> height);
+
   rsx_ptr_t buffers[] = {
     rsxgl_rsx_memalign(64,color_buffer_size),
     rsxgl_rsx_memalign(64,color_buffer_size),

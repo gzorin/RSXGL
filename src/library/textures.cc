@@ -1404,7 +1404,7 @@ rsxgl_tex_subimage(rsxgl_context_t * ctx,texture_t & texture,GLint level,GLint x
     pitch = util_format_get_stride(pdstformat,size[0]);
 
     if(texture.levels[level].data == 0) {
-      const size_t nbytes = util_format_get_2d_size(pdstformat,size[0],size[1]) * size[2];
+      const size_t nbytes = util_format_get_2d_size(pdstformat,pitch,size[1]) * size[2];
       texture.levels[level].data = malloc(nbytes);
     }
 
