@@ -67,20 +67,13 @@ struct sampler_t {
   void destroy() {}
 };
 
-enum rsxgl_texture_remap_outputs {
-  RSXGL_TEXTURE_REMAP_ZERO = 0,
-  RSXGL_TEXTURE_REMAP_ONE = 1,
-  RSXGL_TEXTURE_REMAP_REMAP = 2,
-
-  // Unused by the RSX, but used internally:
-  RSXGL_TEXTURE_REMAP_IGNORE = 3
-};
-
-enum rsxgl_texture_remap_inputs {
-  RSXGL_TEXTURE_REMAP_FROM_A = 0,
-  RSXGL_TEXTURE_REMAP_FROM_B = 1,
-  RSXGL_TEXTURE_REMAP_FROM_G = 2,
-  RSXGL_TEXTURE_REMAP_FROM_R = 3
+enum rsxgl_texture_swizzle_inputs {
+  RSXGL_TEXTURE_SWIZZLE_FROM_R = 0,
+  RSXGL_TEXTURE_SWIZZLE_FROM_G = 1,
+  RSXGL_TEXTURE_SWIZZLE_FROM_B = 2,
+  RSXGL_TEXTURE_SWIZZLE_FROM_A = 3,
+  RSXGL_TEXTURE_SWIZZLE_ZERO = 4,
+  RSXGL_TEXTURE_SWIZZLE_ONE = 5
 };
 
 struct texture_t {
@@ -121,6 +114,10 @@ struct texture_t {
   } levels[max_levels];
 
   uint16_t invalid:1, valid:1, immutable:1, cube:1, rect:1, max_level:4, dims:2;
+  struct {
+    uint16_t r:3, g:3, b:3, a:3;
+  } swizzle;
+  
   pipe_format pformat;
 
   // --- Hot:

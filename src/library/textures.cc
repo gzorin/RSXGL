@@ -37,8 +37,11 @@ extern "C" {
 		      enum pipe_texture_target target, unsigned sample_count,
 		      unsigned bindings);
 
-  struct nvfx_texture_format *
+  const struct nvfx_texture_format *
   nvfx_get_texture_format(enum pipe_format format);
+
+  uint32_t
+  nvfx_get_texture_remap(const struct nvfx_texture_format * tf,uint8_t r,uint8_t g,uint8_t b,uint8_t a);
 }
 
 #if defined(GLAPI)
@@ -593,6 +596,11 @@ texture_t::storage_type & texture_t::storage()
 texture_t::texture_t()
   : deleted(0), timestamp(0), ref_count(0), invalid(0), valid(0), immutable(0), cube(0), rect(0), max_level(0), dims(0), pformat(PIPE_FORMAT_NONE), format(0), pitch(0), remap(0)
 {
+  swizzle.r = RSXGL_TEXTURE_SWIZZLE_FROM_R;
+  swizzle.g = RSXGL_TEXTURE_SWIZZLE_FROM_G;
+  swizzle.b = RSXGL_TEXTURE_SWIZZLE_FROM_B;
+  swizzle.a = RSXGL_TEXTURE_SWIZZLE_FROM_A;
+
   size[0] = 0;
   size[1] = 0;
   size[2] = 0;
@@ -838,25 +846,45 @@ rsxgl_tex_parameterf(rsxgl_context_t * ctx,texture_t::name_type texture_name,GLe
   texture_t & texture = texture_t::storage().at(texture_name);
   
   if(pname == GL_TEXTURE_SWIZZLE_R || pname == GL_TEXTURE_SWIZZLE_G || pname == GL_TEXTURE_SWIZZLE_B || pname == GL_TEXTURE_SWIZZLE_A) {
-    uint32_t remap = texture.remap;
-    
-    uint32_t op_shift = 
-      (pname == GL_TEXTURE_SWIZZLE_R ? NV30_3D_TEX_SWIZZLE_S0_Z__SHIFT :
-       pname == GL_TEXTURE_SWIZZLE_G ? NV30_3D_TEX_SWIZZLE_S0_Y__SHIFT :
-       pname == GL_TEXTURE_SWIZZLE_B ? NV30_3D_TEX_SWIZZLE_S0_X__SHIFT :
-       NV30_3D_TEX_SWIZZLE_S0_W__SHIFT);
-    uint32_t element_shift = 
-      (pname == GL_TEXTURE_SWIZZLE_R ? NV30_3D_TEX_SWIZZLE_S1_Z__SHIFT :
-       pname == GL_TEXTURE_SWIZZLE_G ? NV30_3D_TEX_SWIZZLE_S1_Y__SHIFT :
-       pname == GL_TEXTURE_SWIZZLE_B ? NV30_3D_TEX_SWIZZLE_S1_X__SHIFT :
-       NV30_3D_TEX_SWIZZLE_S1_W__SHIFT);
-    remap &= ~((uint32_t)0x3 << op_shift) | ((uint32_t)0x3 << element_shift);
-    remap |= 
-      ((param == GL_ZERO ? RSXGL_TEXTURE_REMAP_ZERO : param == GL_ONE ? RSXGL_TEXTURE_REMAP_ONE : RSXGL_TEXTURE_REMAP_REMAP) << op_shift) |
-      ((param == GL_RED ? 2 : param == GL_GREEN ? 1 : param == GL_BLUE ? 0 : 3) << element_shift);
-    
-    texture.remap = remap;
-    
+    uint16_t from = RSXGL_TEXTURE_SWIZZLE_ZERO;
+
+    switch((int)param) {
+    case GL_RED:
+      from = RSXGL_TEXTURE_SWIZZLE_FROM_R;
+      break;
+    case GL_GREEN:
+      from = RSXGL_TEXTURE_SWIZZLE_FROM_G;
+      break;
+    case GL_BLUE:
+      from = RSXGL_TEXTURE_SWIZZLE_FROM_B;
+      break;
+    case GL_ALPHA:
+      from = RSXGL_TEXTURE_SWIZZLE_FROM_A;
+      break;
+    case GL_ONE:
+      from = RSXGL_TEXTURE_SWIZZLE_ONE;
+    default:
+      from = RSXGL_TEXTURE_SWIZZLE_ZERO;
+    }
+
+    switch(pname) {
+    case GL_TEXTURE_SWIZZLE_R:
+      texture.swizzle.r = from;
+      break;
+    case GL_TEXTURE_SWIZZLE_G:
+      texture.swizzle.g = from;
+      break;
+    case GL_TEXTURE_SWIZZLE_B:
+      texture.swizzle.b = from;
+      break;
+    case GL_TEXTURE_SWIZZLE_A:
+      texture.swizzle.a = from;
+      break;
+    }
+
+    texture.remap = nvfx_get_texture_remap(nvfx_get_texture_format(texture.pformat),
+					   texture.swizzle.a,texture.swizzle.r,texture.swizzle.g,texture.swizzle.b);
+
     ctx -> invalid_textures |= texture.binding_bitfield;
   }
   else {
@@ -886,7 +914,43 @@ rsxgl_get_texture_parameterf(rsxgl_context_t * ctx,texture_t::name_type texture_
 
   texture_t & texture = texture_t::storage().at(texture_name);
   if(pname == GL_TEXTURE_SWIZZLE_R || pname == GL_TEXTURE_SWIZZLE_G || pname == GL_TEXTURE_SWIZZLE_B || pname == GL_TEXTURE_SWIZZLE_A) {
-    
+    uint16_t from = RSXGL_TEXTURE_SWIZZLE_ZERO;
+
+    switch(pname) {
+    case GL_TEXTURE_SWIZZLE_R:
+      from = texture.swizzle.r;
+      break;
+    case GL_TEXTURE_SWIZZLE_G:
+      from = texture.swizzle.g;
+      break;
+    case GL_TEXTURE_SWIZZLE_B:
+      from = texture.swizzle.b;
+      break;
+    case GL_TEXTURE_SWIZZLE_A:
+      from = texture.swizzle.a;
+      break;
+    }
+
+    switch(from) {
+    case RSXGL_TEXTURE_SWIZZLE_FROM_R:
+      *param = GL_RED;
+      break;
+    case RSXGL_TEXTURE_SWIZZLE_FROM_G:
+      *param = GL_GREEN;
+      break;
+    case RSXGL_TEXTURE_SWIZZLE_FROM_B:
+      *param = GL_BLUE;
+      break;
+    case RSXGL_TEXTURE_SWIZZLE_FROM_A:
+      *param = GL_ALPHA;
+      break;
+    case RSXGL_TEXTURE_SWIZZLE_ONE:
+      *param = GL_ONE;
+      break;
+    default:
+      *param = GL_ZERO;
+      break;
+    }
   }
   else {
     _rsxgl_get_sampler_parameterf(ctx,texture.sampler,pname,param);
@@ -1080,14 +1144,15 @@ rsxgl_tex_image(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,con
 
   // - if there is a pixel unpack buffer bound, then:
   if(ctx -> buffer_binding.names[RSXGL_PIXEL_UNPACK_BUFFER] != 0) {
-    // TODO - Swizzle and convert pixels, if necessary:
     texture.levels[level].memory = ctx -> buffer_binding[RSXGL_PIXEL_UNPACK_BUFFER].memory + rsxgl_pointer_to_offset(data);
     texture.levels[level].memory.owner = 0;
+
+    // TODO: util_format_translate
   }
   // - else if data != 0, then:
   else if(data != 0) {
     const size_t stride = util_format_get_stride(pformat,width);
-    const size_t nbytes = util_format_get_2d_size(pformat,stride,height);
+    const size_t nbytes = util_format_get_2d_size(pformat,stride,height) * depth;
 
     texture.levels[level].data = malloc(nbytes);
 
@@ -1095,13 +1160,8 @@ rsxgl_tex_image(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,con
 			  pformat,data,stride,0,0,width,height);
   }
 
-  // for a pixel organized as 0,1,2,3, this appears to transfer channels un-swizzled to an XRGB framebuffer:
-  // however this would make the "most efficient" format "GL_ARGB" which doesn't exist:
-  //texture.remap = rsxgl_tex_remap(RSXGL_TEXTURE_REMAP_REMAP,RSXGL_TEXTURE_REMAP_REMAP,RSXGL_TEXTURE_REMAP_REMAP,RSXGL_TEXTURE_REMAP_REMAP,3,2,1,0);
-  
-  // this makes GL_BGRA the "most efficient" format parameter:
-  //texture.remap = rsxgl_tex_remap(RSXGL_TEXTURE_REMAP_REMAP,RSXGL_TEXTURE_REMAP_REMAP,RSXGL_TEXTURE_REMAP_REMAP,RSXGL_TEXTURE_REMAP_REMAP,0,1,2,3);
-  texture.remap = rsxgl_tex_remap(RSXGL_TEXTURE_REMAP_REMAP,RSXGL_TEXTURE_REMAP_REMAP,RSXGL_TEXTURE_REMAP_REMAP,RSXGL_TEXTURE_REMAP_REMAP,RSXGL_TEXTURE_REMAP_FROM_A,RSXGL_TEXTURE_REMAP_FROM_B,RSXGL_TEXTURE_REMAP_FROM_G,RSXGL_TEXTURE_REMAP_FROM_R);
+  texture.remap = nvfx_get_texture_remap(nvfx_get_texture_format(pformat),
+					 texture.swizzle.a,texture.swizzle.r,texture.swizzle.g,texture.swizzle.b);
 
   ctx -> invalid_textures |= texture.binding_bitfield;
 
@@ -1188,8 +1248,6 @@ rsxgl_tex_storage(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,c
   const uint32_t pitch = util_format_get_stride(pformat,width);
   texture.pitch = pitch;
 
-  texture.remap = rsxgl_tex_remap(RSXGL_TEXTURE_REMAP_REMAP,RSXGL_TEXTURE_REMAP_REMAP,RSXGL_TEXTURE_REMAP_REMAP,RSXGL_TEXTURE_REMAP_REMAP,RSXGL_TEXTURE_REMAP_FROM_A,RSXGL_TEXTURE_REMAP_FROM_B,RSXGL_TEXTURE_REMAP_FROM_G,RSXGL_TEXTURE_REMAP_FROM_R);
-
   texture_t::dimension_size_type unused_size[3];
   const uint32_t nbytes = rsxgl_tex_level_offset(texture,texture.max_level);
 
@@ -1211,6 +1269,9 @@ rsxgl_tex_storage(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,c
     fmt |
     ((uint32_t)texture.max_level << NV40_3D_TEX_FORMAT_MIPMAP_COUNT__SHIFT)
     ;
+
+  texture.remap = nvfx_get_texture_remap(pfmt,
+					 texture.swizzle.a,texture.swizzle.r,texture.swizzle.g,texture.swizzle.b);
 
   ctx -> invalid_textures |= texture.binding_bitfield;
 
@@ -1419,12 +1480,11 @@ rsxgl_tex_subimage(rsxgl_context_t * ctx,texture_t & texture,GLint level,GLint x
   }
 
   if(srcaddress != 0 && dstaddress != 0) {
-    // util_format_translate: (format,type) -> internalformat
     util_format_translate(pdstformat,dstaddress,pitch,x,y,
 			  psrcformat,srcaddress,util_format_get_stride(psrcformat,width),0,0,width,height);
   }
   else if(srcmem && dstmem) {
-    // util_format_translate: (format,type) -> internalformat
+    // TODO: util_format_translate: (format,type) -> internalformat
     // use RSX DMA
   }
   
@@ -1786,8 +1846,7 @@ rsxgl_texture_validate(rsxgl_context_t * ctx,texture_t & texture,const uint32_t 
 	    }
 	    // transfer with RSX DMA:
 	    else if(plevel -> memory.offset != 0) {
-	      // TODO - do this with RSX DMA:
-	      // util_format_translate: plevel -> internalformat, texture.internalformat
+	      // TODO: util_format_translate: plevel -> internalformat, texture.internalformat
 	      // use RSX DMA
 	    }
 	    
@@ -1805,8 +1864,6 @@ rsxgl_texture_validate(rsxgl_context_t * ctx,texture_t & texture,const uint32_t 
     }
     // failure:
     else {
-      //rsxgl_debug_printf("\t\tfailure: %u %u\n",levels,level);
-      
       texture.valid = 0;
     }
     
@@ -1993,9 +2050,6 @@ rsxgl_textures_validate(rsxgl_context_t * ctx,program_t & program,const uint32_t
 
 	gcm_emit_method(&buffer,NV30_3D_TEX_SWIZZLE(index),1);
 	gcm_emit(&buffer,texture.remap);
-	//static const uint32_t remap = rsxgl_tex_remap(RSXGL_TEXTURE_REMAP_REMAP,RSXGL_TEXTURE_REMAP_REMAP,RSXGL_TEXTURE_REMAP_REMAP,RSXGL_TEXTURE_REMAP_REMAP,
-	//				      RSXGL_TEXTURE_REMAP_FROM_R,RSXGL_TEXTURE_REMAP_FROM_G,RSXGL_TEXTURE_REMAP_FROM_B,RSXGL_TEXTURE_REMAP_FROM_A);
-	//gcm_emit(&buffer,remap);
 	
 	gcm_finish_commands(context,&buffer);
       }

@@ -358,8 +358,22 @@ nvfx_texture_formats[PIPE_FORMAT_COUNT] = {
 	_(R32_FLOAT,		R32F,	T, 0, 0, 1, X, X, X, X, UNORM, 0)
 };
 
-struct nvfx_texture_format *
+const struct nvfx_texture_format *
 nvfx_get_texture_format(enum pipe_format format)
 {
   return &nvfx_texture_formats[format];
+}
+
+uint32_t
+nvfx_get_texture_remap(const struct nvfx_texture_format * tf,uint8_t r,uint8_t g,uint8_t b,uint8_t a)
+{
+  return 0
+    | (tf->src[r] << NV30_3D_TEX_SWIZZLE_S0_Z__SHIFT)
+    | (tf->src[g] << NV30_3D_TEX_SWIZZLE_S0_Y__SHIFT)
+    | (tf->src[b] << NV30_3D_TEX_SWIZZLE_S0_X__SHIFT)
+    | (tf->src[a] << NV30_3D_TEX_SWIZZLE_S0_W__SHIFT)
+    | (tf->comp[r] << NV30_3D_TEX_SWIZZLE_S1_Z__SHIFT)
+    | (tf->comp[g] << NV30_3D_TEX_SWIZZLE_S1_Y__SHIFT)
+    | (tf->comp[b] << NV30_3D_TEX_SWIZZLE_S1_X__SHIFT)
+    | (tf->comp[a] << NV30_3D_TEX_SWIZZLE_S1_W__SHIFT);
 }
