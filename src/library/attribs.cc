@@ -10,7 +10,6 @@
 #include "arena.h"
 #include "buffer.h"
 #include "attribs.h"
-#include "program.h"
 
 #include <GL3/gl3.h>
 #include "error.h"

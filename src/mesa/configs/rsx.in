@@ -5,8 +5,8 @@ CONFIG_NAME = rsx
 
 CC = @ppu_CC@
 CXX = @ppu_CXX@
-DEFINES = -D_GNU_SOURCE
-MKLIB = $(SHELL) @abs_top_srcdir@/src/mesa/mklib-rsx
+DEFINES = -DUSE_MGL_NAMESPACE -DPIPE_OS_UNIX
+MKLIB = $(SHELL) @abs_top_builddir@/src/mesa/mklib-rsx
 
 BUILD_CC = @CC@
 BUILD_CXX = @CXX@

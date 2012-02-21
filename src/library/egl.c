@@ -15,7 +15,6 @@
 #include "rsxgl_config.h"
 #include "rsxgl_limits.h"
 
-#include "pipe/p_screen.h"
 #include "util/u_format.h"
 #include "nouveau/nouveau_winsys.h"
 

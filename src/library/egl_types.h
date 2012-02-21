@@ -7,6 +7,7 @@
 
 #include "gcm.h"
 
+#include "pipe/p_screen.h"
 #include "pipe/p_format.h"
 
 #ifdef __cplusplus
@@ -70,6 +71,8 @@ struct rsxegl_context_t {
   gcmContextData * gcm_context;
 
   void (*callback)(struct rsxegl_context_t *,const uint8_t);
+
+  struct pipe_screen * screen;
 };
 
 #ifdef __cplusplus

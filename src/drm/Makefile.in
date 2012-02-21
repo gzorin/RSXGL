@@ -147,6 +147,7 @@ SPRX = @SPRX@
 STRIP = @STRIP@
 VERSION = @VERSION@
 XARGS = @XARGS@
+XXD = @XXD@
 abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
 abs_top_builddir = @abs_top_builddir@

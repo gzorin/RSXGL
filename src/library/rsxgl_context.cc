@@ -8,6 +8,13 @@
 #include "cxxutil.h"
 #include "GL3/rsxgl.h"
 
+extern "C" {
+
+  struct pipe_context *
+  nvfx_create(struct pipe_screen *pscreen, void *priv);
+
+}
+
 #include <malloc.h>
 #include <stdint.h>
 #include <string.h>
@@ -30,7 +37,7 @@ rsxgl_object_context_create()
 }
 
 rsxgl_context_t::rsxgl_context_t(const struct rsxegl_config_t * config,gcmContextData * gcm_context,struct pipe_screen * screen,struct rsxgl_object_context_t * _object_context)
-  : m_object_context(_object_context), m_screen(screen), active_texture(0), any_samples_passed_query(RSXGL_MAX_QUERY_OBJECTS), ref(0), timestamp_sync(0), next_timestamp(1), last_timestamp(0), cached_timestamp(0)
+  : m_object_context(_object_context), active_texture(0), any_samples_passed_query(RSXGL_MAX_QUERY_OBJECTS), ref(0), timestamp_sync(0), next_timestamp(1), last_timestamp(0), cached_timestamp(0), m_compiler_context(0)
 {
   base.api = EGL_OPENGL_API;
   base.config = config;
@@ -39,6 +46,10 @@ rsxgl_context_t::rsxgl_context_t(const struct rsxegl_config_t * config,gcmContex
   base.read = 0;
   base.valid = 1;
   base.callback = rsxgl_context_t::egl_callback;
+  base.screen = screen;
+
+  m_pctx = nvfx_create(screen,0);
+  rsxgl_debug_printf("m_pctx: %lx\n",(unsigned long)m_pctx);
 
   ++m_object_context -> m_refCount;
 
@@ -52,6 +63,10 @@ rsxgl_context_t::~rsxgl_context_t()
   --m_object_context -> m_refCount;
   if(m_object_context -> m_refCount == 0) {
     delete m_object_context;
+  }
+
+  if(m_compiler_context != 0) {
+    delete m_compiler_context;
   }
 }
 

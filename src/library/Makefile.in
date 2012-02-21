@@ -79,7 +79,7 @@ ARFLAGS = cru
 libEGL_a_AR = $(AR) $(ARFLAGS)
 libEGL_a_LIBADD =
 am_libEGL_a_OBJECTS = libEGL_a-egl.$(OBJEXT) libEGL_a-mem.$(OBJEXT) \
-	libEGL_a-malloc.$(OBJEXT)
+	libEGL_a-malloc.$(OBJEXT) libEGL_a-dl.$(OBJEXT)
 libEGL_a_OBJECTS = $(am_libEGL_a_OBJECTS)
 libGL_a_AR = $(AR) $(ARFLAGS)
 libGL_a_LIBADD =
@@ -90,9 +90,10 @@ am_libGL_a_OBJECTS = libGL_a-rsxgl_context.$(OBJEXT) \
 	libGL_a-enable.$(OBJEXT) libGL_a-arena.$(OBJEXT) \
 	libGL_a-buffer.$(OBJEXT) libGL_a-clear.$(OBJEXT) \
 	libGL_a-draw.$(OBJEXT) libGL_a-sync.$(OBJEXT) \
-	libGL_a-query.$(OBJEXT) libGL_a-program.$(OBJEXT) \
-	libGL_a-attribs.$(OBJEXT) libGL_a-uniforms.$(OBJEXT) \
-	libGL_a-textures.$(OBJEXT) libGL_a-framebuffer.$(OBJEXT) \
+	libGL_a-query.$(OBJEXT) libGL_a-compiler_context.$(OBJEXT) \
+	libGL_a-program.$(OBJEXT) libGL_a-attribs.$(OBJEXT) \
+	libGL_a-uniforms.$(OBJEXT) libGL_a-textures.$(OBJEXT) \
+	libGL_a-framebuffer.$(OBJEXT) \
 	libGL_a-ringbuffer_migrate.$(OBJEXT) \
 	libGL_a-dumb_migrate.$(OBJEXT) libGL_a-debug.$(OBJEXT) \
 	libGL_a-nv40vertprog.$(OBJEXT) libGL_a-nv40fragprog.$(OBJEXT) \
@@ -193,6 +194,7 @@ SPRX = @SPRX@
 STRIP = @STRIP@
 VERSION = @VERSION@
 XARGS = @XARGS@
+XXD = @XXD@
 abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
 abs_top_builddir = @abs_top_builddir@
@@ -271,7 +273,7 @@ MKLIB = @top_builddir@/src/mesa/mklib-rsx
 ppu_lib_LIBRARIES = libEGL.a libGL.a
 nobase_ppu_include_HEADERS = GL3/rsxgl.h GL3/gl3ext.h GL3/rsxgl3ext.h GL3/rsxgl_compatibility.h
 dlmalloc_CPPFLAGS = -DMSPACES -DONLY_MSPACES -DHAVE_MMAP=0 -Dmalloc_getpagesize=4096
-MESA_CPPFLAGS = -I$(MESA_LOCATION)/src/glsl \
+MESA_CPPFLAGS = -I$(MESA_LOCATION)/src \
 	-I$(MESA_LOCATION)/src/mesa \
 	-I$(MESA_LOCATION)/src/mapi \
 	-I$(MESA_LOCATION)/include \
@@ -281,7 +283,7 @@ MESA_CPPFLAGS = -I$(MESA_LOCATION)/src/glsl \
 	-DPIPE_OS_UNIX
 
 LIBDRM_CPPFLAGS = -I$(LIBDRM_LOCATION) -I$(LIBDRM_LOCATION)/include -I$(LIBDRM_LOCATION)/include/drm -I$(LIBDRM_LOCATION)/nouveau
-libEGL_a_SOURCES = egl.c mem.c malloc.c
+libEGL_a_SOURCES = egl.c mem.c malloc.c dl.c
 libEGL_a_CFLAGS = -std=gnu99 -fgnu89-inline
 libEGL_a_CPPFLAGS = -D__RSX__ -I\$(top_srcdir)/include -Wall $(dlmalloc_CPPFLAGS) $(PSL1GHT_CPPFLAGS) \
 	$(MESA_CPPFLAGS) $(LIBDRM_CPPFLAGS) -I$(MESA_LOCATION)/src/gallium/drivers/nvfx
@@ -298,13 +300,13 @@ DUMB = $(top_builddir)/extsrc/mesa/src/glsl/libglsl.a \
 libGL_a_SOURCES = rsxgl_context.cc rsxgl_object_context.cc gl_fifo.c					\
 	error.cc get.cc state.cc enable.cc arena.cc buffer.cc clear.cc draw.cc	\
 	sync.cc query.cc							\
-	program.cc attribs.cc uniforms.cc textures.cc framebuffer.cc		\
+	compiler_context.cc program.cc attribs.cc uniforms.cc textures.cc framebuffer.cc		\
 	ringbuffer_migrate.cc dumb_migrate.cc debug.c \
 	../cgcomp/source/nv40vertprog.c ../cgcomp/source/nv40fragprog.c \
 	st_format.c
 
 libGL_a_CPPFLAGS = -D__RSX__ -I\$(top_srcdir)/include $(PSL1GHT_CPPFLAGS) -I$(top_srcdir)/src/cgcomp/include -I$(top_srcdir)/src/nvfxc \
-	$(MESA_CPPFLAGS)
+	$(MESA_CPPFLAGS) $(LIBDRM_CPPFLAGS)
 
 libGL_a_CFLAGS = -std=gnu99 -fgnu89-inline
 libGL_a_CXXFLAGS = -I$(top_srcdir)/extsrc/boost -std=c++0x -fno-rtti
@@ -382,6 +384,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libEGL_a-dl.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libEGL_a-egl.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libEGL_a-malloc.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libEGL_a-mem.Po@am__quote@
@@ -389,6 +392,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libGL_a-attribs.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libGL_a-buffer.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libGL_a-clear.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libGL_a-compiler_context.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libGL_a-debug.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libGL_a-draw.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libGL_a-dumb_migrate.Po@am__quote@
@@ -465,6 +469,20 @@ libEGL_a-malloc.obj: malloc.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='malloc.c' object='libEGL_a-malloc.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libEGL_a_CPPFLAGS) $(CPPFLAGS) $(libEGL_a_CFLAGS) $(CFLAGS) -c -o libEGL_a-malloc.obj `if test -f 'malloc.c'; then $(CYGPATH_W) 'malloc.c'; else $(CYGPATH_W) '$(srcdir)/malloc.c'; fi`
+
+libEGL_a-dl.o: dl.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libEGL_a_CPPFLAGS) $(CPPFLAGS) $(libEGL_a_CFLAGS) $(CFLAGS) -MT libEGL_a-dl.o -MD -MP -MF $(DEPDIR)/libEGL_a-dl.Tpo -c -o libEGL_a-dl.o `test -f 'dl.c' || echo '$(srcdir)/'`dl.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libEGL_a-dl.Tpo $(DEPDIR)/libEGL_a-dl.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='dl.c' object='libEGL_a-dl.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libEGL_a_CPPFLAGS) $(CPPFLAGS) $(libEGL_a_CFLAGS) $(CFLAGS) -c -o libEGL_a-dl.o `test -f 'dl.c' || echo '$(srcdir)/'`dl.c
+
+libEGL_a-dl.obj: dl.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libEGL_a_CPPFLAGS) $(CPPFLAGS) $(libEGL_a_CFLAGS) $(CFLAGS) -MT libEGL_a-dl.obj -MD -MP -MF $(DEPDIR)/libEGL_a-dl.Tpo -c -o libEGL_a-dl.obj `if test -f 'dl.c'; then $(CYGPATH_W) 'dl.c'; else $(CYGPATH_W) '$(srcdir)/dl.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libEGL_a-dl.Tpo $(DEPDIR)/libEGL_a-dl.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='dl.c' object='libEGL_a-dl.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libEGL_a_CPPFLAGS) $(CPPFLAGS) $(libEGL_a_CFLAGS) $(CFLAGS) -c -o libEGL_a-dl.obj `if test -f 'dl.c'; then $(CYGPATH_W) 'dl.c'; else $(CYGPATH_W) '$(srcdir)/dl.c'; fi`
 
 libGL_a-gl_fifo.o: gl_fifo.c
 @am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libGL_a_CPPFLAGS) $(CPPFLAGS) $(libGL_a_CFLAGS) $(CFLAGS) -MT libGL_a-gl_fifo.o -MD -MP -MF $(DEPDIR)/libGL_a-gl_fifo.Tpo -c -o libGL_a-gl_fifo.o `test -f 'gl_fifo.c' || echo '$(srcdir)/'`gl_fifo.c
@@ -717,6 +735,20 @@ libGL_a-query.obj: query.cc
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='query.cc' object='libGL_a-query.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libGL_a_CPPFLAGS) $(CPPFLAGS) $(libGL_a_CXXFLAGS) $(CXXFLAGS) -c -o libGL_a-query.obj `if test -f 'query.cc'; then $(CYGPATH_W) 'query.cc'; else $(CYGPATH_W) '$(srcdir)/query.cc'; fi`
+
+libGL_a-compiler_context.o: compiler_context.cc
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libGL_a_CPPFLAGS) $(CPPFLAGS) $(libGL_a_CXXFLAGS) $(CXXFLAGS) -MT libGL_a-compiler_context.o -MD -MP -MF $(DEPDIR)/libGL_a-compiler_context.Tpo -c -o libGL_a-compiler_context.o `test -f 'compiler_context.cc' || echo '$(srcdir)/'`compiler_context.cc
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/libGL_a-compiler_context.Tpo $(DEPDIR)/libGL_a-compiler_context.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='compiler_context.cc' object='libGL_a-compiler_context.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libGL_a_CPPFLAGS) $(CPPFLAGS) $(libGL_a_CXXFLAGS) $(CXXFLAGS) -c -o libGL_a-compiler_context.o `test -f 'compiler_context.cc' || echo '$(srcdir)/'`compiler_context.cc
+
+libGL_a-compiler_context.obj: compiler_context.cc
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libGL_a_CPPFLAGS) $(CPPFLAGS) $(libGL_a_CXXFLAGS) $(CXXFLAGS) -MT libGL_a-compiler_context.obj -MD -MP -MF $(DEPDIR)/libGL_a-compiler_context.Tpo -c -o libGL_a-compiler_context.obj `if test -f 'compiler_context.cc'; then $(CYGPATH_W) 'compiler_context.cc'; else $(CYGPATH_W) '$(srcdir)/compiler_context.cc'; fi`
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/libGL_a-compiler_context.Tpo $(DEPDIR)/libGL_a-compiler_context.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='compiler_context.cc' object='libGL_a-compiler_context.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libGL_a_CPPFLAGS) $(CPPFLAGS) $(libGL_a_CXXFLAGS) $(CXXFLAGS) -c -o libGL_a-compiler_context.obj `if test -f 'compiler_context.cc'; then $(CYGPATH_W) 'compiler_context.cc'; else $(CYGPATH_W) '$(srcdir)/compiler_context.cc'; fi`
 
 libGL_a-program.o: program.cc
 @am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libGL_a_CPPFLAGS) $(CPPFLAGS) $(libGL_a_CXXFLAGS) $(CXXFLAGS) -MT libGL_a-program.o -MD -MP -MF $(DEPDIR)/libGL_a-program.Tpo -c -o libGL_a-program.o `test -f 'program.cc' || echo '$(srcdir)/'`program.cc
@@ -1052,7 +1084,10 @@ libEGL.a: $(libEGL_a_OBJECTS) $(libEGL_a_DEPENDENCIES)
 	$(top_builddir)/extsrc/mesa/src/gallium/auxiliary/libgallium.a
 libGL.a: $(libGL_a_OBJECTS) $(libGL_a_DEPENDENCIES)
 	@. $(MKLIB) -static -arch PS3 -cplusplus -o GL \
-	$(libGL_a_OBJECTS)
+	$(libGL_a_OBJECTS) \
+	$(top_builddir)/extsrc/mesa/src/mesa/libmesagallium.a \
+	$(top_builddir)/extsrc/mesa/src/mapi/glapi/libglapi.a \
+	$(top_builddir)/extsrc/mesa/src/glsl/libglsl.a
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

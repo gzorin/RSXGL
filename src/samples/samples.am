@@ -5,6 +5,7 @@ RANLIB = @ppu_RANLIB@
 AS		=	@ppu_AS@
 STRIP		=	@ppu_STRIP@
 CXXLD = PSL1GHT="@PSL1GHT@" "@ppu_CXX@"
+XXD = @XXD@
 
 PSL1GHT_CPPFLAGS = @PSL1GHT_CPPFLAGS@
 PSL1GHT_LDFLAGS = @PSL1GHT_LDFLAGS@
@@ -47,6 +48,14 @@ SUFFIXES = .bin _bin.o _bin.h .png _png.o _png.h .vcg .fcg .vert .frag _vpo.o _f
 %.fpo: %.frag
 	@echo "[Compiling GLSL fragment program] $(notdir $<)"
 	@CGC=$(CGC) NV40ASM=$(local_NV40ASM) $(NV40C) -f -x glsl -o $@ $^
+
+%_vert.h: %.vert
+	@echo Generating $@ from $<
+	@pushd $(abs_srcdir); rm -f $(abs_builddir)/$@; $(XXD) -i $(notdir $<) > $(abs_builddir)/$@; popd
+
+%_frag.h: %.frag
+	@echo Generating $@ from $<
+	@pushd $(abs_srcdir); rm -f $(abs_builddir)/$@; $(XXD) -i $(notdir $<) > $(abs_builddir)/$@; popd
 
 %.self: %.elf
 	@echo "[SELF] $@"
@@ -102,8 +111,8 @@ fragment_shaders = $(filter %.frag,$(notdir $(1)))
 vertex_shader_objs = $(1:.vert=_vpo.o)
 fragment_shader_objs = $(1:.frag=_fpo.o)
 
-vertex_shader_headers = $(1:.vert=_vpo.h)
-fragment_shader_headers = $(1:.frag=_fpo.h)
+vertex_shader_headers = $(1:.vert=_vert.h)
+fragment_shader_headers = $(1:.frag=_frag.h)
 
 shader_objs = $(call vertex_shader_objs,$(call vertex_shaders,$(1))) $(call fragment_shader_objs,$(call fragment_shaders,$(1)))
 shader_headers = $(call vertex_shader_headers,$(call vertex_shaders,$(1))) $(call fragment_shader_headers,$(call fragment_shaders,$(1)))

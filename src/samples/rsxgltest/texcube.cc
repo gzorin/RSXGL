@@ -10,8 +10,8 @@
 #include "sine_wave.h"
 
 #include <stddef.h>
-#include "texcube_vpo.h"
-#include "texcube_fpo.h"
+#include "texcube_vert.h"
+#include "texcube_frag.h"
 
 #include <io/pad.h>
 
@@ -208,42 +208,42 @@ rsxgltest_init(int argc,const char ** argv)
 {
   tcp_printf("%s\n",__PRETTY_FUNCTION__);
 
-  int count = 0;
-
-  tcp_printf("\t%i\n",count++);
-
   glEnable(GL_DEPTH_TEST);
   glDepthFunc(GL_LEQUAL);
-
-  tcp_printf("\t%i\n",count++);
 
   // Set up us the program:
   shaders[0] = glCreateShader(GL_VERTEX_SHADER);
   shaders[1] = glCreateShader(GL_FRAGMENT_SHADER);
 
-  tcp_printf("\t%i\n",count++);
-
   program = glCreateProgram();
-
-  tcp_printf("\t%i\n",count++);
 
   glAttachShader(program,shaders[0]);
   glAttachShader(program,shaders[1]);
 
-  tcp_printf("\t%i\n",count++);
-
+#if 0
   // Supply shader binaries:
   glShaderBinary(1,shaders,0,texcube_vpo,texcube_vpo_size);
   glShaderBinary(1,shaders + 1,0,texcube_fpo,texcube_fpo_size);
+#endif
 
-  tcp_printf("\t%i\n",count++);
+  // Supply shader SOURCES!
+  const GLchar * shader_srcs[] = { (const GLchar *)texcube_vert, (const GLchar *)texcube_frag };
+  GLint shader_srcs_lengths[] = { texcube_vert_len, texcube_frag_len };
+  glShaderSource(shaders[0],1,shader_srcs,shader_srcs_lengths);
+  //glCompileShader(shaders[0]);
 
+  glShaderSource(shaders[1],1,shader_srcs + 1,shader_srcs_lengths + 1);
+  glCompileShader(shaders[1]);
+
+#if 0
   // Link the program for real:
   glLinkProgram(program);
   glValidateProgram(program);
   
   summarize_program("draw",program);
+#endif
 
+#if 0
   vertex_location = glGetAttribLocation(program,"vertex");
   tc_location = glGetAttribLocation(program,"uv");
 
@@ -315,6 +315,7 @@ rsxgltest_init(int argc,const char ** argv)
 
   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+#endif
 }
 
 extern "C"
@@ -330,6 +331,7 @@ rsxgltest_draw()
   glClearColor(rgb[0],rgb[1],rgb[2],1.0);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+#if 0
   float xyz[3] = {
     compute_sine_wave(xyz_waves,rsxgltest_elapsed_time),
     compute_sine_wave(xyz_waves + 1,rsxgltest_elapsed_time),
@@ -363,6 +365,7 @@ rsxgltest_draw()
 
     glDrawElements(GL_TRIANGLES,36,GL_UNSIGNED_INT,client_indices);
   }
+#endif
 
   return 1;
 }
@@ -371,6 +374,7 @@ extern "C"
 void
 rsxgltest_exit()
 {
+#if 0
   glBindBuffer(GL_ARRAY_BUFFER,0);
 
   glVertexAttribPointer(vertex_location,3,GL_FLOAT,GL_FALSE,0,0);
@@ -381,4 +385,5 @@ rsxgltest_exit()
   glDeleteShader(shaders[0]);
   glDeleteProgram(program);
   glDeleteShader(shaders[1]);
+#endif
 }

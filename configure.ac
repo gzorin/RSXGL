@@ -37,6 +37,7 @@ AC_PATH_PROG([XARGS],[xargs])
 AC_PATH_PROG([PWDCMD],[pwd])
 AC_PATH_PROG([RSYNC],[rsync])
 AC_PATH_PROG([PATCH],[patch])
+AC_PATH_PROG([XXD],[xxd])
 
 AC_LANG([C])
 AC_LANG([C++])
@@ -175,8 +176,8 @@ AC_CONFIG_COMMANDS([mesa],
 	   "$RSYNC" -av --files-from="$_abs_top_srcdir/src/mesa/files" "$mesa_srcdir" "$mesa_builddir";
 	fi;
 
-	cp "$_abs_top_builddir/src/mesa/configs/rsx" "$mesa_builddir/configs/current";
-	cp "$_abs_top_srcdir/src/mesa/Makefile-builtins" "$mesa_builddir/src/glsl/";
+	ln -fs "$_abs_top_builddir/src/mesa/configs/rsx" "$mesa_builddir/configs/current";
+	"$RSYNC" -av "$_abs_top_srcdir/src/mesa/Makefile-builtins" "$mesa_builddir/src/glsl/";
 ],
 [       MESA_LOCATION="$MESA_LOCATION";
 	_abs_top_builddir=$(cd "${builddir}"; ${PWDCMD});

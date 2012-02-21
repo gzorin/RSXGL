@@ -12,6 +12,7 @@
 #include "error.h"
 #include "gl_fifo.h"
 #include "program.h"
+#include "compiler_context.h"
 
 #include "gcm.h"
 #include "nv40.h"
@@ -27,7 +28,7 @@
 #define FLOAT32  0x0
 #define FLOAT16  0x1
 #define FIXED12  0x2
-#define INLINE __inline
+//#define INLINE __inline
 #define boolean char
 #include "nv30_vertprog.h"
 #include "nv40_vertprog.h"
@@ -35,7 +36,7 @@
 #undef FLOAT32
 #undef FLOAT16
 #undef FIXED12
-#undef INLINE
+//#undef INLINE
 #undef boolean
 #undef __TYPES_H__
 
@@ -269,14 +270,24 @@ glCompileShader (GLuint shader_name)
   shader_t & shader = shader_t::storage().at(shader_name);
   shader.compiled = GL_FALSE;
 
+  if(shader.source_data == 0) {
+    RSXGL_NOERROR_();
+  }
+
+  compiler_context_t * cctx = current_ctx() -> compiler_context();
+  rsxgl_assert(cctx != 0);
+
+  cctx -> compile_shader(shader.type == RSXGL_VERTEX_SHADER ? compiler_context_t::kVertex : compiler_context_t::kFragment,
+			 shader.source_data);
+
+#if 0
   static const std::string kCompilationUnimplemented("shader compilation not yet implemented in RSXGL");
   const size_t n = kCompilationUnimplemented.length() + 1;
   shader.info().resize(n,0);
   shader.info().set(kCompilationUnimplemented.c_str(),n);
+#endif
 
-  // TODO - Return an error, because we don't really support this yet:
-  //RSXGL_NOERROR_();
-  RSXGL_ERROR_(GL_INVALID_OPERATION);
+  RSXGL_NOERROR_();
 }
 
 GLAPI void APIENTRY
@@ -713,6 +724,8 @@ glLinkProgram (GLuint program_name)
   if(!program_t::storage().is_object(program_name)) {
     RSXGL_ERROR_(GL_INVALID_VALUE);
   }
+
+  compiler_context_t * cctx = current_ctx() -> compiler_context();
 
   program_t & program = program_t::storage().at(program_name);
   std::string info;

@@ -78,3 +78,6 @@ depend: $(ALL_SOURCES) Makefile
 builtin_compiler: $(build_GLSL2_OBJECTS) $(build_OBJECTS) build-builtin_stubs.o
 	@echo $^
 	$(APP_CXX) $(INCLUDES) $(CXXFLAGS) $(LDFLAGS) $(build_OBJECTS) $(build_GLSL2_OBJECTS) build-builtin_stubs.o -o $@
+
+clean:
+	@rm -f $(build_GLSL2_OBJECTS) $(build_OBJECTS) build-builtin_stubs.o builtin_compiler

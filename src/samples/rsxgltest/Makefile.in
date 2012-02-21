@@ -148,6 +148,7 @@ SPRX := @SPRX@
 STRIP = @ppu_STRIP@
 VERSION = @VERSION@
 XARGS = @XARGS@
+XXD = @XXD@
 abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
 abs_top_builddir = @abs_top_builddir@
@@ -233,8 +234,8 @@ vertex_shaders = $(filter %.vert,$(notdir $(1)))
 fragment_shaders = $(filter %.frag,$(notdir $(1)))
 vertex_shader_objs = $(1:.vert=_vpo.o)
 fragment_shader_objs = $(1:.frag=_fpo.o)
-vertex_shader_headers = $(1:.vert=_vpo.h)
-fragment_shader_headers = $(1:.frag=_fpo.h)
+vertex_shader_headers = $(1:.vert=_vert.h)
+fragment_shader_headers = $(1:.frag=_frag.h)
 shader_objs = $(call vertex_shader_objs,$(call vertex_shaders,$(1))) $(call fragment_shader_objs,$(call fragment_shaders,$(1)))
 shader_headers = $(call vertex_shader_headers,$(call vertex_shaders,$(1))) $(call fragment_shader_headers,$(call fragment_shaders,$(1)))
 png_images = $(filter %.png,$(notdir $(1)))
@@ -252,7 +253,8 @@ BUILT_SOURCES = textures_vpo.h textures_fpo.h \
 	texcube_vpo.h texcube_fpo.h \
 	fbo_inner_vpo.h fbo_inner_fpo.h \
 	occlusion_vpo.h occlusion_fpo.h \
-	gradient_png.h
+	gradient_png.h \
+	texcube_vert.h texcube_frag.h
 
 CLEANFILES = draw_vpo.h draw_fpo.h draw_vpo.o draw_fpo.o \
 	textures_vpo.h textures_fpo.h textures_vpo.o textures_fpo.o \
@@ -264,7 +266,8 @@ CLEANFILES = draw_vpo.h draw_fpo.h draw_vpo.o draw_fpo.o \
 	dice_bin.o dice_bin.h \
 	nagel_bin.o nagel_bin.h \
 	face_png.o face_png.h \
-	gradient_png.o gradient_png.h
+	gradient_png.o gradient_png.h \
+	texcube_vert.h texcube_frag.h
 
 
 # clear.c viewport_scissor.c buffer.c program.c draw.c uniforms.c textures.c cube.cc
@@ -278,7 +281,7 @@ manypoints_objects = points_vpo.o points_fpo.o face_png.o
 manypoints_sources = manypoints.cc texture.c points.vert points.frag face.png
 manycubes_objects = cube_vpo.o cube_fpo.o
 manycubes_sources = manycubes.cc cube.vert cube.frag
-texcube_objects = texcube_vpo.o texcube_fpo.o nagel_bin.o gradient_png.o face_png.o
+texcube_objects = nagel_bin.o gradient_png.o face_png.o
 texcube_sources = texcube.cc texture.c texcube.vert texcube.frag nagel.bin face.png gradient.png
 fbo_objects = fbo_inner_vpo.o fbo_inner_fpo.o nagel_bin.o
 fbo_sources = fbo.cc texture.c fbo_inner.vert fbo_inner.frag nagel.bin
@@ -683,6 +686,14 @@ endef
 %.fpo: %.frag
 	@echo "[Compiling GLSL fragment program] $(notdir $<)"
 	@CGC=$(CGC) NV40ASM=$(local_NV40ASM) $(NV40C) -f -x glsl -o $@ $^
+
+%_vert.h: %.vert
+	@echo Generating $@ from $<
+	@pushd $(abs_srcdir); rm -f $(abs_builddir)/$@; $(XXD) -i $(notdir $<) > $(abs_builddir)/$@; popd
+
+%_frag.h: %.frag
+	@echo Generating $@ from $<
+	@pushd $(abs_srcdir); rm -f $(abs_builddir)/$@; $(XXD) -i $(notdir $<) > $(abs_builddir)/$@; popd
 
 %.self: %.elf
 	@echo "[SELF] $@"

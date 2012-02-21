@@ -14,11 +14,14 @@
 #include "uniforms.h"
 #include "textures.h"
 #include "program.h"
+#include "compiler_context.h"
 #include "framebuffer.h"
 #include "sync.h"
 #include "query.h"
 
 #include "bit_set.h"
+
+#include "pipe/p_context.h"
 
 #include <stddef.h>
 
@@ -28,7 +31,8 @@ struct rsxgl_context_t {
 private:
 
   rsxgl_object_context_t * m_object_context;
-  struct pipe_screen * m_screen;
+  pipe_context * m_pctx;
+  compiler_context_t * m_compiler_context;
 
 public:
 
@@ -95,8 +99,23 @@ public:
 
   inline
   struct pipe_screen * screen() {
-    rsxgl_assert(m_screen != 0);
-    return m_screen;
+    rsxgl_assert(base.screen != 0);
+    return base.screen;
+  }
+
+  inline
+  struct pipe_context * pctx() {
+    rsxgl_assert(m_pctx != 0);
+    return m_pctx;
+  }
+
+  inline
+  compiler_context_t * compiler_context() {
+    if(m_compiler_context == 0) {
+      m_compiler_context = new compiler_context_t(pctx());
+    }
+    rsxgl_assert(m_compiler_context != 0);
+    return m_compiler_context;
   }
 
   static void egl_callback(rsxegl_context_t *,const uint8_t);
