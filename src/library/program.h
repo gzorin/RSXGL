@@ -11,6 +11,7 @@
 #include "gl_constants.h"
 #include "gl_object_storage.h"
 #include "array.h"
+#include "compiler_context.h"
 
 #include <nv40prog.h>
 
@@ -78,6 +79,8 @@ struct shader_t {
 
   info_type::type info() { return info_type::type(info_data,info_size); }
   info_type::const_type info() const { return info_type::const_type(info_data,info_size); }
+
+  gl_shader * mesa_shader;
 };
 
 struct program_t {
@@ -248,6 +251,10 @@ struct program_t {
 
   fragout_binding_type::type fragout_binding(size_t i) { assert(i < RSXGL_MAX_DRAW_BUFFERS); return fragout_binding_type::type(fragout_binding_data[i],fragout_binding_size[i]); }
   fragout_binding_type::const_type fragout_binding(size_t i) const { assert(i < RSXGL_MAX_DRAW_BUFFERS); return fragout_binding_type::const_type(fragout_binding_data[i],fragout_binding_size[i]); }
+
+  gl_shader_program * mesa_program;
+  nvfx_vertex_program * nvfx_vp;
+  nvfx_fragment_program * nvfx_fp;
 
   // --- hot:
   //

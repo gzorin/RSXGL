@@ -40,6 +40,9 @@
 #undef boolean
 #undef __TYPES_H__
 
+// mesa:
+#include <main/mtypes.h>
+
 #include <string.h>
 #include <malloc.h>
 #include <algorithm>
@@ -65,7 +68,7 @@ program_t::storage_type & program_t::storage()
 
 // Shader functions:
 shader_t::shader_t()
-  : type(RSXGL_MAX_SHADER_TYPES), compiled(GL_FALSE), deleted(GL_FALSE), ref_count(0)
+  : type(RSXGL_MAX_SHADER_TYPES), compiled(GL_FALSE), deleted(GL_FALSE), ref_count(0), mesa_shader(0)
 {
   source().construct();
   binary().construct();
@@ -103,6 +106,10 @@ glCreateShader (GLenum type)
   uint32_t name = shader_t::storage().create_name_and_object();
   shader_t::storage().at(name).type = rsx_type;
 
+  shader_t & shader = shader_t::storage().at(name);
+  compiler_context_t * cctx = current_ctx() -> compiler_context();
+  shader.mesa_shader = cctx -> create_shader(rsx_type == RSXGL_VERTEX_SHADER ? compiler_context_t::kVertex : compiler_context_t::kFragment);
+
   RSXGL_NOERROR(name);
 }
 
@@ -114,6 +121,8 @@ glDeleteShader (GLuint shader_name)
   }
   
   shader_t::gl_object_type::maybe_delete(shader_name);
+
+  // TODO: destroy mesa resources
 
   RSXGL_NOERROR_();
 }
@@ -277,15 +286,13 @@ glCompileShader (GLuint shader_name)
   compiler_context_t * cctx = current_ctx() -> compiler_context();
   rsxgl_assert(cctx != 0);
 
-  cctx -> compile_shader(shader.type == RSXGL_VERTEX_SHADER ? compiler_context_t::kVertex : compiler_context_t::kFragment,
+  cctx -> compile_shader(shader.mesa_shader,
 			 shader.source_data);
 
-#if 0
-  static const std::string kCompilationUnimplemented("shader compilation not yet implemented in RSXGL");
-  const size_t n = kCompilationUnimplemented.length() + 1;
-  shader.info().resize(n,0);
-  shader.info().set(kCompilationUnimplemented.c_str(),n);
-#endif
+  shader.compiled = shader.mesa_shader -> CompileStatus;
+  const size_t n = strlen(shader.mesa_shader -> InfoLog) + 1;
+  shader.info().resize(n);
+  shader.info().set(shader.mesa_shader -> InfoLog,n);
 
   RSXGL_NOERROR_();
 }
@@ -293,7 +300,7 @@ glCompileShader (GLuint shader_name)
 GLAPI void APIENTRY
 glReleaseShaderCompiler (void)
 {
-  // TODO - Return an error, because we don't really support this yet:
+  // TODO: Return an error, because we don't really support this yet:
   //RSXGL_NOERROR_();
   RSXGL_ERROR_(GL_INVALID_OPERATION);
 }
@@ -303,6 +310,7 @@ program_t::program_t()
   : deleted(0), timestamp(0),
     linked(0), validated(0), invalid_uniforms(0), ref_count(0),
     attrib_name_max_length(0), uniform_name_max_length(0),
+    mesa_program(0), nvfx_vp(0), nvfx_fp(0),
     vp_ucode_offset(~0), fp_ucode_offset(~0), vp_num_insn(0), fp_num_insn(0), 
     vp_input_mask(0), vp_output_mask(0), vp_num_internal_const(0),
     fp_control(0), fp_num_regs(0), instanceid_index(~0), point_sprite_control(0),
@@ -344,13 +352,17 @@ program_t::~program_t()
   if(uniform_values != 0) free(uniform_values);
   if(program_offsets != 0) free(program_offsets);
 
-  // TODO - delete microcode storage also
+  // TODO: delete microcode storage also
 }
 
 GLAPI GLuint APIENTRY
 glCreateProgram (void)
 {
   uint32_t name = program_t::storage().create_name_and_object();
+
+  program_t & program = program_t::storage().at(name);
+  compiler_context_t * cctx = current_ctx() -> compiler_context();
+  program.mesa_program = cctx -> create_program();
 
   RSXGL_NOERROR(name);
 }
@@ -362,7 +374,7 @@ glDeleteProgram (GLuint program_name)
     RSXGL_ERROR_(GL_INVALID_VALUE);
   }
 
-  // TODO - orphan it, instead of doing this:
+  // TODO: orphan it, instead of doing this:
   program_t & program = program_t::storage().at(program_name);
   if(program.timestamp > 0) {
     rsxgl_timestamp_wait(current_ctx(),program.timestamp);
@@ -370,6 +382,8 @@ glDeleteProgram (GLuint program_name)
   }
 
   program_t::gl_object_type::maybe_delete(program_name);
+
+  // TODO: destroy mesa resources
   
   RSXGL_NOERROR_();
 }
@@ -392,6 +406,10 @@ glAttachShader (GLuint program_name, GLuint shader_name)
 
   program_t & program = program_t::storage().at(program_name);
   shader_t & shader = shader_t::storage().at(shader_name);
+
+  compiler_context_t * cctx = current_ctx() -> compiler_context();
+  cctx -> attach_shader(program.mesa_program,shader.mesa_shader);
+
   uint32_t rsx_type = shader.type;
 
   if(program.attached_shaders.names[rsx_type] != shader_name) {
@@ -725,11 +743,23 @@ glLinkProgram (GLuint program_name)
     RSXGL_ERROR_(GL_INVALID_VALUE);
   }
 
-  compiler_context_t * cctx = current_ctx() -> compiler_context();
-
   program_t & program = program_t::storage().at(program_name);
   std::string info;
-  
+
+  compiler_context_t * cctx = current_ctx() -> compiler_context();
+  cctx -> link_program(program.mesa_program);
+
+  program.nvfx_vp = cctx -> translate_vp(program.mesa_program);
+  program.nvfx_fp = cctx -> translate_fp(program.mesa_program);
+
+  rsxgl_debug_printf("%s result: %i info: %s programs: %lx %x\n",
+		     __PRETTY_FUNCTION__,
+		     program.mesa_program -> LinkStatus,
+		     program.mesa_program -> InfoLog,
+		     (unsigned long)program.nvfx_vp,
+		     (unsigned long)program.nvfx_fp);
+
+#if 0
   shader_t * shaders[RSXGL_MAX_SHADER_TYPES];
   size_t nValidShaders = 0;
   program.linked = GL_FALSE;
@@ -801,7 +831,7 @@ glLinkProgram (GLuint program_name)
     goto fail;
   }
 
-  // TODO - orphan it, instead of doing this:
+  // TODO: orphan it, instead of doing this:
   if(program.timestamp > 0) {
     rsxgl_timestamp_wait(current_ctx(),program.timestamp);
     program.timestamp = 0;
@@ -1070,7 +1100,7 @@ glLinkProgram (GLuint program_name)
 	// If they are equal, then make sure they are of the same type & size:
 	if(c == 0 && !((*vp_it0) -> type == (*fp_it0) -> type &&
 		       (*vp_it0) -> count == (*fp_it0) -> count)) {
-	  // TODO - Add an error message
+	  // TODO: Add an error message
 	  goto fail;
 	}
 	
@@ -1218,7 +1248,7 @@ glLinkProgram (GLuint program_name)
 	
 	// If they are equal, then make sure they are of the same type & size:
 	if(c == 0 && !((*vp_it0) -> type == (*fp_it0) -> type)) {
-	  // TODO - Add an error message
+	  // TODO: Add an error message
 	  goto fail;
 	}
 	
@@ -1296,7 +1326,7 @@ glLinkProgram (GLuint program_name)
   }
 
   // Link VP outputs to FP inputs (by patching VP microcode) (GLSL varying variables):
-  // TODO - Provide error information for unresolved varyings, or varyings whose types mismatch
+  // TODO: Provide error information for unresolved varyings, or varyings whose types mismatch
   {
     // Map FP input indices to VP outputs:
     program_t::attrib_size_type linked_vp_index[RSXGL_MAX_VERTEX_ATTRIBS];
@@ -1338,7 +1368,7 @@ glLinkProgram (GLuint program_name)
 	  linked_vp_index[vp_output -> index] = fp_input_to_vp_output[fp_input -> index];
 	}
 	else {
-	  // TODO - Generate an error message here, fail
+	  // TODO: Generate an error message here, fail
 	}
       }
     };
@@ -1363,13 +1393,13 @@ glLinkProgram (GLuint program_name)
     int unresolved_vp_outputs = 0;
     for(std::deque< const rsxProgramAttrib * >::const_iterator it = fp_inputs.begin(),it_end = fp_inputs.end();it != it_end;++it) {
       if(linked_vp_index[(*it) -> index] == -1) {
-	// TODO - Generate an error:
+	// TODO: Generate an error:
 	++unresolved_vp_outputs;
       }
     }
 
     if(unresolved_vp_outputs) {
-      // TODO - Add an error message
+      // TODO: Add an error message
       goto fail;
     }
 #endif
@@ -1515,6 +1545,7 @@ glLinkProgram (GLuint program_name)
   else {
     program.info().resize(0);
   }
+#endif
 
   RSXGL_NOERROR_();
 }

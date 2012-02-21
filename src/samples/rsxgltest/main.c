@@ -326,7 +326,7 @@ main(int argc, const char ** argv)
   tcp_init();
   tcp_printf("%s\n",rsxgltest_name);
 
-  glInitDebug(1024*16,tcp_puts);
+  glInitDebug(1024*256,tcp_puts);
 
   ioPadInit(1);
   padInfo padinfo;

@@ -251,6 +251,7 @@ docs/relnotes-7.8.html
 docs/relnotes-7.9.1.html
 docs/relnotes-7.9.2.html
 docs/relnotes-7.9.html
+docs/relnotes-8.0.1.html
 docs/relnotes-8.0.html
 docs/relnotes.html
 docs/repository.html
@@ -277,7 +278,6 @@ doxygen/core_subset.doxy
 doxygen/doxy.bat
 doxygen/gallium.doc
 doxygen/gallium.doxy
-doxygen/gbm.doxy
 doxygen/glapi.doxy
 doxygen/glsl.doxy
 doxygen/header.html
@@ -3032,15 +3032,12 @@ src/mesa/drivers/dri/Makefile.targets
 src/mesa/drivers/dri/common/.gitignore
 src/mesa/drivers/dri/common/Android.mk
 src/mesa/drivers/dri/common/Makefile.sources
-src/mesa/drivers/dri/common/depthtmp.h
 src/mesa/drivers/dri/common/dri_test.c
 src/mesa/drivers/dri/common/dri_util.c
 src/mesa/drivers/dri/common/dri_util.h
+src/mesa/drivers/dri/common/drirc
 src/mesa/drivers/dri/common/drisw_util.c
 src/mesa/drivers/dri/common/mmio.h
-src/mesa/drivers/dri/common/spantmp2.h
-src/mesa/drivers/dri/common/spantmp_common.h
-src/mesa/drivers/dri/common/stenciltmp.h
 src/mesa/drivers/dri/common/utils.c
 src/mesa/drivers/dri/common/utils.h
 src/mesa/drivers/dri/common/xmlconfig.c
@@ -3215,6 +3212,8 @@ src/mesa/drivers/dri/i965/gen6_wm_state.c
 src/mesa/drivers/dri/i965/gen7_cc_state.c
 src/mesa/drivers/dri/i965/gen7_clip_state.c
 src/mesa/drivers/dri/i965/gen7_disable.c
+src/mesa/drivers/dri/i965/gen7_hiz.c
+src/mesa/drivers/dri/i965/gen7_hiz.h
 src/mesa/drivers/dri/i965/gen7_misc_state.c
 src/mesa/drivers/dri/i965/gen7_sampler_state.c
 src/mesa/drivers/dri/i965/gen7_sf_state.c
@@ -3480,8 +3479,6 @@ src/mesa/drivers/dri/radeon/server/radeon_reg.h
 src/mesa/drivers/dri/swrast/Makefile
 src/mesa/drivers/dri/swrast/swrast.c
 src/mesa/drivers/dri/swrast/swrast_priv.h
-src/mesa/drivers/dri/swrast/swrast_span.c
-src/mesa/drivers/dri/swrast/swrast_spantemp.h
 src/mesa/drivers/osmesa/Makefile
 src/mesa/drivers/osmesa/SConscript
 src/mesa/drivers/osmesa/descrip.mms
@@ -3507,7 +3504,6 @@ src/mesa/drivers/x11/xm_api.c
 src/mesa/drivers/x11/xm_buffer.c
 src/mesa/drivers/x11/xm_dd.c
 src/mesa/drivers/x11/xm_line.c
-src/mesa/drivers/x11/xm_span.c
 src/mesa/drivers/x11/xm_tri.c
 src/mesa/drivers/x11/xmesa.h
 src/mesa/drivers/x11/xmesaP.h
@@ -3636,6 +3632,7 @@ src/mesa/main/nvprogram.c
 src/mesa/main/nvprogram.h
 src/mesa/main/pack.c
 src/mesa/main/pack.h
+src/mesa/main/pack_tmp.h
 src/mesa/main/pbo.c
 src/mesa/main/pbo.h
 src/mesa/main/pixel.c
@@ -3936,7 +3933,6 @@ src/mesa/swrast/s_renderbuffer.c
 src/mesa/swrast/s_renderbuffer.h
 src/mesa/swrast/s_span.c
 src/mesa/swrast/s_span.h
-src/mesa/swrast/s_spantemp.h
 src/mesa/swrast/s_stencil.c
 src/mesa/swrast/s_stencil.h
 src/mesa/swrast/s_texcombine.c

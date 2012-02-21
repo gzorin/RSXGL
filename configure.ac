@@ -14,7 +14,6 @@ AC_CONFIG_FILES(
 	src/drm/Makefile
 	src/nouveau/Makefile
 	src/nvfx/Makefile
-	src/nvfxc/Makefile
 	src/library/Makefile
 	src/library/rsxgl_config.h
 	src/library/GL3/rsxgl3ext.h
@@ -22,7 +21,7 @@ AC_CONFIG_FILES(
 	)
 
 # Which subdirectories get built:
-RSXGL_SUBDIRS="extsrc/mesa include src/cgcomp src/drm src/nouveau src/nvfx src/nvfxc src/library"
+RSXGL_SUBDIRS="extsrc/mesa include src/cgcomp src/drm src/nouveau src/nvfx src/library"
 
 # Determine which samples get built:
 RSXGL_SAMPLES="rsxgltest rsxglgears"
@@ -174,6 +173,7 @@ AC_CONFIG_COMMANDS([mesa],
 	   echo "Copying Mesa files from source directory \"$mesa_srcdir\" to build directory \"$mesa_builddir\"...";
 	   #cat "$_abs_top_srcdir/extsrc/mesa/rsxgl/files" | xargs -I % echo "file=\"%\"; dir=\$(dirname \$file); mkdir -p \"$mesa_builddir/\$dir\"; cp -a \"$mesa_srcdir/\$file\" \"$mesa_builddir/\$file\";" | sh;
 	   "$RSYNC" -av --files-from="$_abs_top_srcdir/src/mesa/files" "$mesa_srcdir" "$mesa_builddir";
+	   pushd "$mesa_builddir"; "$PATCH" -p0 < "$_abs_top_srcdir/src/mesa/patch"; popd
 	fi;
 
 	ln -fs "$_abs_top_builddir/src/mesa/configs/rsx" "$mesa_builddir/configs/current";
@@ -185,6 +185,7 @@ AC_CONFIG_COMMANDS([mesa],
 	XARGS="${XARGS}"
 	PWDCMD="${PWDCMD}"
 	RSYNC="${RSYNC}"
+	PATCH="${PATCH}"
 ])
 
 AC_OUTPUT

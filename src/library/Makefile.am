@@ -52,18 +52,23 @@ DUMB = $(top_builddir)/extsrc/mesa/src/glsl/libglsl.a \
 libGL_a_SOURCES = rsxgl_context.cc rsxgl_object_context.cc gl_fifo.c					\
 	error.cc get.cc state.cc enable.cc arena.cc buffer.cc clear.cc draw.cc	\
 	sync.cc query.cc							\
-	compiler_context.cc program.cc attribs.cc uniforms.cc textures.cc framebuffer.cc		\
+	compiler_context.cc compiler_translate.c program.cc attribs.cc uniforms.cc textures.cc framebuffer.cc		\
 	ringbuffer_migrate.cc dumb_migrate.cc debug.c \
 	../cgcomp/source/nv40vertprog.c ../cgcomp/source/nv40fragprog.c \
 	st_format.c
-libGL_a_CPPFLAGS = -D__RSX__ -I\$(top_srcdir)/include $(PSL1GHT_CPPFLAGS) -I$(top_srcdir)/src/cgcomp/include -I$(top_srcdir)/src/nvfxc \
+libGL_a_CPPFLAGS = -D__RSX__ -I\$(top_srcdir)/include $(PSL1GHT_CPPFLAGS) -I$(top_srcdir)/src/cgcomp/include \
 	$(MESA_CPPFLAGS) $(LIBDRM_CPPFLAGS)
 libGL_a_CFLAGS = -std=gnu99 -fgnu89-inline
 libGL_a_CXXFLAGS = -I$(top_srcdir)/extsrc/boost -std=c++0x -fno-rtti
-libGL_a_DEPENDENCIES = libEGL.a
+libGL_a_DEPENDENCIES = libEGL.a \
+	$(top_builddir)/extsrc/mesa/src/mesa/libmesa.a \
+	$(top_builddir)/extsrc/mesa/src/mesa/libmesagallium.a \
+	$(top_builddir)/extsrc/mesa/src/mapi/glapi/libglapi.a \
+	$(top_builddir)/extsrc/mesa/src/glsl/libglsl.a
 libGL.a: $(libGL_a_OBJECTS) $(libGL_a_DEPENDENCIES)
 	@. $(MKLIB) -static -arch PS3 -cplusplus -o GL \
 	$(libGL_a_OBJECTS) \
+	$(top_builddir)/extsrc/mesa/src/mesa/libmesa.a \
 	$(top_builddir)/extsrc/mesa/src/mesa/libmesagallium.a \
 	$(top_builddir)/extsrc/mesa/src/mapi/glapi/libglapi.a \
 	$(top_builddir)/extsrc/mesa/src/glsl/libglsl.a

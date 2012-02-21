@@ -8,12 +8,24 @@ extern "C" {
 #include "state_tracker/st_context.h"
 #include "state_tracker/st_program.h"
 #include "glsl/ralloc.h"
+#include "state_tracker/st_glsl_to_tgsi.h"
+#include "program/programopt.h"
+#include "tgsi/tgsi_scan.h"
 }
 
 #include "glsl/ast.h"
 #include "glsl/glsl_parser_extras.h"
 #include "glsl/ir_optimization.h"
 #include "glsl/ir_print_visitor.h"
+#include "glsl/program.h"
+
+extern "C" {
+  struct string_to_uint_map;
+  struct string_to_uint_map * string_to_uint_map_ctor();
+
+  struct nvfx_vertex_program * compiler_context__translate_vp(struct gl_context * mesa_ctx, struct gl_shader_program * program);
+  struct nvfx_fragment_program * compiler_context__translate_fp(struct gl_context * mesa_ctx,struct gl_shader_program * program);
+}
 
 namespace {
 
@@ -86,7 +98,6 @@ program_string_notify( struct gl_context *ctx,
 compiler_context_t::compiler_context_t(pipe_context * pipe)
 {
   rsxgl_debug_printf("%s\n",__PRETTY_FUNCTION__);
-  //mesa_context = st_create_context(API_OPENGL,pctx,0,0);
 
   // the mesa context:
   mesa_ctx = (struct gl_context *)calloc(1,sizeof(gl_context));
@@ -136,19 +147,13 @@ compiler_context_t::compiler_context_t(pipe_context * pipe)
 
 compiler_context_t::~compiler_context_t()
 {
-  //st_destroy_context(mesa_context);
-
   free(mesa_ctx -> st);
   free(mesa_ctx);
 }
 
 struct gl_shader *
-compiler_context_t::compile_shader(const type t,const char * src)
+compiler_context_t::create_shader(const type t)
 {
-  rsxgl_assert(mesa_ctx != 0);
-
-  rsxgl_debug_printf("%u [%s]\n",(unsigned int)t,src);
-
   gl_shader * shader = rzalloc(0,gl_shader);
   rsxgl_assert(shader != 0);
 
@@ -166,18 +171,24 @@ compiler_context_t::compile_shader(const type t,const char * src)
     return 0;
   }
 
+  return shader;
+}
+
+void
+compiler_context_t::compile_shader(struct gl_shader * shader,const char * src)
+{
+  rsxgl_assert(mesa_ctx != 0);
+
+  rsxgl_debug_printf("[%s]\n",src);
+
   shader -> Source = src;
 
   struct _mesa_glsl_parse_state *state =
     new(shader) _mesa_glsl_parse_state(mesa_ctx, shader->Type, shader);
 
-  int count = 0;
-  
   const char *source = shader->Source;
   state->error = preprocess(state, &source, &state->info_log,
 			    state->extensions, mesa_ctx->API) != 0;
-
-  rsxgl_debug_printf("\t%i\n",count++);
 
   if (!state->error) {
     _mesa_glsl_lexer_ctor(state, source);
@@ -185,29 +196,20 @@ compiler_context_t::compile_shader(const type t,const char * src)
     _mesa_glsl_lexer_dtor(state);
   }
 
-  rsxgl_debug_printf("\t%i\n",count++);
-  
   shader->ir = new(shader) exec_list;
   if (!state->error && !state->translation_unit.is_empty())
     _mesa_ast_to_hir(shader->ir, state);
 
-  rsxgl_debug_printf("\t%i\n",count++);
-  
   /* Optimization passes */
   if (!state->error && !shader->ir->is_empty()) {
     bool progress;
     do {
       progress = do_common_optimization(shader->ir, false, false, 32);
-      rsxgl_debug_printf("\t\t%i\n",(int)progress);
     } while (progress);
 
-    rsxgl_debug_printf("\t%i\n",count++);
-    
     validate_ir_tree(shader->ir);
   }
 
-  rsxgl_debug_printf("\t%i\n",count++);
-  
   shader->symbols = state->symbols;
   shader->CompileStatus = !state->error;
   shader->Version = state->language_version;
@@ -215,21 +217,87 @@ compiler_context_t::compile_shader(const type t,const char * src)
 	 sizeof(shader->builtins_to_link[0]) * state->num_builtins_to_link);
   shader->num_builtins_to_link = state->num_builtins_to_link;
 
-  rsxgl_debug_printf("\t%i\n",count++);
-  
   if (shader->InfoLog)
     ralloc_free(shader->InfoLog);
   
   shader->InfoLog = state->info_log;
 
-  rsxgl_debug_printf("\t%i\n",count++);
-  
   /* Retain any live IR, but trash the rest. */
   reparent_ir(shader->ir, shader);
 
-  rsxgl_debug_printf("\t%i\n",count++);
-  
   ralloc_free(state);
+}
 
-  return shader;
+void
+compiler_context_t::destroy_shader(struct gl_shader * shader)
+{
+  ralloc_free(shader);
+}
+
+struct gl_shader_program *
+compiler_context_t::create_program()
+{
+  struct gl_shader_program * program = rzalloc(0, struct gl_shader_program);
+
+  program -> AttributeBindings = string_to_uint_map_ctor();
+  program -> FragDataBindings = string_to_uint_map_ctor();  
+  program -> InfoLog = ralloc_strdup(program, "");
+
+  return program;
+}
+
+void
+compiler_context_t::attach_shader(struct gl_shader_program * program,struct gl_shader * shader)
+{
+  program->Shaders =
+    reralloc(program, program->Shaders,
+	     struct gl_shader *, program->NumShaders + 1);
+  rsxgl_assert(program->Shaders != NULL);
+
+  program->Shaders[program->NumShaders] = shader;
+  program->NumShaders++;
+}
+
+void
+compiler_context_t::link_program(struct gl_shader_program * program)
+{
+  link_shaders(mesa_ctx,program);
+  if(!program -> LinkStatus) return;
+
+  st_link_shader(mesa_ctx,program);
+}
+
+void
+compiler_context_t::destroy_program(struct gl_shader_program * program)
+{
+  ralloc_free(program);
+}
+
+struct nvfx_vertex_program *
+compiler_context_t::translate_vp(struct gl_shader_program * program)
+{
+  return compiler_context__translate_vp(mesa_ctx,program);
+}
+
+void
+compiler_context_t::destroy_vp(nvfx_vertex_program * nvfx_vp)
+{
+  if(nvfx_vp == 0) {
+    return;
+  }
+}
+
+ 
+struct nvfx_fragment_program *
+compiler_context_t::translate_fp(struct gl_shader_program * program)
+{
+  return compiler_context__translate_fp(mesa_ctx,program);
+}
+
+void
+compiler_context_t::destroy_fp(nvfx_fragment_program * nvfx_fp)
+{
+  if(nvfx_fp == 0) {
+    return;
+  }
 }

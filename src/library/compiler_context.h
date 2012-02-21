@@ -4,6 +4,9 @@
 struct pipe_context;
 struct st_context;
 struct gl_shader;
+struct gl_shader_program;
+struct nvfx_vertex_program;
+struct nvfx_fragment_program;
 
 struct compiler_context_t {
   enum type {
@@ -18,7 +21,20 @@ struct compiler_context_t {
   compiler_context_t(pipe_context *);
   ~compiler_context_t();
 
-  struct gl_shader * compile_shader(const type,const char *);
+  struct gl_shader * create_shader(const type);
+  void compile_shader(struct gl_shader *,const char *);
+  void destroy_shader(struct gl_shader *);
+
+  struct gl_shader_program * create_program();
+  void attach_shader(struct gl_shader_program *,struct gl_shader *);
+  void link_program(struct gl_shader_program *);
+  void destroy_program(struct gl_shader_program *);
+  
+  struct nvfx_vertex_program * translate_vp(struct gl_shader_program *);
+  void destroy_vp(nvfx_vertex_program *);
+  
+  struct nvfx_fragment_program * translate_fp(struct gl_shader_program *);
+  void destroy_fp(nvfx_fragment_program *);
 };
 
 #endif

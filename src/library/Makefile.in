@@ -91,9 +91,9 @@ am_libGL_a_OBJECTS = libGL_a-rsxgl_context.$(OBJEXT) \
 	libGL_a-buffer.$(OBJEXT) libGL_a-clear.$(OBJEXT) \
 	libGL_a-draw.$(OBJEXT) libGL_a-sync.$(OBJEXT) \
 	libGL_a-query.$(OBJEXT) libGL_a-compiler_context.$(OBJEXT) \
-	libGL_a-program.$(OBJEXT) libGL_a-attribs.$(OBJEXT) \
-	libGL_a-uniforms.$(OBJEXT) libGL_a-textures.$(OBJEXT) \
-	libGL_a-framebuffer.$(OBJEXT) \
+	libGL_a-compiler_translate.$(OBJEXT) libGL_a-program.$(OBJEXT) \
+	libGL_a-attribs.$(OBJEXT) libGL_a-uniforms.$(OBJEXT) \
+	libGL_a-textures.$(OBJEXT) libGL_a-framebuffer.$(OBJEXT) \
 	libGL_a-ringbuffer_migrate.$(OBJEXT) \
 	libGL_a-dumb_migrate.$(OBJEXT) libGL_a-debug.$(OBJEXT) \
 	libGL_a-nv40vertprog.$(OBJEXT) libGL_a-nv40fragprog.$(OBJEXT) \
@@ -300,17 +300,22 @@ DUMB = $(top_builddir)/extsrc/mesa/src/glsl/libglsl.a \
 libGL_a_SOURCES = rsxgl_context.cc rsxgl_object_context.cc gl_fifo.c					\
 	error.cc get.cc state.cc enable.cc arena.cc buffer.cc clear.cc draw.cc	\
 	sync.cc query.cc							\
-	compiler_context.cc program.cc attribs.cc uniforms.cc textures.cc framebuffer.cc		\
+	compiler_context.cc compiler_translate.c program.cc attribs.cc uniforms.cc textures.cc framebuffer.cc		\
 	ringbuffer_migrate.cc dumb_migrate.cc debug.c \
 	../cgcomp/source/nv40vertprog.c ../cgcomp/source/nv40fragprog.c \
 	st_format.c
 
-libGL_a_CPPFLAGS = -D__RSX__ -I\$(top_srcdir)/include $(PSL1GHT_CPPFLAGS) -I$(top_srcdir)/src/cgcomp/include -I$(top_srcdir)/src/nvfxc \
+libGL_a_CPPFLAGS = -D__RSX__ -I\$(top_srcdir)/include $(PSL1GHT_CPPFLAGS) -I$(top_srcdir)/src/cgcomp/include \
 	$(MESA_CPPFLAGS) $(LIBDRM_CPPFLAGS)
 
 libGL_a_CFLAGS = -std=gnu99 -fgnu89-inline
 libGL_a_CXXFLAGS = -I$(top_srcdir)/extsrc/boost -std=c++0x -fno-rtti
-libGL_a_DEPENDENCIES = libEGL.a
+libGL_a_DEPENDENCIES = libEGL.a \
+	$(top_builddir)/extsrc/mesa/src/mesa/libmesa.a \
+	$(top_builddir)/extsrc/mesa/src/mesa/libmesagallium.a \
+	$(top_builddir)/extsrc/mesa/src/mapi/glapi/libglapi.a \
+	$(top_builddir)/extsrc/mesa/src/glsl/libglsl.a
+
 all: all-am
 
 .SUFFIXES:
@@ -393,6 +398,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libGL_a-buffer.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libGL_a-clear.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libGL_a-compiler_context.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libGL_a-compiler_translate.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libGL_a-debug.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libGL_a-draw.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libGL_a-dumb_migrate.Po@am__quote@
@@ -497,6 +503,20 @@ libGL_a-gl_fifo.obj: gl_fifo.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='gl_fifo.c' object='libGL_a-gl_fifo.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libGL_a_CPPFLAGS) $(CPPFLAGS) $(libGL_a_CFLAGS) $(CFLAGS) -c -o libGL_a-gl_fifo.obj `if test -f 'gl_fifo.c'; then $(CYGPATH_W) 'gl_fifo.c'; else $(CYGPATH_W) '$(srcdir)/gl_fifo.c'; fi`
+
+libGL_a-compiler_translate.o: compiler_translate.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libGL_a_CPPFLAGS) $(CPPFLAGS) $(libGL_a_CFLAGS) $(CFLAGS) -MT libGL_a-compiler_translate.o -MD -MP -MF $(DEPDIR)/libGL_a-compiler_translate.Tpo -c -o libGL_a-compiler_translate.o `test -f 'compiler_translate.c' || echo '$(srcdir)/'`compiler_translate.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libGL_a-compiler_translate.Tpo $(DEPDIR)/libGL_a-compiler_translate.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='compiler_translate.c' object='libGL_a-compiler_translate.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libGL_a_CPPFLAGS) $(CPPFLAGS) $(libGL_a_CFLAGS) $(CFLAGS) -c -o libGL_a-compiler_translate.o `test -f 'compiler_translate.c' || echo '$(srcdir)/'`compiler_translate.c
+
+libGL_a-compiler_translate.obj: compiler_translate.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libGL_a_CPPFLAGS) $(CPPFLAGS) $(libGL_a_CFLAGS) $(CFLAGS) -MT libGL_a-compiler_translate.obj -MD -MP -MF $(DEPDIR)/libGL_a-compiler_translate.Tpo -c -o libGL_a-compiler_translate.obj `if test -f 'compiler_translate.c'; then $(CYGPATH_W) 'compiler_translate.c'; else $(CYGPATH_W) '$(srcdir)/compiler_translate.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libGL_a-compiler_translate.Tpo $(DEPDIR)/libGL_a-compiler_translate.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='compiler_translate.c' object='libGL_a-compiler_translate.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libGL_a_CPPFLAGS) $(CPPFLAGS) $(libGL_a_CFLAGS) $(CFLAGS) -c -o libGL_a-compiler_translate.obj `if test -f 'compiler_translate.c'; then $(CYGPATH_W) 'compiler_translate.c'; else $(CYGPATH_W) '$(srcdir)/compiler_translate.c'; fi`
 
 libGL_a-debug.o: debug.c
 @am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libGL_a_CPPFLAGS) $(CPPFLAGS) $(libGL_a_CFLAGS) $(CFLAGS) -MT libGL_a-debug.o -MD -MP -MF $(DEPDIR)/libGL_a-debug.Tpo -c -o libGL_a-debug.o `test -f 'debug.c' || echo '$(srcdir)/'`debug.c
@@ -1085,6 +1105,7 @@ libEGL.a: $(libEGL_a_OBJECTS) $(libEGL_a_DEPENDENCIES)
 libGL.a: $(libGL_a_OBJECTS) $(libGL_a_DEPENDENCIES)
 	@. $(MKLIB) -static -arch PS3 -cplusplus -o GL \
 	$(libGL_a_OBJECTS) \
+	$(top_builddir)/extsrc/mesa/src/mesa/libmesa.a \
 	$(top_builddir)/extsrc/mesa/src/mesa/libmesagallium.a \
 	$(top_builddir)/extsrc/mesa/src/mapi/glapi/libglapi.a \
 	$(top_builddir)/extsrc/mesa/src/glsl/libglsl.a

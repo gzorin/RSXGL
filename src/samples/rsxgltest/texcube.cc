@@ -229,15 +229,24 @@ rsxgltest_init(int argc,const char ** argv)
   // Supply shader SOURCES!
   const GLchar * shader_srcs[] = { (const GLchar *)texcube_vert, (const GLchar *)texcube_frag };
   GLint shader_srcs_lengths[] = { texcube_vert_len, texcube_frag_len };
+  GLint compiled = 0;
+
   glShaderSource(shaders[0],1,shader_srcs,shader_srcs_lengths);
-  //glCompileShader(shaders[0]);
+  glCompileShader(shaders[0]);
+
+  glGetShaderiv(shaders[0],GL_COMPILE_STATUS,&compiled);
+  tcp_printf("shader compile status: %i\n",compiled);
 
   glShaderSource(shaders[1],1,shader_srcs + 1,shader_srcs_lengths + 1);
   glCompileShader(shaders[1]);
 
-#if 0
+  glGetShaderiv(shaders[1],GL_COMPILE_STATUS,&compiled);
+  tcp_printf("shader compile status: %i\n",compiled);
+
   // Link the program for real:
   glLinkProgram(program);
+
+#if 0
   glValidateProgram(program);
   
   summarize_program("draw",program);
