@@ -5,7 +5,7 @@ CONFIG_NAME = rsx
 
 CC = @ppu_CC@
 CXX = @ppu_CXX@
-DEFINES = -DUSE_MGL_NAMESPACE -DPIPE_OS_UNIX
+DEFINES = -DUSE_MGL_NAMESPACE -DPIPE_OS_UNIX -DFFS_DEFINED -Dffs=__builtin_ffs -Dffsll=__builtin_ffsll
 MKLIB = $(SHELL) @abs_top_builddir@/src/mesa/mklib-rsx
 
 BUILD_CC = @CC@
@@ -30,3 +30,5 @@ DRIVER_DIRS =
 DRI_DIRS =
 GALLIUM_DIRS = auxiliary drivers
 GALLIUM_DRIVERS_DIRS = 
+
+PYTHON2 = /opt/local/bin/python2.7
