@@ -279,7 +279,6 @@ MESA_CPPFLAGS = -I$(MESA_LOCATION)/src \
 	-I$(MESA_LOCATION)/include \
 	-I$(MESA_LOCATION)/src/gallium/include \
 	-I$(MESA_LOCATION)/src/gallium/auxiliary \
-	-I$(MESA_LOCATION)/src/gallium/drivers \
 	-DPIPE_OS_UNIX
 
 LIBDRM_CPPFLAGS = -I$(LIBDRM_LOCATION) -I$(LIBDRM_LOCATION)/include -I$(LIBDRM_LOCATION)/include/drm -I$(LIBDRM_LOCATION)/nouveau
@@ -305,7 +304,7 @@ libGL_a_SOURCES = rsxgl_context.cc rsxgl_object_context.cc gl_fifo.c					\
 	../cgcomp/source/nv40vertprog.c ../cgcomp/source/nv40fragprog.c \
 	st_format.c
 
-libGL_a_CPPFLAGS = -D__RSX__ -I\$(top_srcdir)/include $(PSL1GHT_CPPFLAGS) -I$(top_srcdir)/src/cgcomp/include \
+libGL_a_CPPFLAGS = -D__RSX__ -I\$(top_srcdir)/include $(PSL1GHT_CPPFLAGS) -I$(top_srcdir)/src/cgcomp/include -I$(top_srcdir)/src \
 	$(MESA_CPPFLAGS) $(LIBDRM_CPPFLAGS)
 
 libGL_a_CFLAGS = -std=gnu99 -fgnu89-inline

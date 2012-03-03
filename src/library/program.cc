@@ -42,6 +42,15 @@
 
 // mesa:
 #include <main/mtypes.h>
+#include <state_tracker/st_program.h>
+#include <program/prog_parameter.h>
+#include <glsl/list.h>
+#include <glsl/ir.h>
+#include <glsl/ir_uniform.h>
+
+extern "C" {
+#include <nvfx/nvfx_state.h>
+}
 
 #include <string.h>
 #include <malloc.h>
@@ -758,6 +767,118 @@ glLinkProgram (GLuint program_name)
 		     program.mesa_program -> InfoLog,
 		     (unsigned long)program.nvfx_vp,
 		     (unsigned long)program.nvfx_fp);
+
+  struct gl_shader * gl_vsh = program.mesa_program->_LinkedShaders[MESA_SHADER_VERTEX];
+  struct gl_program * gl_vp = gl_vsh->Program;
+  
+  struct gl_shader * gl_fsh = program.mesa_program->_LinkedShaders[MESA_SHADER_FRAGMENT];
+  struct gl_program * gl_fp = gl_fsh->Program;
+  
+  // Process vertex program attributes:
+  {
+    rsxgl_debug_printf("attributes:\n");
+    
+    struct st_vertex_program * st_vp = st_vertex_program((struct gl_vertex_program *)gl_vp);
+    
+    exec_list *ir = gl_vsh->ir;
+    foreach_list(node, ir) {
+      const ir_variable *const var = ((ir_instruction *) node)->as_variable();
+      
+      if (var == NULL
+	  || var->mode != ir_var_in
+	  || var->location == -1
+	  || var->location < VERT_ATTRIB_GENERIC0)
+	continue;
+      
+      // vp -> input_to_index[var -> location] is the VP location:
+      rsxgl_debug_printf("\t%s:%i -> %i\n",var->name,var->location,st_vp -> input_to_index[var -> location]);
+    }
+  }
+  
+  // Process program uniforms:
+  // gl_program declared in mtypes.h
+  {
+    //
+    // Build vp constant map - from index into gl_vp -> Parameters to hardware index:
+    typedef std::map< unsigned int, uint32_t > nvfx_vp_constant_map_t;
+    nvfx_vp_constant_map_t nvfx_vp_constant_map;
+    
+    if(program.nvfx_vp != 0) {
+      for(unsigned int i = 0,n = program.nvfx_vp -> nr_consts;i < n;++i) {
+	nvfx_vp_constant_map[program.nvfx_vp -> consts[i].index] = i;
+      }
+    }
+    
+    //
+    // Build fp constant map - from index into gl_fp -> Parameters to a std::deque of offsets:
+    typedef std::map< unsigned int, std::deque< uint32_t > > nvfx_fp_constant_map_t;
+    nvfx_fp_constant_map_t nvfx_fp_constant_map;
+    
+    if(program.nvfx_fp != 0) {
+      for(unsigned int i = 0,n = program.nvfx_fp -> nr_consts;i < n;++i) {
+	nvfx_fp_constant_map[program.nvfx_fp -> consts[i].index].push_back(program.nvfx_fp -> consts[i].offset);
+      }
+    }
+    
+    rsxgl_debug_printf("%i uniforms:\n",program.mesa_program -> NumUserUniformStorage);
+    rsxgl_debug_printf("\tvp %u parameters:\n",gl_vp -> Parameters -> NumParameters);
+    rsxgl_debug_printf("\tfp %u parameters:\n",gl_fp -> Parameters -> NumParameters);
+    
+    for(unsigned int i = 0,n = program.mesa_program -> NumUserUniformStorage;i < n;++i) {
+      gl_uniform_storage * uniform_storage = program.mesa_program -> UniformStorage + i;
+      
+      rsxgl_debug_printf("\t%s storage: num_driver_storage:%u\n",
+	     uniform_storage -> name,
+	     uniform_storage -> num_driver_storage);
+      
+      // gl_program_parameter_list declared in prog_paramater.h
+      // gl_uniform_storage declared in ir_uniform.h
+      
+      // Search for it in vp:
+      bool found_vp = false, found_fp = false;
+      
+      for(unsigned int i = 0,n = gl_vp -> Parameters -> NumParameters;i < n;++i) {
+	gl_program_parameter * parameter = gl_vp -> Parameters -> Parameters + i;
+	if((parameter -> Type == PROGRAM_UNIFORM || parameter -> Type == PROGRAM_SAMPLER) && strcmp(parameter -> Name,uniform_storage -> name) == 0) {
+	  if(!found_vp) rsxgl_debug_printf("\t\tfound in vp register type: %u data type: %x: ",parameter -> Type,parameter -> DataType);
+	  found_vp |= true;
+	  
+	  if(parameter -> Type == PROGRAM_UNIFORM) {
+	    nvfx_vp_constant_map_t::const_iterator it = nvfx_vp_constant_map.find(i);
+	    if(it != nvfx_vp_constant_map.end()) {
+	      rsxgl_debug_printf("%u ",it -> second);
+	    }
+	  }
+	  else if(parameter -> Type == PROGRAM_SAMPLER) {
+	    rsxgl_debug_printf("(sampler: %u)",(unsigned int)uniform_storage -> sampler);
+	  }
+	}
+      }
+      if(found_vp) rsxgl_debug_printf("\n");
+      
+      // Search for it in fp:
+      for(unsigned int i = 0,n = gl_fp -> Parameters -> NumParameters;i < n;++i) {
+	gl_program_parameter * parameter = gl_fp -> Parameters -> Parameters + i;
+	if((parameter -> Type == PROGRAM_UNIFORM || parameter -> Type == PROGRAM_SAMPLER) && strcmp(parameter -> Name,uniform_storage -> name) == 0) {
+	  if(!found_fp) rsxgl_debug_printf("\t\tfound in fp register type: %u data type: %x: ",parameter -> Type,parameter -> DataType);
+	  found_fp |= true;
+	  
+	      if(parameter -> Type == PROGRAM_UNIFORM) {
+		nvfx_fp_constant_map_t::const_iterator it = nvfx_fp_constant_map.find(i);
+		if(it != nvfx_fp_constant_map.end()) {
+		  for(std::deque< uint32_t >::const_iterator jt = it -> second.begin();jt != it -> second.end();++jt) {
+		    rsxgl_debug_printf("%u ",*jt);
+		  }
+		}
+	      }
+	      else if(parameter -> Type == PROGRAM_SAMPLER) {
+		rsxgl_debug_printf("(sampler: %u)",(unsigned int)uniform_storage -> sampler);
+	      }
+	}
+      }
+      if(found_fp) rsxgl_debug_printf("\n");
+    }
+  }
 
 #if 0
   shader_t * shaders[RSXGL_MAX_SHADER_TYPES];
