@@ -35,7 +35,11 @@ struct nvfx_vertex_program {
 	unsigned data_start_min;
 
 	uint32_t ir;
+#if defined(__cplusplus)
+  uint32_t _or;
+#else
 	uint32_t or;
+#endif
 	int clip_nr;
 
 	struct util_dynarray branch_relocs;
@@ -71,7 +75,11 @@ struct nvfx_fragment_program_bo {
 struct nvfx_fragment_program {
 	unsigned samplers;
 	unsigned point_sprite_control;
+#if defined(__cplusplus)
+  unsigned _or;
+#else
 	unsigned or;
+#endif
 	unsigned coord_conventions;
 
 	uint32_t *insn;
