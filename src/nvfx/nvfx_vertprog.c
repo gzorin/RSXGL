@@ -500,8 +500,11 @@ nvfx_vertprog_parse_instruction(struct nvfx_context* nvfx, struct nvfx_vpc *vpc,
 		case TGSI_FILE_TEMPORARY:
 			/* handled above */
 			break;
+		case TGSI_FILE_SAMPLER:
+		  /* TODO: Implement this. */
+		  break;
 		default:
-			NOUVEAU_ERR("bad src file\n");
+			NOUVEAU_ERR("bad src file: \n");
 			return FALSE;
 		}
 	}
@@ -780,6 +783,10 @@ nvfx_vertprog_parse_instruction(struct nvfx_context* nvfx, struct nvfx_vpc *vpc,
 			vpc->vp->insns[vpc->vp->nr_insns - 1].data[3] |= NVFX_VP_INST_LAST;
 		}
 		break;
+
+	case TGSI_OPCODE_TEX:
+	  /* TODO: Implement this. */
+	  break;
 
 	default:
 		NOUVEAU_ERR("invalid opcode %d\n", finst->Instruction.Opcode);
