@@ -588,17 +588,17 @@ glGetProgramInfoLog (GLuint program_name, GLsizei bufSize, GLsizei *length, GLch
 //
 static void * main_ucode_address = 0;
 
-static inline program_t::vp_instruction_type *
+static inline struct nvfx_vertex_program_exec *
 rsxgl_main_ucode_address(program_t::ucode_offset_type off)
 {
   rsxgl_assert(off != ~0U);
-  return (program_t::vp_instruction_type *)((uint8_t *)main_ucode_address + (ptrdiff_t)off * sizeof(program_t::vp_instruction_type));
+  return (struct nvfx_vertex_program_exec *)((uint8_t *)main_ucode_address + (ptrdiff_t)off * sizeof(struct nvfx_vertex_program_exec));
 }
 
 static inline program_t::ucode_offset_type
-rsxgl_vp_ucode_offset(const program_t::vp_instruction_type * address)
+rsxgl_vp_ucode_offset(const struct nvfx_vertex_program_exec * address)
 {
-  return ((uint8_t *)address - (uint8_t *)main_ucode_address) / (sizeof(program_t::vp_instruction_type));
+  return ((uint8_t *)address - (uint8_t *)main_ucode_address) / (sizeof(struct nvfx_vertex_program_exec));
 }
 
 static mspace
@@ -622,24 +622,24 @@ rsxgl_main_ucode_mspace()
 rsx_ptr_t rsx_ucode_address = 0;
 uint32_t rsx_ucode_offset = 0;
 
-static inline program_t::fp_instruction_type *
+static inline uint32_t *
 rsxgl_rsx_ucode_address(program_t::ucode_offset_type off)
 {
   rsxgl_assert(off != ~0U);
-  return (program_t::fp_instruction_type *)((uint8_t *)rsx_ucode_address + (ptrdiff_t)off * sizeof(program_t::fp_instruction_type));
+  return (uint32_t *)((uint8_t *)rsx_ucode_address + (ptrdiff_t)off * sizeof(uint32_t) * 4);
 }
 
 static inline uint32_t
 rsxgl_rsx_ucode_offset(program_t::ucode_offset_type off)
 {
   rsxgl_assert(off != ~0U);
-  return (off * sizeof(program_t::fp_instruction_type)) + rsx_ucode_offset;
+  return (off * sizeof(uint32_t) * 4) + rsx_ucode_offset;
 }
 
 static inline program_t::ucode_offset_type
-rsxgl_rsx_ucode_offset(const program_t::fp_instruction_type * address)
+rsxgl_rsx_ucode_offset(const uint32_t * address)
 {
-  return ((uint8_t *)address - (uint8_t *)rsx_ucode_address) / (sizeof(program_t::fp_instruction_type));
+  return ((uint8_t *)address - (uint8_t *)rsx_ucode_address) / (sizeof(uint32_t) * 4);
 }
 
 static mspace
@@ -807,6 +807,73 @@ glLinkProgram (GLuint program_name)
 
     // Start a new attached shaders array:
     program.attached_shaders().construct();
+
+    //
+    // Migrate vertex program microcode to cache-aligned memory:
+    {
+      static const std::string kVPUcodeAllocFail("Failed to allocate space for vertex program microcode");
+      
+      struct nvfx_vertex_program_exec * address = (struct nvfx_vertex_program_exec *)mspace_memalign(rsxgl_main_ucode_mspace(),RSXGL_CACHE_LINE_SIZE,program.nvfx_vp -> nr_insns * sizeof(struct nvfx_vertex_program_exec));
+      if(address == 0) {
+	info += kVPUcodeAllocFail;
+	//goto fail;
+      }
+      else {
+	if(program.vp_ucode_offset != ~0U) {
+	  mspace_free(rsxgl_main_ucode_mspace(),rsxgl_main_ucode_address(program.vp_ucode_offset));
+	}
+	
+	program.vp_ucode_offset = rsxgl_vp_ucode_offset(address);
+	
+	memcpy(address,program.nvfx_vp -> insns,program.nvfx_vp -> nr_insns * sizeof(struct nvfx_vertex_program_exec));
+
+	program.vp_num_insn = program.nvfx_vp -> nr_insns;
+	program.vp_input_mask = program.nvfx_vp -> ir;
+	program.vp_output_mask = program.nvfx_vp -> _or;
+      }
+    }
+    
+    // Migrate fragment program microcode to RSX memory:
+    {
+      static const std::string kFPUcodeAllocFail("Failed to allocate space for fragment program microcode");
+      
+      uint32_t * address = (uint32_t *)mspace_memalign(rsxgl_rsx_ucode_mspace(),RSXGL_CACHE_LINE_SIZE,program.nvfx_fp -> insn_len * sizeof(uint32_t));
+      if(address == 0) {
+	info += kFPUcodeAllocFail;
+	//goto fail;
+      }
+      else {
+	if(program.fp_ucode_offset != ~0U) {
+	  mspace_free(rsxgl_rsx_ucode_mspace(),rsxgl_rsx_ucode_address(program.fp_ucode_offset));
+	}
+	
+	program.fp_ucode_offset = rsxgl_rsx_ucode_offset(address);
+	
+	memcpy(address,program.nvfx_fp -> insn,program.nvfx_fp -> insn_len * sizeof(uint32_t));
+
+	program.fp_num_insn = program.nvfx_fp -> insn_len / 4;
+
+#if 0	
+	program.fp_num_insn = fp -> num_insn;
+	program.fp_control = fp -> fp_control;
+	program.fp_num_regs = fp -> num_regs;
+	
+	uint16_t
+	  texcoords = fp -> texcoords,
+	  texcoord2D = fp -> texcoord2D,
+	  texcoord3D = fp -> texcoord3D;
+	for(size_t i = 0;i < RSXGL_MAX_TEXTURE_COORDS;++i) {
+	  if(texcoords & 1) program.fp_texcoords.set(i);
+	  if(texcoord2D & 1) program.fp_texcoord2D.set(i);
+	  if(texcoord3D & 1) program.fp_texcoord3D.set(i);
+	  
+	  texcoords >>= 1;
+	  texcoord2D >>= 1;
+	  texcoord3D >>= 1;
+	}
+#endif
+      }
+    }
 
     //
     struct gl_shader * gl_vsh = program.mesa_program->_LinkedShaders[MESA_SHADER_VERTEX];
@@ -2044,13 +2111,13 @@ rsxgl_program_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
       gcm_emit_method(&buffer,NV30_3D_VP_UPLOAD_FROM_ID,1);
       gcm_emit(&buffer,0);
 
-      const program_t::vp_instruction_type * ucode = rsxgl_main_ucode_address(program.vp_ucode_offset);
+      const struct nvfx_vertex_program_exec * ucode = rsxgl_main_ucode_address(program.vp_ucode_offset);
       for(size_t i = 0,n = program.vp_num_insn;i < n;++i,++ucode) {
 	gcm_emit_method(&buffer,NV30_3D_VP_UPLOAD_INST(0),4);
-	gcm_emit(&buffer,ucode -> words[0]);
-	gcm_emit(&buffer,ucode -> words[1]);
-	gcm_emit(&buffer,ucode -> words[2]);
-	gcm_emit(&buffer,ucode -> words[3]);
+	gcm_emit(&buffer,ucode -> data[0]);
+	gcm_emit(&buffer,ucode -> data[1]);
+	gcm_emit(&buffer,ucode -> data[2]);
+	gcm_emit(&buffer,ucode -> data[3]);
       }
       
       gcm_emit_method(&buffer,NV30_3D_VP_START_FROM_ID,1);

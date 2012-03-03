@@ -267,15 +267,6 @@ struct program_t {
 
   // --- hot:
   //
-  // Type used to manipulate program instructions:
-  union vp_instruction_type {
-    uint32_t words[4];
-  };
-
-  union fp_instruction_type {
-    uint32_t words[4];
-  };
-
   // Type that can store instruction indices:
   typedef boost::uint_value_t< RSXGL_MAX_PROGRAM_INSTRUCTIONS - 1 >::least instruction_size_type;
 

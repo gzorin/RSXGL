@@ -503,18 +503,18 @@ glGetUniformuiv (GLuint program, GLint location, GLuint *params)
 extern rsx_ptr_t rsx_ucode_address;
 extern uint32_t rsx_ucode_offset;
 
-static inline program_t::fp_instruction_type *
+static inline uint32_t *
 rsxgl_rsx_ucode_address(program_t::ucode_offset_type off)
 {
   rsxgl_assert(off != ~0U);
-  return (program_t::fp_instruction_type *)((uint8_t *)rsx_ucode_address + (ptrdiff_t)off * sizeof(program_t::fp_instruction_type));
+  return (uint32_t *)((uint8_t *)rsx_ucode_address + (ptrdiff_t)off * sizeof(uint32_t) * 4);
 }
 
 static inline uint32_t
 rsxgl_rsx_ucode_offset(program_t::ucode_offset_type off)
 {
   rsxgl_assert(off != ~0U);
-  return (off * sizeof(program_t::fp_instruction_type)) + rsx_ucode_offset;
+  return (off * sizeof(uint32_t) * 4) + rsx_ucode_offset;
 }
 
 static inline void
