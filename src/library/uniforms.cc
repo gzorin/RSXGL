@@ -38,75 +38,75 @@
 #define GLAPI extern "C"
 
 static inline void
-set(ieee32_t & lhs,const int8_t & rhs) {
+set_gpu_data(ieee32_t & lhs,const int8_t rhs) {
   lhs.u = rhs;
 }
 
 static inline void
-set(ieee32_t & lhs,const int16_t & rhs) {
+set_gpu_data(ieee32_t & lhs,const int16_t rhs) {
   lhs.u = rhs;
 }
 
 static inline void
-set(ieee32_t & lhs,const int32_t & rhs) {
+set_gpu_data(ieee32_t & lhs,const int32_t rhs) {
   lhs.u = rhs;
 }
 
 //
 static inline void
-set(ieee32_t & lhs,const uint8_t & rhs) {
+set_gpu_data(ieee32_t & lhs,const uint8_t rhs) {
   lhs.u = rhs;
 }
 
 static inline void
-set(ieee32_t & lhs,const uint16_t & rhs) {
+set_gpu_data(ieee32_t & lhs,const uint16_t rhs) {
   lhs.u = rhs;
 }
 
 static inline void
-set(ieee32_t & lhs,const uint32_t & rhs) {
+set_gpu_data(ieee32_t & lhs,const uint32_t rhs) {
   lhs.u = rhs;
 }
 
 static inline void
-set(ieee32_t & lhs,const float & rhs) {
+set_gpu_data(ieee32_t & lhs,const float rhs) {
   lhs.f = rhs;
 }
 
 //
 static inline void
-get(const ieee32_t & lhs,int8_t & rhs) {
+get_gpu_data(const ieee32_t & lhs,int8_t & rhs) {
   rhs = lhs.u;
 }
 
 static inline void
-get(const ieee32_t & lhs,int16_t & rhs) {
+get_gpu_data(const ieee32_t & lhs,int16_t & rhs) {
   rhs = lhs.u;
 }
 
 static inline void
-get(const ieee32_t & lhs,int32_t & rhs) {
+get_gpu_data(const ieee32_t & lhs,int32_t & rhs) {
   rhs = lhs.u;
 }
 
 //
 static inline void
-get(const ieee32_t & lhs,uint8_t & rhs) {
+get_gpu_data(const ieee32_t & lhs,uint8_t & rhs) {
   rhs = lhs.u;
 }
 
 static inline void
-get(const ieee32_t & lhs,uint16_t & rhs) {
+get_gpu_data(const ieee32_t & lhs,uint16_t & rhs) {
   rhs = lhs.u;
 }
 
 static inline void
-get(const ieee32_t & lhs,uint32_t & rhs) {
+get_gpu_data(const ieee32_t & lhs,uint32_t & rhs) {
   rhs = lhs.u;
 }
 
 static inline void
-get(const ieee32_t & lhs,float & rhs) {
+get_gpu_data(const ieee32_t & lhs,float & rhs) {
   rhs = lhs.f;
 }
 
@@ -141,10 +141,10 @@ rsxgl_uniform(rsxgl_context_t * ctx,
   uniform.invalid = uniform.enabled;
 
   ieee32_t * values = program.uniform_values + uniform.values_index;
-  set(values[0],v0);
-  if(Width > 1) set(values[1],v1);
-  if(Width > 2) set(values[2],v2);
-  if(Width > 3) set(values[3],v3);
+  set_gpu_data(values[0],v0);
+  if(Width > 1) set_gpu_data(values[1],v1);
+  if(Width > 2) set_gpu_data(values[2],v2);
+  if(Width > 3) set_gpu_data(values[3],v3);
 
   RSXGL_NOERROR_();
 }
@@ -191,7 +191,7 @@ rsxgl_uniform(rsxgl_context_t * ctx,
     for(program_t::uniform_size_type n = count;n > 0;--n) {
       for(size_t i = 0;i < Width;++i) {
 	for(size_t j = 0;j < Height;++j,++values) {
-	  set(*values,v[(j * Width) + i]);
+	  set_gpu_data(*values,v[(j * Width) + i]);
 	}
       }
       v += Width * Height;
@@ -200,7 +200,7 @@ rsxgl_uniform(rsxgl_context_t * ctx,
   else {
     for(program_t::uniform_size_type n = Width * Height * count;n > 0;--n,++values,++v) {
       //rsxgl_debug_printf("%f ",*v);
-      set(*values,*v);
+      set_gpu_data(*values,*v);
     }
   }
 
@@ -483,7 +483,7 @@ glGetUniformufv (GLuint program_name, GLint location, GLfloat *params)
 
   const ieee32_t * values = program.uniform_values + uniform.values_index;
   for(program_t::uniform_size_type i = 0,n = uniform.count * width;i < n;++i,++params,++values) {
-    get(*values,*params);
+    get_gpu_data(*values,*params);
   }
 }
 

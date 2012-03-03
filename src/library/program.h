@@ -11,6 +11,7 @@
 #include "gl_constants.h"
 #include "gl_object_storage.h"
 #include "array.h"
+#include "set.h"
 #include "compiler_context.h"
 
 #include <nv40prog.h>
@@ -102,9 +103,16 @@ struct program_t {
 
   uint32_t linked:1,validated:1,invalid_uniforms:1,ref_count:28;
 
-  typedef object_container_type< shader_t, RSXGL_MAX_SHADER_TYPES > shader_container_type;
+  typedef set< shader_t::name_type, uint16_t > shader_container_type;
 
-  shader_container_type attached_shaders, linked_shaders;
+  shader_container_type::size_type attached_shaders_size, linked_shaders_size;
+  shader_container_type::pointer_type attached_shaders_data, linked_shaders_data;
+
+  shader_container_type::type attached_shaders() { return shader_container_type::type(attached_shaders_data,attached_shaders_size); }
+  shader_container_type::const_type attached_shaders() const { return shader_container_type::const_type(attached_shaders_data,attached_shaders_size); }
+
+  shader_container_type::type linked_shaders() { return shader_container_type::type(linked_shaders_data,linked_shaders_size); }
+  shader_container_type::const_type linked_shaders() const { return shader_container_type::const_type(linked_shaders_data,linked_shaders_size); }
 
   // Information returned from glLinkProgram():
   typedef array< char, uint32_t > info_type;
@@ -137,6 +145,7 @@ struct program_t {
 
     typedef typename array_type::size_type size_type;
     typedef typename array_type::pointer_type pointer_type;
+    typedef typename array_type::const_pointer_type const_pointer_type;
 
     struct find_lt {
       names_type::const_type & names;
@@ -179,12 +188,12 @@ struct program_t {
     struct const_type : public array_type::const_type {
       typedef typename array_type::const_type base_type;
 
-      const_type(const pointer_type & _values,const size_type & _size)
+      const_type(const const_pointer_type & _values,const size_type & _size)
 	: base_type(_values,_size) {
       }
 
       std::pair< bool, size_type > find(names_type::const_type names,const char * name) const {
-	pointer_type it = std::lower_bound(base_type::values,base_type::values + base_type::size,name,find_lt(names));
+	const_pointer_type it = std::lower_bound(base_type::values,base_type::values + base_type::size,name,find_lt(names));
 	if(it != (base_type::values + base_type::size) && find_eq(names)(*it,name)) {
 	  return std::make_pair(true,it - base_type::values);
 	}

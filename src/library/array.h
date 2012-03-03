@@ -19,6 +19,7 @@ struct array {
   typedef Type value_type;
   typedef SizeType size_type;
   typedef value_type * pointer_type;
+  typedef const value_type * const_pointer_type;
 
   typedef typename Alloc::template rebind< value_type >::other allocator;
 
@@ -105,10 +106,10 @@ struct array {
   };
 
   struct const_type {
-    const pointer_type & values;
+    const const_pointer_type & values;
     const size_type & size;
 
-    const_type(const pointer_type & _values,const size_type & _size)
+    const_type(const const_pointer_type & _values,const size_type & _size)
       : values(_values), size(_size) {
     }
 

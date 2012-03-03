@@ -24,75 +24,75 @@
 #define GLAPI extern "C"
 
 static inline void
-set(ieee32_t & lhs,const int8_t rhs) {
+set_gpu_data(ieee32_t & lhs,const int8_t rhs) {
   lhs.u = rhs;
 }
 
 static inline void
-set(ieee32_t & lhs,const int16_t rhs) {
+set_gpu_data(ieee32_t & lhs,const int16_t rhs) {
   lhs.u = rhs;
 }
 
 static inline void
-set(ieee32_t & lhs,const int32_t rhs) {
+set_gpu_data(ieee32_t & lhs,const int32_t rhs) {
   lhs.u = rhs;
 }
 
 //
 static inline void
-set(ieee32_t & lhs,const uint8_t rhs) {
+set_gpu_data(ieee32_t & lhs,const uint8_t rhs) {
   lhs.u = rhs;
 }
 
 static inline void
-set(ieee32_t & lhs,const uint16_t rhs) {
+set_gpu_data(ieee32_t & lhs,const uint16_t rhs) {
   lhs.u = rhs;
 }
 
 static inline void
-set(ieee32_t & lhs,const uint32_t rhs) {
+set_gpu_data(ieee32_t & lhs,const uint32_t rhs) {
   lhs.u = rhs;
 }
 
 static inline void
-set(ieee32_t & lhs,const float rhs) {
+set_gpu_data(ieee32_t & lhs,const float rhs) {
   lhs.f = rhs;
 }
 
 //
 static inline void
-get(const ieee32_t & lhs,int8_t & rhs) {
+get_gpu_data(const ieee32_t & lhs,int8_t & rhs) {
   rhs = lhs.u;
 }
 
 static inline void
-get(const ieee32_t & lhs,int16_t & rhs) {
+get_gpu_data(const ieee32_t & lhs,int16_t & rhs) {
   rhs = lhs.u;
 }
 
 static inline void
-get(const ieee32_t & lhs,int32_t & rhs) {
+get_gpu_data(const ieee32_t & lhs,int32_t & rhs) {
   rhs = lhs.u;
 }
 
 //
 static inline void
-get(const ieee32_t & lhs,uint8_t & rhs) {
+get_gpu_data(const ieee32_t & lhs,uint8_t & rhs) {
   rhs = lhs.u;
 }
 
 static inline void
-get(const ieee32_t & lhs,uint16_t & rhs) {
+get_gpu_data(const ieee32_t & lhs,uint16_t & rhs) {
   rhs = lhs.u;
 }
 
 static inline void
-get(const ieee32_t & lhs,uint32_t & rhs) {
+get_gpu_data(const ieee32_t & lhs,uint32_t & rhs) {
   rhs = lhs.u;
 }
 
 static inline void
-get(const ieee32_t & lhs,float & rhs) {
+get_gpu_data(const ieee32_t & lhs,float & rhs) {
   rhs = lhs.f;
 }
 
@@ -340,10 +340,10 @@ rsxgl_vertex_attrib(rsxgl_context_t * ctx,uint32_t rsx_type,GLuint index,const T
   attribs.buffers.bind(index,0);
   attribs.memory_offset[index] = 0;
 
-  set(attribs.defaults[index][0],v0);
-  if(Size >= 1) set(attribs.defaults[index][1],v1);
-  if(Size >= 2) set(attribs.defaults[index][2],v2);
-  if(Size >= 3) set(attribs.defaults[index][3],v3);
+  set_gpu_data(attribs.defaults[index][0],v0);
+  if(Size >= 1) set_gpu_data(attribs.defaults[index][1],v1);
+  if(Size >= 2) set_gpu_data(attribs.defaults[index][2],v2);
+  if(Size >= 3) set_gpu_data(attribs.defaults[index][3],v3);
 
   ctx -> invalid_attribs.set(index);
   

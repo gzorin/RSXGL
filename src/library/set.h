@@ -12,8 +12,6 @@
 #include <memory>
 #include <functional>
 
-#include <iostream>
-
 template< typename Type, typename SizeType, typename Compare = std::less< Type >, typename Alloc = std::allocator< void > >
 struct set : public array< Type, SizeType, Alloc > {
   typedef array< Type, SizeType, Alloc > array_type;
@@ -21,6 +19,7 @@ struct set : public array< Type, SizeType, Alloc > {
   typedef typename array_type::value_type value_type;
   typedef typename array_type::size_type size_type;
   typedef typename array_type::pointer_type pointer_type;
+  typedef typename array_type::const_pointer_type const_pointer_type;
 
   typedef typename array_type::allocator allocator;
   
@@ -37,6 +36,10 @@ struct set : public array< Type, SizeType, Alloc > {
 
     void destruct() {
       array_type::type::destruct();
+    }
+
+    size_type get_size() const {
+      return array_type::type::size;
     }
 
     bool insert(const value_type & x) const {
@@ -97,17 +100,36 @@ struct set : public array< Type, SizeType, Alloc > {
     bool has(const value_type & x) const {
       return binary_search(array_type::type::values,array_type::type::values + array_type::type::size,x,Compare());
     }
+
+    value_type & operator[](size_type i) {
+      assert(i < array_type::type::size);
+      return array_type::type::values[i];
+    }
+
+    void clear() {
+      destruct();
+      construct();
+    }
   };
 
-  struct const_type : protected array_type::type {
-    const_type(const pointer_type & _values,const size_type & _size) : array_type::const_type(_values,_size) {
+  struct const_type : protected array_type::const_type {
+    const_type(const const_pointer_type & _values,const size_type & _size) : array_type::const_type(_values,_size) {
     }
 
     const_type(const const_type & rhs) : array_type::const_type(rhs) {
     }
 
+    size_type get_size() const {
+      return array_type::const_type::size;
+    }
+
     bool has(const value_type & x) const {
-      return binary_search(array_type::type::values,array_type::type::values + array_type::type::size,x,Compare());
+      return binary_search(array_type::const_type::values,array_type::const_type::values + array_type::const_type::size,x,Compare());
+    }
+
+    const value_type & operator[](size_type i) const {
+      assert(i < array_type::const_type::size);
+      return array_type::const_type::values[i];
     }
   };
 
