@@ -918,6 +918,7 @@ glLinkProgram (GLuint program_name)
     // Things that get accumulated:
     // program_offsets - uint32_t's
     // uniform_values - ieee32_t's
+    // names_size - accumulate amount of space required for attribute & uniform names
     // attribs - map from string's to attrib_t's
     // uniforms - map from string's to uniform_t's
     // sampler_uniforms - map from string's to sampler_uniform_t's
@@ -939,7 +940,7 @@ glLinkProgram (GLuint program_name)
     
     // Process vertex program attributes:
     {
-      rsxgl_debug_printf("attributes:\n");
+      //rsxgl_debug_printf("attributes:\n");
 
       program.attrib_name_max_length = 0;
       
@@ -1011,17 +1012,19 @@ glLinkProgram (GLuint program_name)
 	}
       }
       
-      rsxgl_debug_printf("%i uniforms:\n",program.mesa_program -> NumUserUniformStorage);
-      
+      //rsxgl_debug_printf("%i uniforms:\n",program.mesa_program -> NumUserUniformStorage);
+
       for(unsigned int i = 0,n = program.mesa_program -> NumUserUniformStorage;i < n;++i) {
 	const gl_uniform_storage * uniform_storage = program.mesa_program -> UniformStorage + i;
 	const glsl_type * type = uniform_storage -> type;
+	bool add_name = false;
 
-	rsxgl_debug_printf("\t%s type:%s num_driver_storage:%u\n",
-			   uniform_storage -> name,
-			   uniform_storage -> type -> name,
-			   uniform_storage -> num_driver_storage);
+	//rsxgl_debug_printf("\t%s type:%s num_driver_storage:%u\n",
+	//		   uniform_storage -> name,
+	//		   uniform_storage -> type -> name,
+	//		   uniform_storage -> num_driver_storage);
 
+	// Non-samplers:
 	if(uniform_storage -> type -> base_type != GLSL_TYPE_SAMPLER) {
 	  program_t::uniform_t uniform;
 	  uniform.type = rsxgl_glsl_type_to_rsxgl_type(type);
@@ -1031,63 +1034,215 @@ glLinkProgram (GLuint program_name)
 	  std::fill_n(std::back_inserter(uniform_values),type -> vector_elements * type -> matrix_columns,ieee32_t());
 	  
 	  // Search for it in vp:
-	  bool found_vp = false, found_fp = false;
-	  
+	  // store vp index
+	  uniform.vp_index = 0;
+
 	  for(unsigned int i = 0,n = gl_vp -> Parameters -> NumParameters;i < n;++i) {
 	    gl_program_parameter * parameter = gl_vp -> Parameters -> Parameters + i;
-	    if((parameter -> Type == PROGRAM_UNIFORM || parameter -> Type == PROGRAM_SAMPLER) && strcmp(parameter -> Name,uniform_storage -> name) == 0) {
-	      if(!found_vp) rsxgl_debug_printf("\t\tfound in vp register type: %u data type: %x: ",parameter -> Type,parameter -> DataType);
-	      found_vp |= true;
-	      
-	      if(parameter -> Type == PROGRAM_UNIFORM) {
-		nvfx_vp_constant_map_t::const_iterator it = nvfx_vp_constant_map.find(i);
-		if(it != nvfx_vp_constant_map.end()) {
-		  rsxgl_debug_printf("%u ",it -> second);
-		}
+	    if(parameter -> Type == PROGRAM_UNIFORM && strcmp(parameter -> Name,uniform_storage -> name) == 0) {
+	      nvfx_vp_constant_map_t::const_iterator it = nvfx_vp_constant_map.find(i);
+	      if(it != nvfx_vp_constant_map.end()) {
+		//rsxgl_debug_printf("%u ",it -> second);
+		uniform.enabled.set(RSXGL_VERTEX_SHADER);
+		uniform.vp_index = it -> second;
 	      }
-	      else if(parameter -> Type == PROGRAM_SAMPLER) {
-		rsxgl_debug_printf("(sampler: %u)",(unsigned int)uniform_storage -> sampler);
-	      }
+	      break;
 	    }
 	  }
-	  if(found_vp) rsxgl_debug_printf("\n");
 	  
 	  // Search for it in fp:
-	  // for each count:
+	  // for each in count:
 	  // - store an offset count n
-	  // - store n offsets
+	  // - store n (offsets / 4)
+	  uniform.program_offsets_index = 0;
 
 	  for(unsigned int i = 0,n = gl_fp -> Parameters -> NumParameters;i < n;++i) {
 	    gl_program_parameter * parameter = gl_fp -> Parameters -> Parameters + i;
-	    if((parameter -> Type == PROGRAM_UNIFORM || parameter -> Type == PROGRAM_SAMPLER) && strcmp(parameter -> Name,uniform_storage -> name) == 0) {
-	      if(!found_fp) rsxgl_debug_printf("\t\tfound in fp register type: %u data type: %x: ",parameter -> Type,parameter -> DataType);
-	      found_fp |= true;
-	      
-	      if(parameter -> Type == PROGRAM_UNIFORM) {
-		nvfx_fp_constant_map_t::const_iterator it = nvfx_fp_constant_map.find(i);
-		if(it != nvfx_fp_constant_map.end()) {
-		  for(std::deque< uint32_t >::const_iterator jt = it -> second.begin();jt != it -> second.end();++jt) {
-		    rsxgl_debug_printf("%u ",*jt);
-		  }
+	    if(parameter -> Type == PROGRAM_UNIFORM && strcmp(parameter -> Name,uniform_storage -> name) == 0) {
+	      nvfx_fp_constant_map_t::const_iterator it = nvfx_fp_constant_map.find(i);
+	      if(it != nvfx_fp_constant_map.end()) {
+		uniform.enabled.set(RSXGL_FRAGMENT_SHADER);
+		uniform.program_offsets_index = program_offsets.size();
+		
+		const std::deque< uint32_t > & offsets = it -> second;
+		program_offsets.push_back(offsets.size());
+		for(const uint32_t & offset : offsets) {
+		  program_offsets.push_back(offset / 4);
 		}
 	      }
-	      else if(parameter -> Type == PROGRAM_SAMPLER) {
-		rsxgl_debug_printf("(sampler: %u)",(unsigned int)uniform_storage -> sampler);
-	      }
+	      break;
 	    }
 	  }
-	  if(found_fp) rsxgl_debug_printf("\n");
 
 	  uniforms.insert(std::make_pair(uniform_storage -> name,uniform));
+	  add_name = true;
 	}
+	// Sampler:
 	else {
-	  program_t::sampler_uniform_t uniform;
-	  uniform.type = rsxgl_glsl_type_to_rsxgl_type(uniform_storage -> type);
+	  program_t::sampler_uniform_t sampler_uniform;
+	  sampler_uniform.type = rsxgl_glsl_type_to_rsxgl_type(uniform_storage -> type);
+	  sampler_uniform.vp_index = RSXGL_MAX_COMBINED_TEXTURE_IMAGE_UNITS;
+	  sampler_uniform.fp_index = RSXGL_MAX_COMBINED_TEXTURE_IMAGE_UNITS;
 
-	  sampler_uniforms.insert(std::make_pair(uniform_storage -> name,uniform));
+	  // Search for it in vp:
+	  for(unsigned int i = 0,n = gl_vp -> Parameters -> NumParameters;i < n;++i) {
+	    gl_program_parameter * parameter = gl_vp -> Parameters -> Parameters + i;
+	    if(parameter -> Type == PROGRAM_SAMPLER && strcmp(parameter -> Name,uniform_storage -> name) == 0) {
+	      //rsxgl_debug_printf("(sampler: %u)",(unsigned int)uniform_storage -> sampler);
+	      sampler_uniform.vp_index = (unsigned int)uniform_storage -> sampler;
+	      break;
+	    }
+	  }
+	  
+	  // Search for it in fp:
+	  for(unsigned int i = 0,n = gl_fp -> Parameters -> NumParameters;i < n;++i) {
+	    gl_program_parameter * parameter = gl_fp -> Parameters -> Parameters + i;
+	    if(parameter -> Type == PROGRAM_SAMPLER && strcmp(parameter -> Name,uniform_storage -> name) == 0) {
+	      //rsxgl_debug_printf("(sampler: %u)",(unsigned int)uniform_storage -> sampler);
+	      sampler_uniform.fp_index = (unsigned int)uniform_storage -> sampler;
+	      break;
+	    }
+	  }
+
+	  sampler_uniforms.insert(std::make_pair(uniform_storage -> name,sampler_uniform));
+	  add_name = true;
+	}
+
+	if(add_name) {
+	  const program_t::name_size_type name_length = strlen(uniform_storage -> name);
+	  program.uniform_name_max_length = std::max(program.uniform_name_max_length,(program_t::name_size_type)name_length);
+	  names_size += name_length + 1;
 	}
       }
     }
+
+    // Migrate program offsets array:
+    if(program.program_offsets != 0) free(program.program_offsets);
+    program.program_offsets = (program_t::instruction_size_type *)memalign(RSXGL_CACHE_LINE_SIZE,sizeof(program_t::instruction_size_type) * program_offsets.size());
+    std::copy(program_offsets.begin(),program_offsets.end(),program.program_offsets);  
+
+    // Migrate uniform values array:
+    if(program.uniform_values != 0) free(program.uniform_values);
+    program.uniform_values = (ieee32_t *)memalign(RSXGL_CACHE_LINE_SIZE,sizeof(ieee32_t) * uniform_values.size());
+    std::copy(uniform_values.begin(),uniform_values.end(),program.uniform_values);
+
+    // Make space for attribute and uniform names:
+    rsxgl_debug_printf("names require %u bytes\n",(unsigned int)names_size);
+    program.names().resize(names_size);
+    char * pnames = program.names_data;
+
+    // Migrate attributes table:
+    if(attribs.size() > 0) {
+      rsxgl_debug_printf("%u attribs\n",attribs.size());
+
+      program.attribs_enabled.reset();
+
+      program_t::attrib_table_type::type table = program.attrib_table();
+      table.resize(attribs.size());
+
+      unsigned int i = 0;
+      for(const std::pair< const char *, program_t::attrib_t > & value : attribs) {
+	rsxgl_debug_printf(" %s: type:%u index:%u\n",
+			   value.first,
+			   (unsigned int)value.second.type,
+			   (unsigned int)value.second.index);
+
+	table[i].first = pnames - program.names_data;
+	table[i].second = value.second;
+
+	for(const char * name = value.first;*name != 0;++name,++pnames) {
+	  *pnames = *name;
+	}
+	*pnames++ = 0;
+	
+	++i;
+      }
+    }
+
+    // Migrate uniforms table:
+    if(uniforms.size() > 0) {
+      rsxgl_debug_printf("%u uniforms\n",uniforms.size());
+
+      program_t::uniform_table_type::type table = program.uniform_table();
+      table.resize(uniforms.size());
+
+      unsigned int i = 0;
+      for(const std::pair< const char *, program_t::uniform_t > & value : uniforms) {
+	rsxgl_debug_printf(" %s: type:%u count:%u values_index:%u vp_index:%u program_offsets_index:%u\n",
+			   value.first,
+			   (unsigned int)value.second.type,
+			   (unsigned int)value.second.count,
+			   (unsigned int)value.second.values_index,
+			   (unsigned int)value.second.vp_index,
+			   (unsigned int)value.second.program_offsets_index);
+
+	table[i].first = pnames - program.names_data;
+	table[i].second = value.second;
+
+	for(const char * name = value.first;*name != 0;++name,++pnames) {
+	  *pnames = *name;
+	}
+	*pnames++ = 0;
+
+	++i;
+      }
+    }
+
+    // Migrate texture table:
+    program.fp_texcoords.reset();
+    program.fp_texcoord2D.reset();
+    program.fp_texcoord3D.reset();
+    program.textures_enabled.reset();
+
+    for(unsigned int i = 0;i < RSXGL_MAX_COMBINED_TEXTURE_IMAGE_UNITS;++i) {
+      program.texture_assignments.set(i,0);
+    }
+
+    if(sampler_uniforms.size() > 0) {
+      rsxgl_debug_printf("%u sampler uniforms\n",sampler_uniforms.size());
+
+      program_t::sampler_uniform_table_type::type table = program.sampler_uniform_table();
+      table.resize(sampler_uniforms.size());
+
+      unsigned int i = 0;
+      for(const std::pair< const char *, program_t::sampler_uniform_t > & value : sampler_uniforms) {
+	rsxgl_debug_printf(" %s: type:%u vp_index:%u fp_index:%u\n",
+			   value.first,
+			   (unsigned int)value.second.type,
+			   (unsigned int)value.second.vp_index,
+			   (unsigned int)value.second.fp_index);
+
+	table[i].first = pnames - program.names_data;
+	table[i].second = value.second;
+
+	if(value.second.vp_index != RSXGL_MAX_COMBINED_TEXTURE_IMAGE_UNITS) {
+	  program.textures_enabled.set(value.second.vp_index);
+	}
+	if(value.second.fp_index != RSXGL_MAX_COMBINED_TEXTURE_IMAGE_UNITS) {
+	  program.fp_texcoords.set(value.second.fp_index);
+	  if(value.second.type == RSXGL_DATA_TYPE_SAMPLER2D) {
+	    program.fp_texcoord2D.set(value.second.fp_index);
+	  }
+	  else if(value.second.type == RSXGL_DATA_TYPE_SAMPLER3D) {
+	    program.fp_texcoord3D.set(value.second.fp_index);
+	  }
+	  program.textures_enabled.set(RSXGL_MAX_VERTEX_TEXTURE_IMAGE_UNITS,value.second.fp_index);
+	}
+
+	for(const char * name = value.first;*name != 0;++name,++pnames) {
+	  *pnames = *name;
+	}
+	*pnames++ = 0;
+
+	++i;
+      }
+    }
+
+    // Deal with these later:
+    program.instanceid_index = ~0;
+    program.point_sprite_control = 0;
+
+    rsxgl_debug_printf("wrote %u names bytes\n",(unsigned int)(pnames - program.names_data));
   }
   
   if(info.length() > 0) {
