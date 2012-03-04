@@ -246,13 +246,10 @@ rsxgltest_init(int argc,const char ** argv)
   // Link the program for real:
   glLinkProgram(program);
 
-#if 0
   glValidateProgram(program);
   
   summarize_program("draw",program);
-#endif
 
-#if 0
   vertex_location = glGetAttribLocation(program,"vertex");
   tc_location = glGetAttribLocation(program,"uv");
 
@@ -324,7 +321,6 @@ rsxgltest_init(int argc,const char ** argv)
 
   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
-#endif
 }
 
 extern "C"
@@ -340,7 +336,6 @@ rsxgltest_draw()
   glClearColor(rgb[0],rgb[1],rgb[2],1.0);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-#if 0
   float xyz[3] = {
     compute_sine_wave(xyz_waves,rsxgltest_elapsed_time),
     compute_sine_wave(xyz_waves + 1,rsxgltest_elapsed_time),
@@ -374,7 +369,6 @@ rsxgltest_draw()
 
     glDrawElements(GL_TRIANGLES,36,GL_UNSIGNED_INT,client_indices);
   }
-#endif
 
   return 1;
 }

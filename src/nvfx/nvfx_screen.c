@@ -550,10 +550,10 @@ nvfx_screen_create(struct nouveau_device *dev)
 		NOUVEAU_ERR("Unknown nv3x/nv4x chipset: nv%02x\n", dev->chipset);
 		return NULL;
 	}
-#endif
-
+#else
 	eng3d_class = NV40_3D;
 	screen->is_nv4x = ~0;
+#endif
 
 	screen->advertise_npot = !!screen->is_nv4x;
 	screen->advertise_blend_equation_separate = !!screen->is_nv4x;

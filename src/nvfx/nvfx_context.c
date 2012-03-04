@@ -90,7 +90,11 @@ nvfx_create(struct pipe_screen *pscreen, void *priv)
 	/* TODO: it seems that nv30 might have fixed function clipping usable with vertex programs
 	 * However, my code for that doesn't work, so use vp clipping for all cards, which works.
 	 */
+#if !defined(__RSXGL__)
 	nvfx->use_vp_clipping = TRUE;
+#else
+	nvfx->use_vp_clipping = FALSE;
+#endif
 
 	nvfx_init_query_functions(nvfx);
 	nvfx_init_surface_functions(nvfx);

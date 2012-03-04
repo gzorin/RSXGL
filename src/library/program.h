@@ -176,7 +176,7 @@ struct program_t {
 
       std::pair< bool, size_type > find(names_type::const_type names,const char * name) const {
 	pointer_type it = std::lower_bound(base_type::values,base_type::values + base_type::size,name,find_lt(names));
-	if(it != (base_type::values + base_type::size) && find_eq(names)(*it,name)) {
+	if(it != (base_type::values + base_type::size) && !find_lt(names)(name,*it)) {
 	  return std::make_pair(true,it - base_type::values);
 	}
 	else {

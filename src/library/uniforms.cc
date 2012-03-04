@@ -617,12 +617,21 @@ rsxgl_uniforms_validate(rsxgl_context_t * ctx,program_t & program)
 
 	  program_t::uniform_size_type index = uniform.vp_index;
 	  uint32_t * buffer = gcm_reserve(context,6 * count);
+
+#if 0
+	  rsxgl_debug_printf("vp constant %u (%u)\n",index,count);
+#endif
 	    
 	  for(program_t::uniform_size_type j = 0;j < count;++j,++index,pvalues += width) {
 	    //rsxgl_debug_printf("%u/%u %u: %u: %f %f %f %f\n",
 	    //	 j,count,width,
 	    //	 pvalues - values,
 	    //	 pvalues[0].f,pvalues[1].f,pvalues[2].f,pvalues[3].f);
+
+#if 0
+	    rsxgl_debug_printf("\t%04u: %x %x %x %x\n",index,
+			       width > 0 ? pvalues[0].u : 0,width > 0 ? pvalues[1].u : 0,width > 0 ? pvalues[2].u : 0,width > 0 ? pvalues[3].u : 0);
+#endif
 	    
 	    gcm_emit_method(&buffer,NV30_3D_VP_UPLOAD_CONST_ID,5);
 	    gcm_emit(&buffer,index);

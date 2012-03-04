@@ -7,6 +7,9 @@
 #include "program/programopt.h"
 #include "nvfx/nvfx_context.h"
 #include "nvfx/nvfx_state.h"
+#include "nvfx/nvfx_shader.h"
+#include "nvfx/nv30_vertprog.h"
+#include "nvfx/nv40_vertprog.h"
 
 extern struct nvfx_vertex_program*
 nvfx_vertprog_translate(struct nvfx_context *nvfx, const struct pipe_shader_state* vps, struct tgsi_shader_info* info);
@@ -75,6 +78,61 @@ compiler_context__translate_vp(struct gl_context * mesa_ctx, struct gl_shader_pr
   struct tgsi_shader_info info;
   tgsi_scan_shader(tgsi.tokens,&info);
   nvfx_vp = nvfx_vertprog_translate((struct nvfx_context *)(st_context(mesa_ctx) -> pipe),&tgsi,&info);
+
+  /* If exec or data segments moved we need to patch the program to
+   * fixup offsets and register IDs.
+   */
+  const unsigned vp_exec_start = 0;
+
+  rsxgl_debug_printf("%u branch relocs\n",nvfx_vp->branch_relocs.size);
+
+  if (nvfx_vp->exec_start != vp_exec_start) {
+    rsxgl_debug_printf("vp_relocs %u -> %u\n", nvfx_vp->exec_start, vp_exec_start);
+    for(unsigned i = 0; i < nvfx_vp->branch_relocs.size; i += sizeof(struct nvfx_relocation))
+      {
+	struct nvfx_relocation* reloc = (struct nvfx_relocation*)((char*)nvfx_vp->branch_relocs.data + i);
+	uint32_t* hw = nvfx_vp->insns[reloc->location].data;
+	unsigned target = vp_exec_start + reloc->target;
+	
+	rsxgl_debug_printf("vp_reloc hw %u -> hw %u\n", reloc->location, target);
+	
+	  {
+	    hw[3] &=~ NV40_VP_INST_IADDRL_MASK;
+	    hw[3] |= (target & 7) << NV40_VP_INST_IADDRL_SHIFT;
+	    
+	    hw[2] &=~ NV40_VP_INST_IADDRH_MASK;
+	    hw[2] |= ((target >> 3) & 0x3f) << NV40_VP_INST_IADDRH_SHIFT;
+	  }
+      }
+    
+    nvfx_vp->exec_start = vp_exec_start;
+  }
+
+#if 0
+  const unsigned vp_data_start = 0;
+
+  rsxgl_debug_printf("%u const relocs\n",nvfx_vp->const_relocs.size);
+
+#undef NVFX_VP
+#define NVFX_VP(c) ((NV30_VP_##c) + (1 & ((NV40_VP_##c) - (NV30_VP_##c))))
+
+  if (~0 /*nvfx_vp->data_start*/ != vp_data_start) {
+    for(unsigned i = 0; i < nvfx_vp->const_relocs.size; i += sizeof(struct nvfx_relocation))
+      {
+	struct nvfx_relocation* reloc = (struct nvfx_relocation*)((char*)nvfx_vp->const_relocs.data + i);
+	struct nvfx_vertex_program_exec *vpi = &nvfx_vp->insns[reloc->location];
+	
+	rsxgl_debug_printf("reloc %i to %i + %i\n", reloc->location, vp_data_start, reloc->target);
+	
+	vpi->data[1] &= ~NVFX_VP(INST_CONST_SRC_MASK);
+	vpi->data[1] |=
+	  (reloc->target + vp_data_start) <<
+	  NVFX_VP(INST_CONST_SRC_SHIFT);
+      }
+    
+    nvfx_vp->data_start = vp_data_start;
+  }
+#endif
 
  end:
 

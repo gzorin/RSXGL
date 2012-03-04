@@ -58,6 +58,15 @@ extern "C" {
 #include <map>
 #include "set_algorithm2.h"
 
+//#define SWAP32(v) ((v)>>24)|((v)<<24)|(((v)&0xFF00)<<8)|(((v)&0xFF0000)>>8)
+#define SWAP32(v) (v)
+
+static u32 endian_fp(u32 v)
+{
+  return ( ( ( v >> 16 ) & 0xffff ) << 0 ) |
+         ( ( ( v >> 0 ) & 0xffff ) << 16 );
+}
+
 #if defined(GLAPI)
 #undef GLAPI
 #endif
@@ -851,6 +860,42 @@ glLinkProgram (GLuint program_name)
     // Start a new attached shaders array:
     program.attached_shaders().construct();
 
+    // Dump microcode:
+    {
+      rsxgl_debug_printf("VP microcode: %u instructions\n",program.nvfx_vp -> nr_insns);
+      for(unsigned int i = 0,n = program.nvfx_vp -> nr_insns;i < n;++i) {
+	for(unsigned int j = 0;j < 4;++j) {
+	  program.nvfx_vp -> insns[i].data[j] = SWAP32(program.nvfx_vp -> insns[i].data[j]);
+	}
+
+	rsxgl_debug_printf("%04u: %x %x %x %x\n",i,
+			   program.nvfx_vp -> insns[i].data[0],
+			   program.nvfx_vp -> insns[i].data[1],
+			   program.nvfx_vp -> insns[i].data[2],
+			   program.nvfx_vp -> insns[i].data[3]);
+      }
+
+      
+    }
+
+    {
+      rsxgl_debug_printf("VP microcode: %u instructions\n",program.nvfx_fp -> insn_len / 4);
+      for(unsigned int i = 0,n = program.nvfx_fp -> insn_len / 4;i < n;++i) {
+	for(unsigned int j = 0;j < 4;++j) {
+	  program.nvfx_fp -> insn[i*4+j] = endian_fp(SWAP32(program.nvfx_fp -> insn[i*4+j]));
+	}
+
+	rsxgl_debug_printf("%04u: %x %x %x %x\n",i,
+			   program.nvfx_fp -> insn[i*4],
+			   program.nvfx_fp -> insn[i*4+1],
+			   program.nvfx_fp -> insn[i*4+2],
+			   program.nvfx_fp -> insn[i*4+3]);
+      }
+
+      program.nvfx_fp -> insn[2] = 0xc8000001;
+      program.nvfx_fp -> insn[3] = 0xc8000001;
+    }
+
     //
     // Migrate vertex program microcode to cache-aligned memory:
     {
@@ -926,9 +971,16 @@ glLinkProgram (GLuint program_name)
 
     std::deque< uint32_t > program_offsets;
     std::deque< ieee32_t > uniform_values;
-    std::map< const char *, program_t::attrib_t > attribs;
-    std::map< const char *, program_t::uniform_t > uniforms;
-    std::map< const char *, program_t::sampler_uniform_t > sampler_uniforms;
+
+    struct cstr_less {
+      bool operator()(const char * lhs,const char * rhs) const {
+	return strcmp(lhs,rhs) < 0;
+      }
+    };
+
+    std::map< const char *, program_t::attrib_t, cstr_less > attribs;
+    std::map< const char *, program_t::uniform_t, cstr_less > uniforms;
+    std::map< const char *, program_t::sampler_uniform_t, cstr_less > sampler_uniforms;
     program_t::name_size_type names_size = 0;
 
     //
@@ -1149,6 +1201,8 @@ glLinkProgram (GLuint program_name)
 
 	table[i].first = pnames - program.names_data;
 	table[i].second = value.second;
+
+	program.attribs_enabled.set(value.second.index);
 
 	for(const char * name = value.first;*name != 0;++name,++pnames) {
 	  *pnames = *name;
@@ -2362,6 +2416,9 @@ rsxgl_program_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
 
     // load the vertex program:
     {
+#if 0
+      rsxgl_debug_printf("vp %u instructions\n",(unsigned int)program.vp_num_insn);
+#endif
       uint32_t * buffer = gcm_reserve(context,program.vp_num_insn * 5 + 7);
       
       gcm_emit_method(&buffer,NV30_3D_VP_UPLOAD_FROM_ID,1);
@@ -2369,6 +2426,11 @@ rsxgl_program_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
 
       const struct nvfx_vertex_program_exec * ucode = rsxgl_main_ucode_address(program.vp_ucode_offset);
       for(size_t i = 0,n = program.vp_num_insn;i < n;++i,++ucode) {
+#if 0
+	rsxgl_debug_printf("%04u: %x %x %x %x\n",i,
+			   ucode -> data[0],ucode -> data[1],ucode -> data[2],ucode -> data[3]);
+#endif
+
 	gcm_emit_method(&buffer,NV30_3D_VP_UPLOAD_INST(0),4);
 	gcm_emit(&buffer,ucode -> data[0]);
 	gcm_emit(&buffer,ucode -> data[1]);
@@ -2378,6 +2440,11 @@ rsxgl_program_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
       
       gcm_emit_method(&buffer,NV30_3D_VP_START_FROM_ID,1);
       gcm_emit(&buffer,0);
+
+#if 0
+      rsxgl_debug_printf("vp masks: %x %x\n",program.vp_input_mask,program.vp_output_mask);
+#endif
+
       gcm_emit_method(&buffer,NV40_3D_VP_ATTRIB_EN,2);
       gcm_emit(&buffer,program.vp_input_mask);
       gcm_emit(&buffer,program.vp_output_mask);
@@ -2389,6 +2456,11 @@ rsxgl_program_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
     if(program.vp_num_internal_const > 0) {
       const program_t::instruction_size_type * program_offsets = program.program_offsets;
       const ieee32_t * uniform_values = program.uniform_values;
+
+#if 0
+      rsxgl_debug_printf("%u internal constants\n",program.vp_num_internal_const);
+#endif
+
       for(program_t::uniform_size_type i = 0,n = program.vp_num_internal_const;i < n;++i) {
 	program_t::instruction_size_type count = *program_offsets++;
 	program_t::instruction_size_type index = *program_offsets++;
@@ -2396,6 +2468,12 @@ rsxgl_program_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
 	uint32_t * buffer = gcm_reserve(context,6 * count);
 
 	for(;count > 0;--count,++index,uniform_values += 4) {
+
+#if 0
+	  rsxgl_debug_printf("\t%04u: (%u) %u %x %x %x %x\n",i,count,index,
+			     uniform_values[0].u,uniform_values[1].u,uniform_values[2].u,uniform_values[3].u);
+#endif
+
 	  gcm_emit_method(&buffer,NV30_3D_VP_UPLOAD_CONST_ID,5);
 	  gcm_emit(&buffer,index);
 	  
@@ -2415,6 +2493,18 @@ rsxgl_program_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
       const uint32_t n = 4 + (2 * RSXGL_MAX_TEXTURE_COORDS);
 
       uint32_t * buffer = gcm_reserve(context,n);
+
+#if 0
+      rsxgl_debug_printf("fp ucode_offset: %u\n",rsxgl_rsx_ucode_offset(program.fp_ucode_offset));
+#endif
+
+      const uint32_t * pfp_ucode = rsxgl_rsx_ucode_address(program.fp_ucode_offset);
+      for(unsigned int j = 0;j < program.fp_num_insn;++j) {
+#if 0
+	rsxgl_debug_printf("%04u: %x %x %x %x\n",j,pfp_ucode[0],pfp_ucode[1],pfp_ucode[2],pfp_ucode[3]);
+#endif
+	pfp_ucode += 4;
+      }
       
       gcm_emit_method_at(buffer,i++,NV30_3D_FP_ACTIVE_PROGRAM,1);
       gcm_emit_at(buffer,i++,rsxgl_rsx_ucode_offset(program.fp_ucode_offset) | NV30_3D_FP_ACTIVE_PROGRAM_DMA0);
@@ -2457,6 +2547,10 @@ rsxgl_program_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
 	it3D.next(program.fp_texcoord3D);
 	reg += 4;
       }
+
+#if 0
+      rsxgl_debug_printf("fp control: %x\n",program.fp_control);
+#endif
 
       gcm_emit_method_at(buffer,i++,NV30_3D_FP_CONTROL,1);
       gcm_emit_at(buffer,i++,program.fp_control);
