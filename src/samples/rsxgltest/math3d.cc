@@ -5,7 +5,7 @@ frustum(float left,float right,
 	float bottom,float top,
 	float near,float far)
 {
-  Eigen::Projective3f r;
+  Eigen::Projective3f r(Eigen::Projective3f::Identity());
 
   float near_times_2 = 2.0f * near;
   float right_minus_left = right - left,

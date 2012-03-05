@@ -84,6 +84,7 @@ compiler_context__translate_vp(struct gl_context * mesa_ctx, struct gl_shader_pr
    */
   const unsigned vp_exec_start = 0;
 
+#if 0
   rsxgl_debug_printf("%u branch relocs\n",nvfx_vp->branch_relocs.size);
 
   if (nvfx_vp->exec_start != vp_exec_start) {
@@ -107,32 +108,23 @@ compiler_context__translate_vp(struct gl_context * mesa_ctx, struct gl_shader_pr
     
     nvfx_vp->exec_start = vp_exec_start;
   }
-
-#if 0
-  const unsigned vp_data_start = 0;
+#endif
 
   rsxgl_debug_printf("%u const relocs\n",nvfx_vp->const_relocs.size);
 
 #undef NVFX_VP
-#define NVFX_VP(c) ((NV30_VP_##c) + (1 & ((NV40_VP_##c) - (NV30_VP_##c))))
+#define NVFX_VP(c) (NV40_VP_##c)
 
-  if (~0 /*nvfx_vp->data_start*/ != vp_data_start) {
-    for(unsigned i = 0; i < nvfx_vp->const_relocs.size; i += sizeof(struct nvfx_relocation))
-      {
-	struct nvfx_relocation* reloc = (struct nvfx_relocation*)((char*)nvfx_vp->const_relocs.data + i);
-	struct nvfx_vertex_program_exec *vpi = &nvfx_vp->insns[reloc->location];
-	
-	rsxgl_debug_printf("reloc %i to %i + %i\n", reloc->location, vp_data_start, reloc->target);
-	
-	vpi->data[1] &= ~NVFX_VP(INST_CONST_SRC_MASK);
-	vpi->data[1] |=
-	  (reloc->target + vp_data_start) <<
-	  NVFX_VP(INST_CONST_SRC_SHIFT);
-      }
-    
-    nvfx_vp->data_start = vp_data_start;
-  }
-#endif
+  for(unsigned i = 0; i < nvfx_vp->const_relocs.size; i += sizeof(struct nvfx_relocation))
+    {
+      struct nvfx_relocation* reloc = (struct nvfx_relocation*)((char*)nvfx_vp->const_relocs.data + i);
+      struct nvfx_vertex_program_exec *vpi = &nvfx_vp->insns[reloc->location];
+      
+      vpi->data[1] &= ~NVFX_VP(INST_CONST_SRC_MASK);
+      vpi->data[1] |=
+	(reloc->target) <<
+	NVFX_VP(INST_CONST_SRC_SHIFT);
+    }
 
  end:
 
@@ -402,4 +394,155 @@ compiler_context__translate_fp(struct gl_context * mesa_ctx,struct gl_shader_pro
  end:
 
   return nvfx_fp;
+}
+
+void
+compiler_context__link_vp_fp(struct gl_context * mesa_ctx,struct nvfx_vertex_program * vp,struct nvfx_fragment_program * fp)
+{
+  struct nvfx_context * nvfx = (struct nvfx_context *)(st_context(mesa_ctx) -> pipe);
+
+  const unsigned sprite_coord_enable = 0;
+  boolean emulate_sprite_flipping = FALSE;
+
+  int sprite_real_input = -1;
+  int sprite_reloc_input;
+  unsigned i;
+  fp->last_vp_id = vp->id;
+  fp->last_sprite_coord_enable = sprite_coord_enable;
+  
+  if(sprite_coord_enable)
+    {
+      sprite_real_input = vp->sprite_fp_input;
+      if(sprite_real_input < 0)
+	{
+	  unsigned used_texcoords = 0;
+	  for(unsigned i = 0; i < fp->num_slots; ++i) {
+	    unsigned generic = fp->slot_to_generic[i];
+	    if((generic < 32) && !((1 << generic) & sprite_coord_enable))
+	      {
+		unsigned char slot_mask = vp->generic_to_fp_input[generic];
+		if(slot_mask >= 0xf0)
+		  used_texcoords |= 1 << ((slot_mask & 0xf) - NVFX_FP_OP_INPUT_SRC_TC0);
+	      }
+	  }
+	  
+	  sprite_real_input = NVFX_FP_OP_INPUT_SRC_TC(__builtin_ctz(~used_texcoords));
+	}
+      
+      fp->point_sprite_control |= (1 << (sprite_real_input - NVFX_FP_OP_INPUT_SRC_TC0 + 8));
+    }
+  else
+    fp->point_sprite_control = 0;
+  
+  if(emulate_sprite_flipping)
+    sprite_reloc_input = 0;
+  else
+    sprite_reloc_input = sprite_real_input;
+  
+  for(i = 0; i < fp->num_slots; ++i) {
+    unsigned generic = fp->slot_to_generic[i];
+    if((generic < 32) && ((1 << generic) & sprite_coord_enable))
+      {
+	if(fp->slot_to_fp_input[i] != sprite_reloc_input)
+	  goto update_slots;
+      }
+    else
+      {
+	unsigned char slot_mask = vp->generic_to_fp_input[generic];
+	if((slot_mask >> 4) & (slot_mask ^ fp->slot_to_fp_input[i]))
+	  goto update_slots;
+      }
+  }
+  
+  if(emulate_sprite_flipping)
+    {
+      if(fp->slot_to_fp_input[fp->num_slots] != sprite_real_input)
+	goto update_slots;
+    }
+  
+  if(0)
+    {
+    update_slots:
+      /* optimization: we start updating from the slot we found the first difference in */
+      for(; i < fp->num_slots; ++i)
+	{
+	  unsigned generic = fp->slot_to_generic[i];
+	  if((generic < 32) && ((1 << generic) & sprite_coord_enable))
+	    fp->slot_to_fp_input[i] = sprite_reloc_input;
+	  else
+	    fp->slot_to_fp_input[i] = vp->generic_to_fp_input[generic] & 0xf;
+	}
+      
+      fp->slot_to_fp_input[fp->num_slots] = sprite_real_input;
+      
+      if(nvfx->is_nv4x)
+	{
+	  fp->or = 0;
+	  for(i = 0; i <= fp->num_slots; ++i) {
+	    unsigned fp_input = fp->slot_to_fp_input[i];
+	    if(fp_input == NVFX_FP_OP_INPUT_SRC_TC(8))
+	      fp->or |= (1 << 12);
+	    else if(fp_input == NVFX_FP_OP_INPUT_SRC_TC(9))
+	      fp->or |= (1 << 13);
+	    else if(fp_input >= NVFX_FP_OP_INPUT_SRC_TC(0) && fp_input <= NVFX_FP_OP_INPUT_SRC_TC(7))
+	      fp->or |= (1 << (fp_input - NVFX_FP_OP_INPUT_SRC_TC0 + 14));
+	  }
+	}
+      
+      fp->progs_left_with_obsolete_slot_assignments = fp->progs;
+      goto update;
+    }
+
+ update:
+
+  /* we only do this if we aren't sure that all program versions have the
+   * current slot assignments, otherwise we just update constants for speed
+   */
+  if(fp->progs_left_with_obsolete_slot_assignments) {
+    unsigned char* fpbo_slots = &fp->fpbo->slots[fp->bo_prog_idx * 8];
+    /* also relocate sprite coord slot, if any */
+    for(unsigned i = 0; i <= fp->num_slots; ++i) {
+      unsigned value = fp->slot_to_fp_input[i];;
+      if(value != fpbo_slots[i]) {
+	unsigned* p;
+	unsigned* begin = (unsigned*)fp->slot_relocations[i].data;
+	unsigned* end = (unsigned*)((char*)fp->slot_relocations[i].data + fp->slot_relocations[i].size);
+	//printf("fp %p reloc slot %u/%u: %u -> %u\n", fp, i, fp->num_slots, fpbo_slots[i], value);
+	if(value == 0)
+	  {
+	    /* was relocated to an input, switch type to temporary */
+	    for(p = begin; p != end; ++p) {
+	      unsigned off = *p;
+	      unsigned dw = fp->insn[off];
+	      dw &=~ NVFX_FP_REG_TYPE_MASK;
+	      //printf("reloc_tmp at %x\n", off);
+	      nvfx_fp_memcpy(&fpmap[off], &dw, sizeof(dw));
+	    }
+	  } else {
+	  if(!fpbo_slots[i])
+	    {
+	      /* was relocated to a temporary, switch type to input */
+	      for(p= begin; p != end; ++p) {
+		unsigned off = *p;
+		unsigned dw = fp->insn[off];
+		//printf("reloc_in at %x\n", off);
+		dw |= NVFX_FP_REG_TYPE_INPUT << NVFX_FP_REG_TYPE_SHIFT;
+		nvfx_fp_memcpy(&fpmap[off], &dw, sizeof(dw));
+	      }
+	    }
+	  
+	  /* set the correct input index */
+	  for(p = begin; p != end; ++p) {
+	    unsigned off = *p & ~3;
+	    unsigned dw = fp->insn[off];
+	    //printf("reloc&~3 at %x\n", off);
+	    dw = (dw & ~NVFX_FP_OP_INPUT_SRC_MASK) | (value << NVFX_FP_OP_INPUT_SRC_SHIFT);
+	    nvfx_fp_memcpy(&fpmap[off], &dw, sizeof(dw));
+	  }
+	}
+	fpbo_slots[i] = value;
+      }
+    }
+    --fp->progs_left_with_obsolete_slot_assignments;
+  }  
 }

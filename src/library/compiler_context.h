@@ -34,6 +34,7 @@ struct compiler_context_t {
   void destroy_vp(nvfx_vertex_program *);
   
   struct nvfx_fragment_program * translate_fp(struct gl_shader_program *);
+  void link_vp_fp(struct nvfx_vertex_program *,struct nvfx_fragment_program *);
   void destroy_fp(nvfx_fragment_program *);
 };
 

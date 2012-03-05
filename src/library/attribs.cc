@@ -832,7 +832,7 @@ rsxgl_attribs_validate(rsxgl_context_t * ctx,const bit_set< RSXGL_MAX_VERTEX_ATT
   const bit_set< RSXGL_MAX_VERTEX_ATTRIBS > invalid_constant_attribs = invalid_attribs & ~attribs.enabled;
 
   // Validate the vertex cache
-  // TODO - move this someplace where it can be determined if vertex buffers have been made
+  // TODO: move this someplace where it can be determined if vertex buffers have been made
   // invalid, and perform the operation if that's the case.
   {
     uint32_t * buffer = gcm_reserve(context,8);
@@ -862,7 +862,7 @@ rsxgl_attribs_validate(rsxgl_context_t * ctx,const bit_set< RSXGL_MAX_VERTEX_ATT
     rsxgl_buffer_validate(ctx,attribs.buffers[i],start,length,timestamp);
   }
 
-  // TODO - Somewhere in here, make it so that attribs with nothing attached will disable fetching by the RSX (by setting NV30_3D_VTXFMT_SIZE to 0):
+  // TODO: Somewhere in here, make it so that attribs with nothing attached will disable fetching by the RSX (by setting NV30_3D_VTXFMT_SIZE to 0):
   if(invalid_pointer_attribs.any()) {
     uint32_t * buffer = gcm_reserve(context,4 * RSXGL_MAX_VERTEX_ATTRIBS);
     size_t nbuffer = 0;

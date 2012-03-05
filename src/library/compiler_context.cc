@@ -25,6 +25,7 @@ extern "C" {
 
   struct nvfx_vertex_program * compiler_context__translate_vp(struct gl_context * mesa_ctx, struct gl_shader_program * program);
   struct nvfx_fragment_program * compiler_context__translate_fp(struct gl_context * mesa_ctx,struct gl_shader_program * program);
+  void compiler_context__link_vp_fp(struct gl_context * mesa_ctx,struct nvfx_vertex_program * vp,struct nvfx_fragment_program * fp);
 }
 
 namespace {
@@ -292,6 +293,12 @@ struct nvfx_fragment_program *
 compiler_context_t::translate_fp(struct gl_shader_program * program)
 {
   return compiler_context__translate_fp(mesa_ctx,program);
+}
+
+void
+compiler_context_t::link_vp_fp(struct nvfx_vertex_program * vp,struct nvfx_fragment_program * fp)
+{
+  compiler_context__link_vp_fp(mesa_ctx,vp,fp);
 }
 
 void

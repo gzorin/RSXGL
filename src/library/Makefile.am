@@ -30,7 +30,7 @@ LIBDRM_CPPFLAGS = -I$(LIBDRM_LOCATION) -I$(LIBDRM_LOCATION)/include -I$(LIBDRM_L
 
 libEGL_a_SOURCES = egl.c mem.c malloc.c dl.c
 libEGL_a_CFLAGS = -std=gnu99 -fgnu89-inline
-libEGL_a_CPPFLAGS = -D__RSX__ -I\$(top_srcdir)/include -Wall $(dlmalloc_CPPFLAGS) $(PSL1GHT_CPPFLAGS) \
+libEGL_a_CPPFLAGS = -D__RSX__ -I$(top_srcdir)/src -I\$(top_srcdir)/include -Wall $(dlmalloc_CPPFLAGS) $(PSL1GHT_CPPFLAGS) \
 	$(MESA_CPPFLAGS) $(LIBDRM_CPPFLAGS) -I$(MESA_LOCATION)/src/gallium/drivers/nvfx
 libEGL_a_DEPENDENCIES = $(top_builddir)/src/nvfx/libnvfx.a \
 	$(top_builddir)/src/nouveau/libnouveau.a \
@@ -44,10 +44,6 @@ libEGL.a: $(libEGL_a_OBJECTS) $(libEGL_a_DEPENDENCIES)
 	$(top_builddir)/src/drm/libdrm_nouveau.a \
 	$(top_builddir)/extsrc/mesa/src/gallium/auxiliary/libgallium.a
 
-DUMB = $(top_builddir)/extsrc/mesa/src/glsl/libglsl.a \
-	$(top_builddir)/extsrc/mesa/src/mapi/glapi/libglapi.a \
-	$(top_builddir)/extsrc/mesa/src/mesa/libmesagallium.a
-
 libGL_a_SOURCES = rsxgl_context.cc rsxgl_object_context.cc gl_fifo.c					\
 	error.cc get.cc state.cc enable.cc arena.cc buffer.cc clear.cc draw.cc	\
 	sync.cc query.cc							\
@@ -55,7 +51,7 @@ libGL_a_SOURCES = rsxgl_context.cc rsxgl_object_context.cc gl_fifo.c					\
 	ringbuffer_migrate.cc dumb_migrate.cc debug.c \
 	../cgcomp/source/nv40vertprog.c ../cgcomp/source/nv40fragprog.c \
 	st_format.c
-libGL_a_CPPFLAGS = -D__RSX__ -I\$(top_srcdir)/include $(PSL1GHT_CPPFLAGS) -I$(top_srcdir)/src/cgcomp/include -I$(top_srcdir)/src \
+libGL_a_CPPFLAGS = -D__RSX__ -I$(top_srcdir)/src -I\$(top_srcdir)/include $(PSL1GHT_CPPFLAGS) -I$(top_srcdir)/src/cgcomp/include \
 	$(MESA_CPPFLAGS) $(LIBDRM_CPPFLAGS)
 libGL_a_CFLAGS = -std=gnu99 -fgnu89-inline
 libGL_a_CXXFLAGS = -I$(top_srcdir)/extsrc/boost -std=c++0x -fno-rtti

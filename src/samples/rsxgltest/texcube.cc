@@ -282,9 +282,6 @@ rsxgltest_init(int argc,const char ** argv)
   glVertexAttribPointer(vertex_location,3,GL_FLOAT,GL_FALSE,sizeof(float) * 5,0);
   glVertexAttribPointer(tc_location,2,GL_FLOAT,GL_FALSE,sizeof(float) * 5,(const GLvoid *)(sizeof(float) * 3));
 
-  //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,buffers[1]);
-  //glBufferData(GL_ELEMENT_ARRAY_BUFFER,sizeof(GLuint) * 6 * 2 * 3,indices,GL_STATIC_DRAW);
-
   client_indices = (GLuint *)malloc(sizeof(GLuint) * 6 * 2 * 3);
   memcpy(client_indices,indices,sizeof(GLuint) * 6 * 2 * 3);
 
@@ -354,6 +351,8 @@ rsxgltest_draw()
     glUniform1i(image_location,0);
 
     Eigen::Affine3f modelview = ViewMatrixInv * (Eigen::Affine3f::Identity() * Eigen::Translation3f(-5,0,0) * rotmat * Eigen::UniformScaling< float >(3.0));
+    //Eigen::Affine3f modelview = ViewMatrixInv;
+    //Eigen::Affine3f modelview(Eigen::Affine3f::Identity());
     glUniformMatrix4fv(TransMatrix_location,1,GL_FALSE,modelview.data());
 
     glDrawElements(GL_TRIANGLES,36,GL_UNSIGNED_INT,client_indices);
@@ -365,6 +364,8 @@ rsxgltest_draw()
     glUniform1i(image_location,1);
 
     Eigen::Affine3f modelview = ViewMatrixInv * (Eigen::Affine3f::Identity() * Eigen::Translation3f(5,0,0) * rotmat * Eigen::UniformScaling< float >(3.0));
+    //Eigen::Affine3f modelview = ViewMatrixInv;
+    //Eigen::Affine3f modelview(Eigen::Affine3f::Identity());
     glUniformMatrix4fv(TransMatrix_location,1,GL_FALSE,modelview.data());
 
     glDrawElements(GL_TRIANGLES,36,GL_UNSIGNED_INT,client_indices);

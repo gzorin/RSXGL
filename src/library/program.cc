@@ -879,7 +879,7 @@ glLinkProgram (GLuint program_name)
     }
 
     {
-      rsxgl_debug_printf("VP microcode: %u instructions\n",program.nvfx_fp -> insn_len / 4);
+      rsxgl_debug_printf("FP microcode: %u instructions\n",program.nvfx_fp -> insn_len / 4);
       for(unsigned int i = 0,n = program.nvfx_fp -> insn_len / 4;i < n;++i) {
 	for(unsigned int j = 0;j < 4;++j) {
 	  program.nvfx_fp -> insn[i*4+j] = endian_fp(SWAP32(program.nvfx_fp -> insn[i*4+j]));
@@ -900,7 +900,7 @@ glLinkProgram (GLuint program_name)
     // Migrate vertex program microcode to cache-aligned memory:
     {
       static const std::string kVPUcodeAllocFail("Failed to allocate space for vertex program microcode");
-      
+
       struct nvfx_vertex_program_exec * address = (struct nvfx_vertex_program_exec *)mspace_memalign(rsxgl_main_ucode_mspace(),RSXGL_CACHE_LINE_SIZE,program.nvfx_vp -> nr_insns * sizeof(struct nvfx_vertex_program_exec));
       if(address == 0) {
 	info += kVPUcodeAllocFail;
@@ -1064,23 +1064,25 @@ glLinkProgram (GLuint program_name)
 	}
       }
       
-      //rsxgl_debug_printf("%i uniforms:\n",program.mesa_program -> NumUserUniformStorage);
+      rsxgl_debug_printf("%i uniforms:\n",program.mesa_program -> NumUserUniformStorage);
 
       for(unsigned int i = 0,n = program.mesa_program -> NumUserUniformStorage;i < n;++i) {
 	const gl_uniform_storage * uniform_storage = program.mesa_program -> UniformStorage + i;
 	const glsl_type * type = uniform_storage -> type;
 	bool add_name = false;
 
-	//rsxgl_debug_printf("\t%s type:%s num_driver_storage:%u\n",
-	//		   uniform_storage -> name,
-	//		   uniform_storage -> type -> name,
-	//		   uniform_storage -> num_driver_storage);
+	rsxgl_debug_printf("\t%s type:%s num_driver_storage:%u\n",
+			   uniform_storage -> name,
+			   uniform_storage -> type -> name,
+			   uniform_storage -> num_driver_storage);
 
 	// Non-samplers:
 	if(uniform_storage -> type -> base_type != GLSL_TYPE_SAMPLER) {
 	  program_t::uniform_t uniform;
 	  uniform.type = rsxgl_glsl_type_to_rsxgl_type(type);
 	  uniform.count = type -> matrix_columns;
+
+	  rsxgl_debug_printf("\t\ttype:%u count:%u\n",(unsigned int)uniform.type,(unsigned int)uniform.count);
 
 	  uniform.values_index = uniform_values.size();
 	  std::fill_n(std::back_inserter(uniform_values),type -> vector_elements * type -> matrix_columns,ieee32_t());
@@ -1280,7 +1282,7 @@ glLinkProgram (GLuint program_name)
 	  else if(value.second.type == RSXGL_DATA_TYPE_SAMPLER3D) {
 	    program.fp_texcoord3D.set(value.second.fp_index);
 	  }
-	  program.textures_enabled.set(RSXGL_MAX_VERTEX_TEXTURE_IMAGE_UNITS,value.second.fp_index);
+	  program.textures_enabled.set(RSXGL_MAX_VERTEX_TEXTURE_IMAGE_UNITS + value.second.fp_index);
 	}
 
 	for(const char * name = value.first;*name != 0;++name,++pnames) {

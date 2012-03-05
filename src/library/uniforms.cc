@@ -185,7 +185,7 @@ rsxgl_uniform(rsxgl_context_t * ctx,
 
   ieee32_t * values = program.uniform_values + uniform.values_index;
 
-  //  rsxgl_debug_printf("%s: %u: ",__PRETTY_FUNCTION__,uniform.values_index);
+  //rsxgl_debug_printf("%s: %u: ",__PRETTY_FUNCTION__,uniform.values_index);
 
   if(Height > 1 && transpose) {
     for(program_t::uniform_size_type n = count;n > 0;--n) {
@@ -618,9 +618,7 @@ rsxgl_uniforms_validate(rsxgl_context_t * ctx,program_t & program)
 	  program_t::uniform_size_type index = uniform.vp_index;
 	  uint32_t * buffer = gcm_reserve(context,6 * count);
 
-#if 0
-	  rsxgl_debug_printf("vp constant %u (%u)\n",index,count);
-#endif
+	  //rsxgl_debug_printf("vp constant %u (count:%u width:%u)\n",index,count,width);
 	    
 	  for(program_t::uniform_size_type j = 0;j < count;++j,++index,pvalues += width) {
 	    //rsxgl_debug_printf("%u/%u %u: %u: %f %f %f %f\n",
@@ -628,10 +626,14 @@ rsxgl_uniforms_validate(rsxgl_context_t * ctx,program_t & program)
 	    //	 pvalues - values,
 	    //	 pvalues[0].f,pvalues[1].f,pvalues[2].f,pvalues[3].f);
 
-#if 0
-	    rsxgl_debug_printf("\t%04u: %x %x %x %x\n",index,
-			       width > 0 ? pvalues[0].u : 0,width > 0 ? pvalues[1].u : 0,width > 0 ? pvalues[2].u : 0,width > 0 ? pvalues[3].u : 0);
-#endif
+	    //rsxgl_debug_printf("\t%04u: %x %x %x %x\n",index,
+	    //		       width > 0 ? pvalues[0].u : 0,width > 0 ? pvalues[1].u : 0,width > 0 ? pvalues[2].u : 0,width > 0 ? pvalues[3].u : 0);
+
+	    //rsxgl_debug_printf("\t%04u: %f %f %f %f\n",index,
+	    //		       width > 0 ? pvalues[0].f : 0,
+	    //		       width > 1 ? pvalues[1].f : 0,
+	    //		       width > 2 ? pvalues[2].f : 0,
+	    //		       width > 3 ? pvalues[3].f : 0);
 	    
 	    gcm_emit_method(&buffer,NV30_3D_VP_UPLOAD_CONST_ID,5);
 	    gcm_emit(&buffer,index);
