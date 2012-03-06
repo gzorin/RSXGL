@@ -17,8 +17,11 @@ with a configure script. It requires the following projects:
 * [ps3toolchain](http://github.com/ps3dev/ps3toolchain)
 * [PSL1GHT](http://github.com/ps3dev/PSL1GHT)
 
-NVIDIA's cgc shader compiler, from the Cg toolkit, is also required to
-use vertex and fragment GPU programs.
+RSXGL incorporates parts of the Mesa project, primarily to provide
+runtime compilation of GLSL programs. Suitable versions of Mesa and
+libdrm are included with RSXGL. python 2.6 with the libxml2 module is
+required by Mesa's build process (specifically for building GLSL's
+builtin functions).
 
 The RSXGL library depends upon a toolchain that can generate binaries for the
 PS3's PPU, and also upon parts of the PSL1GHT SDK. The sample programs also

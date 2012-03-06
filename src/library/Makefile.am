@@ -23,6 +23,7 @@ MESA_CPPFLAGS = -I$(MESA_LOCATION)/src \
 	-I$(MESA_LOCATION)/include \
 	-I$(MESA_LOCATION)/src/gallium/include \
 	-I$(MESA_LOCATION)/src/gallium/auxiliary \
+	-I$(MESA_LOCATION)/src/gallium/drivers \
 	-DPIPE_OS_UNIX
 
 LIBDRM_LOCATION = @LIBDRM_LOCATION@

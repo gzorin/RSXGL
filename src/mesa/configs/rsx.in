@@ -31,4 +31,4 @@ DRI_DIRS =
 GALLIUM_DIRS = auxiliary drivers
 GALLIUM_DRIVERS_DIRS = 
 
-PYTHON2 = /opt/local/bin/python2.7
+PYTHON2 = @PYTHON@

@@ -1,12 +1,14 @@
 Briefly, the following OpenGL 3.1 features haven't been implemented
 yet (the RSX is capable of supporting most of them):
 
-* Full GLSL support. Currently, GLSL and Cg shaders can be compiled offline and
-  used with a OpenGL ES 2 style API.
+* Support for OpenGL 3.1-level GLSL (version 1.40). RSXGL incorporates
+  Mesa's GLSL compiler, which implements GLSL 1.30.
+* Transform feedback, geometry shaders, uniform buffer objects.
 * A variety of capabilities related to texture maps (rectangular and
   cube textures, the behavior of glPixelStore, copying from the
-  framebuffer, mipmap generation, and texture formats, including
-  compressed formats, that require conversion and/or swizzling).
+  framebuffer (glCopyTexImage* and glCopyTexSubImage*), mipmap generation,
+  and texture formats, including compressed formats, that require
+  conversion and/or swizzling).
 * Client-side vertex array data. OpenGL 3.1's core profile
   specifically omits this, but it is specified by OpenGL ES 2 (as well
   as the OpenGL 3 compatibility profile), and is likely still widely
@@ -17,6 +19,19 @@ yet (the RSX is capable of supporting most of them):
   behavior of glEnable()/glDisable() likely needs to be implemented as well.
 
 Further details follow:
+
+-------------------------------------------------------------------------------
+6 March 2012
+
+* MESA MERGE
+
+Parts of Mesa have been incorporated into RSXGL: its GLSL 1.30
+compiler as well as its library for transfering textures between
+different formats.
+
+Some OpenGL features that previously worked, such as point sprites,
+instanced rendering, and multiple render targets are, at the moment,
+disabled or untested.
 
 -------------------------------------------------------------------------------
 20 September 2011
