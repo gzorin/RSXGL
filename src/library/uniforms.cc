@@ -16,21 +16,7 @@
 #include "gcm.h"
 #include "nv40.h"
 #include "gl_fifo.h"
-
-// Get a few things from cgcomp's headers:
-#define __TYPES_H__
-#define FLOAT32  0x0
-#define FLOAT16  0x1
-#define FIXED12  0x2
-#define INLINE __inline
-#define boolean char
-#include "cgcomp/nv40_vertprog.h"
-#undef FLOAT32
-#undef FLOAT16
-#undef FIXED12
-#undef INLINE
-#undef boolean
-#undef __TYPES_H__
+#include "ieee32_t.h"
 
 #if defined(GLAPI)
 #undef GLAPI

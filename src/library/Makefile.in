@@ -96,7 +96,6 @@ am_libGL_a_OBJECTS = libGL_a-rsxgl_context.$(OBJEXT) \
 	libGL_a-textures.$(OBJEXT) libGL_a-framebuffer.$(OBJEXT) \
 	libGL_a-ringbuffer_migrate.$(OBJEXT) \
 	libGL_a-dumb_migrate.$(OBJEXT) libGL_a-debug.$(OBJEXT) \
-	libGL_a-nv40vertprog.$(OBJEXT) libGL_a-nv40fragprog.$(OBJEXT) \
 	libGL_a-st_format.$(OBJEXT)
 libGL_a_OBJECTS = $(am_libGL_a_OBJECTS)
 DEFAULT_INCLUDES = -I.@am__isrc@
@@ -297,10 +296,9 @@ libGL_a_SOURCES = rsxgl_context.cc rsxgl_object_context.cc gl_fifo.c					\
 	sync.cc query.cc							\
 	compiler_context.cc compiler_translate.c program.cc attribs.cc uniforms.cc textures.cc framebuffer.cc		\
 	ringbuffer_migrate.cc dumb_migrate.cc debug.c \
-	../cgcomp/source/nv40vertprog.c ../cgcomp/source/nv40fragprog.c \
 	st_format.c
 
-libGL_a_CPPFLAGS = -D__RSX__ -I$(top_srcdir)/src -I\$(top_srcdir)/include $(PSL1GHT_CPPFLAGS) -I$(top_srcdir)/src/cgcomp/include \
+libGL_a_CPPFLAGS = -D__RSX__ -I$(top_srcdir)/src -I\$(top_srcdir)/include $(PSL1GHT_CPPFLAGS) \
 	$(MESA_CPPFLAGS) $(LIBDRM_CPPFLAGS)
 
 libGL_a_CFLAGS = -std=gnu99 -fgnu89-inline
@@ -402,8 +400,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libGL_a-framebuffer.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libGL_a-get.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libGL_a-gl_fifo.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libGL_a-nv40fragprog.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libGL_a-nv40vertprog.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libGL_a-program.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libGL_a-query.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libGL_a-ringbuffer_migrate.Po@am__quote@
@@ -526,34 +522,6 @@ libGL_a-debug.obj: debug.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='debug.c' object='libGL_a-debug.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libGL_a_CPPFLAGS) $(CPPFLAGS) $(libGL_a_CFLAGS) $(CFLAGS) -c -o libGL_a-debug.obj `if test -f 'debug.c'; then $(CYGPATH_W) 'debug.c'; else $(CYGPATH_W) '$(srcdir)/debug.c'; fi`
-
-libGL_a-nv40vertprog.o: ../cgcomp/source/nv40vertprog.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libGL_a_CPPFLAGS) $(CPPFLAGS) $(libGL_a_CFLAGS) $(CFLAGS) -MT libGL_a-nv40vertprog.o -MD -MP -MF $(DEPDIR)/libGL_a-nv40vertprog.Tpo -c -o libGL_a-nv40vertprog.o `test -f '../cgcomp/source/nv40vertprog.c' || echo '$(srcdir)/'`../cgcomp/source/nv40vertprog.c
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libGL_a-nv40vertprog.Tpo $(DEPDIR)/libGL_a-nv40vertprog.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='../cgcomp/source/nv40vertprog.c' object='libGL_a-nv40vertprog.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libGL_a_CPPFLAGS) $(CPPFLAGS) $(libGL_a_CFLAGS) $(CFLAGS) -c -o libGL_a-nv40vertprog.o `test -f '../cgcomp/source/nv40vertprog.c' || echo '$(srcdir)/'`../cgcomp/source/nv40vertprog.c
-
-libGL_a-nv40vertprog.obj: ../cgcomp/source/nv40vertprog.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libGL_a_CPPFLAGS) $(CPPFLAGS) $(libGL_a_CFLAGS) $(CFLAGS) -MT libGL_a-nv40vertprog.obj -MD -MP -MF $(DEPDIR)/libGL_a-nv40vertprog.Tpo -c -o libGL_a-nv40vertprog.obj `if test -f '../cgcomp/source/nv40vertprog.c'; then $(CYGPATH_W) '../cgcomp/source/nv40vertprog.c'; else $(CYGPATH_W) '$(srcdir)/../cgcomp/source/nv40vertprog.c'; fi`
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libGL_a-nv40vertprog.Tpo $(DEPDIR)/libGL_a-nv40vertprog.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='../cgcomp/source/nv40vertprog.c' object='libGL_a-nv40vertprog.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libGL_a_CPPFLAGS) $(CPPFLAGS) $(libGL_a_CFLAGS) $(CFLAGS) -c -o libGL_a-nv40vertprog.obj `if test -f '../cgcomp/source/nv40vertprog.c'; then $(CYGPATH_W) '../cgcomp/source/nv40vertprog.c'; else $(CYGPATH_W) '$(srcdir)/../cgcomp/source/nv40vertprog.c'; fi`
-
-libGL_a-nv40fragprog.o: ../cgcomp/source/nv40fragprog.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libGL_a_CPPFLAGS) $(CPPFLAGS) $(libGL_a_CFLAGS) $(CFLAGS) -MT libGL_a-nv40fragprog.o -MD -MP -MF $(DEPDIR)/libGL_a-nv40fragprog.Tpo -c -o libGL_a-nv40fragprog.o `test -f '../cgcomp/source/nv40fragprog.c' || echo '$(srcdir)/'`../cgcomp/source/nv40fragprog.c
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libGL_a-nv40fragprog.Tpo $(DEPDIR)/libGL_a-nv40fragprog.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='../cgcomp/source/nv40fragprog.c' object='libGL_a-nv40fragprog.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libGL_a_CPPFLAGS) $(CPPFLAGS) $(libGL_a_CFLAGS) $(CFLAGS) -c -o libGL_a-nv40fragprog.o `test -f '../cgcomp/source/nv40fragprog.c' || echo '$(srcdir)/'`../cgcomp/source/nv40fragprog.c
-
-libGL_a-nv40fragprog.obj: ../cgcomp/source/nv40fragprog.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libGL_a_CPPFLAGS) $(CPPFLAGS) $(libGL_a_CFLAGS) $(CFLAGS) -MT libGL_a-nv40fragprog.obj -MD -MP -MF $(DEPDIR)/libGL_a-nv40fragprog.Tpo -c -o libGL_a-nv40fragprog.obj `if test -f '../cgcomp/source/nv40fragprog.c'; then $(CYGPATH_W) '../cgcomp/source/nv40fragprog.c'; else $(CYGPATH_W) '$(srcdir)/../cgcomp/source/nv40fragprog.c'; fi`
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libGL_a-nv40fragprog.Tpo $(DEPDIR)/libGL_a-nv40fragprog.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='../cgcomp/source/nv40fragprog.c' object='libGL_a-nv40fragprog.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libGL_a_CPPFLAGS) $(CPPFLAGS) $(libGL_a_CFLAGS) $(CFLAGS) -c -o libGL_a-nv40fragprog.obj `if test -f '../cgcomp/source/nv40fragprog.c'; then $(CYGPATH_W) '../cgcomp/source/nv40fragprog.c'; else $(CYGPATH_W) '$(srcdir)/../cgcomp/source/nv40fragprog.c'; fi`
 
 libGL_a-st_format.o: st_format.c
 @am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libGL_a_CPPFLAGS) $(CPPFLAGS) $(libGL_a_CFLAGS) $(CFLAGS) -MT libGL_a-st_format.o -MD -MP -MF $(DEPDIR)/libGL_a-st_format.Tpo -c -o libGL_a-st_format.o `test -f 'st_format.c' || echo '$(srcdir)/'`st_format.c
