@@ -85,6 +85,7 @@ compiler_context__translate_vp(struct gl_context * mesa_ctx, struct gl_shader_pr
   const unsigned vp_exec_start = 0;
 
 #if 0
+  // TODO: do this
   rsxgl_debug_printf("%u branch relocs\n",nvfx_vp->branch_relocs.size);
 
   if (nvfx_vp->exec_start != vp_exec_start) {
@@ -489,7 +490,7 @@ compiler_context__link_vp_fp(struct gl_context * mesa_ctx,struct nvfx_vertex_pro
 	  }
 	}
       
-      fp->progs_left_with_obsolete_slot_assignments = fp->progs;
+      fp->progs_left_with_obsolete_slot_assignments = 1 /*fp->progs*/;
       goto update;
     }
 
@@ -499,11 +500,11 @@ compiler_context__link_vp_fp(struct gl_context * mesa_ctx,struct nvfx_vertex_pro
    * current slot assignments, otherwise we just update constants for speed
    */
   if(fp->progs_left_with_obsolete_slot_assignments) {
-    unsigned char* fpbo_slots = &fp->fpbo->slots[fp->bo_prog_idx * 8];
+    /* unsigned char* fpbo_slots = &fp->fpbo->slots[fp->bo_prog_idx * 8]; */
     /* also relocate sprite coord slot, if any */
     for(unsigned i = 0; i <= fp->num_slots; ++i) {
       unsigned value = fp->slot_to_fp_input[i];;
-      if(value != fpbo_slots[i]) {
+      if(1 /*value != fpbo_slots[i]*/) {
 	unsigned* p;
 	unsigned* begin = (unsigned*)fp->slot_relocations[i].data;
 	unsigned* end = (unsigned*)((char*)fp->slot_relocations[i].data + fp->slot_relocations[i].size);
@@ -516,10 +517,11 @@ compiler_context__link_vp_fp(struct gl_context * mesa_ctx,struct nvfx_vertex_pro
 	      unsigned dw = fp->insn[off];
 	      dw &=~ NVFX_FP_REG_TYPE_MASK;
 	      //printf("reloc_tmp at %x\n", off);
-	      nvfx_fp_memcpy(&fpmap[off], &dw, sizeof(dw));
+	      //nvfx_fp_memcpy(&fpmap[off], &dw, sizeof(dw));
+	      fp->insn[off] = dw;
 	    }
 	  } else {
-	  if(!fpbo_slots[i])
+	  if(1 /*!fpbo_slots[i]*/)
 	    {
 	      /* was relocated to a temporary, switch type to input */
 	      for(p= begin; p != end; ++p) {
@@ -527,7 +529,8 @@ compiler_context__link_vp_fp(struct gl_context * mesa_ctx,struct nvfx_vertex_pro
 		unsigned dw = fp->insn[off];
 		//printf("reloc_in at %x\n", off);
 		dw |= NVFX_FP_REG_TYPE_INPUT << NVFX_FP_REG_TYPE_SHIFT;
-		nvfx_fp_memcpy(&fpmap[off], &dw, sizeof(dw));
+		//nvfx_fp_memcpy(&fpmap[off], &dw, sizeof(dw));
+		fp->insn[off] = dw;
 	      }
 	    }
 	  
@@ -537,10 +540,11 @@ compiler_context__link_vp_fp(struct gl_context * mesa_ctx,struct nvfx_vertex_pro
 	    unsigned dw = fp->insn[off];
 	    //printf("reloc&~3 at %x\n", off);
 	    dw = (dw & ~NVFX_FP_OP_INPUT_SRC_MASK) | (value << NVFX_FP_OP_INPUT_SRC_SHIFT);
-	    nvfx_fp_memcpy(&fpmap[off], &dw, sizeof(dw));
+	    //nvfx_fp_memcpy(&fpmap[off], &dw, sizeof(dw));
+	    fp->insn[off] = dw;
 	  }
 	}
-	fpbo_slots[i] = value;
+	/*fpbo_slots[i] = value;*/
       }
     }
     --fp->progs_left_with_obsolete_slot_assignments;

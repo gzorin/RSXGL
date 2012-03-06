@@ -36,7 +36,7 @@ struct nvfx_vertex_program {
 
 	uint32_t ir;
 #if defined(__cplusplus)
-  uint32_t _or;
+  uint32_t outregs;
 #else
 	uint32_t or;
 #endif
@@ -76,7 +76,7 @@ struct nvfx_fragment_program {
 	unsigned samplers;
 	unsigned point_sprite_control;
 #if defined(__cplusplus)
-  unsigned _or;
+  unsigned outregs;
 #else
 	unsigned or;
 #endif

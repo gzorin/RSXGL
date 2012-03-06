@@ -827,6 +827,7 @@ glLinkProgram (GLuint program_name)
 
   program.nvfx_vp = cctx -> translate_vp(program.mesa_program);
   program.nvfx_fp = cctx -> translate_fp(program.mesa_program);
+  cctx -> link_vp_fp(program.nvfx_vp,program.nvfx_fp);
 
   rsxgl_debug_printf("%s result: %i info: %s programs: %lx %x\n",
 		     __PRETTY_FUNCTION__,
@@ -885,7 +886,7 @@ glLinkProgram (GLuint program_name)
 	  program.nvfx_fp -> insn[i*4+j] = endian_fp(SWAP32(program.nvfx_fp -> insn[i*4+j]));
 	}
 
-	rsxgl_debug_printf("%04u: %x %x %x %x\n",i,
+	rsxgl_debug_printf("%04u: %08x %08x %08x %08x\n",i,
 			   program.nvfx_fp -> insn[i*4],
 			   program.nvfx_fp -> insn[i*4+1],
 			   program.nvfx_fp -> insn[i*4+2],
@@ -917,7 +918,6 @@ glLinkProgram (GLuint program_name)
 
 	program.vp_num_insn = program.nvfx_vp -> nr_insns;
 	program.vp_input_mask = program.nvfx_vp -> ir;
-	program.vp_output_mask = program.nvfx_vp -> _or;
       }
     }
     
@@ -959,6 +959,8 @@ glLinkProgram (GLuint program_name)
 #endif
       }
     }
+
+    program.vp_output_mask = program.nvfx_vp -> outregs | program.nvfx_fp -> outregs;
 
     // Things that get accumulated:
     // program_offsets - uint32_t's
