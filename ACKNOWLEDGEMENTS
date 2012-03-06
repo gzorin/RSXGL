@@ -9,6 +9,8 @@ Thanks to the nouveau project for the diligent NVIDIA reversing.
 
 -------------------------------------------------------------------------------
 
+RSXGL includes the sources for the Mesa project.
+
 This library includes code from the PSL1GHT project.
 
 This library includes code from the nouveau project.
