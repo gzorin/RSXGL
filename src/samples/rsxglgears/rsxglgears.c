@@ -54,8 +54,6 @@
 #include <GL3/gl3.h>
 #include <GL3/gl3ext.h>
 #include "rsxgltest.h"
-#include "rsxglgears_vpo.h"
-#include "rsxglgears_fpo.h"
 extern void tcp_printf(const char * fmt,...);
 #define printf tcp_printf
 
@@ -648,7 +646,7 @@ static const char vertex_shader[] =
 "}";
 
 static const char fragment_shader[] =
-"precision mediump float;\n"
+"//precision mediump float;\n"
 "varying vec4 Color;\n"
 "\n"
 "void main(void)\n"
@@ -669,18 +667,16 @@ gears_init(void)
    /* Compile the vertex shader */
    p = vertex_shader;
    v = glCreateShader(GL_VERTEX_SHADER);
-   //glShaderSource(v, 1, &p, NULL);
-   //glCompileShader(v);
-   glShaderBinary(1,&v,0,rsxglgears_vpo,rsxglgears_vpo_size);
+   glShaderSource(v, 1, &p, NULL);
+   glCompileShader(v);
    glGetShaderInfoLog(v, sizeof msg, NULL, msg);
    printf("vertex shader info: %s\n", msg);
 
    /* Compile the fragment shader */
    p = fragment_shader;
    f = glCreateShader(GL_FRAGMENT_SHADER);
-   //glShaderSource(f, 1, &p, NULL);
-   //glCompileShader(f);
-   glShaderBinary(1,&f,0,rsxglgears_fpo,rsxglgears_fpo_size);
+   glShaderSource(f, 1, &p, NULL);
+   glCompileShader(f);
    glGetShaderInfoLog(f, sizeof msg, NULL, msg);
    printf("fragment shader info: %s\n", msg);
 

@@ -245,6 +245,7 @@ struct program_t {
   sampler_uniform_table_type::type sampler_uniform_table() { return sampler_uniform_table_type::type(sampler_uniform_table_values,sampler_uniform_table_size); }
   sampler_uniform_table_type::const_type sampler_uniform_table() const { return sampler_uniform_table_type::const_type(sampler_uniform_table_values,sampler_uniform_table_size); }
 
+#if 0
   // Attribute bindings requested by glBindAttribLocation(). A string for each possible vertex attribute:
   typedef array< char, uint32_t > attrib_binding_type;
   attrib_binding_type::size_type attrib_binding_size[RSXGL_MAX_VERTEX_ATTRIBS];
@@ -260,6 +261,7 @@ struct program_t {
 
   fragout_binding_type::type fragout_binding(size_t i) { assert(i < RSXGL_MAX_DRAW_BUFFERS); return fragout_binding_type::type(fragout_binding_data[i],fragout_binding_size[i]); }
   fragout_binding_type::const_type fragout_binding(size_t i) const { assert(i < RSXGL_MAX_DRAW_BUFFERS); return fragout_binding_type::const_type(fragout_binding_data[i],fragout_binding_size[i]); }
+#endif
 
   gl_shader_program * mesa_program;
   nvfx_vertex_program * nvfx_vp;

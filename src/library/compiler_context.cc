@@ -11,6 +11,9 @@ extern "C" {
 #include "state_tracker/st_glsl_to_tgsi.h"
 #include "program/programopt.h"
 #include "tgsi/tgsi_scan.h"
+
+char * strdup(const char *s1);
+#include "program/hash_table.h"
 }
 
 #include "glsl/ast.h"
@@ -20,9 +23,6 @@ extern "C" {
 #include "glsl/program.h"
 
 extern "C" {
-  struct string_to_uint_map;
-  struct string_to_uint_map * string_to_uint_map_ctor();
-
   struct nvfx_vertex_program * compiler_context__translate_vp(struct gl_context * mesa_ctx, struct gl_shader_program * program);
   struct nvfx_fragment_program * compiler_context__translate_fp(struct gl_context * mesa_ctx,struct gl_shader_program * program);
   void compiler_context__link_vp_fp(struct gl_context * mesa_ctx,struct nvfx_vertex_program * vp,struct nvfx_fragment_program * fp);
@@ -247,6 +247,18 @@ compiler_context_t::attach_shader(struct gl_shader_program * program,struct gl_s
 
   program->Shaders[program->NumShaders] = shader;
   program->NumShaders++;
+}
+
+void
+compiler_context_t::bind_attrib_location(struct gl_shader_program * program,unsigned int index,const char * name)
+{
+  program->AttributeBindings->put(index + VERT_ATTRIB_GENERIC0, name);
+}
+
+void
+compiler_context_t::bind_frag_data_location(struct gl_shader_program * program,unsigned int index,const char * name)
+{
+  program->FragDataBindings->put(index + FRAG_RESULT_DATA0, name);
 }
 
 void

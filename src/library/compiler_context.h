@@ -27,6 +27,8 @@ struct compiler_context_t {
 
   struct gl_shader_program * create_program();
   void attach_shader(struct gl_shader_program *,struct gl_shader *);
+  void bind_attrib_location(struct gl_shader_program *,unsigned int,const char *);
+  void bind_frag_data_location(struct gl_shader_program *,unsigned int,const char *);
   void link_program(struct gl_shader_program *);
   void destroy_program(struct gl_shader_program *);
   

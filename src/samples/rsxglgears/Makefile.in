@@ -242,27 +242,23 @@ image_objs = $(call png_image_objs,$(call png_images,$(1)))
 image_headers = $(call png_image_headers,$(call png_images,$(1)))
 eigen_LOCATION = $(top_srcdir)/extsrc/eigen
 eigen_CPPFLAGS = -I$(eigen_LOCATION)
-BUILT_SOURCES = rsxglgears_vpo.h rsxglgears_fpo.h
-CLEANFILES = rsxglgears_vpo.h rsxglgears_fpo.h rsxglgears_vpo.o rsxglgears_fpo.o
 sources = rsxglglears.c
-objects = rsxglgears_vpo.o rsxglgears_fpo.o
-rsxglgears_elf_DEPENDENCIES = $(top_builddir)/src/library/libEGL.a $(top_builddir)/src/library/libGL.a \
-	$(objects)
-
+rsxglgears_elf_DEPENDENCIES = $(top_builddir)/src/library/libEGL.a $(top_builddir)/src/library/libGL.a
 rsxglgears_elf_SOURCES = ../rsxgltest/main.c	\
 	../rsxgltest/math3d.cc			\
-	rsxglgears.c rsxglgears.vert rsxglgears.frag
+	rsxglgears.c
 
+
+# rsxglgears.vert rsxglgears.frag
 rsxglgears_elf_CPPFLAGS = -D__RSX__ -I\$(top_srcdir)/include $(eigen_CPPFLAGS) $(PSL1GHT_CPPFLAGS) -I$(top_srcdir)/include -I$(top_srcdir)/src/library -I$(top_builddir)/src/library -I$(top_srcdir)/src/samples/rsxgltest
 rsxglgears_elf_CFLAGS = -std=gnu99 -fgnu89-inline -O3
 rsxglgears_elf_LDFLAGS = -L$(top_builddir)/src/library $(PSL1GHT_LDFLAGS)
-rsxglgears_elf_LDADD = $(objects) -lGL -lEGL -lrsx -lgcm_sys -lnet -lio -lsysutil -lsysmodule -lrt -llv2
+rsxglgears_elf_LDADD = -lGL -lEGL -lrsx -lgcm_sys -lnet -lio -lsysutil -lsysmodule -lrt -llv2
 TITLE := RSXGLGEARS
 APPID := TSTRSXGL1
 CONTENTID := UP0001-$(APPID)_00-0000000000000000
 PKGFILES := release
-all: $(BUILT_SOURCES)
-	$(MAKE) $(AM_MAKEFLAGS) all-am
+all: all-am
 
 .SUFFIXES:
 .SUFFIXES: .bin _bin.o _bin.h .png _png.o _png.h .vcg .fcg .vert .frag _vpo.o _fpo.o _vpo.h _fpo.h .vpo .fpo .c .cc .o .obj
@@ -466,12 +462,10 @@ distdir: $(DISTFILES)
 	  fi; \
 	done
 check-am: all-am
-check: $(BUILT_SOURCES)
-	$(MAKE) $(AM_MAKEFLAGS) check-am
+check: check-am
 all-am: Makefile $(PROGRAMS) all-local
 installdirs:
-install: $(BUILT_SOURCES)
-	$(MAKE) $(AM_MAKEFLAGS) install-am
+install: install-am
 install-exec: install-exec-am
 install-data: install-data-am
 uninstall: uninstall-am
@@ -493,7 +487,6 @@ install-strip:
 mostlyclean-generic:
 
 clean-generic:
-	-test -z "$(CLEANFILES)" || rm -f $(CLEANFILES)
 
 distclean-generic:
 	-test -z "$(CONFIG_CLEAN_FILES)" || rm -f $(CONFIG_CLEAN_FILES)
@@ -502,7 +495,6 @@ distclean-generic:
 maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
 	@echo "it deletes files that may require special tools to rebuild."
-	-test -z "$(BUILT_SOURCES)" || rm -f $(BUILT_SOURCES)
 clean: clean-am
 
 clean-am: clean-generic clean-local clean-noinstPROGRAMS \
@@ -573,7 +565,7 @@ ps-am:
 
 uninstall-am:
 
-.MAKE: all check install install-am install-strip
+.MAKE: install-am install-strip
 
 .PHONY: CTAGS GTAGS all all-am all-local check check-am clean \
 	clean-generic clean-local clean-noinstPROGRAMS ctags distclean \

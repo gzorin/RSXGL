@@ -51,7 +51,6 @@ extern "C" {
 #include <nvfx/nvfx_state.h>
 }
 
-#include <string.h>
 #include <malloc.h>
 #include <algorithm>
 #include <deque>
@@ -340,6 +339,7 @@ program_t::program_t()
   uniform_table().construct();
   sampler_uniform_table().construct();
 
+#if 0
   for(size_t i = 0;i < RSXGL_MAX_VERTEX_ATTRIBS;++i) {
     attrib_binding(i).construct();
   }
@@ -347,6 +347,7 @@ program_t::program_t()
   for(size_t i = 0;i < RSXGL_MAX_DRAW_BUFFERS;++i) {
     fragout_binding(i).construct();
   }
+#endif
 }
 
 program_t::~program_t()
@@ -368,6 +369,7 @@ program_t::~program_t()
   uniform_table().destruct();
   sampler_uniform_table().destruct();
 
+#if 0
   for(size_t i = 0;i < RSXGL_MAX_VERTEX_ATTRIBS;++i) {
     attrib_binding(i).destruct();
   }
@@ -375,6 +377,7 @@ program_t::~program_t()
   for(size_t i = 0;i < RSXGL_MAX_DRAW_BUFFERS;++i) {
     fragout_binding(i).destruct();
   }
+#endif
 
   if(uniform_values != 0) free(uniform_values);
   if(program_offsets != 0) free(program_offsets);
@@ -1301,7 +1304,7 @@ glLinkProgram (GLuint program_name)
       }
     }
 
-    // Deal with these later:
+    // TODO: deal with these:
     program.instanceid_index = ~0;
     program.point_sprite_control = 0;
 
@@ -2183,12 +2186,10 @@ glBindAttribLocation (GLuint program_name, GLuint index, const GLchar* name)
   }
 
   program_t & program = program_t::storage().at(program_name);
-  
-  const size_t n = strlen(name) + 1;
 
-  program.attrib_binding(index).resize(n);
-  program.attrib_binding(index).set(name,n);
-  
+  compiler_context_t * cctx = current_ctx() -> compiler_context();
+  cctx -> bind_attrib_location(program.mesa_program,index,name);
+
   RSXGL_NOERROR_();
 }
 
@@ -2397,17 +2398,25 @@ glBindFragDataLocation (GLuint program_name, GLuint color, const GLchar *name)
   }
 
   program_t & program = program_t::storage().at(program_name);
-  
-  const size_t n = strlen(name) + 1;
-  program.fragout_binding(color).resize(n);
-  program.fragout_binding(color).set(name,n);
+
+  compiler_context_t * cctx = current_ctx() -> compiler_context();
+  cctx -> bind_frag_data_location(program.mesa_program,color,name);
   
   RSXGL_NOERROR_();
 }
 
 GLAPI GLint APIENTRY
-glGetFragDataLocation (GLuint program, const GLchar *name)
+glGetFragDataLocation (GLuint program_name, const GLchar *name)
 {
+  if(!program_t::storage().is_object(program_name)) {
+    RSXGL_ERROR(GL_INVALID_VALUE,-1);
+  }
+
+  program_t & program = program_t::storage().at(program_name);
+
+  // TODO: implement this
+
+  RSXGL_NOERROR(-1);
 }
 
 void
