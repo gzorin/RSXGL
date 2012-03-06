@@ -801,9 +801,7 @@ ppu_libpng_LDFLAGS
 ppu_libpng_LIBS
 ppu_zlib_CPPFLAGS
 ppu_zlib_LDFLAGS
-ppu_zlib_LIBS
-MESA_LOCATION
-LIBDRM_LOCATION'
+ppu_zlib_LIBS'
 
 
 # Initialize some variables set by options.
@@ -1494,10 +1492,6 @@ Some influential environment variables:
               linker flags for ppu_zlib, overriding pkg-config
   ppu_zlib_LIBS
               library flags for ppu_zlib, overriding pkg-config
-  MESA_LOCATION
-              location of Mesa sources
-  LIBDRM_LOCATION
-              location of the libdrm sources
 
 Use these variables to override the choices made by `configure' or to help
 it to find libraries and programs with nonstandard names/locations.
@@ -6535,7 +6529,13 @@ fi
 
 
 # Deal with mesa:
+#AC_ARG_VAR([MESA_LOCATION],[location of Mesa sources])
+#AC_ARG_VAR([LIBDRM_LOCATION],[location of the libdrm sources])
 
+MESA_LOCATION="\${top_srcdir}/extsrc/mesa"
+
+
+LIBDRM_LOCATION="\${top_srcdir}/extsrc/drm"
 
 
 ac_config_commands="$ac_config_commands mesa"
@@ -7285,9 +7285,9 @@ cat >>$CONFIG_STATUS <<_ACEOF || ac_write_fail=1
 # INIT-COMMANDS
 #
 AMDEP_TRUE="$AMDEP_TRUE" ac_aux_dir="$ac_aux_dir"
-       MESA_LOCATION="$MESA_LOCATION";
-	_abs_top_builddir=$(cd "${builddir}"; ${PWDCMD});
+       _abs_top_builddir=$(cd "${builddir}"; ${PWDCMD});
 	_abs_top_srcdir=$(cd "${srcdir}"; ${PWDCMD});
+	MESA_LOCATION="\${_abs_top_srcdir}/extsrc/mesa";
 	XARGS="${XARGS}"
 	PWDCMD="${PWDCMD}"
 	RSYNC="${RSYNC}"
@@ -7855,7 +7855,6 @@ $as_echo X"$file" |
 
 	if test "$mesa_srcdir" != "$mesa_builddir"; then
 	   echo "Copying Mesa files from source directory \"$mesa_srcdir\" to build directory \"$mesa_builddir\"...";
-	   #cat "$_abs_top_srcdir/extsrc/mesa/rsxgl/files" | xargs -I % echo "file=\"%\"; dir=\$(dirname \$file); mkdir -p \"$mesa_builddir/\$dir\"; cp -a \"$mesa_srcdir/\$file\" \"$mesa_builddir/\$file\";" | sh;
 	   "$RSYNC" -av --files-from="$_abs_top_srcdir/src/mesa/files" "$mesa_srcdir" "$mesa_builddir";
 	   pushd "$mesa_builddir"; "$PATCH" -p0 < "$_abs_top_srcdir/src/mesa/patch"; popd
 	fi;

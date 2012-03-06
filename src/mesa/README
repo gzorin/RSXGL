@@ -1,0 +1,21 @@
+mesa revision hash: d38a2952895d6e859e04bc5dc6d7cfa9f8c36f17
+drm revision hash: 66518ab5653cfdc840cd69e7b653ec05df060584
+
+The files in this directory are used to get Mesa's 8.0 branch to work
+with RSXGL. Currently, Mesa is used by RSXGL to compile GLSL programs
+and to translate textures between various formats.
+
+RSXGL supports out-of-source builds, so its configure script uses the
+"files" file to copy Mesa's source tree to a build directory. "patch"
+contains a few changes to Mesa's source itself.
+
+Mesa's build system gets modified so that the GLSL builtin functions
+compiler can be built and run on the system used to build RSXGL.
+
+The "src/" directory contains headers for a few functions not included
+in the PS3 homebrew toolchain (notably dlopen() and friends).
+
+RSXGL modifies the sources contained in Mesa's
+src/gallium/drivers/{nouveau,nvfx}. The modified versions are kept
+elsewhere in RSXGL's source tree; Mesa's versions of these do not get
+built.

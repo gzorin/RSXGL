@@ -157,8 +157,14 @@ AC_TOOLCHAIN_EXTPKG([ppu],[libpng],[libpng],[${ppu_portlibs_PKG_CONFIG_PATH}])
 AC_TOOLCHAIN_EXTPKG([ppu],[zlib],[zlib],[${ppu_portlibs_PKG_CONFIG_PATH}])
 
 # Deal with mesa:
-AC_ARG_VAR([MESA_LOCATION],[location of Mesa sources])
-AC_ARG_VAR([LIBDRM_LOCATION],[location of the libdrm sources])
+#AC_ARG_VAR([MESA_LOCATION],[location of Mesa sources])
+#AC_ARG_VAR([LIBDRM_LOCATION],[location of the libdrm sources])
+
+MESA_LOCATION="\${top_srcdir}/extsrc/mesa"
+AC_SUBST([MESA_LOCATION])
+
+LIBDRM_LOCATION="\${top_srcdir}/extsrc/drm"
+AC_SUBST([LIBDRM_LOCATION])
 
 AC_CONFIG_COMMANDS([mesa],
 [	mesa_builddir="${_abs_top_builddir}/extsrc/mesa";
@@ -171,7 +177,6 @@ AC_CONFIG_COMMANDS([mesa],
 
 	if test "$mesa_srcdir" != "$mesa_builddir"; then
 	   echo "Copying Mesa files from source directory \"$mesa_srcdir\" to build directory \"$mesa_builddir\"...";
-	   #cat "$_abs_top_srcdir/extsrc/mesa/rsxgl/files" | xargs -I % echo "file=\"%\"; dir=\$(dirname \$file); mkdir -p \"$mesa_builddir/\$dir\"; cp -a \"$mesa_srcdir/\$file\" \"$mesa_builddir/\$file\";" | sh;
 	   "$RSYNC" -av --files-from="$_abs_top_srcdir/src/mesa/files" "$mesa_srcdir" "$mesa_builddir";
 	   pushd "$mesa_builddir"; "$PATCH" -p0 < "$_abs_top_srcdir/src/mesa/patch"; popd
 	fi;
@@ -179,9 +184,9 @@ AC_CONFIG_COMMANDS([mesa],
 	ln -fs "$_abs_top_builddir/src/mesa/configs/rsx" "$mesa_builddir/configs/current";
 	"$RSYNC" -av "$_abs_top_srcdir/src/mesa/Makefile-builtins" "$mesa_builddir/src/glsl/";
 ],
-[       MESA_LOCATION="$MESA_LOCATION";
-	_abs_top_builddir=$(cd "${builddir}"; ${PWDCMD});
+[       _abs_top_builddir=$(cd "${builddir}"; ${PWDCMD});
 	_abs_top_srcdir=$(cd "${srcdir}"; ${PWDCMD});
+	MESA_LOCATION="\${_abs_top_srcdir}/extsrc/mesa";
 	XARGS="${XARGS}"
 	PWDCMD="${PWDCMD}"
 	RSYNC="${RSYNC}"
