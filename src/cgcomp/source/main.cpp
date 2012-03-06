@@ -199,8 +199,8 @@ int compileVP(std::istream & in,std::ostream & out)
       dstcodeptr[n+2] = SWAP32(vpi[i].data[2]);
       dstcodeptr[n+3] = SWAP32(vpi[i].data[3]);
 
-      fprintf(stderr,"%04u: %x %x %x %x\n",i,
-	      dstcodeptr[n + 0],dstcodeptr[n + 1],dstcodeptr[n + 2],dstcodeptr[n + 3]);
+      fprintf(stderr,"%04u: %08x %08x %08x %08x\n",i,
+	      SWAP32(dstcodeptr[n + 0]),SWAP32(dstcodeptr[n + 1]),SWAP32(dstcodeptr[n + 2]),SWAP32(dstcodeptr[n + 3]));
 
       const uint32_t opcode = (vpi[i].data[1] & NV40_VP_INST_VEC_OPCODE_MASK) >> NV40_VP_INST_VEC_OPCODE_SHIFT;
     }
@@ -365,7 +365,7 @@ int compileFP(std::istream & in,std::ostream & out)
       dstcodeptr[n+2] = endian_fp((SWAP32(fpi[i].data[2])));
       dstcodeptr[n+3] = endian_fp((SWAP32(fpi[i].data[3])));
 
-      fprintf(stderr,"%04u: %x %x %x %x\n",i,
+      fprintf(stderr,"%04u: %08x %08x %08x %08x\n",i,
 	      dstcodeptr[n + 0],dstcodeptr[n + 1],dstcodeptr[n + 2],dstcodeptr[n + 3]);
 
       const uint32_t opcode = (fpi[i].data[0] & NVFX_FP_OP_OPCODE_MASK) >> NVFX_FP_OP_OPCODE_SHIFT;

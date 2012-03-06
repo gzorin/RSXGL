@@ -26,15 +26,10 @@ compiler_context__translate_vp(struct gl_context * mesa_ctx, struct gl_shader_pr
     return 0;
   }
 
-  rsxgl_debug_printf("%s\n",__PRETTY_FUNCTION__);
-
   struct nvfx_vertex_program * nvfx_vp = 0;
 
   struct st_vertex_program * vp = st_vertex_program((struct gl_vertex_program *)program->_LinkedShaders[MESA_SHADER_VERTEX]->Program);
   st_prepare_vertex_program(mesa_ctx, vp);
-  
-  rsxgl_debug_printf("\tinputs: %u outputs: %u\n",
-		     vp->num_inputs,vp->num_outputs);
   
   struct ureg_program * ureg = ureg_create(TGSI_PROCESSOR_VERTEX);
   
@@ -111,8 +106,6 @@ compiler_context__translate_vp(struct gl_context * mesa_ctx, struct gl_shader_pr
   }
 #endif
 
-  rsxgl_debug_printf("%u const relocs\n",nvfx_vp->const_relocs.size);
-
 #undef NVFX_VP
 #define NVFX_VP(c) (NV40_VP_##c)
 
@@ -161,8 +154,6 @@ compiler_context__translate_fp(struct gl_context * mesa_ctx,struct gl_shader_pro
      program->_LinkedShaders[MESA_SHADER_FRAGMENT]->Program == 0) {
     return 0;
   }
-
-  rsxgl_debug_printf("%s\n",__PRETTY_FUNCTION__);
 
   struct nvfx_fragment_program * nvfx_fp = 0;
 

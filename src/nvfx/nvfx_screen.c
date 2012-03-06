@@ -486,8 +486,6 @@ nvfx_screen_create(struct nouveau_device *dev)
 	if (!screen)
 		return NULL;
 
-	rsxgl_debug_printf("%s\n",__PRETTY_FUNCTION__);
-
 	pscreen = &screen->base.base;
 
 #if !defined(__RSXGL__)

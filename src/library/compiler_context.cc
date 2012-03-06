@@ -33,8 +33,6 @@ namespace {
 struct gl_shader *
 new_shader(struct gl_context *ctx, GLuint name, GLenum type)
 {
-  rsxgl_debug_printf("%s\n",__PRETTY_FUNCTION__);
-
   struct gl_shader *shader;
   
   rsxgl_assert(type == GL_FRAGMENT_SHADER || type == GL_VERTEX_SHADER);
@@ -54,8 +52,6 @@ new_shader(struct gl_context *ctx, GLuint name, GLenum type)
 struct gl_program *
 new_program(struct gl_context *ctx, GLenum target, GLuint id)
 {
-  rsxgl_debug_printf("%s\n",__PRETTY_FUNCTION__);
-
   switch (target) {
   case GL_VERTEX_PROGRAM_ARB: {
     struct st_vertex_program *prog = ST_CALLOC_STRUCT(st_vertex_program);
@@ -89,8 +85,6 @@ program_string_notify( struct gl_context *ctx,
 		       GLenum target,
 		       struct gl_program *prog )
 {
-  rsxgl_debug_printf("%s\n",__PRETTY_FUNCTION__);
-
   return GL_TRUE;
 }
 
@@ -98,8 +92,6 @@ program_string_notify( struct gl_context *ctx,
 
 compiler_context_t::compiler_context_t(pipe_context * pipe)
 {
-  rsxgl_debug_printf("%s\n",__PRETTY_FUNCTION__);
-
   // the mesa context:
   mesa_ctx = (struct gl_context *)calloc(1,sizeof(gl_context));
   memset(mesa_ctx,0,sizeof(*mesa_ctx));
@@ -179,8 +171,6 @@ void
 compiler_context_t::compile_shader(struct gl_shader * shader,const char * src)
 {
   rsxgl_assert(mesa_ctx != 0);
-
-  rsxgl_debug_printf("[%s]\n",src);
 
   shader -> Source = src;
 

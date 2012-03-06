@@ -270,6 +270,35 @@ void CCompiler::Compile(CParser *pParser)
 	}
 }
 
+static const char * reg_types[] = {
+  "NONE",
+  "OUT ",
+  "IN  ",
+  "TEMP",
+  "UNK ",
+  "CNST",
+  "IMM ",
+  "RLOC"
+};
+
+void fprintf_reg(struct nvfx_reg reg)
+{
+  fprintf(stderr,"(type:%s index:%u)",reg_types[(unsigned int)reg.type],(unsigned int)reg.index);
+}
+
+void fprintf_src(struct nvfx_src src)
+{
+  fprintf_reg(src.reg);
+#if 0
+  fprintf(stderr,"(indirect:%u %u %u neg:%u abs:%u swz:%u %u %u %u)",
+	  (unsigned int)src.indirect,(unsigned int)src.indirect_reg,(unsigned int)src.indirect_swz,
+	  (unsigned int)src.negate,(unsigned int)src.abs,
+	  (unsigned int)src.swz[0],(unsigned int)src.swz[1],(unsigned int)src.swz[2],(unsigned int)src.swz[3]);
+#endif
+  fprintf(stderr,"(swz:%u %u %u %u)",
+	  (unsigned int)src.swz[0],(unsigned int)src.swz[1],(unsigned int)src.swz[2],(unsigned int)src.swz[3]);
+}
+
 void CCompiler::emit_insn(u8 opcode,struct nvfx_insn *insn)
 {
 	u32 *hw;
@@ -283,10 +312,17 @@ void CCompiler::emit_insn(u8 opcode,struct nvfx_insn *insn)
 
 	hw = m_pInstructions[m_nCurInstruction].data;
 
-	emit_dst(hw,slot,insn);
-	emit_src(hw,0,&insn->src[0]);
-	emit_src(hw,1,&insn->src[1]);
-	emit_src(hw,2,&insn->src[2]);
+	fprintf(stderr,"emit_insn op:%04x slot:%u mask:%x\n",op,slot,insn->mask);
+	fprintf(stderr,"dst: ");
+	fprintf_reg(insn->dst);
+
+	fprintf(stderr," srcs: ");
+	fprintf_src(insn->src[0]);
+	fprintf_src(insn->src[1]);
+	fprintf_src(insn->src[2]);
+	fprintf(stderr,"\n");
+
+	//fprintf(stderr,"%08x %08x %08x %08x\n",hw[0],hw[1],hw[2],hw[3]);
 
 	hw[0] |= (insn->cc_cond << NVFX_VP(INST_COND_SHIFT));
 	hw[0] |= (insn->cc_test << NVFX_VP(INST_COND_TEST_SHIFT));
@@ -295,6 +331,8 @@ void CCompiler::emit_insn(u8 opcode,struct nvfx_insn *insn)
 		  (insn->cc_swz[1] << NVFX_VP(INST_COND_SWZ_Y_SHIFT)) |
 		  (insn->cc_swz[2] << NVFX_VP(INST_COND_SWZ_Z_SHIFT)) |
 		  (insn->cc_swz[3] << NVFX_VP(INST_COND_SWZ_W_SHIFT)));
+	//fprintf(stderr,"%08x %08x %08x %08x\n",hw[0],hw[1],hw[2],hw[3]);
+
 	if(insn->cc_update)
 		hw[0] |= NVFX_VP(INST_COND_UPDATE_ENABLE);
 
@@ -312,6 +350,20 @@ void CCompiler::emit_insn(u8 opcode,struct nvfx_insn *insn)
 		hw[0] |= NV40_VP_INST_VEC_DEST_TEMP_MASK ;
 		hw[3] |= (insn->mask << NV40_VP_INST_SCA_WRITEMASK_SHIFT);
 	}
+	//fprintf(stderr,"%08x %08x %08x %08x\n",hw[0],hw[1],hw[2],hw[3]);
+
+	fprintf(stderr,"emit_dst\n");
+	emit_dst(hw,slot,insn);
+	fprintf(stderr,"%08x %08x %08x %08x\n",hw[0],hw[1],hw[2],hw[3]);
+
+	emit_src(hw,0,&insn->src[0]);
+	fprintf(stderr,"%08x %08x %08x %08x\n",hw[0],hw[1],hw[2],hw[3]);
+
+	emit_src(hw,1,&insn->src[1]);
+	fprintf(stderr,"%08x %08x %08x %08x\n",hw[0],hw[1],hw[2],hw[3]);
+
+	emit_src(hw,2,&insn->src[2]);
+	fprintf(stderr,"%08x %08x %08x %08x\n",hw[0],hw[1],hw[2],hw[3]);
 }
 
 void CCompiler::emit_dst(u32 *hw,u8 slot,struct nvfx_insn *insn)
@@ -457,6 +509,8 @@ void CCompiler::emit_src(u32 *hw, u8 pos, struct nvfx_src *src)
 			hw[3] |= ((sr & NVFX_VP(SRC2_LOW_MASK)) << NVFX_VP(INST_SRC2L_SHIFT));
 			break;
 	}
+
+	
 }
 
 struct nvfx_reg CCompiler::temp()

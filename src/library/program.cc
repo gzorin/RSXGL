@@ -58,9 +58,6 @@ extern "C" {
 #include <map>
 #include "set_algorithm2.h"
 
-//#define SWAP32(v) ((v)>>24)|((v)<<24)|(((v)&0xFF00)<<8)|(((v)&0xFF0000)>>8)
-#define SWAP32(v) (v)
-
 static u32 endian_fp(u32 v)
 {
   return ( ( ( v >> 16 ) & 0xffff ) << 0 ) |
@@ -815,6 +812,45 @@ glLinkProgram (GLuint program_name)
   }
 
   program_t & program = program_t::storage().at(program_name);
+
+  // TODO: orphan it, instead of doing this:
+  if(program.timestamp > 0) {
+    rsxgl_timestamp_wait(current_ctx(),program.timestamp);
+    program.timestamp = 0;
+  }
+
+  // Get rid of any linked shaders:
+  for(unsigned int i = 0,n = program.linked_shaders().get_size();i < n;++i) {
+    shader_t::gl_object_type::unref_and_maybe_delete(program.linked_shaders()[i]);
+  }
+  program.linked_shaders().destruct();
+
+  // Destroy other tables, etc:
+  if(program.vp_ucode_offset != ~0U) {
+    mspace_free(rsxgl_main_ucode_mspace(),rsxgl_main_ucode_address(program.vp_ucode_offset));
+    program.vp_ucode_offset = ~0U;
+  }
+  if(program.fp_ucode_offset != ~0U) {
+    mspace_free(rsxgl_rsx_ucode_mspace(),rsxgl_rsx_ucode_address(program.fp_ucode_offset));
+    program.fp_ucode_offset = ~0U;
+  }
+  program.names().destruct();
+  program.attrib_table().destruct();
+  program.uniform_table().destruct();
+  program.sampler_uniform_table().destruct();
+  if(program.program_offsets != 0) {
+    free(program.program_offsets);
+    program.program_offsets = 0;
+  }
+  if(program.uniform_values != 0) {
+    free(program.uniform_values);
+    program.uniform_values = 0;
+  }
+
+  program.linked = GL_FALSE;
+  program.validated = GL_FALSE;
+
+  //
   std::string info;
 
   compiler_context_t * cctx = current_ctx() -> compiler_context();
@@ -825,34 +861,22 @@ glLinkProgram (GLuint program_name)
   
   cctx -> link_program(program.mesa_program);
 
-  program.nvfx_vp = cctx -> translate_vp(program.mesa_program);
-  program.nvfx_fp = cctx -> translate_fp(program.mesa_program);
-  cctx -> link_vp_fp(program.nvfx_vp,program.nvfx_fp);
-
+#if 0
   rsxgl_debug_printf("%s result: %i info: %s programs: %lx %x\n",
 		     __PRETTY_FUNCTION__,
 		     program.mesa_program -> LinkStatus,
-		     program.mesa_program -> InfoLog,
-		     (unsigned long)program.nvfx_vp,
-		     (unsigned long)program.nvfx_fp);
+		     program.mesa_program -> InfoLog);
+#endif
 
   info += std::string(program.mesa_program -> InfoLog);
 
   if(program.mesa_program -> LinkStatus) {
-    // TODO: orphan it, instead of doing this:
-    if(program.timestamp > 0) {
-      rsxgl_timestamp_wait(current_ctx(),program.timestamp);
-      program.timestamp = 0;
-    }
+    program.nvfx_vp = cctx -> translate_vp(program.mesa_program);
+    program.nvfx_fp = cctx -> translate_fp(program.mesa_program);
+    rsxgl_assert(program.nvfx_vp != 0);
+    rsxgl_assert(program.nvfx_fp != 0);
 
-    //
-    program.linked = GL_TRUE;
-
-    // Get rid of any linked shaders:
-    for(unsigned int i = 0,n = program.linked_shaders().get_size();i < n;++i) {
-      shader_t::gl_object_type::unref_and_maybe_delete(program.linked_shaders()[i]);
-    }
-    program.linked_shaders().destruct();
+    cctx -> link_vp_fp(program.nvfx_vp,program.nvfx_fp);
 
     // Move attached shaders to linked shaders:
     program.linked_shaders_data = program.attached_shaders_data;
@@ -861,41 +885,31 @@ glLinkProgram (GLuint program_name)
     // Start a new attached shaders array:
     program.attached_shaders().construct();
 
-    // Dump microcode:
+#if 0
+    // Dump VP: microcode:
     {
       rsxgl_debug_printf("VP microcode: %u instructions\n",program.nvfx_vp -> nr_insns);
       for(unsigned int i = 0,n = program.nvfx_vp -> nr_insns;i < n;++i) {
-	for(unsigned int j = 0;j < 4;++j) {
-	  program.nvfx_vp -> insns[i].data[j] = SWAP32(program.nvfx_vp -> insns[i].data[j]);
-	}
-
 	rsxgl_debug_printf("%04u: %x %x %x %x\n",i,
 			   program.nvfx_vp -> insns[i].data[0],
 			   program.nvfx_vp -> insns[i].data[1],
 			   program.nvfx_vp -> insns[i].data[2],
 			   program.nvfx_vp -> insns[i].data[3]);
       }
-
-      
     }
 
+    // Dump FP microcode:
     {
       rsxgl_debug_printf("FP microcode: %u instructions\n",program.nvfx_fp -> insn_len / 4);
       for(unsigned int i = 0,n = program.nvfx_fp -> insn_len / 4;i < n;++i) {
-	for(unsigned int j = 0;j < 4;++j) {
-	  program.nvfx_fp -> insn[i*4+j] = endian_fp(SWAP32(program.nvfx_fp -> insn[i*4+j]));
-	}
-
 	rsxgl_debug_printf("%04u: %08x %08x %08x %08x\n",i,
 			   program.nvfx_fp -> insn[i*4],
 			   program.nvfx_fp -> insn[i*4+1],
 			   program.nvfx_fp -> insn[i*4+2],
 			   program.nvfx_fp -> insn[i*4+3]);
       }
-
-      program.nvfx_fp -> insn[2] = 0xc8000001;
-      program.nvfx_fp -> insn[3] = 0xc8000001;
     }
+#endif
 
     //
     // Migrate vertex program microcode to cache-aligned memory:
@@ -908,10 +922,6 @@ glLinkProgram (GLuint program_name)
 	//goto fail;
       }
       else {
-	if(program.vp_ucode_offset != ~0U) {
-	  mspace_free(rsxgl_main_ucode_mspace(),rsxgl_main_ucode_address(program.vp_ucode_offset));
-	}
-	
 	program.vp_ucode_offset = rsxgl_vp_ucode_offset(address);
 	
 	memcpy(address,program.nvfx_vp -> insns,program.nvfx_vp -> nr_insns * sizeof(struct nvfx_vertex_program_exec));
@@ -921,7 +931,7 @@ glLinkProgram (GLuint program_name)
       }
     }
     
-    // Migrate fragment program microcode to RSX memory:
+    // Migrate fragment program microcode to RSX memory, performing endian swap along the way:
     {
       static const std::string kFPUcodeAllocFail("Failed to allocate space for fragment program microcode");
       
@@ -931,32 +941,15 @@ glLinkProgram (GLuint program_name)
 	//goto fail;
       }
       else {
-	if(program.fp_ucode_offset != ~0U) {
-	  mspace_free(rsxgl_rsx_ucode_mspace(),rsxgl_rsx_ucode_address(program.fp_ucode_offset));
-	}
-	
 	program.fp_ucode_offset = rsxgl_rsx_ucode_offset(address);
 	
-	memcpy(address,program.nvfx_fp -> insn,program.nvfx_fp -> insn_len * sizeof(uint32_t));
+	//memcpy(address,program.nvfx_fp -> insn,program.nvfx_fp -> insn_len * sizeof(uint32_t));
+	for(unsigned int i = 0,n = program.nvfx_fp -> insn_len;i < n;++i) {
+	  address[i] = endian_fp(program.nvfx_fp -> insn[i]);
+	}
 
 	program.fp_num_insn = program.nvfx_fp -> insn_len / 4;
 	program.fp_control = program.nvfx_fp -> fp_control;
-
-#if 0	
-	uint16_t
-	  texcoords = fp -> texcoords,
-	  texcoord2D = fp -> texcoord2D,
-	  texcoord3D = fp -> texcoord3D;
-	for(size_t i = 0;i < RSXGL_MAX_TEXTURE_COORDS;++i) {
-	  if(texcoords & 1) program.fp_texcoords.set(i);
-	  if(texcoord2D & 1) program.fp_texcoord2D.set(i);
-	  if(texcoord3D & 1) program.fp_texcoord3D.set(i);
-	  
-	  texcoords >>= 1;
-	  texcoord2D >>= 1;
-	  texcoord3D >>= 1;
-	}
-#endif
       }
     }
 
@@ -994,8 +987,6 @@ glLinkProgram (GLuint program_name)
     
     // Process vertex program attributes:
     {
-      //rsxgl_debug_printf("attributes:\n");
-
       program.attrib_name_max_length = 0;
       
       struct st_vertex_program * st_vp = st_vertex_program((struct gl_vertex_program *)gl_vp);
@@ -1010,9 +1001,6 @@ glLinkProgram (GLuint program_name)
 	    || var->location < VERT_ATTRIB_GENERIC0)
 	  continue;
 	
-	// vp -> input_to_index[var -> location] is the VP location:
-	rsxgl_debug_printf("\t%s:%i -> %i\n",var->name,var->location,st_vp -> input_to_index[var -> location]);
-
 	program_t::attrib_t attrib;
 	attrib.type = rsxgl_glsl_type_to_rsxgl_type(var->type);
 	attrib.index = st_vp -> input_to_index[var -> location];
@@ -1066,17 +1054,21 @@ glLinkProgram (GLuint program_name)
 	}
       }
       
+#if 0
       rsxgl_debug_printf("%i uniforms:\n",program.mesa_program -> NumUserUniformStorage);
+#endif
 
       for(unsigned int i = 0,n = program.mesa_program -> NumUserUniformStorage;i < n;++i) {
 	const gl_uniform_storage * uniform_storage = program.mesa_program -> UniformStorage + i;
 	const glsl_type * type = uniform_storage -> type;
 	bool add_name = false;
 
+#if 0
 	rsxgl_debug_printf("\t%s type:%s num_driver_storage:%u\n",
 			   uniform_storage -> name,
 			   uniform_storage -> type -> name,
 			   uniform_storage -> num_driver_storage);
+#endif
 
 	// Non-samplers:
 	if(uniform_storage -> type -> base_type != GLSL_TYPE_SAMPLER) {
@@ -1084,7 +1076,9 @@ glLinkProgram (GLuint program_name)
 	  uniform.type = rsxgl_glsl_type_to_rsxgl_type(type);
 	  uniform.count = type -> matrix_columns;
 
+#if 0
 	  rsxgl_debug_printf("\t\ttype:%u count:%u\n",(unsigned int)uniform.type,(unsigned int)uniform.count);
+#endif
 
 	  uniform.values_index = uniform_values.size();
 	  std::fill_n(std::back_inserter(uniform_values),type -> vector_elements * type -> matrix_columns,ieee32_t());
@@ -1098,7 +1092,6 @@ glLinkProgram (GLuint program_name)
 	    if(parameter -> Type == PROGRAM_UNIFORM && strcmp(parameter -> Name,uniform_storage -> name) == 0) {
 	      nvfx_vp_constant_map_t::const_iterator it = nvfx_vp_constant_map.find(i);
 	      if(it != nvfx_vp_constant_map.end()) {
-		//rsxgl_debug_printf("%u ",it -> second);
 		uniform.enabled.set(RSXGL_VERTEX_SHADER);
 		uniform.vp_index = it -> second;
 	      }
@@ -1144,7 +1137,6 @@ glLinkProgram (GLuint program_name)
 	  for(unsigned int i = 0,n = gl_vp -> Parameters -> NumParameters;i < n;++i) {
 	    gl_program_parameter * parameter = gl_vp -> Parameters -> Parameters + i;
 	    if(parameter -> Type == PROGRAM_SAMPLER && strcmp(parameter -> Name,uniform_storage -> name) == 0) {
-	      //rsxgl_debug_printf("(sampler: %u)",(unsigned int)uniform_storage -> sampler);
 	      sampler_uniform.vp_index = (unsigned int)uniform_storage -> sampler;
 	      break;
 	    }
@@ -1154,7 +1146,6 @@ glLinkProgram (GLuint program_name)
 	  for(unsigned int i = 0,n = gl_fp -> Parameters -> NumParameters;i < n;++i) {
 	    gl_program_parameter * parameter = gl_fp -> Parameters -> Parameters + i;
 	    if(parameter -> Type == PROGRAM_SAMPLER && strcmp(parameter -> Name,uniform_storage -> name) == 0) {
-	      //rsxgl_debug_printf("(sampler: %u)",(unsigned int)uniform_storage -> sampler);
 	      sampler_uniform.fp_index = (unsigned int)uniform_storage -> sampler;
 	      break;
 	    }
@@ -1173,23 +1164,27 @@ glLinkProgram (GLuint program_name)
     }
 
     // Migrate program offsets array:
-    if(program.program_offsets != 0) free(program.program_offsets);
+    rsxgl_assert(program.program_offsets == 0);
     program.program_offsets = (program_t::instruction_size_type *)memalign(RSXGL_CACHE_LINE_SIZE,sizeof(program_t::instruction_size_type) * program_offsets.size());
     std::copy(program_offsets.begin(),program_offsets.end(),program.program_offsets);  
 
     // Migrate uniform values array:
-    if(program.uniform_values != 0) free(program.uniform_values);
+    rsxgl_assert(program.uniform_values == 0);
     program.uniform_values = (ieee32_t *)memalign(RSXGL_CACHE_LINE_SIZE,sizeof(ieee32_t) * uniform_values.size());
     std::copy(uniform_values.begin(),uniform_values.end(),program.uniform_values);
 
     // Make space for attribute and uniform names:
+#if 0
     rsxgl_debug_printf("names require %u bytes\n",(unsigned int)names_size);
+#endif
     program.names().resize(names_size);
     char * pnames = program.names_data;
 
     // Migrate attributes table:
     if(attribs.size() > 0) {
+#if 0
       rsxgl_debug_printf("%u attribs\n",attribs.size());
+#endif
 
       program.attribs_enabled.reset();
 
@@ -1198,10 +1193,12 @@ glLinkProgram (GLuint program_name)
 
       unsigned int i = 0;
       for(const std::pair< const char *, program_t::attrib_t > & value : attribs) {
+#if 0
 	rsxgl_debug_printf(" %s: type:%u index:%u\n",
 			   value.first,
 			   (unsigned int)value.second.type,
 			   (unsigned int)value.second.index);
+#endif
 
 	table[i].first = pnames - program.names_data;
 	table[i].second = value.second;
@@ -1219,13 +1216,16 @@ glLinkProgram (GLuint program_name)
 
     // Migrate uniforms table:
     if(uniforms.size() > 0) {
+#if 0
       rsxgl_debug_printf("%u uniforms\n",uniforms.size());
+#endif
 
       program_t::uniform_table_type::type table = program.uniform_table();
       table.resize(uniforms.size());
 
       unsigned int i = 0;
       for(const std::pair< const char *, program_t::uniform_t > & value : uniforms) {
+#if 0
 	rsxgl_debug_printf(" %s: type:%u count:%u values_index:%u vp_index:%u program_offsets_index:%u\n",
 			   value.first,
 			   (unsigned int)value.second.type,
@@ -1233,6 +1233,7 @@ glLinkProgram (GLuint program_name)
 			   (unsigned int)value.second.values_index,
 			   (unsigned int)value.second.vp_index,
 			   (unsigned int)value.second.program_offsets_index);
+#endif
 
 	table[i].first = pnames - program.names_data;
 	table[i].second = value.second;
@@ -1257,18 +1258,22 @@ glLinkProgram (GLuint program_name)
     }
 
     if(sampler_uniforms.size() > 0) {
+#if 0
       rsxgl_debug_printf("%u sampler uniforms\n",sampler_uniforms.size());
+#endif
 
       program_t::sampler_uniform_table_type::type table = program.sampler_uniform_table();
       table.resize(sampler_uniforms.size());
 
       unsigned int i = 0;
       for(const std::pair< const char *, program_t::sampler_uniform_t > & value : sampler_uniforms) {
+#if 0
 	rsxgl_debug_printf(" %s: type:%u vp_index:%u fp_index:%u\n",
 			   value.first,
 			   (unsigned int)value.second.type,
 			   (unsigned int)value.second.vp_index,
 			   (unsigned int)value.second.fp_index);
+#endif
 
 	table[i].first = pnames - program.names_data;
 	table[i].second = value.second;
@@ -1300,7 +1305,11 @@ glLinkProgram (GLuint program_name)
     program.instanceid_index = ~0;
     program.point_sprite_control = 0;
 
+    program.linked = GL_TRUE;
+
+#if 0
     rsxgl_debug_printf("wrote %u names bytes\n",(unsigned int)(pnames - program.names_data));
+#endif
   }
   
   if(info.length() > 0) {
@@ -2418,218 +2427,187 @@ rsxgl_program_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
   if(ctx -> program_binding.names[RSXGL_ACTIVE_PROGRAM] != 0) {
     program_t & program = ctx -> program_binding[RSXGL_ACTIVE_PROGRAM];
 
-    // load the vertex program:
-    {
-#if 0
-      rsxgl_debug_printf("vp %u instructions\n",(unsigned int)program.vp_num_insn);
-#endif
-      uint32_t * buffer = gcm_reserve(context,program.vp_num_insn * 5 + 7);
-      
-      gcm_emit_method(&buffer,NV30_3D_VP_UPLOAD_FROM_ID,1);
-      gcm_emit(&buffer,0);
-
-      const struct nvfx_vertex_program_exec * ucode = rsxgl_main_ucode_address(program.vp_ucode_offset);
-      for(size_t i = 0,n = program.vp_num_insn;i < n;++i,++ucode) {
-#if 0
-	rsxgl_debug_printf("%04u: %x %x %x %x\n",i,
-			   ucode -> data[0],ucode -> data[1],ucode -> data[2],ucode -> data[3]);
-#endif
-
-	gcm_emit_method(&buffer,NV30_3D_VP_UPLOAD_INST(0),4);
-	gcm_emit(&buffer,ucode -> data[0]);
-	gcm_emit(&buffer,ucode -> data[1]);
-	gcm_emit(&buffer,ucode -> data[2]);
-	gcm_emit(&buffer,ucode -> data[3]);
-      }
-      
-      gcm_emit_method(&buffer,NV30_3D_VP_START_FROM_ID,1);
-      gcm_emit(&buffer,0);
-
-#if 0
-      rsxgl_debug_printf("vp masks: %x %x\n",program.vp_input_mask,program.vp_output_mask);
-#endif
-
-      gcm_emit_method(&buffer,NV40_3D_VP_ATTRIB_EN,2);
-      gcm_emit(&buffer,program.vp_input_mask);
-      gcm_emit(&buffer,program.vp_output_mask);
-      
-      gcm_finish_commands(context,&buffer);
-    }
-
-    // load vertex program internal constants:
-    if(program.vp_num_internal_const > 0) {
-      const program_t::instruction_size_type * program_offsets = program.program_offsets;
-      const ieee32_t * uniform_values = program.uniform_values;
-
-#if 0
-      rsxgl_debug_printf("%u internal constants\n",program.vp_num_internal_const);
-#endif
-
-      for(program_t::uniform_size_type i = 0,n = program.vp_num_internal_const;i < n;++i) {
-	program_t::instruction_size_type count = *program_offsets++;
-	program_t::instruction_size_type index = *program_offsets++;
-
-	uint32_t * buffer = gcm_reserve(context,6 * count);
-
-	for(;count > 0;--count,++index,uniform_values += 4) {
-
-#if 0
-	  rsxgl_debug_printf("\t%04u: (%u) %u %x %x %x %x\n",i,count,index,
-			     uniform_values[0].u,uniform_values[1].u,uniform_values[2].u,uniform_values[3].u);
-#endif
-
-	  gcm_emit_method(&buffer,NV30_3D_VP_UPLOAD_CONST_ID,5);
-	  gcm_emit(&buffer,index);
-	  
-	  gcm_emit(&buffer,uniform_values[0].u);
-	  gcm_emit(&buffer,uniform_values[1].u);
-	  gcm_emit(&buffer,uniform_values[2].u);
-	  gcm_emit(&buffer,uniform_values[3].u);
+    if(program.linked) {
+      // load the vertex program:
+      {
+	uint32_t * buffer = gcm_reserve(context,program.vp_num_insn * 5 + 7);
+	
+	gcm_emit_method(&buffer,NV30_3D_VP_UPLOAD_FROM_ID,1);
+	gcm_emit(&buffer,0);
+	
+	const struct nvfx_vertex_program_exec * ucode = rsxgl_main_ucode_address(program.vp_ucode_offset);
+	for(size_t i = 0,n = program.vp_num_insn;i < n;++i,++ucode) {
+	  gcm_emit_method(&buffer,NV30_3D_VP_UPLOAD_INST(0),4);
+	  gcm_emit(&buffer,ucode -> data[0]);
+	  gcm_emit(&buffer,ucode -> data[1]);
+	  gcm_emit(&buffer,ucode -> data[2]);
+	  gcm_emit(&buffer,ucode -> data[3]);
 	}
-
+	
+	gcm_emit_method(&buffer,NV30_3D_VP_START_FROM_ID,1);
+	gcm_emit(&buffer,0);
+	
+	gcm_emit_method(&buffer,NV40_3D_VP_ATTRIB_EN,2);
+	gcm_emit(&buffer,program.vp_input_mask);
+	gcm_emit(&buffer,program.vp_output_mask);
+	
 	gcm_finish_commands(context,&buffer);
       }
-    }
-    
-    // load the fragment program:
-    {
-      uint32_t i = 0;
-      const uint32_t n = 4 + (2 * RSXGL_MAX_TEXTURE_COORDS);
-
-      uint32_t * buffer = gcm_reserve(context,n);
-
-#if 0
-      rsxgl_debug_printf("fp ucode_offset: %u\n",rsxgl_rsx_ucode_offset(program.fp_ucode_offset));
-#endif
-
-      const uint32_t * pfp_ucode = rsxgl_rsx_ucode_address(program.fp_ucode_offset);
-      for(unsigned int j = 0;j < program.fp_num_insn;++j) {
-#if 0
-	rsxgl_debug_printf("%04u: %x %x %x %x\n",j,pfp_ucode[0],pfp_ucode[1],pfp_ucode[2],pfp_ucode[3]);
-#endif
-	pfp_ucode += 4;
+      
+      // load vertex program internal constants:
+      if(program.vp_num_internal_const > 0) {
+	const program_t::instruction_size_type * program_offsets = program.program_offsets;
+	const ieee32_t * uniform_values = program.uniform_values;
+	
+	for(program_t::uniform_size_type i = 0,n = program.vp_num_internal_const;i < n;++i) {
+	  program_t::instruction_size_type count = *program_offsets++;
+	  program_t::instruction_size_type index = *program_offsets++;
+	  
+	  uint32_t * buffer = gcm_reserve(context,6 * count);
+	  
+	  for(;count > 0;--count,++index,uniform_values += 4) {
+	    gcm_emit_method(&buffer,NV30_3D_VP_UPLOAD_CONST_ID,5);
+	    gcm_emit(&buffer,index);
+	    
+	    gcm_emit(&buffer,uniform_values[0].u);
+	    gcm_emit(&buffer,uniform_values[1].u);
+	    gcm_emit(&buffer,uniform_values[2].u);
+	    gcm_emit(&buffer,uniform_values[3].u);
+	  }
+	  
+	  gcm_finish_commands(context,&buffer);
+	}
       }
       
-      gcm_emit_method_at(buffer,i++,NV30_3D_FP_ACTIVE_PROGRAM,1);
-      gcm_emit_at(buffer,i++,rsxgl_rsx_ucode_offset(program.fp_ucode_offset) | NV30_3D_FP_ACTIVE_PROGRAM_DMA0);
-
-      // Texcoord control:
+      // load the fragment program:
+      {
+	uint32_t i = 0;
+	const uint32_t n = 4 + (2 * RSXGL_MAX_TEXTURE_COORDS);
+	
+	uint32_t * buffer = gcm_reserve(context,n);
+	
+	const uint32_t * pfp_ucode = rsxgl_rsx_ucode_address(program.fp_ucode_offset);
+	for(unsigned int j = 0;j < program.fp_num_insn;++j) {
+	  pfp_ucode += 4;
+	}
+	
+	gcm_emit_method_at(buffer,i++,NV30_3D_FP_ACTIVE_PROGRAM,1);
+	gcm_emit_at(buffer,i++,rsxgl_rsx_ucode_offset(program.fp_ucode_offset) | NV30_3D_FP_ACTIVE_PROGRAM_DMA0);
+	
+	// Texcoord control:
 #define  NV40TCL_TEX_COORD_CONTROL(x)                                   (0x00000b40+((x)*4))
-      bit_set< RSXGL_MAX_TEXTURE_COORDS >::const_iterator it = program.fp_texcoords.begin(),
-	it2D = program.fp_texcoord2D.begin(),
-	it3D = program.fp_texcoord3D.begin();
-      uint32_t reg = 0xb40;
-      for(uint32_t j = 0;j < RSXGL_MAX_TEXTURE_COORDS;++j,i += 2) {
+	bit_set< RSXGL_MAX_TEXTURE_COORDS >::const_iterator it = program.fp_texcoords.begin(),
+	  it2D = program.fp_texcoord2D.begin(),
+	  it3D = program.fp_texcoord3D.begin();
+	uint32_t reg = 0xb40;
+	for(uint32_t j = 0;j < RSXGL_MAX_TEXTURE_COORDS;++j,i += 2) {
 #if 0
-	const uint32_t cmds[2] = {
-	  //NV40TCL_TEX_COORD_CONTROL(j),
-	  reg,
-	  it.test() ? 
-	  ((it3D.test() ? (1 << 4) : 0) | (it2D.test() ? 1 : 0)) :
-	  (0)
-	};
-	
-	rsxgl_debug_printf("%u %u, %u %u %u: %x %x\n",
-			   j,i,
-			   (uint32_t)it.test(),
-			   (uint32_t)it2D.test(),
-			   (uint32_t)it3D.test(),
-			   cmds[0],cmds[1]);
-
-	gcm_emit_method_at(buffer,i,cmds[0],1);
-	gcm_emit_at(buffer,i + 1,cmds[1]);
+	  const uint32_t cmds[2] = {
+	    //NV40TCL_TEX_COORD_CONTROL(j),
+	    reg,
+	    it.test() ? 
+	    ((it3D.test() ? (1 << 4) : 0) | (it2D.test() ? 1 : 0)) :
+	    (0)
+	  };
+	  
+	  rsxgl_debug_printf("%u %u, %u %u %u: %x %x\n",
+			     j,i,
+			     (uint32_t)it.test(),
+			     (uint32_t)it2D.test(),
+			     (uint32_t)it3D.test(),
+			     cmds[0],cmds[1]);
+	  
+	  gcm_emit_method_at(buffer,i,cmds[0],1);
+	  gcm_emit_at(buffer,i + 1,cmds[1]);
 #endif
-
-	gcm_emit_method_at(buffer,i,reg,1);
-	gcm_emit_at(buffer,i + 1,
-		    it.test() ? 
-		    ((it3D.test() ? (1 << 4) : 0) | (it2D.test() ? 1 : 0)) :
-		    (0));
+	  
+	  gcm_emit_method_at(buffer,i,reg,1);
+	  gcm_emit_at(buffer,i + 1,
+		      it.test() ? 
+		      ((it3D.test() ? (1 << 4) : 0) | (it2D.test() ? 1 : 0)) :
+		      (0));
+	  
+	  it.next(program.fp_texcoords);
+	  it2D.next(program.fp_texcoord2D);
+	  it3D.next(program.fp_texcoord3D);
+	  reg += 4;
+	}
 	
-	it.next(program.fp_texcoords);
-	it2D.next(program.fp_texcoord2D);
-	it3D.next(program.fp_texcoord3D);
-	reg += 4;
+	gcm_emit_method_at(buffer,i++,NV30_3D_FP_CONTROL,1);
+	gcm_emit_at(buffer,i++,program.fp_control);
+	
+	gcm_finish_n_commands(context,n);
       }
-
-#if 0
-      rsxgl_debug_printf("fp control: %x\n",program.fp_control);
-#endif
-
-      gcm_emit_method_at(buffer,i++,NV30_3D_FP_CONTROL,1);
-      gcm_emit_at(buffer,i++,program.fp_control);
-
-      gcm_finish_n_commands(context,n);
-    }
-
-    // invalidate vertex program uniforms:
-    if(program.uniform_table_size > 0) {
-      program.invalid_uniforms = 1;
-      program_t::uniform_table_type::value_type * uniform = program.uniform_table_values;
-      for(program_t::uniform_size_type i = 0,n = program.uniform_table_size;i < n;++i,++uniform) {
-	if(uniform -> second.enabled.test(RSXGL_VERTEX_SHADER)) {
-	  uniform -> second.invalid.set(RSXGL_VERTEX_SHADER);
+      
+      // invalidate vertex program uniforms:
+      if(program.uniform_table_size > 0) {
+	program.invalid_uniforms = 1;
+	program_t::uniform_table_type::value_type * uniform = program.uniform_table_values;
+	for(program_t::uniform_size_type i = 0,n = program.uniform_table_size;i < n;++i,++uniform) {
+	  if(uniform -> second.enabled.test(RSXGL_VERTEX_SHADER)) {
+	    uniform -> second.invalid.set(RSXGL_VERTEX_SHADER);
+	  }
 	}
       }
-    }
-
-    // Tell the GPU which vertex attributes the program will use:
-    {
-      uint32_t * buffer = gcm_reserve(context,2);
       
-      gcm_emit_method(&buffer,NV40_3D_VP_ATTRIB_EN,1);
-      gcm_emit(&buffer,program.attribs_enabled.as_integer());
-      
-      gcm_finish_commands(context,&buffer);
-    }
-
-    // Tell unused attributes to have a size of 0:
-    {
-      const bit_set< RSXGL_MAX_VERTEX_ATTRIBS > unused_attribs = ~program.attribs_enabled;
-
-      if(unused_attribs.any()) {
-	uint32_t * buffer = gcm_reserve(context,2 * RSXGL_MAX_VERTEX_ATTRIBS);
-	size_t nbuffer = 0;
-
-	for(size_t i = 0;i < RSXGL_MAX_VERTEX_ATTRIBS;++i) {
-	  if(!unused_attribs.test(i)) continue;
-
-	  gcm_emit_method_at(buffer,nbuffer + 0,NV30_3D_VTXFMT(i),1);
-	  gcm_emit_at(buffer,nbuffer + 1,
-		      /* ((uint32_t)attribs.frequency[i] << 16 | */
-		      ((uint32_t)0 << NV30_3D_VTXFMT_STRIDE__SHIFT) |
-		      ((uint32_t)0 << NV30_3D_VTXFMT_SIZE__SHIFT) |
-		      ((uint32_t)RSXGL_VERTEX_F32 & 0x7));
-
-	  nbuffer += 2;
-	}
-
-	gcm_finish_n_commands(context,nbuffer);
-      }
-    }
-
-    // Set point sprite behavior:
-    {
-      if(program.point_sprite_control == 0) {
+      // Tell the GPU which vertex attributes the program will use:
+      {
 	uint32_t * buffer = gcm_reserve(context,2);
-
-	gcm_emit_method_at(buffer,0,NV30_3D_POINT_PARAMETERS_ENABLE,1);
-	gcm_emit_at(buffer,1,0);
-
-	gcm_finish_n_commands(context,2);
+	
+	gcm_emit_method(&buffer,NV40_3D_VP_ATTRIB_EN,1);
+	gcm_emit(&buffer,program.attribs_enabled.as_integer());
+	
+	gcm_finish_commands(context,&buffer);
       }
-      else {
-	//rsxgl_debug_printf("point sprite control: %x\n",program.point_sprite_control);
-
-	uint32_t * buffer = gcm_reserve(context,4);
-
-	gcm_emit_method_at(buffer,0,NV30_3D_POINT_PARAMETERS_ENABLE,1);
-	gcm_emit_at(buffer,1,1);
-
-	gcm_emit_method_at(buffer,2,NV30_3D_POINT_SPRITE,1);
-	gcm_emit_at(buffer,3,program.point_sprite_control);
-
-	gcm_finish_n_commands(context,4);
+      
+      // Tell unused attributes to have a size of 0:
+      {
+	const bit_set< RSXGL_MAX_VERTEX_ATTRIBS > unused_attribs = ~program.attribs_enabled;
+	
+	if(unused_attribs.any()) {
+	  uint32_t * buffer = gcm_reserve(context,2 * RSXGL_MAX_VERTEX_ATTRIBS);
+	  size_t nbuffer = 0;
+	  
+	  for(size_t i = 0;i < RSXGL_MAX_VERTEX_ATTRIBS;++i) {
+	    if(!unused_attribs.test(i)) continue;
+	    
+	    gcm_emit_method_at(buffer,nbuffer + 0,NV30_3D_VTXFMT(i),1);
+	    gcm_emit_at(buffer,nbuffer + 1,
+			/* ((uint32_t)attribs.frequency[i] << 16 | */
+			((uint32_t)0 << NV30_3D_VTXFMT_STRIDE__SHIFT) |
+			((uint32_t)0 << NV30_3D_VTXFMT_SIZE__SHIFT) |
+			((uint32_t)RSXGL_VERTEX_F32 & 0x7));
+	    
+	    nbuffer += 2;
+	  }
+	  
+	  gcm_finish_n_commands(context,nbuffer);
+	}
+      }
+      
+      // Set point sprite behavior:
+      {
+	if(program.point_sprite_control == 0) {
+	  uint32_t * buffer = gcm_reserve(context,2);
+	  
+	  gcm_emit_method_at(buffer,0,NV30_3D_POINT_PARAMETERS_ENABLE,1);
+	  gcm_emit_at(buffer,1,0);
+	  
+	  gcm_finish_n_commands(context,2);
+	}
+	else {
+	  //rsxgl_debug_printf("point sprite control: %x\n",program.point_sprite_control);
+	  
+	  uint32_t * buffer = gcm_reserve(context,4);
+	  
+	  gcm_emit_method_at(buffer,0,NV30_3D_POINT_PARAMETERS_ENABLE,1);
+	  gcm_emit_at(buffer,1,1);
+	  
+	  gcm_emit_method_at(buffer,2,NV30_3D_POINT_SPRITE,1);
+	  gcm_emit_at(buffer,3,program.point_sprite_control);
+	  
+	  gcm_finish_n_commands(context,4);
+	}
       }
     }
   }

@@ -348,10 +348,6 @@ nvfx_vp_emit(struct nvfx_vpc *vpc, struct nvfx_insn insn)
 
 static inline struct nvfx_src
 tgsi_src(struct nvfx_vpc *vpc, const struct tgsi_full_src_register *fsrc) {
-  rsxgl_debug_printf("tgsi_src: file: %u index: %u\n",
-		     (unsigned int)fsrc -> Register.File,
-		     (unsigned int)fsrc -> Register.Index);
-
 	struct nvfx_src src;
 
 	switch (fsrc->Register.File) {
@@ -398,12 +394,6 @@ tgsi_src(struct nvfx_vpc *vpc, const struct tgsi_full_src_register *fsrc) {
 			src.reg.type = -1;
 		}
 	}
-
-	rsxgl_debug_printf("result is type:%u index:%u indurect:%u indurect_reg:%u indirect_swz:%u swz:%u %u %u %u\n",
-			   (unsigned int)src.reg.type,(unsigned int)src.reg.index,
-			   (unsigned int)src.indirect,(unsigned int)src.indirect_reg,(unsigned int)src.indirect_swz,
-			   (unsigned int)src.swz[0],(unsigned int)src.swz[1],(unsigned int)src.swz[2],(unsigned int)src.swz[3]
-			   );
 
 	return src;
 }
