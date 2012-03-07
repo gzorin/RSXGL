@@ -978,7 +978,7 @@ glLinkProgram (GLuint program_name)
 		const std::deque< uint32_t > & offsets = it -> second;
 		program_offsets.push_back(offsets.size());
 
-		for(std::deque< uint32_t >::const_iterator jt = it -> second.begin(),jt_end = it -> second.end();jt != jt_end;++jt) {
+		for(std::deque< uint32_t >::const_iterator jt = offsets.begin(),jt_end = offsets.end();jt != jt_end;++jt) {
 		  program_offsets.push_back(*jt / 4);
 		}
 	      }
