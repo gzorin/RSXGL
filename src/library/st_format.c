@@ -1673,11 +1673,12 @@ rsxgl_choose_format(struct pipe_screen *screen, GLenum internalFormat,
 }
 
 int
-rsxgl_get_format_color_bit_depth(enum pipe_format pformat,int channel)
+rsxgl_get_format_color_bit_depth(enum pipe_format pformat,int _channel)
 {
   if(!util_format_is_depth_or_stencil(pformat)) {
     const struct util_format_description * desc = util_format_description(pformat);
     if(desc != 0) {
+      int channel = desc -> swizzle[_channel];
       if(desc -> layout == UTIL_FORMAT_LAYOUT_PLAIN && channel < desc -> nr_channels) {
 	return desc -> channel[channel].size;
       }
@@ -1687,11 +1688,12 @@ rsxgl_get_format_color_bit_depth(enum pipe_format pformat,int channel)
 }
 
 int
-rsxgl_get_format_depth_bit_depth(enum pipe_format pformat,int channel)
+rsxgl_get_format_depth_bit_depth(enum pipe_format pformat,int _channel)
 {
   if(util_format_is_depth_or_stencil(pformat)) {
     const struct util_format_description * desc = util_format_description(pformat);
     if(desc != 0) {
+      int channel = desc -> swizzle[_channel];
       if(desc -> layout == UTIL_FORMAT_LAYOUT_PLAIN && channel < desc -> nr_channels) {
 	return desc -> channel[channel].size;
       }

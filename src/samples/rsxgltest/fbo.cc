@@ -11,8 +11,8 @@
 #include "sine_wave.h"
 
 #include <stddef.h>
-#include "fbo_inner_vpo.h"
-#include "fbo_inner_fpo.h"
+#include "fbo_inner_vert.h"
+#include "fbo_inner_frag.h"
 
 #include <io/pad.h>
 
@@ -254,10 +254,29 @@ rsxgltest_init(int argc,const char ** argv)
     
     glAttachShader(program,shaders[0]);
     glAttachShader(program,shaders[1]);
-    
+
+#if 0    
     // Supply shader binaries:
     glShaderBinary(1,shaders,0,fbo_inner_vpo,fbo_inner_vpo_size);
     glShaderBinary(1,shaders + 1,0,fbo_inner_fpo,fbo_inner_fpo_size);
+#endif
+
+    // Supply shader SOURCES!
+    const GLchar * shader_srcs[] = { (const GLchar *)fbo_inner_vert, (const GLchar *)fbo_inner_frag };
+    GLint shader_srcs_lengths[] = { fbo_inner_vert_len, fbo_inner_frag_len };
+    GLint compiled = 0;
+    
+    glShaderSource(shaders[0],1,shader_srcs,shader_srcs_lengths);
+    glCompileShader(shaders[0]);
+    
+    glGetShaderiv(shaders[0],GL_COMPILE_STATUS,&compiled);
+    tcp_printf("shader compile status: %i\n",compiled);
+    
+    glShaderSource(shaders[1],1,shader_srcs + 1,shader_srcs_lengths + 1);
+    glCompileShader(shaders[1]);
+    
+    glGetShaderiv(shaders[1],GL_COMPILE_STATUS,&compiled);
+    tcp_printf("shader compile status: %i\n",compiled);
 
     //glBindAttribLocation(program,vertex_location,"vertex");
     //glBindAttribLocation(program,normal_location,"normal");
@@ -361,12 +380,16 @@ rsxgltest_init(int argc,const char ** argv)
   glFramebufferRenderbuffer(GL_FRAMEBUFFER,GL_DEPTH_ATTACHMENT,GL_RENDERBUFFER,rbo[1]);
 
   glBindFramebuffer(GL_FRAMEBUFFER,0);
+
+  glBindTexture(GL_TEXTURE_2D,0);
 }
 
 extern "C"
 int
 rsxgltest_draw()
 {
+  tcp_printf("%s\n",__PRETTY_FUNCTION__);
+
   float rgb[3] = {
     compute_sine_wave(rgb_waves,rsxgltest_elapsed_time),
     compute_sine_wave(rgb_waves + 1,rsxgltest_elapsed_time),

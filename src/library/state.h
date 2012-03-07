@@ -105,6 +105,7 @@ struct state_t {
 	scissor:1,
 	write_mask:1,
 	clear_color:1,
+	clear_depth_stencil:1,
 	depth:1,
 	blend:1,
 	stencil:1,

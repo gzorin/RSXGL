@@ -48,7 +48,7 @@ state_t::state_t()
 
   write_mask.parts.depth = 1;
   enable.depth_test = 0;
-  depth.clear = 0xffff;
+  depth.clear = 0xffffff;
   depth.func = RSXGL_LESS;
 
   enable.blend = 0;
@@ -61,6 +61,7 @@ state_t::state_t()
   blend.dst_alpha_func = RSXGL_ZERO;
 
   write_mask.parts.stencil = 1;
+  stencil.clear = 0;
   stencil.face[0].enable = 0;
   stencil.face[0].mask = 0xff;
   stencil.face[0].func = RSXGL_ALWAYS;
@@ -304,6 +305,16 @@ rsxgl_state_validate(rsxgl_context_t * ctx)
     
     gcm_finish_commands(context,&buffer);
   }
+
+  if(s -> invalid.parts.clear_depth_stencil) {
+    // clear color:
+    buffer = gcm_reserve(context,2);
+    
+    gcm_emit_method(&buffer,NV30_3D_CLEAR_DEPTH_VALUE,1);
+    gcm_emit(&buffer,((uint32_t)s -> depth.clear << 8) | ((uint32_t)s -> stencil.clear));
+    
+    gcm_finish_commands(context,&buffer);
+  }
   
   if(s -> invalid.parts.write_mask || s -> invalid.parts.depth) {
     buffer = gcm_reserve(context,2);
@@ -316,7 +327,7 @@ rsxgl_state_validate(rsxgl_context_t * ctx)
 
   if(s -> invalid.parts.depth) {
     // depth-related:
-    buffer = gcm_reserve(context,4);
+    buffer = gcm_reserve(context,2);
     
     gcm_emit_method(&buffer,NV30_3D_DEPTH_FUNC,1);
     switch(s -> depth.func) {
@@ -345,9 +356,6 @@ rsxgl_state_validate(rsxgl_context_t * ctx)
       gcm_emit(&buffer,NV30_3D_DEPTH_FUNC_ALWAYS);
       break;
     };
-    
-    gcm_emit_method(&buffer,NV30_3D_CLEAR_DEPTH_VALUE,1);
-    gcm_emit(&buffer,s -> depth.clear);
     
     gcm_finish_commands(context,&buffer);
   }

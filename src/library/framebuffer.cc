@@ -156,7 +156,7 @@ rsxgl_renderbuffer_storage(rsxgl_context_t * ctx,const renderbuffer_t::name_type
 						  glinternalformat,GL_NONE,GL_NONE,
 						  PIPE_TEXTURE_RECT,
 						  1,
-						  PIPE_BIND_SAMPLER_VIEW | PIPE_BIND_RENDER_TARGET);
+						  PIPE_BIND_SAMPLER_VIEW);
 
   if(pformat == PIPE_FORMAT_NONE) {
     RSXGL_ERROR_(GL_INVALID_ENUM);
@@ -916,7 +916,7 @@ rsxgl_emit_surface(gcmContextData * context,const uint8_t which,surface_t const 
   };
 
   uint32_t * buffer = gcm_reserve(context,6);
-	
+
   gcm_emit_method_at(buffer,0,rsxgl_dma_methods[which],1);
   gcm_emit_at(buffer,1,(surface.memory.location == RSXGL_MEMORY_LOCATION_LOCAL) ? RSXGL_DMA_MEMORY_FRAME_BUFFER : RSXGL_DMA_MEMORY_HOST_BUFFER);
   
@@ -1049,7 +1049,12 @@ rsxgl_framebuffer_validate(rsxgl_context_t * ctx,framebuffer_t & framebuffer,con
 	if(type == RSXGL_ATTACHMENT_TYPE_RENDERBUFFER) {
 	  renderbuffer_t & renderbuffer = renderbuffer_t::storage().at(framebuffer.attachments[4]);
 	  
-	  if(util_format_is_depth_or_stencil(renderbuffer.pformat)) {
+	  if(util_format_is_depth_or_stencil(renderbuffer.pformat) &&
+	     ctx -> screen() -> is_format_supported(ctx -> screen(),
+						    renderbuffer.pformat,
+						    PIPE_TEXTURE_RECT,
+						    1,
+						    PIPE_BIND_SAMPLER_VIEW | PIPE_BIND_DEPTH_STENCIL)) {
 	    depth_pformat = renderbuffer.pformat;
 	    
 	    surfaces[4] = renderbuffer.surface;
@@ -1066,7 +1071,7 @@ rsxgl_framebuffer_validate(rsxgl_context_t * ctx,framebuffer_t & framebuffer,con
 						    texture.pformat,
 						    texture.rect ? PIPE_TEXTURE_RECT : PIPE_TEXTURE_2D,
 						    1,
-						    PIPE_BIND_SAMPLER_VIEW | PIPE_BIND_RENDER_TARGET)) {
+						    PIPE_BIND_SAMPLER_VIEW | PIPE_BIND_DEPTH_STENCIL)) {
 	    depth_pformat = texture.pformat;
 	    
 	    surfaces[4].pitch = texture.pitch;
@@ -1112,15 +1117,15 @@ rsxgl_framebuffer_validate(rsxgl_context_t * ctx,framebuffer_t & framebuffer,con
 
     const struct util_format_description * color_desc = util_format_description(color_pformat);
     rsxgl_assert(color_desc != 0);
-    framebuffer.write_mask.parts.r = color_desc -> channel[0].type != UTIL_FORMAT_TYPE_VOID;
-    framebuffer.write_mask.parts.g = color_desc -> channel[1].type != UTIL_FORMAT_TYPE_VOID;
-    framebuffer.write_mask.parts.b = color_desc -> channel[2].type != UTIL_FORMAT_TYPE_VOID;
-    framebuffer.write_mask.parts.a = color_desc -> channel[3].type != UTIL_FORMAT_TYPE_VOID;
+    framebuffer.write_mask.parts.r = color_desc -> channel[ color_desc -> swizzle[0] ].type != UTIL_FORMAT_TYPE_VOID;
+    framebuffer.write_mask.parts.g = color_desc -> channel[ color_desc -> swizzle[1] ].type != UTIL_FORMAT_TYPE_VOID;
+    framebuffer.write_mask.parts.b = color_desc -> channel[ color_desc -> swizzle[2] ].type != UTIL_FORMAT_TYPE_VOID;
+    framebuffer.write_mask.parts.a = color_desc -> channel[ color_desc -> swizzle[3] ].type != UTIL_FORMAT_TYPE_VOID;
 
     const struct util_format_description * depth_desc = util_format_description(depth_pformat);
     rsxgl_assert(depth_desc != 0);
-    framebuffer.write_mask.parts.depth = depth_desc -> channel[0].type != UTIL_FORMAT_TYPE_VOID;
-    framebuffer.write_mask.parts.stencil = depth_desc -> channel[1].type != UTIL_FORMAT_TYPE_VOID;
+    framebuffer.write_mask.parts.depth = depth_desc -> channel[ depth_desc -> swizzle[0] ].type != UTIL_FORMAT_TYPE_VOID;
+    framebuffer.write_mask.parts.stencil = depth_desc -> channel[ depth_desc -> swizzle[1] ].type != UTIL_FORMAT_TYPE_VOID;
 
     framebuffer.invalid = 0;
   }
@@ -1147,7 +1152,7 @@ rsxgl_draw_framebuffer_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
       const uint16_t w = framebuffer.size[0], h = framebuffer.size[1];
 
       uint32_t * buffer = gcm_reserve(context,9);
-      
+
       gcm_emit_method_at(buffer,0,NV30_3D_RT_FORMAT,1);
       gcm_emit_at(buffer,1,format | ((31 - __builtin_clz(w)) << NV30_3D_RT_FORMAT_LOG2_WIDTH__SHIFT) | ((31 - __builtin_clz(h)) << NV30_3D_RT_FORMAT_LOG2_HEIGHT__SHIFT));
       

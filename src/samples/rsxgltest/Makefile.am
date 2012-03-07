@@ -11,7 +11,7 @@ BUILT_SOURCES = textures_vpo.h textures_fpo.h \
 	points_vpo.h points_fpo.h \
 	cube_vpo.h cube_fpo.h \
 	texcube_vpo.h texcube_fpo.h \
-	fbo_inner_vpo.h fbo_inner_fpo.h \
+	fbo_inner_vert.h fbo_inner_frag.h \
 	occlusion_vpo.h occlusion_fpo.h \
 	gradient_png.h \
 	texcube_vert.h texcube_frag.h
@@ -22,6 +22,7 @@ CLEANFILES = draw_vpo.h draw_fpo.h draw_vpo.o draw_fpo.o \
 	cube_vpo.h cube_fpo.h cube_vpo.o cube_fpo.o \
 	texcube_vpo.h texcube_fpo.h texcube_vpo.o texcube_fpo.o \
 	fbo_vpo.h fbo_fpo.h fbo_vpo.o fbo_fpo.o \
+	fbo_inner_vert.h fbo_inner_frag.h \
 	dice_bin.o dice_bin.h \
 	nagel_bin.o nagel_bin.h \
 	face_png.o face_png.h \
@@ -47,7 +48,7 @@ manycubes_sources = manycubes.cc cube.vert cube.frag
 texcube_objects = nagel_bin.o gradient_png.o face_png.o
 texcube_sources = texcube.cc texture.c texcube.vert texcube.frag nagel.bin face.png gradient.png
 
-fbo_objects = fbo_inner_vpo.o fbo_inner_fpo.o nagel_bin.o
+fbo_objects = nagel_bin.o
 fbo_sources = fbo.cc texture.c fbo_inner.vert fbo_inner.frag nagel.bin
 
 occlusion_objects = occlusion_vpo.o occlusion_fpo.o
@@ -56,8 +57,8 @@ occlusion_sources = occlusion.cc occlusion.vert occlusion.frag
 occlusion2_objects = occlusion_vpo.o occlusion_fpo.o
 occlusion2_sources = occlusion2.cc occlusion.vert occlusion.frag
 
-objects = $(texcube_objects)
-sources = $(texcube_sources)
+objects = $(fbo_objects)
+sources = $(fbo_sources)
 
 rsxgltest_elf_DEPENDENCIES = $(top_builddir)/src/library/libEGL.a $(top_builddir)/src/library/libGL.a	\
 	$(objects)

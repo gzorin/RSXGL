@@ -1,3 +1,4 @@
+#version 130
 attribute vec3 vertex;
 attribute vec3 normal;
 attribute vec2 uv;

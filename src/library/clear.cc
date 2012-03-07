@@ -66,7 +66,7 @@ glClearDepthf(GLclampf d)
     break;
   }
 
-  ctx -> state.invalid.parts.depth = 1;
+  ctx -> state.invalid.parts.clear_depth_stencil = 1;
 
   RSXGL_NOERROR_();
 }
@@ -76,15 +76,15 @@ glClearStencil (GLint s)
 {
   struct rsxgl_context_t * ctx = current_ctx();
 
-  switch(ctx -> base.config -> egl_depth_size) {
-  case 16:
+  switch(ctx -> base.config -> egl_stencil_size) {
+  case 8:
     ctx -> state.stencil.clear = s;
     break;
   default:
     break;
   }
 
-  ctx -> state.invalid.parts.stencil = 1;
+  ctx -> state.invalid.parts.clear_depth_stencil = 1;
 
   RSXGL_NOERROR_();
 }
