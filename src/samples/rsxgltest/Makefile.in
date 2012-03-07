@@ -46,7 +46,7 @@ mkinstalldirs = $(install_sh) -d
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 PROGRAMS = $(noinst_PROGRAMS)
-am__objects_1 = rsxgltest_elf-fbo.$(OBJEXT) \
+am__objects_1 = rsxgltest_elf-fbomrt.$(OBJEXT) \
 	rsxgltest_elf-texture.$(OBJEXT)
 am__objects_2 = $(am__objects_1)
 am_rsxgltest_elf_OBJECTS = rsxgltest_elf-main.$(OBJEXT) \
@@ -253,6 +253,7 @@ BUILT_SOURCES = textures_vpo.h textures_fpo.h \
 	cube_vpo.h cube_fpo.h \
 	texcube_vpo.h texcube_fpo.h \
 	fbo_inner_vert.h fbo_inner_frag.h \
+	fbo_outer_vert.h fbo_outer_frag.h \
 	occlusion_vpo.h occlusion_fpo.h \
 	gradient_png.h \
 	texcube_vert.h texcube_frag.h
@@ -265,6 +266,7 @@ CLEANFILES = draw_vpo.h draw_fpo.h draw_vpo.o draw_fpo.o \
 	texcube_vpo.h texcube_fpo.h texcube_vpo.o texcube_fpo.o \
 	fbo_vpo.h fbo_fpo.h fbo_vpo.o fbo_fpo.o \
 	fbo_inner_vert.h fbo_inner_frag.h \
+	fbo_outer_vert.h fbo_outer_frag.h \
 	dice_bin.o dice_bin.h \
 	nagel_bin.o nagel_bin.h \
 	face_png.o face_png.h \
@@ -287,12 +289,14 @@ texcube_objects = nagel_bin.o gradient_png.o face_png.o
 texcube_sources = texcube.cc texture.c texcube.vert texcube.frag nagel.bin face.png gradient.png
 fbo_objects = nagel_bin.o
 fbo_sources = fbo.cc texture.c fbo_inner.vert fbo_inner.frag nagel.bin
+fbomrt_objects = nagel_bin.o
+fbomrt_sources = fbomrt.cc texture.c fbo_inner.vert fbo_inner.frag fbo_outer.vert fbo_outer.frag nagel.bin
 occlusion_objects = occlusion_vpo.o occlusion_fpo.o
 occlusion_sources = occlusion.cc occlusion.vert occlusion.frag
 occlusion2_objects = occlusion_vpo.o occlusion_fpo.o
 occlusion2_sources = occlusion2.cc occlusion.vert occlusion.frag
-objects = $(fbo_objects)
-sources = $(fbo_sources)
+objects = $(fbomrt_objects)
+sources = $(fbomrt_sources)
 rsxgltest_elf_DEPENDENCIES = $(top_builddir)/src/library/libEGL.a $(top_builddir)/src/library/libGL.a	\
 	$(objects)
 
@@ -356,7 +360,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/rsxgltest_elf-fbo.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/rsxgltest_elf-fbomrt.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/rsxgltest_elf-main.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/rsxgltest_elf-math3d.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/rsxgltest_elf-sine_wave.Po@am__quote@
@@ -446,19 +450,19 @@ rsxgltest_elf-math3d.obj: math3d.cc
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(rsxgltest_elf_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o rsxgltest_elf-math3d.obj `if test -f 'math3d.cc'; then $(CYGPATH_W) 'math3d.cc'; else $(CYGPATH_W) '$(srcdir)/math3d.cc'; fi`
 
-rsxgltest_elf-fbo.o: fbo.cc
-@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(rsxgltest_elf_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT rsxgltest_elf-fbo.o -MD -MP -MF $(DEPDIR)/rsxgltest_elf-fbo.Tpo -c -o rsxgltest_elf-fbo.o `test -f 'fbo.cc' || echo '$(srcdir)/'`fbo.cc
-@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/rsxgltest_elf-fbo.Tpo $(DEPDIR)/rsxgltest_elf-fbo.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='fbo.cc' object='rsxgltest_elf-fbo.o' libtool=no @AMDEPBACKSLASH@
+rsxgltest_elf-fbomrt.o: fbomrt.cc
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(rsxgltest_elf_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT rsxgltest_elf-fbomrt.o -MD -MP -MF $(DEPDIR)/rsxgltest_elf-fbomrt.Tpo -c -o rsxgltest_elf-fbomrt.o `test -f 'fbomrt.cc' || echo '$(srcdir)/'`fbomrt.cc
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/rsxgltest_elf-fbomrt.Tpo $(DEPDIR)/rsxgltest_elf-fbomrt.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='fbomrt.cc' object='rsxgltest_elf-fbomrt.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(rsxgltest_elf_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o rsxgltest_elf-fbo.o `test -f 'fbo.cc' || echo '$(srcdir)/'`fbo.cc
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(rsxgltest_elf_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o rsxgltest_elf-fbomrt.o `test -f 'fbomrt.cc' || echo '$(srcdir)/'`fbomrt.cc
 
-rsxgltest_elf-fbo.obj: fbo.cc
-@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(rsxgltest_elf_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT rsxgltest_elf-fbo.obj -MD -MP -MF $(DEPDIR)/rsxgltest_elf-fbo.Tpo -c -o rsxgltest_elf-fbo.obj `if test -f 'fbo.cc'; then $(CYGPATH_W) 'fbo.cc'; else $(CYGPATH_W) '$(srcdir)/fbo.cc'; fi`
-@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/rsxgltest_elf-fbo.Tpo $(DEPDIR)/rsxgltest_elf-fbo.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='fbo.cc' object='rsxgltest_elf-fbo.obj' libtool=no @AMDEPBACKSLASH@
+rsxgltest_elf-fbomrt.obj: fbomrt.cc
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(rsxgltest_elf_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT rsxgltest_elf-fbomrt.obj -MD -MP -MF $(DEPDIR)/rsxgltest_elf-fbomrt.Tpo -c -o rsxgltest_elf-fbomrt.obj `if test -f 'fbomrt.cc'; then $(CYGPATH_W) 'fbomrt.cc'; else $(CYGPATH_W) '$(srcdir)/fbomrt.cc'; fi`
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/rsxgltest_elf-fbomrt.Tpo $(DEPDIR)/rsxgltest_elf-fbomrt.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='fbomrt.cc' object='rsxgltest_elf-fbomrt.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(rsxgltest_elf_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o rsxgltest_elf-fbo.obj `if test -f 'fbo.cc'; then $(CYGPATH_W) 'fbo.cc'; else $(CYGPATH_W) '$(srcdir)/fbo.cc'; fi`
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(rsxgltest_elf_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o rsxgltest_elf-fbomrt.obj `if test -f 'fbomrt.cc'; then $(CYGPATH_W) 'fbomrt.cc'; else $(CYGPATH_W) '$(srcdir)/fbomrt.cc'; fi`
 
 ID: $(HEADERS) $(SOURCES) $(LISP) $(TAGS_FILES)
 	list='$(SOURCES) $(HEADERS) $(LISP) $(TAGS_FILES)'; \
