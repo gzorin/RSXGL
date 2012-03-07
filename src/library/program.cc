@@ -1087,7 +1087,9 @@ glLinkProgram (GLuint program_name)
       table.resize(uniforms.size());
 
       unsigned int i = 0;
-      for(const std::pair< const char *, program_t::uniform_t > & value : uniforms) {
+      for(std::map< const char *, program_t::uniform_t, cstr_less >::iterator it = uniforms.begin();
+          it != uniforms.end(); it++) {
+        const std::pair< const char *, program_t::uniform_t > value = *it;
 #if 0
 	rsxgl_debug_printf(" %s: type:%u count:%u values_index:%u vp_index:%u program_offsets_index:%u\n",
 			   value.first,
@@ -1129,7 +1131,9 @@ glLinkProgram (GLuint program_name)
       table.resize(sampler_uniforms.size());
 
       unsigned int i = 0;
-      for(const std::pair< const char *, program_t::sampler_uniform_t > & value : sampler_uniforms) {
+      for(std::map< const char *, program_t::sampler_uniform_t, cstr_less >::iterator it = sampler_uniforms.begin();
+          it != sampler_uniforms.end(); it++) {
+        const std::pair< const char *, program_t::sampler_uniform_t > value = *it;
 #if 0
 	rsxgl_debug_printf(" %s: type:%u vp_index:%u fp_index:%u\n",
 			   value.first,
