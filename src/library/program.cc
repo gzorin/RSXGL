@@ -977,8 +977,9 @@ glLinkProgram (GLuint program_name)
 		
 		const std::deque< uint32_t > & offsets = it -> second;
 		program_offsets.push_back(offsets.size());
-		for(const uint32_t & offset : offsets) {
-		  program_offsets.push_back(offset / 4);
+
+		for(std::deque< uint32_t >::const_iterator jt = it -> second.begin(),jt_end = it -> second.end();jt != jt_end;++jt) {
+		  program_offsets.push_back(*jt / 4);
 		}
 	      }
 	      break;
@@ -1054,20 +1055,20 @@ glLinkProgram (GLuint program_name)
       table.resize(attribs.size());
 
       unsigned int i = 0;
-      for(const std::pair< const char *, program_t::attrib_t > & value : attribs) {
+      for(std::map< const char *, program_t::attrib_t, cstr_less >::const_iterator jt = attribs.begin(),jt_end = attribs.end();jt != jt_end;++jt) {
 #if 0
 	rsxgl_debug_printf(" %s: type:%u index:%u\n",
 			   value.first,
 			   (unsigned int)value.second.type,
 			   (unsigned int)value.second.index);
 #endif
-
+	
 	table[i].first = pnames - program.names_data;
-	table[i].second = value.second;
-
-	program.attribs_enabled.set(value.second.index);
-
-	for(const char * name = value.first;*name != 0;++name,++pnames) {
+	table[i].second = jt -> second;
+	
+	program.attribs_enabled.set(jt -> second.index);
+	
+	for(const char * name = jt -> first;*name != 0;++name,++pnames) {
 	  *pnames = *name;
 	}
 	*pnames++ = 0;
