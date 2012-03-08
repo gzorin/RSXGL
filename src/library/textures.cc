@@ -883,7 +883,7 @@ rsxgl_tex_parameterf(rsxgl_context_t * ctx,texture_t::name_type texture_name,GLe
     }
 
     texture.remap = nvfx_get_texture_remap(nvfx_get_texture_format(texture.pformat),
-					   texture.swizzle.a,texture.swizzle.r,texture.swizzle.g,texture.swizzle.b);
+					   texture.swizzle.r,texture.swizzle.g,texture.swizzle.b,texture.swizzle.a);
 
     ctx -> invalid_textures |= texture.binding_bitfield;
   }
@@ -1035,7 +1035,7 @@ rsxgl_tex_remap(uint32_t op0,uint32_t op1,uint32_t op2,uint32_t op3,
 }
 
 static inline uint32_t
-rsxgl_tex_level_offset(const texture_t & texture,size_t level)
+rsxgl_get_tex_level_offset_size(const texture_t & texture,size_t level,texture_t::dimension_size_type * outsize)
 {
   texture_t::dimension_size_type size[3] = { texture.size[0], texture.size[1], texture.size[2] };
   const uint32_t pitch = util_format_get_stride(texture.pformat,size[0]);
@@ -1045,12 +1045,128 @@ rsxgl_tex_level_offset(const texture_t & texture,size_t level)
   for(size_t i = 0,n = std::min((size_t)texture.max_level,level);i < n;++i) {
     offset += pitch * size[1] * size[2];
 
-    size[0] = std::max(size[0] >> 1,1);
-    size[1] = std::max(size[1] >> 1,1);
-    size[2] = std::max(size[2] >> 1,1);
+    for(int j = 0;j < 3;++j) {
+      size[j] = std::max(size[j] >> 1,1);
+    }
+  }
+
+  if(outsize != 0) {
+    for(int j = 0;j < 3;++j) {
+      outsize[j] = size[j];
+    }
   }
 
   return offset;
+}
+
+static enum pipe_format
+rsxgl_choose_source_format(const GLenum format,const GLenum type)
+{
+  if(format == GL_RED) {
+    if(type == GL_UNSIGNED_BYTE) {
+      return PIPE_FORMAT_R8_UNORM;
+    }
+    else if(type == GL_BYTE) {
+      return PIPE_FORMAT_R8_SNORM;
+    }
+    else if(type == GL_UNSIGNED_SHORT) {
+      return PIPE_FORMAT_R16_UNORM;
+    }
+    else if(type == GL_SHORT) {
+      return PIPE_FORMAT_R16_SNORM;
+    }
+    else if(type == GL_UNSIGNED_INT) {
+      return PIPE_FORMAT_R32_UNORM;
+    }
+    else if(type == GL_INT) {
+      return PIPE_FORMAT_R32_SNORM;
+    }
+    else if(type == GL_FLOAT) {
+      return PIPE_FORMAT_R32_FLOAT;
+    }
+  }
+  else if(format == GL_RG) {
+    if(type == GL_UNSIGNED_BYTE) {
+      return PIPE_FORMAT_R8G8_UNORM;
+    }
+    else if(type == GL_BYTE) {
+      return PIPE_FORMAT_R8G8_SNORM;
+    }
+    else if(type == GL_UNSIGNED_SHORT) {
+      return PIPE_FORMAT_R16G16_UNORM;
+    }
+    else if(type == GL_SHORT) {
+      return PIPE_FORMAT_R16G16_SNORM;
+    }
+    else if(type == GL_UNSIGNED_INT) {
+      return PIPE_FORMAT_R32G32_UNORM;
+    }
+    else if(type == GL_INT) {
+      return PIPE_FORMAT_R32G32_SNORM;
+    }
+    else if(type == GL_FLOAT) {
+      return PIPE_FORMAT_R32G32_FLOAT;
+    }
+  }
+  else if(format == GL_RGB) {
+    if(type == GL_UNSIGNED_BYTE) {
+      return PIPE_FORMAT_R8G8B8_UNORM;
+    }
+    else if(type == GL_BYTE) {
+      return PIPE_FORMAT_R8G8B8_SNORM;
+    }
+    else if(type == GL_UNSIGNED_SHORT) {
+      return PIPE_FORMAT_R16G16B16_UNORM;
+    }
+    else if(type == GL_SHORT) {
+      return PIPE_FORMAT_R16G16B16_SNORM;
+    }
+    else if(type == GL_UNSIGNED_INT) {
+      return PIPE_FORMAT_R32G32B32_UNORM;
+    }
+    else if(type == GL_INT) {
+      return PIPE_FORMAT_R32G32B32_SNORM;
+    }
+    else if(type == GL_FLOAT) {
+      return PIPE_FORMAT_R32G32B32_FLOAT;
+    }
+  }
+  else if(format == GL_BGR) {
+    if(type == GL_UNSIGNED_BYTE) {
+      return PIPE_FORMAT_X8R8G8B8_UNORM;
+    }
+    
+  }
+  else if(format == GL_RGBA) {
+    if(type == GL_UNSIGNED_BYTE) {
+      return PIPE_FORMAT_R8G8B8A8_UNORM;
+    }
+    else if(type == GL_BYTE) {
+      return PIPE_FORMAT_R8G8B8A8_SNORM;
+    }
+    else if(type == GL_UNSIGNED_SHORT) {
+      return PIPE_FORMAT_R16G16B16A16_UNORM;
+    }
+    else if(type == GL_SHORT) {
+      return PIPE_FORMAT_R16G16B16A16_SNORM;
+    }
+    else if(type == GL_UNSIGNED_INT) {
+      return PIPE_FORMAT_R32G32B32A32_UNORM;
+    }
+    else if(type == GL_INT) {
+      return PIPE_FORMAT_R32G32B32A32_SNORM;
+    }
+    else if(type == GL_FLOAT) {
+      return PIPE_FORMAT_R32G32B32A32_FLOAT;
+    }
+  }
+  else if(format == GL_BGRA) {
+    if(type == GL_UNSIGNED_BYTE) {
+      return PIPE_FORMAT_A8R8G8B8_UNORM;
+    }
+  }
+
+  return PIPE_FORMAT_NONE;
 }
 
 static inline void
@@ -1066,16 +1182,22 @@ rsxgl_tex_image(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,con
     RSXGL_ERROR_(GL_INVALID_VALUE);
   }
 
-  const pipe_format pformat = rsxgl_choose_format(ctx -> screen(),
-						  glinternalformat,format,type,
-						  (dims == 1) ? PIPE_TEXTURE_1D :
-						  (dims == 2) ? (cube ? PIPE_TEXTURE_CUBE : (rect ? PIPE_TEXTURE_RECT : PIPE_TEXTURE_2D)) :
-						  (dims == 3) ? PIPE_TEXTURE_2D :
-						  PIPE_MAX_TEXTURE_TYPES,
-						  1,
-						  PIPE_BIND_SAMPLER_VIEW);
+  const pipe_format psrcformat = rsxgl_choose_source_format(format,type);
 
-  if(pformat == PIPE_FORMAT_NONE) {
+  if(psrcformat == PIPE_FORMAT_NONE) {
+    RSXGL_ERROR_(GL_INVALID_VALUE);
+  }
+
+  const pipe_format pdstformat = rsxgl_choose_format(ctx -> screen(),
+						     glinternalformat,GL_NONE,GL_NONE,
+						     (dims == 1) ? PIPE_TEXTURE_1D :
+						     (dims == 2) ? (cube ? PIPE_TEXTURE_CUBE : (rect ? PIPE_TEXTURE_RECT : PIPE_TEXTURE_2D)) :
+						     (dims == 3) ? PIPE_TEXTURE_2D :
+						     PIPE_MAX_TEXTURE_TYPES,
+						     1,
+						     PIPE_BIND_SAMPLER_VIEW);
+
+  if(pdstformat == PIPE_FORMAT_NONE) {
     RSXGL_ERROR_(GL_INVALID_VALUE);
   }
 
@@ -1105,13 +1227,10 @@ rsxgl_tex_image(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,con
     texture.dims = dims;
     texture.cube = cube;
     texture.rect = rect;
-    texture.pformat = pformat;
   }
   else if(texture.dims != dims ||
-	  texture.pformat != pformat ||
 	  texture.cube != cube ||
-	  texture.rect != rect ||
-	  texture.pformat != pformat) {
+	  texture.rect != rect) {
     // TODO - Provide an error, or something, I don't think this is standard behavior.
     return;
   }
@@ -1122,7 +1241,7 @@ rsxgl_tex_image(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,con
 
   // set the size for the mipmap level
   texture.levels[level].dims = dims;
-  texture.levels[level].pformat = pformat;
+  texture.levels[level].pformat = pdstformat;
 
   texture.levels[level].size[0] = width;
   texture.levels[level].size[1] = height;
@@ -1151,17 +1270,18 @@ rsxgl_tex_image(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,con
   }
   // - else if data != 0, then:
   else if(data != 0) {
-    const size_t stride = util_format_get_stride(pformat,width);
-    const size_t nbytes = util_format_get_2d_size(pformat,stride,height) * depth;
+    const size_t srcstride = util_format_get_stride(psrcformat,width);
+    const size_t dststride = util_format_get_stride(pdstformat,width);
+    const size_t nbytes = util_format_get_2d_size(pdstformat,dststride,height) * depth;
 
     texture.levels[level].data = malloc(nbytes);
 
-    util_format_translate(pformat,texture.levels[level].data,stride,0,0,
-			  pformat,data,stride,0,0,width,height);
+    util_format_translate(pdstformat,texture.levels[level].data,dststride,0,0,
+			  psrcformat,data,srcstride,0,0,width,height);
   }
 
-  texture.remap = nvfx_get_texture_remap(nvfx_get_texture_format(pformat),
-					 texture.swizzle.a,texture.swizzle.r,texture.swizzle.g,texture.swizzle.b);
+  texture.remap = nvfx_get_texture_remap(nvfx_get_texture_format(pdstformat),
+					 texture.swizzle.r,texture.swizzle.g,texture.swizzle.b,texture.swizzle.a);
 
   ctx -> invalid_textures |= texture.binding_bitfield;
 
@@ -1248,8 +1368,7 @@ rsxgl_tex_storage(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,c
   const uint32_t pitch = util_format_get_stride(pformat,width);
   texture.pitch = pitch;
 
-  texture_t::dimension_size_type unused_size[3];
-  const uint32_t nbytes = rsxgl_tex_level_offset(texture,texture.max_level);
+  const uint32_t nbytes = rsxgl_get_tex_level_offset_size(texture,texture.max_level,0);
 
   const memory_arena_t::name_type arena = ctx -> arena_binding.names[RSXGL_TEXTURE_ARENA];
   texture.memory = rsxgl_arena_allocate(memory_arena_t::storage().at(arena),128,nbytes,0);
@@ -1261,6 +1380,13 @@ rsxgl_tex_storage(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,c
   const nvfx_texture_format * pfmt = nvfx_get_texture_format(pformat);
   const uint32_t fmt = pfmt -> fmt[4] | NV40_3D_TEX_FORMAT_LINEAR | (texture.rect ? NV40_3D_TEX_FORMAT_RECT : 0) | 0x8000;
 
+  //rsxgl_debug_printf("%s: dims:%u pformat:%u size:%ux%ux%u pitch:%u bytes:%u fmt:%x\n",__PRETTY_FUNCTION__,
+  //		     (unsigned int)dims,
+  //		     (unsigned int)pformat,
+  //		     (unsigned int)width,(unsigned int)height,(unsigned int)depth,
+  //		     (unsigned int)pitch,(unsigned int)nbytes,(unsigned int)fmt);
+  //rsxgl_debug_printf("\toffset:%u\n",texture.memory.offset);
+
   texture.format =
     ((texture.memory.location == 0) ? NV30_3D_TEX_FORMAT_DMA0 : NV30_3D_TEX_FORMAT_DMA1) |
     ((texture.cube) ? NV30_3D_TEX_FORMAT_CUBIC : 0) |
@@ -1270,8 +1396,20 @@ rsxgl_tex_storage(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,c
     ((uint32_t)texture.max_level << NV40_3D_TEX_FORMAT_MIPMAP_COUNT__SHIFT)
     ;
 
+  //rsxgl_debug_printf("\tswizzle src:%u %u %u %u comp:%u %u %u %u\n",
+  //		     (unsigned int)pfmt->src[texture.swizzle.r],
+  //		     (unsigned int)pfmt->src[texture.swizzle.g],
+  //		     (unsigned int)pfmt->src[texture.swizzle.b],
+  //		     (unsigned int)pfmt->src[texture.swizzle.a],
+  //
+  //		     (unsigned int)pfmt->comp[texture.swizzle.r],
+  //		     (unsigned int)pfmt->comp[texture.swizzle.g],
+  //		     (unsigned int)pfmt->comp[texture.swizzle.b],
+  //		     (unsigned int)pfmt->comp[texture.swizzle.a]);
+		     
+
   texture.remap = nvfx_get_texture_remap(pfmt,
-					 texture.swizzle.a,texture.swizzle.r,texture.swizzle.g,texture.swizzle.b);
+					 texture.swizzle.r,texture.swizzle.g,texture.swizzle.b,texture.swizzle.a);
 
   ctx -> invalid_textures |= texture.binding_bitfield;
 
@@ -1289,118 +1427,14 @@ rsxgl_tex_subimage(rsxgl_context_t * ctx,texture_t & texture,GLint level,GLint x
   if(level < 0 || (boost::static_log2_argument_type)level >= texture_t::max_levels) {
     RSXGL_ERROR_(GL_INVALID_VALUE);
   }
-
+  
   if(width < 0 || height < 0 || depth < 0 ||
      width > RSXGL_MAX_TEXTURE_SIZE || height > RSXGL_MAX_TEXTURE_SIZE || depth > RSXGL_MAX_TEXTURE_SIZE) {
     RSXGL_ERROR_(GL_INVALID_VALUE);
   }
 
   // pick a format:
-  pipe_format psrcformat = PIPE_FORMAT_NONE;
-
-  if(format == GL_RED) {
-    if(type == GL_UNSIGNED_BYTE) {
-      psrcformat = PIPE_FORMAT_R8_UNORM;
-    }
-    else if(type == GL_BYTE) {
-      psrcformat = PIPE_FORMAT_R8_SNORM;
-    }
-    else if(type == GL_UNSIGNED_SHORT) {
-      psrcformat = PIPE_FORMAT_R16_UNORM;
-    }
-    else if(type == GL_SHORT) {
-      psrcformat = PIPE_FORMAT_R16_SNORM;
-    }
-    else if(type == GL_UNSIGNED_INT) {
-      psrcformat = PIPE_FORMAT_R32_UNORM;
-    }
-    else if(type == GL_INT) {
-      psrcformat = PIPE_FORMAT_R32_SNORM;
-    }
-    else if(type == GL_FLOAT) {
-      psrcformat = PIPE_FORMAT_R32_FLOAT;
-    }
-  }
-  else if(format == GL_RG) {
-    if(type == GL_UNSIGNED_BYTE) {
-      psrcformat = PIPE_FORMAT_R8G8_UNORM;
-    }
-    else if(type == GL_BYTE) {
-      psrcformat = PIPE_FORMAT_R8G8_SNORM;
-    }
-    else if(type == GL_UNSIGNED_SHORT) {
-      psrcformat = PIPE_FORMAT_R16G16_UNORM;
-    }
-    else if(type == GL_SHORT) {
-      psrcformat = PIPE_FORMAT_R16G16_SNORM;
-    }
-    else if(type == GL_UNSIGNED_INT) {
-      psrcformat = PIPE_FORMAT_R32G32_UNORM;
-    }
-    else if(type == GL_INT) {
-      psrcformat = PIPE_FORMAT_R32G32_SNORM;
-    }
-    else if(type == GL_FLOAT) {
-      psrcformat = PIPE_FORMAT_R32G32_FLOAT;
-    }
-  }
-  else if(format == GL_RGB) {
-    if(type == GL_UNSIGNED_BYTE) {
-      psrcformat = PIPE_FORMAT_R8G8B8_UNORM;
-    }
-    else if(type == GL_BYTE) {
-      psrcformat = PIPE_FORMAT_R8G8B8_SNORM;
-    }
-    else if(type == GL_UNSIGNED_SHORT) {
-      psrcformat = PIPE_FORMAT_R16G16B16_UNORM;
-    }
-    else if(type == GL_SHORT) {
-      psrcformat = PIPE_FORMAT_R16G16B16_SNORM;
-    }
-    else if(type == GL_UNSIGNED_INT) {
-      psrcformat = PIPE_FORMAT_R32G32B32_UNORM;
-    }
-    else if(type == GL_INT) {
-      psrcformat = PIPE_FORMAT_R32G32B32_SNORM;
-    }
-    else if(type == GL_FLOAT) {
-      psrcformat = PIPE_FORMAT_R32G32B32_FLOAT;
-    }
-  }
-  else if(format == GL_BGR) {
-    if(type == GL_UNSIGNED_BYTE) {
-      psrcformat = PIPE_FORMAT_X8R8G8B8_UNORM;
-    }
-    
-  }
-  else if(format == GL_RGBA) {
-    if(type == GL_UNSIGNED_BYTE) {
-      psrcformat = PIPE_FORMAT_R8G8B8A8_UNORM;
-    }
-    else if(type == GL_BYTE) {
-      psrcformat = PIPE_FORMAT_R8G8B8A8_SNORM;
-    }
-    else if(type == GL_UNSIGNED_SHORT) {
-      psrcformat = PIPE_FORMAT_R16G16B16A16_UNORM;
-    }
-    else if(type == GL_SHORT) {
-      psrcformat = PIPE_FORMAT_R16G16B16A16_SNORM;
-    }
-    else if(type == GL_UNSIGNED_INT) {
-      psrcformat = PIPE_FORMAT_R32G32B32A32_UNORM;
-    }
-    else if(type == GL_INT) {
-      psrcformat = PIPE_FORMAT_R32G32B32A32_SNORM;
-    }
-    else if(type == GL_FLOAT) {
-      psrcformat = PIPE_FORMAT_R32G32B32A32_FLOAT;
-    }
-  }
-  else if(format == GL_BGRA) {
-    if(type == GL_UNSIGNED_BYTE) {
-      psrcformat = PIPE_FORMAT_A8R8G8B8_UNORM;
-    }
-  }
+  pipe_format psrcformat = rsxgl_choose_source_format(format,type);
 
   if(psrcformat == PIPE_FORMAT_NONE) {
     RSXGL_ERROR_(GL_INVALID_ENUM);
@@ -1430,18 +1464,20 @@ rsxgl_tex_subimage(rsxgl_context_t * ctx,texture_t & texture,GLint level,GLint x
       texture.timestamp = 0;
     }
 
+    const uint32_t offset = rsxgl_get_tex_level_offset_size(texture,level,size);
+
     pdstformat = texture.pformat;
     pitch = texture.pitch;
 
     // there is a pixel buffer object attached - can do DMA:
     if(ctx -> buffer_binding.names[RSXGL_PIXEL_UNPACK_BUFFER] != 0) {
       srcmem = ctx -> buffer_binding[RSXGL_PIXEL_UNPACK_BUFFER].memory + rsxgl_pointer_to_offset(data);
-      dstmem = texture.memory + rsxgl_tex_level_offset(texture,level);
+      dstmem = texture.memory + offset;
     }
     // source is client memory - just do a memcpy:
     else {
       srcaddress = data;
-      dstaddress = (uint8_t *)rsxgl_arena_address(memory_arena_t::storage().at(texture.arena),texture.memory + rsxgl_tex_level_offset(texture,level));
+      dstaddress = (uint8_t *)rsxgl_arena_address(memory_arena_t::storage().at(texture.arena),texture.memory + offset);
     }
   }
   // rsxgl_tex_image was called to request that a texture level be allocated, but that hasn't been done yet
@@ -1487,7 +1523,7 @@ rsxgl_tex_subimage(rsxgl_context_t * ctx,texture_t & texture,GLint level,GLint x
     // TODO: util_format_translate: (format,type) -> internalformat
     // use RSX DMA
   }
-  
+
   RSXGL_NOERROR_();
 }
 
@@ -1772,12 +1808,6 @@ rsxgl_texture_validate(rsxgl_context_t * ctx,texture_t & texture,const uint32_t 
     for(;level < texture_t::max_levels;++level,++plevel) {
       if(plevel -> pformat == PIPE_FORMAT_NONE && plevel -> dims == 0) break;
       
-      // is the size what we expected? if not, fail:
-      if(levels > 0 && (plevel -> pformat != pformat ||
-			plevel -> dims != dims ||
-			plevel -> size[0] != expected_size[0] || plevel -> size[1] != expected_size[1] || plevel -> size[2] ||
-			plevel -> arena != arena)) break;
-      
       // fill in the expected size:
       if(levels == 0) {
 	dims = plevel -> dims;
@@ -1786,19 +1816,20 @@ rsxgl_texture_validate(rsxgl_context_t * ctx,texture_t & texture,const uint32_t 
 	// pitch is a multiple of 64, to make it compatible with framebuffer objects:
 	pitch = util_format_get_stride(pformat,plevel -> size[0]);
 	arena = plevel -> arena;
+
+	nbytes += util_format_get_2d_size(pformat,pitch,plevel -> size[1]) * plevel -> size[2];
 	
 	expected_size[0] = std::max(plevel -> size[0] >> 1,1);
 	expected_size[1] = std::max(plevel -> size[1] >> 1,1);
 	expected_size[2] = std::max(plevel -> size[2] >> 1,1);
       }
       else {
+	nbytes += util_format_get_2d_size(pformat,pitch,expected_size[1]) * expected_size[2];
+
 	expected_size[0] = std::max(expected_size[0] >> 1,1);
 	expected_size[1] = std::max(expected_size[1] >> 1,1);
 	expected_size[2] = std::max(expected_size[2] >> 1,1);
       }
-      
-      // accumulate storage requirements:
-      nbytes += util_format_get_2d_size(pformat,pitch,plevel -> size[1]) * plevel -> size[2];
       
       if(plevel -> data != 0 || plevel -> memory.offset != 0) ++ntransfer;
       

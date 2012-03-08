@@ -220,12 +220,6 @@ rsxgltest_init(int argc,const char ** argv)
   glAttachShader(program,shaders[0]);
   glAttachShader(program,shaders[1]);
 
-#if 0
-  // Supply shader binaries:
-  glShaderBinary(1,shaders,0,texcube_vpo,texcube_vpo_size);
-  glShaderBinary(1,shaders + 1,0,texcube_fpo,texcube_fpo_size);
-#endif
-
   // Supply shader SOURCES!
   const GLchar * shader_srcs[] = { (const GLchar *)texcube_vert, (const GLchar *)texcube_frag };
   GLint shader_srcs_lengths[] = { texcube_vert_len, texcube_frag_len };
