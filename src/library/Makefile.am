@@ -65,5 +65,6 @@ libGL.a: $(libGL_a_OBJECTS) $(libGL_a_DEPENDENCIES)
 	$(libGL_a_OBJECTS) \
 	$(top_builddir)/extsrc/mesa/src/mesa/libmesa.a \
 	$(top_builddir)/extsrc/mesa/src/mesa/libmesagallium.a \
+	$(top_builddir)/extsrc/mesa/src/gallium/auxiliary/libgallium.a \
 	$(top_builddir)/extsrc/mesa/src/mapi/glapi/libglapi.a \
 	$(top_builddir)/extsrc/mesa/src/glsl/libglsl.a
