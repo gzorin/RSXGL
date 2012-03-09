@@ -11,7 +11,6 @@
 #include "gl_constants.h"
 #include "gl_types.h"
 #include "rsxgl_context.h"
-#include "framebuffer.h"
 
 #include <cstddef>
 #include <bitset>

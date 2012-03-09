@@ -299,7 +299,8 @@ framebuffer_t::storage_type & framebuffer_t::storage()
 }
 
 framebuffer_t::framebuffer_t()
-  : is_default(0), invalid(0), format(0), enabled(0)
+  : is_default(0), invalid(0), invalid_complete(0), complete(0), color_pformat(PIPE_FORMAT_NONE), depth_pformat(PIPE_FORMAT_NONE),
+    format(0), color_targets(0)
 {
   for(size_t i = 0;i < RSXGL_MAX_ATTACHMENTS;++i) {
     attachment_types.set(i,RSXGL_ATTACHMENT_TYPE_NONE);
@@ -359,6 +360,7 @@ static inline void
 rsxgl_framebuffer_invalidate(rsxgl_context_t * ctx,const framebuffer_t::name_type framebuffer_name,framebuffer_t & framebuffer)
 {
   framebuffer.invalid = 1;
+  framebuffer.invalid_complete = 1;
 
   if(ctx -> framebuffer_binding.is_bound(RSXGL_DRAW_FRAMEBUFFER,framebuffer_name)) {
     ctx -> invalid.parts.draw_framebuffer = 1;
@@ -546,12 +548,6 @@ glBindFramebuffer (GLenum target, GLuint framebuffer_name)
   }
 
   RSXGL_NOERROR_();
-}
-
-GLAPI GLenum APIENTRY
-glCheckFramebufferStatus (GLenum target)
-{
-  //RSXGL_NOERROR_();
 }
 
 GLAPI void APIENTRY
@@ -853,6 +849,7 @@ rsxgl_draw_buffers(rsxgl_context_t * ctx,const framebuffer_t::name_type framebuf
   }
 
   framebuffer.invalid = 1;
+  framebuffer.invalid_complete = 1;
 
   if(ctx -> framebuffer_binding.is_bound(RSXGL_DRAW_FRAMEBUFFER,framebuffer_name)) {
     ctx -> invalid.parts.draw_framebuffer = 1;
@@ -915,6 +912,10 @@ rsxgl_emit_surface(gcmContextData * context,const uint8_t which,surface_t const 
     NV40_3D_ZETA_PITCH
   };
 
+  rsxgl_debug_printf("%s loc:%u offset:%u pitch:%u\n",
+		     __PRETTY_FUNCTION__,
+		     surface.memory.location,surface.memory.offset,surface.pitch);
+
   uint32_t * buffer = gcm_reserve(context,6);
 
   gcm_emit_method_at(buffer,0,rsxgl_dma_methods[which],1);
@@ -934,6 +935,187 @@ rsxgl_renderbuffer_validate(rsxgl_context_t * ctx,renderbuffer_t & renderbuffer,
 {
 }
 
+// Check the framebuffer for completeness. Besides setting the complete predicate, also collects the
+// framebuffer's pipe_formats, size, and write mask along the way:
+static inline void
+rsxgl_framebuffer_validate_complete(rsxgl_context_t * ctx,framebuffer_t & framebuffer)
+{
+  if(framebuffer.invalid_complete) {
+    rsxgl_debug_printf("%s:\n",__PRETTY_FUNCTION__);
+
+    framebuffer_dimension_size_type w = ~0, h = ~0;
+    pipe_format color_pformat = PIPE_FORMAT_NONE, depth_pformat = PIPE_FORMAT_NONE;
+    bool complete = true;
+
+    if(framebuffer.is_default) {
+      color_pformat = ctx -> base.draw -> color_pformat;
+      depth_pformat = ctx -> base.draw -> depth_pformat;
+
+      w = ctx -> base.draw -> width;
+      h = ctx -> base.draw -> height;
+    }
+    else {
+      // Color buffers:
+      for(framebuffer_t::mapping_t::const_iterator it = framebuffer.mapping.begin();complete && !it.done();it.next(framebuffer.mapping)) {
+	const framebuffer_t::attachment_size_type i = it.value();
+	if(i == RSXGL_MAX_COLOR_ATTACHMENTS) continue;
+
+	const uint32_t type = framebuffer.attachment_types.get(i);
+
+	if(type == RSXGL_ATTACHMENT_TYPE_RENDERBUFFER) {
+	  renderbuffer_t & renderbuffer = renderbuffer_t::storage().at(framebuffer.attachments[i]);
+
+	  if(!util_format_is_depth_or_stencil(renderbuffer.pformat)) {
+	    if(color_pformat == PIPE_FORMAT_NONE) {
+	      color_pformat = renderbuffer.pformat;
+	    }
+	    else if(!util_is_format_compatible(util_format_description(color_pformat),
+					       util_format_description(renderbuffer.pformat))) {
+	      rsxgl_debug_printf("\trenderbuffer attachment %u isn't compatible\n",(unsigned int)i);
+	      complete = false;
+	    }
+
+	    w = std::min(w,renderbuffer.size[0]);
+	    h = std::min(h,renderbuffer.size[1]);
+	  }
+	  else {
+	    rsxgl_debug_printf("\trenderbuffer attachment %u format isn't color\n",(unsigned int)i);
+	    complete = false;
+	  }
+	}
+	else if(type == RSXGL_ATTACHMENT_TYPE_TEXTURE) {
+	  texture_t & texture = texture_t::storage().at(framebuffer.attachments[i]);
+
+	  rsxgl_debug_printf("\ttexture attachment %u format: %u\n",(unsigned int)i,(unsigned int)texture.pformat);
+
+	  if(texture.dims == 2 && !util_format_is_depth_or_stencil(texture.pformat)) {
+	    if(color_pformat == PIPE_FORMAT_NONE) {
+	      color_pformat = texture.pformat;
+	    }
+	    else if(!util_is_format_compatible(util_format_description(color_pformat),
+					       util_format_description(texture.pformat))) {
+	      rsxgl_debug_printf("\ttexture attachment %u isn't compatible\n",(unsigned int)i);
+	      complete = false;
+	    }
+	    
+	    w = std::min(w,texture.size[0]);
+	    h = std::min(h,texture.size[1]);
+	  }
+	  else {
+	    rsxgl_debug_printf("\ttexture attachment %u format isn't color\n",(unsigned int)i);
+	    complete = false;
+	  }
+	}
+      }
+
+      // Depth buffer:
+      if(complete) {
+	const uint32_t type = framebuffer.attachment_types.get(4);
+	if(type == RSXGL_ATTACHMENT_TYPE_RENDERBUFFER) {
+	  renderbuffer_t & renderbuffer = renderbuffer_t::storage().at(framebuffer.attachments[4]);
+	  
+	  if(util_format_is_depth_or_stencil(renderbuffer.pformat)) {
+	    depth_pformat = renderbuffer.pformat;
+	    
+	    w = std::min(w,renderbuffer.size[0]);
+	    h = std::min(h,renderbuffer.size[1]);
+	  }
+	  else {
+	    rsxgl_debug_printf("\trenderbuffer attachment depth format isn't depth\n");
+	    complete = false;
+	  }
+	}
+	else if(type == RSXGL_ATTACHMENT_TYPE_TEXTURE) {
+	  texture_t & texture = texture_t::storage().at(framebuffer.attachments[4]);
+	  
+	  if(texture.dims == 2 && util_format_is_depth_or_stencil(texture.pformat)) {
+	    depth_pformat = texture.pformat;
+	    
+	    w = std::min(w,texture.size[0]);
+	    h = std::min(h,texture.size[1]);
+	  }
+	  else {
+	    rsxgl_debug_printf("\ttexture attachment depth format isn't depth\n");
+	    complete = false;
+	  }
+	}
+      }
+    }
+
+    complete = complete &&
+      (ctx -> screen() -> is_format_supported(ctx -> screen(),
+					      color_pformat,
+					      PIPE_TEXTURE_RECT,
+					      1,
+					      PIPE_BIND_SAMPLER_VIEW | PIPE_BIND_RENDER_TARGET)) &&
+      (ctx -> screen() -> is_format_supported(ctx -> screen(),
+					      depth_pformat,
+					      PIPE_TEXTURE_RECT,
+					      1,
+					      PIPE_BIND_SAMPLER_VIEW | PIPE_BIND_DEPTH_STENCIL));
+
+    rsxgl_debug_printf("\tresult: %u %u %u %ux%u\n",(unsigned int)complete,(unsigned int)color_pformat,(unsigned int)depth_pformat,(unsigned int)w,(unsigned int)h);
+    framebuffer.complete = complete;
+    framebuffer.write_mask.all = 0;
+    
+    // TODO: Check against current color & depth write masks:
+    if(complete) {
+      framebuffer.color_pformat = color_pformat;
+      framebuffer.depth_pformat = depth_pformat;
+      framebuffer.size[0] = w;
+      framebuffer.size[1] = h;
+
+      // Collect the write mask for this framebuffer:
+      const struct util_format_description * color_desc = util_format_description(framebuffer.color_pformat);
+      if(color_desc != 0) {
+	framebuffer.write_mask.parts.r = color_desc -> channel[ color_desc -> swizzle[0] ].type != UTIL_FORMAT_TYPE_VOID;
+	framebuffer.write_mask.parts.g = color_desc -> channel[ color_desc -> swizzle[1] ].type != UTIL_FORMAT_TYPE_VOID;
+	framebuffer.write_mask.parts.b = color_desc -> channel[ color_desc -> swizzle[2] ].type != UTIL_FORMAT_TYPE_VOID;
+	framebuffer.write_mask.parts.a = color_desc -> channel[ color_desc -> swizzle[3] ].type != UTIL_FORMAT_TYPE_VOID;
+      }
+
+      const struct util_format_description * depth_desc = util_format_description(framebuffer.depth_pformat);
+      if(depth_desc != 0) {
+	framebuffer.write_mask.parts.depth = depth_desc -> channel[ depth_desc -> swizzle[0] ].type != UTIL_FORMAT_TYPE_VOID;
+	framebuffer.write_mask.parts.stencil = depth_desc -> channel[ depth_desc -> swizzle[1] ].type != UTIL_FORMAT_TYPE_VOID;
+      }
+    }
+    else {
+      framebuffer.color_pformat = PIPE_FORMAT_NONE;
+      framebuffer.depth_pformat = PIPE_FORMAT_NONE;
+      framebuffer.size[0] = 0;
+      framebuffer.size[1] = 0;
+    }
+
+    framebuffer.invalid_complete = 0;
+  }
+}
+
+GLAPI GLenum APIENTRY
+glCheckFramebufferStatus (GLenum target)
+{
+  const uint32_t rsx_framebuffer_target = rsxgl_framebuffer_target(target);
+  if(rsx_framebuffer_target == RSXGL_MAX_FRAMEBUFFER_TARGETS) {
+    RSXGL_ERROR(GL_INVALID_ENUM,0);
+  }
+
+  rsxgl_context_t * ctx = current_ctx();
+
+  if(!ctx -> framebuffer_binding.is_anything_bound(rsx_framebuffer_target)) {
+    RSXGL_ERROR(GL_INVALID_OPERATION,0);
+  }
+
+  framebuffer_t & framebuffer = ctx -> framebuffer_binding[rsx_framebuffer_target];
+  rsxgl_framebuffer_validate_complete(ctx,framebuffer);
+
+  if(rsx_framebuffer_target == RSXGL_DRAW_FRAMEBUFFER && framebuffer.complete) {
+    RSXGL_NOERROR(GL_FRAMEBUFFER_COMPLETE);
+  }
+  else {
+    RSXGL_NOERROR(GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER);
+  }
+}
+
 void
 rsxgl_framebuffer_validate(rsxgl_context_t * ctx,framebuffer_t & framebuffer,const uint32_t timestamp)
 {
@@ -950,183 +1132,100 @@ rsxgl_framebuffer_validate(rsxgl_context_t * ctx,framebuffer_t & framebuffer,con
   }
     
   if(framebuffer.invalid) {
-    uint16_t enabled = 0;
-    framebuffer_dimension_size_type w = ~0, h = ~0;
-    surface_t surfaces[RSXGL_MAX_ATTACHMENTS];
-    pipe_format color_pformat = PIPE_FORMAT_NONE, depth_pformat = PIPE_FORMAT_NONE;
+    rsxgl_framebuffer_validate_complete(ctx,framebuffer);
 
-    if(framebuffer.is_default) {
-      color_pformat = ctx -> base.draw -> color_pformat;
-      depth_pformat = ctx -> base.draw -> depth_pformat;
+    rsxgl_debug_printf("%s: %u\n",__PRETTY_FUNCTION__,(unsigned int)framebuffer.complete);
 
-      w = ctx -> base.draw -> width;
-      h = ctx -> base.draw -> height;
+    if(framebuffer.complete) {
+      uint16_t color_targets = 0;
+      surface_t surfaces[RSXGL_MAX_ATTACHMENTS];
 
-      if(framebuffer.attachment_types.get(0) != RSXGL_ATTACHMENT_TYPE_NONE && framebuffer.mapping.get(0) < RSXGL_MAX_COLOR_ATTACHMENTS) {
-	const uint32_t buffer = (framebuffer.mapping.get(0) == 0) ? ctx -> base.draw -> buffer : !ctx -> base.draw -> buffer;
-	surfaces[RSXGL_COLOR_ATTACHMENT0].pitch = ctx -> base.draw -> color_pitch;
-	surfaces[RSXGL_COLOR_ATTACHMENT0].memory.location = ctx -> base.draw -> color_buffer[buffer].location;
-	surfaces[RSXGL_COLOR_ATTACHMENT0].memory.offset = ctx -> base.draw -> color_buffer[buffer].offset;
-	surfaces[RSXGL_COLOR_ATTACHMENT0].memory.owner = 0;
+      if(framebuffer.is_default) {
+	if(framebuffer.attachment_types.get(0) != RSXGL_ATTACHMENT_TYPE_NONE && framebuffer.mapping.get(0) < RSXGL_MAX_COLOR_ATTACHMENTS) {
+	  const uint32_t buffer = (framebuffer.mapping.get(0) == 0) ? ctx -> base.draw -> buffer : !ctx -> base.draw -> buffer;
+	  surfaces[RSXGL_COLOR_ATTACHMENT0].pitch = ctx -> base.draw -> color_pitch;
+	  surfaces[RSXGL_COLOR_ATTACHMENT0].memory.location = ctx -> base.draw -> color_buffer[buffer].location;
+	  surfaces[RSXGL_COLOR_ATTACHMENT0].memory.offset = ctx -> base.draw -> color_buffer[buffer].offset;
+	  surfaces[RSXGL_COLOR_ATTACHMENT0].memory.owner = 0;
+	  
+	  color_targets = NV30_3D_RT_ENABLE_COLOR0;
+	}
+	else {
+	  color_targets = 0;
+	}
 	
-	enabled = NV30_3D_RT_ENABLE_COLOR0;
+	if(framebuffer.attachment_types.get(RSXGL_DEPTH_STENCIL_ATTACHMENT) != RSXGL_ATTACHMENT_TYPE_NONE) {
+	  surfaces[RSXGL_DEPTH_STENCIL_ATTACHMENT].pitch = ctx -> base.draw -> depth_pitch;
+	  surfaces[RSXGL_DEPTH_STENCIL_ATTACHMENT].memory.location = ctx -> base.draw -> depth_buffer.location;
+	  surfaces[RSXGL_DEPTH_STENCIL_ATTACHMENT].memory.offset = ctx -> base.draw -> depth_buffer.offset;
+	  surfaces[RSXGL_DEPTH_STENCIL_ATTACHMENT].memory.owner = 0;
+	}
       }
       else {
-	enabled = 0;
-      }
-
-      if(framebuffer.attachment_types.get(RSXGL_DEPTH_STENCIL_ATTACHMENT) != RSXGL_ATTACHMENT_TYPE_NONE) {
-	surfaces[RSXGL_DEPTH_STENCIL_ATTACHMENT].pitch = ctx -> base.draw -> depth_pitch;
-	surfaces[RSXGL_DEPTH_STENCIL_ATTACHMENT].memory.location = ctx -> base.draw -> depth_buffer.location;
-	surfaces[RSXGL_DEPTH_STENCIL_ATTACHMENT].memory.offset = ctx -> base.draw -> depth_buffer.offset;
-	surfaces[RSXGL_DEPTH_STENCIL_ATTACHMENT].memory.owner = 0;
-      }
-    }
-    else {
-      // Color buffers:
-      for(framebuffer_t::mapping_t::const_iterator it = framebuffer.mapping.begin();!it.done();it.next(framebuffer.mapping)) {
-	const framebuffer_t::attachment_size_type i = it.value();
-	if(i == RSXGL_MAX_COLOR_ATTACHMENTS) continue;
-
-	const uint32_t type = framebuffer.attachment_types.get(i);
-	if(type == RSXGL_ATTACHMENT_TYPE_NONE) continue;
-
-	if(type == RSXGL_ATTACHMENT_TYPE_RENDERBUFFER) {
-	  renderbuffer_t & renderbuffer = renderbuffer_t::storage().at(framebuffer.attachments[i]);
+	// Color buffers:
+	for(framebuffer_t::mapping_t::const_iterator it = framebuffer.mapping.begin();!it.done();it.next(framebuffer.mapping)) {
+	  const framebuffer_t::attachment_size_type i = it.value();
+	  if(i == RSXGL_MAX_COLOR_ATTACHMENTS) continue;
 	  
-	  if(!util_format_is_depth_or_stencil(renderbuffer.pformat) &&
-	     ctx -> screen() -> is_format_supported(ctx -> screen(),
-						    renderbuffer.pformat,
-						    PIPE_TEXTURE_RECT,
-						    1,
-						    PIPE_BIND_SAMPLER_VIEW | PIPE_BIND_RENDER_TARGET)) {
-	    if(color_pformat == PIPE_FORMAT_NONE) {
-	      color_pformat = renderbuffer.pformat;
-	    }
-	    else if(!util_is_format_compatible(util_format_description(color_pformat),
-					       util_format_description(renderbuffer.pformat))) {
-	      break;
-	    }
-
+	  const uint32_t type = framebuffer.attachment_types.get(i);
+	  
+	  if(type == RSXGL_ATTACHMENT_TYPE_RENDERBUFFER) {
+	    renderbuffer_t & renderbuffer = renderbuffer_t::storage().at(framebuffer.attachments[i]);
 	    surfaces[i] = renderbuffer.surface;
-	    w = std::min(w,renderbuffer.size[0]);
-	    h = std::min(h,renderbuffer.size[1]);
-	    
-	    enabled |= (NV30_3D_RT_ENABLE_COLOR0 << i);
+	    color_targets |= (NV30_3D_RT_ENABLE_COLOR0 << i);
 	  }
-	}
-	else if(type == RSXGL_ATTACHMENT_TYPE_TEXTURE) {
-	  texture_t & texture = texture_t::storage().at(framebuffer.attachments[i]);
-
-	  if(texture.dims == 2 &&
-	     !util_format_is_depth_or_stencil(texture.pformat) &&
-	     ctx -> screen() -> is_format_supported(ctx -> screen(),
-						    texture.pformat,
-						    texture.rect ? PIPE_TEXTURE_RECT : PIPE_TEXTURE_2D,
-						    1,
-						    PIPE_BIND_SAMPLER_VIEW | PIPE_BIND_RENDER_TARGET)) {
-	    if(color_pformat == PIPE_FORMAT_NONE) {
-	      color_pformat = texture.pformat;
-	    }
-	    else if(!util_is_format_compatible(util_format_description(color_pformat),
-					       util_format_description(texture.pformat))) {
-	      break;
-	    }
+	  else if(type == RSXGL_ATTACHMENT_TYPE_TEXTURE) {
+	    texture_t & texture = texture_t::storage().at(framebuffer.attachments[i]);
 	    
 	    surfaces[i].pitch = texture.pitch;
 	    surfaces[i].memory = texture.memory;
-	    w = std::min(w,texture.size[0]);
-	    h = std::min(h,texture.size[1]);
-	    
-	    enabled |= (NV30_3D_RT_ENABLE_COLOR0 << i);
+	      
+	    color_targets |= (NV30_3D_RT_ENABLE_COLOR0 << i);
 	  }
 	}
-      }
 
-      // Depth buffer:
-      {
-	const uint32_t type = framebuffer.attachment_types.get(4);
-	if(type == RSXGL_ATTACHMENT_TYPE_RENDERBUFFER) {
-	  renderbuffer_t & renderbuffer = renderbuffer_t::storage().at(framebuffer.attachments[4]);
-	  
-	  if(util_format_is_depth_or_stencil(renderbuffer.pformat) &&
-	     ctx -> screen() -> is_format_supported(ctx -> screen(),
-						    renderbuffer.pformat,
-						    PIPE_TEXTURE_RECT,
-						    1,
-						    PIPE_BIND_SAMPLER_VIEW | PIPE_BIND_DEPTH_STENCIL)) {
-	    depth_pformat = renderbuffer.pformat;
-	    
+	// Depth buffer:
+	{
+	  const uint32_t type = framebuffer.attachment_types.get(4);
+	  if(type == RSXGL_ATTACHMENT_TYPE_RENDERBUFFER) {
+	    renderbuffer_t & renderbuffer = renderbuffer_t::storage().at(framebuffer.attachments[4]);
 	    surfaces[4] = renderbuffer.surface;
-	    w = std::min(w,renderbuffer.size[0]);
-	    h = std::min(h,renderbuffer.size[1]);
 	  }
-	}
-	else if(type == RSXGL_ATTACHMENT_TYPE_TEXTURE) {
-	  texture_t & texture = texture_t::storage().at(framebuffer.attachments[4]);
-	  
-	  if(texture.dims == 2 &&
-	     util_format_is_depth_or_stencil(texture.pformat) &&
-	     ctx -> screen() -> is_format_supported(ctx -> screen(),
-						    texture.pformat,
-						    texture.rect ? PIPE_TEXTURE_RECT : PIPE_TEXTURE_2D,
-						    1,
-						    PIPE_BIND_SAMPLER_VIEW | PIPE_BIND_DEPTH_STENCIL)) {
-	    depth_pformat = texture.pformat;
+	  else if(type == RSXGL_ATTACHMENT_TYPE_TEXTURE) {
+	    texture_t & texture = texture_t::storage().at(framebuffer.attachments[4]);
 	    
 	    surfaces[4].pitch = texture.pitch;
 	    surfaces[4].memory = texture.memory;
-	    w = std::min(w,texture.size[0]);
-	    h = std::min(h,texture.size[1]);
 	  }
 	}
       }
-    }
 
-    rsxgl_assert(color_pformat == PIPE_FORMAT_NONE || !util_format_is_depth_or_stencil(color_pformat));
-    rsxgl_assert(depth_pformat == PIPE_FORMAT_NONE || util_format_is_depth_or_stencil(depth_pformat));
-
-    framebuffer.format = (uint16_t)nvfx_get_framebuffer_format(color_pformat,depth_pformat) | (uint16_t)NV30_3D_RT_FORMAT_TYPE_LINEAR;
-
-    framebuffer.enabled = (enabled != 0 ? enabled : (uint16_t)NV30_3D_RT_ENABLE_COLOR0);
-    framebuffer.size[0] = w;
-    framebuffer.size[1] = h;
-
-    for(framebuffer_t::attachment_size_type i = 0;i < RSXGL_MAX_ATTACHMENTS;++i) {
-      framebuffer.surfaces[i] = surfaces[i];
-    }
-
+      // Store data that gets passed down the command stream:
+      framebuffer.format = (uint16_t)nvfx_get_framebuffer_format(framebuffer.color_pformat,framebuffer.depth_pformat) | (uint16_t)NV30_3D_RT_FORMAT_TYPE_LINEAR;
+      framebuffer.color_targets = color_targets;
+      
+      for(framebuffer_t::attachment_size_type i = 0;i < RSXGL_MAX_ATTACHMENTS;++i) {
+	framebuffer.surfaces[i] = surfaces[i];
+      }
+      
 #if 0
-    //
-    if(color_pformat != PIPE_FORMAT_NONE && depth_pformat == PIPE_FORMAT_NONE) {
-      uint32_t pitch = 0;
-      for(framebuffer_t::attachment_size_type i = 0;i < RSXGL_MAX_COLOR_ATTACHMENTS && pitch == 0;++i) {
-	pitch = surfaces[i].pitch;
+      //
+      if(color_pformat != PIPE_FORMAT_NONE && depth_pformat == PIPE_FORMAT_NONE) {
+	uint32_t pitch = 0;
+	for(framebuffer_t::attachment_size_type i = 0;i < RSXGL_MAX_COLOR_ATTACHMENTS && pitch == 0;++i) {
+	  pitch = surfaces[i].pitch;
+	}
+	framebuffer.surfaces[4].pitch = pitch;
       }
-      framebuffer.surfaces[4].pitch = pitch;
-    }
-    else if(color_pformat == PIPE_FORMAT_NONE && depth_pformat != PIPE_FORMAT_NONE) {
-      const uint32_t pitch = surfaces[4].pitch;
-      for(framebuffer_t::attachment_size_type i = 0;i < RSXGL_MAX_COLOR_ATTACHMENTS;++i) {
-	framebuffer.surfaces[i].pitch = pitch;
+      else if(color_pformat == PIPE_FORMAT_NONE && depth_pformat != PIPE_FORMAT_NONE) {
+	const uint32_t pitch = surfaces[4].pitch;
+	for(framebuffer_t::attachment_size_type i = 0;i < RSXGL_MAX_COLOR_ATTACHMENTS;++i) {
+	  framebuffer.surfaces[i].pitch = pitch;
+	}
       }
-    }
 #endif
-
-    framebuffer.write_mask.all = 0;
-
-    const struct util_format_description * color_desc = util_format_description(color_pformat);
-    rsxgl_assert(color_desc != 0);
-    framebuffer.write_mask.parts.r = color_desc -> channel[ color_desc -> swizzle[0] ].type != UTIL_FORMAT_TYPE_VOID;
-    framebuffer.write_mask.parts.g = color_desc -> channel[ color_desc -> swizzle[1] ].type != UTIL_FORMAT_TYPE_VOID;
-    framebuffer.write_mask.parts.b = color_desc -> channel[ color_desc -> swizzle[2] ].type != UTIL_FORMAT_TYPE_VOID;
-    framebuffer.write_mask.parts.a = color_desc -> channel[ color_desc -> swizzle[3] ].type != UTIL_FORMAT_TYPE_VOID;
-
-    const struct util_format_description * depth_desc = util_format_description(depth_pformat);
-    rsxgl_assert(depth_desc != 0);
-    framebuffer.write_mask.parts.depth = depth_desc -> channel[ depth_desc -> swizzle[0] ].type != UTIL_FORMAT_TYPE_VOID;
-    framebuffer.write_mask.parts.stencil = depth_desc -> channel[ depth_desc -> swizzle[1] ].type != UTIL_FORMAT_TYPE_VOID;
-
+    }
+    
     framebuffer.invalid = 0;
   }
 }
@@ -1139,44 +1238,54 @@ rsxgl_draw_framebuffer_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
   rsxgl_framebuffer_validate(ctx,framebuffer,timestamp);
 
   if(ctx -> invalid.parts.draw_framebuffer) {
-    gcmContextData * context = ctx -> gcm_context();
+    rsxgl_debug_printf("validating draw framebuffer: %u\n",(unsigned int)ctx -> framebuffer_binding.names[RSXGL_DRAW_FRAMEBUFFER]);
+    if(framebuffer.complete) {
+      const uint32_t format = framebuffer.format;
+      const uint32_t color_targets = framebuffer.color_targets;
 
-    for(framebuffer_t::attachment_size_type i = 0;i < RSXGL_MAX_ATTACHMENTS;++i) {
-      rsxgl_emit_surface(context,i,framebuffer.surfaces[i]);
+      gcmContextData * context = ctx -> gcm_context();
+      
+      if(format != 0 && color_targets != 0) {
+	for(framebuffer_t::attachment_size_type i = 0;i < RSXGL_MAX_ATTACHMENTS;++i) {
+	  rsxgl_emit_surface(context,i,framebuffer.surfaces[i]);
+	}
+
+	const uint16_t w = framebuffer.size[0], h = framebuffer.size[1];
+	
+	uint32_t * buffer = gcm_reserve(context,9);
+	
+	rsxgl_debug_printf("%s format:%x color_targets:%x size:%ux%u\n",__PRETTY_FUNCTION__,
+			   format,color_targets,(unsigned int)w,(unsigned int)h);
+	
+	gcm_emit_method_at(buffer,0,NV30_3D_RT_FORMAT,1);
+	gcm_emit_at(buffer,1,format | ((31 - __builtin_clz(w)) << NV30_3D_RT_FORMAT_LOG2_WIDTH__SHIFT) | ((31 - __builtin_clz(h)) << NV30_3D_RT_FORMAT_LOG2_HEIGHT__SHIFT));
+	
+	gcm_emit_method_at(buffer,2,NV30_3D_RT_HORIZ,2);
+	gcm_emit_at(buffer,3,w << 16);
+	gcm_emit_at(buffer,4,h << 16);
+	
+	gcm_emit_method_at(buffer,5,NV30_3D_COORD_CONVENTIONS,1);
+	gcm_emit_at(buffer,6,h | NV30_3D_COORD_CONVENTIONS_ORIGIN_NORMAL);
+	
+	gcm_emit_method_at(buffer,7,NV30_3D_RT_ENABLE,1);
+	gcm_emit_at(buffer,8,color_targets);
+	
+	gcm_finish_n_commands(context,9);
+	
+	ctx -> can_draw = 1;
+      }
+      else {
+	uint32_t * buffer = gcm_reserve(context,2);
+	
+	gcm_emit_method_at(buffer,0,NV30_3D_RT_ENABLE,1);
+	gcm_emit_at(buffer,1,0);
+	
+	gcm_finish_n_commands(context,2);
+	
+	ctx -> can_draw = 0;
+      }
+
+      ctx -> invalid.parts.draw_framebuffer = 0;
     }
-
-    const uint32_t format = framebuffer.format;
-
-    if(format != 0) {
-      const uint32_t enabled = framebuffer.enabled;
-      const uint16_t w = framebuffer.size[0], h = framebuffer.size[1];
-
-      uint32_t * buffer = gcm_reserve(context,9);
-
-      gcm_emit_method_at(buffer,0,NV30_3D_RT_FORMAT,1);
-      gcm_emit_at(buffer,1,format | ((31 - __builtin_clz(w)) << NV30_3D_RT_FORMAT_LOG2_WIDTH__SHIFT) | ((31 - __builtin_clz(h)) << NV30_3D_RT_FORMAT_LOG2_HEIGHT__SHIFT));
-      
-      gcm_emit_method_at(buffer,2,NV30_3D_RT_HORIZ,2);
-      gcm_emit_at(buffer,3,w << 16);
-      gcm_emit_at(buffer,4,h << 16);
-      
-      gcm_emit_method_at(buffer,5,NV30_3D_COORD_CONVENTIONS,1);
-      gcm_emit_at(buffer,6,h | NV30_3D_COORD_CONVENTIONS_ORIGIN_NORMAL);
-      
-      gcm_emit_method_at(buffer,7,NV30_3D_RT_ENABLE,1);
-      gcm_emit_at(buffer,8,enabled);
-      
-      gcm_finish_n_commands(context,9);
-    }
-    else {
-      uint32_t * buffer = gcm_reserve(context,2);
-
-      gcm_emit_method_at(buffer,0,NV30_3D_RT_ENABLE,1);
-      gcm_emit_at(buffer,1,0);
-      
-      gcm_finish_n_commands(context,2);
-    }
-
-    ctx -> invalid.parts.draw_framebuffer = 0;
   }
 }

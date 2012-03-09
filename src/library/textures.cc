@@ -594,7 +594,10 @@ texture_t::storage_type & texture_t::storage()
 }
 
 texture_t::texture_t()
-  : deleted(0), timestamp(0), ref_count(0), invalid(0), valid(0), immutable(0), cube(0), rect(0), max_level(0), dims(0), pformat(PIPE_FORMAT_NONE), format(0), pitch(0), remap(0)
+  : deleted(0), timestamp(0), ref_count(0),
+    invalid(0), invalid_complete(0),
+    valid(0), complete(0), immutable(0),
+    cube(0), rect(0), max_level(0), dims(0), pformat(PIPE_FORMAT_NONE), format(0), pitch(0), remap(0)
 {
   swizzle.r = RSXGL_TEXTURE_SWIZZLE_FROM_R;
   swizzle.g = RSXGL_TEXTURE_SWIZZLE_FROM_G;
@@ -1237,7 +1240,9 @@ rsxgl_tex_image(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,con
 
   // set the texture's invalid & valid bits:
   texture.invalid = 1;
+  texture.invalid_complete = 1;
   texture.valid = 0;
+  texture.complete = 0;
 
   // set the size for the mipmap level
   texture.levels[level].dims = dims;
@@ -1354,7 +1359,9 @@ rsxgl_tex_storage(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,c
 
   texture.dims = dims;
   texture.invalid = 0;
+  texture.invalid_complete = 0;
   texture.valid = 1;
+  texture.complete = 1;
   texture.immutable = 1;
   texture.pformat = pformat;
   texture.cube = cube;
@@ -1482,7 +1489,7 @@ rsxgl_tex_subimage(rsxgl_context_t * ctx,texture_t & texture,GLint level,GLint x
   }
   // rsxgl_tex_image was called to request that a texture level be allocated, but that hasn't been done yet
   // allocate the temporary buffer for that level if it hasn't been already
-  else if(texture.invalid && texture.levels[level].pformat != PIPE_FORMAT_NONE) {
+  else if(!texture.valid && texture.levels[level].pformat != PIPE_FORMAT_NONE) {
     // there is a pixel buffer object attached - obtain pointer to it, then memcpy:
     if(ctx -> buffer_binding.names[RSXGL_PIXEL_UNPACK_BUFFER] != 0) {
       srcaddress = rsxgl_arena_address(memory_arena_t::storage().at(ctx -> buffer_binding[RSXGL_PIXEL_UNPACK_BUFFER].arena),
@@ -1779,6 +1786,61 @@ glGetCompressedTexImage (GLenum target, GLint level, GLvoid *img)
 GLAPI void APIENTRY
 glTexBuffer (GLenum target, GLenum internalformat, GLuint buffer)
 {
+}
+
+void
+rsxgl_texture_validate_storage(rsxgl_context_t * ctx,texture_t & texture)
+{
+  if(texture.invalid_complete) {
+    bool complete = true;
+
+    pipe_format pformat = PIPE_FORMAT_NONE;
+
+    uint8_t dims = 0;
+    texture_t::level_t * plevel = texture.levels;
+    size_t level = 0, levels = 0, ntransfer = 0;
+    texture_t::dimension_size_type expected_size[3] = { 0,0,0 };
+
+    for(;level < texture_t::max_levels;++level,++plevel) {
+      if(plevel -> pformat == PIPE_FORMAT_NONE && plevel -> dims == 0) break;
+      
+      // fill in the expected size:
+      if(levels == 0) {
+	dims = plevel -> dims;
+	pformat = plevel -> pformat;
+	
+	// pitch is a multiple of 64, to make it compatible with framebuffer objects:
+	pitch = util_format_get_stride(pformat,plevel -> size[0]);
+	arena = plevel -> arena;
+
+	nbytes += util_format_get_2d_size(pformat,pitch,plevel -> size[1]) * plevel -> size[2];
+	
+	expected_size[0] = std::max(plevel -> size[0] >> 1,1);
+	expected_size[1] = std::max(plevel -> size[1] >> 1,1);
+	expected_size[2] = std::max(plevel -> size[2] >> 1,1);
+      }
+      else {
+	nbytes += util_format_get_2d_size(pformat,pitch,expected_size[1]) * expected_size[2];
+
+	expected_size[0] = std::max(expected_size[0] >> 1,1);
+	expected_size[1] = std::max(expected_size[1] >> 1,1);
+	expected_size[2] = std::max(expected_size[2] >> 1,1);
+      }
+      
+      if(plevel -> data != 0 || plevel -> memory.offset != 0) ++ntransfer;
+      
+      ++levels;
+    }
+
+    texture.complete = complete;
+
+    if(complete) {
+    }
+    else {
+    }
+
+    texture.invalid_complete = 0;
+  }
 }
 
 void

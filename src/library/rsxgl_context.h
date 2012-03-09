@@ -48,6 +48,8 @@ public:
     } parts;
   } invalid;
 
+  uint8_t can_draw:1, can_read:1;
+
   bit_set< RSXGL_MAX_VERTEX_ATTRIBS > invalid_attribs;
   attribs_t::binding_type attribs_binding;
 

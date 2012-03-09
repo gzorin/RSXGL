@@ -101,12 +101,12 @@ glClear(GLbitfield mask)
   const uint32_t timestamp = rsxgl_timestamp_create(ctx,1);
   rsxgl_draw_framebuffer_validate(ctx,timestamp);
   rsxgl_state_validate(ctx);
-
+  
   gcmContextData * context = ctx -> base.gcm_context;
-    
+  
   uint32_t * buffer = gcm_reserve(context,2);
   gcm_emit_method(&buffer,NV30_3D_CLEAR_BUFFERS,1);
-
+  
   write_mask_t write_mask;
   write_mask.all = ctx -> framebuffer_binding[RSXGL_DRAW_FRAMEBUFFER].write_mask.all & ctx -> state.write_mask.all;
   
@@ -119,7 +119,7 @@ glClear(GLbitfield mask)
 	   (mask & GL_STENCIL_BUFFER_BIT ? (write_mask.parts.stencil ? NV30_3D_CLEAR_BUFFERS_STENCIL : 0) : 0));
   
   gcm_finish_commands(context,&buffer);
-
+    
   rsxgl_timestamp_post(ctx,timestamp);
   
   RSXGL_NOERROR_();

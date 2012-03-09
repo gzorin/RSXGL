@@ -739,7 +739,7 @@ glMultiDrawArrays (GLenum mode, const GLint *first, const GLsizei *count, const 
     }
     
     uint32_t timestamp = rsxgl_draw_init(ctx,mode,min_start,max_count,primcount);
-    
+
     const rsxgl_query_object_index_type query_index = ctx -> any_samples_passed_query;
     
     if(query_index == RSXGL_MAX_QUERY_OBJECTS) {
