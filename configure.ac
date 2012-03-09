@@ -181,7 +181,7 @@ AC_CONFIG_COMMANDS([mesa],
 	   "$RSYNC" -av --files-from="$_abs_top_srcdir/src/mesa/files" "$mesa_srcdir" "$mesa_builddir";
 	fi;
 
-	pushd "$mesa_builddir"; "$PATCH" -p0 < "$_abs_top_srcdir/src/mesa/patch"; popd
+	pushd "$mesa_builddir"; "$PATCH" -N -p0 < "$_abs_top_srcdir/src/mesa/patch"; popd
 	ln -fs "$_abs_top_builddir/src/mesa/configs/rsx" "$mesa_builddir/configs/current";
 	"$RSYNC" -av "$_abs_top_srcdir/src/mesa/Makefile-builtins" "$mesa_builddir/src/glsl/";
 ],
