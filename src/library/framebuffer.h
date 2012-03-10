@@ -119,12 +119,14 @@ struct framebuffer_t {
   typedef mapping_t::index_type mapping_size_type;
   mapping_t mapping;
 
+  write_mask_t write_masks[RSXGL_MAX_COLOR_ATTACHMENTS];
+
   uint8_t is_default:1, invalid:1, invalid_complete:1, complete:1;
   pipe_format color_pformat, depth_pformat;
 
-  write_mask_t write_mask;
-
   uint16_t format, color_targets;
+  uint32_t color_mask;
+  uint16_t color_mask_mrt, depth_mask;
   framebuffer_dimension_size_type size[2];
   surface_t surfaces[RSXGL_MAX_ATTACHMENTS];
 

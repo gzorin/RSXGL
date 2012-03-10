@@ -600,6 +600,7 @@ glDepthRangef(GLclampf zNear, GLclampf zFar)
   RSXGL_NOERROR_();
 }
 
+#if 0
 GLAPI void APIENTRY
 glColorMask(GLboolean red,GLboolean green,GLboolean blue,GLboolean alpha)
 {
@@ -626,6 +627,7 @@ glDepthMask (GLboolean flag)
 
   RSXGL_NOERROR_();
 }
+#endif
 
 GLAPI void APIENTRY
 glScissor (GLint x, GLint y, GLsizei width, GLsizei height)
