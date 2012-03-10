@@ -102,9 +102,10 @@ struct texture_t {
 
   // --- Cold:
   struct level_t {
-    uint8_t invalid_contents:1, dims:2;
+    uint8_t dims:2, cube:1, rect:1;
     pipe_format pformat;
     dimension_size_type size[3];
+    uint32_t pitch;
     void * data;
     memory_t memory;
     memory_arena_t::name_type arena;
@@ -114,8 +115,10 @@ struct texture_t {
   } levels[max_levels];
 
   uint16_t invalid:1, invalid_complete:1,
-    valid:1, complete:1, immutable:1,
-    cube:1, rect:1, max_level:4, dims:2;
+    allocated:1, complete:1, immutable:1,
+    dims:2, cube:1, rect:1,
+    levels:4;
+
   struct {
     uint16_t r:3, g:3, b:3, a:3;
   } swizzle;
