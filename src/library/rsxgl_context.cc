@@ -47,6 +47,7 @@ rsxgl_context_t::rsxgl_context_t(const struct rsxegl_config_t * config,gcmContex
   base.valid = 1;
   base.callback = rsxgl_context_t::egl_callback;
   base.screen = screen;
+  base.sync_sleep_interval = RSXGL_SYNC_SLEEP_INTERVAL;
 
   m_pctx = nvfx_create(screen,0);
   rsxgl_debug_printf("m_pctx: %lx\n",(unsigned long)m_pctx);
@@ -125,7 +126,7 @@ rsxgl_timestamp_create(rsxgl_context_t * ctx,const uint32_t count)
   // check for overflow:
   if(next_timestamp > max_timestamp || next_timestamp < current_timestamp) {
     // block until last_timestamp is reached:
-    rsxgl_timestamp_wait(ctx -> cached_timestamp,ctx -> timestamp_sync,ctx -> last_timestamp,RSXGL_SYNC_SLEEP_INTERVAL);
+    rsxgl_timestamp_wait(ctx -> cached_timestamp,ctx -> timestamp_sync,ctx -> last_timestamp,ctx -> base.sync_sleep_interval);
 
     // Buffers:
     {
@@ -172,7 +173,7 @@ rsxgl_timestamp_wait(rsxgl_context_t * ctx,const uint32_t timestamp)
   rsxgl_assert(ctx -> timestamp_sync != 0);
 
   rsxgl_gcm_flush(ctx -> gcm_context());
-  rsxgl_timestamp_wait(ctx -> cached_timestamp,ctx -> timestamp_sync,timestamp,RSXGL_SYNC_SLEEP_INTERVAL);
+  rsxgl_timestamp_wait(ctx -> cached_timestamp,ctx -> timestamp_sync,timestamp,ctx -> base.sync_sleep_interval);
 }
 
 bool

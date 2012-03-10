@@ -4,6 +4,7 @@
 
 #define GL3_PROTOTYPES
 #include <GL3/gl3.h>
+#include <GL3/gl3ext.h>
 
 #include "rsxgltest.h"
 #include "math3d.h"
@@ -290,7 +291,8 @@ rsxgltest_init(int argc,const char ** argv)
   glActiveTexture(GL_TEXTURE0);
 
   glBindTexture(GL_TEXTURE_2D,textures[0]);
-  glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,nagel_image.width,nagel_image.height,0,GL_BGRA,GL_UNSIGNED_BYTE,nagel_image.data);
+  glTexStorage2D(GL_TEXTURE_2D,1,GL_RGBA,nagel_image.width,nagel_image.height);
+  glTexSubImage2D(GL_TEXTURE_2D,0,0,0,nagel_image.width,nagel_image.height,GL_RGBA,GL_UNSIGNED_BYTE,nagel_image.data);
 
   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
@@ -299,7 +301,8 @@ rsxgltest_init(int argc,const char ** argv)
   glActiveTexture(GL_TEXTURE1);
 
   glBindTexture(GL_TEXTURE_2D,textures[1]);
-  glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,face_image.width,face_image.height,0,GL_BGRA,GL_UNSIGNED_BYTE,face_image.data);
+  glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,face_image.width,face_image.height,0,GL_RGBA,GL_UNSIGNED_BYTE,0);
+  glTexSubImage2D(GL_TEXTURE_2D,0,0,0,face_image.width,face_image.height,GL_RGBA,GL_UNSIGNED_BYTE,face_image.data);
 
   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
@@ -308,7 +311,7 @@ rsxgltest_init(int argc,const char ** argv)
   glActiveTexture(GL_TEXTURE2);
 
   glBindTexture(GL_TEXTURE_2D,textures[2]);
-  glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,gradient_image.width,gradient_image.height,0,GL_BGRA,GL_UNSIGNED_BYTE,gradient_image.data);
+  glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,gradient_image.width,gradient_image.height,0,GL_RGBA,GL_UNSIGNED_BYTE,gradient_image.data);
 
   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
@@ -338,6 +341,12 @@ rsxgltest_draw()
     Eigen::AngleAxisf(DTOR(xyz[2]) * 360.0f,Eigen::Vector3f::UnitZ()) *
     Eigen::AngleAxisf(DTOR(xyz[1]) * 360.0f,Eigen::Vector3f::UnitY()) *
     Eigen::AngleAxisf(DTOR(xyz[0]) * 360.0f,Eigen::Vector3f::UnitX());
+
+  glActiveTexture(GL_TEXTURE0);
+  glTexSubImage2D(GL_TEXTURE_2D,0,0,0,nagel_image.width,nagel_image.height,GL_RGBA,GL_UNSIGNED_BYTE,nagel_image.data);
+
+  //glActiveTexture(GL_TEXTURE1);
+  //glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,face_image.width,face_image.height,0,GL_RGBA,GL_UNSIGNED_BYTE,face_image.data);
 
   {
     //glActiveTexture(GL_TEXTURE0);

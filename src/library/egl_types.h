@@ -73,6 +73,7 @@ struct rsxegl_context_t {
   void (*callback)(struct rsxegl_context_t *,const uint8_t);
 
   struct pipe_screen * screen;
+  uint32_t sync_sleep_interval;
 };
 
 #ifdef __cplusplus

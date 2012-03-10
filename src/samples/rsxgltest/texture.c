@@ -29,10 +29,10 @@ void parseRGB(uint32_t *dest, uint32_t width, uint32_t height,
 			uint8_t green = rowData[index++];
 			uint8_t blue  = rowData[index++];
 
-			*dest = 0xff << 24 | red << 16 | green << 8 | blue;
+			//*dest = 0xff << 24 | red << 16 | green << 8 | blue;
 			//*dest = 0xff << 24 | blue << 16 | green << 8 | red;
 			//*dest = blue << 24 | green << 16 | red << 8 | 0xff;
-			//*dest = red << 24 | green << 16 | blue << 8 | 0xff;
+			*dest = red << 24 | green << 16 | blue << 8 | 0xff;
 			dest++;	
 		}
 	}
@@ -58,10 +58,10 @@ void parseRGBA(uint32_t *dest, uint32_t width, uint32_t height,
 			uint8_t blue  = rowData[index++];
 			uint8_t alpha = rowData[index++];
 
-			*dest = alpha << 24 | red << 16 | green << 8 | blue;
+			//*dest = alpha << 24 | red << 16 | green << 8 | blue;
 			//*dest = alpha << 24 | blue << 16 | green << 8 | red;
 			//*dest = blue << 24 | green << 16 | red << 8 | alpha;
-			//*dest = red << 24 | green << 16 | blue << 8 | alpha;
+			*dest = red << 24 | green << 16 | blue << 8 | alpha;
 			dest++;	
 		}
 	}

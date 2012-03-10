@@ -115,9 +115,9 @@ struct texture_t {
   } levels[max_levels];
 
   uint16_t invalid:1, invalid_complete:1,
-    allocated:1, complete:1, immutable:1,
+    complete:1, immutable:1,
     dims:2, cube:1, rect:1,
-    levels:4;
+    num_levels:4;
 
   struct {
     uint16_t r:3, g:3, b:3, a:3;

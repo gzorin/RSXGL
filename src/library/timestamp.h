@@ -57,8 +57,15 @@ rsxgl_timestamp_wait(uint32_t & cached_timestamp,const uint8_t index,const uint3
     
     uint32_t timestamp = *object;
 
-    for(;timestamp < compare;timestamp = *object) {
-      usleep(timeout_interval);
+    if(timeout_interval) {
+      for(;timestamp < compare;timestamp = *object) {
+	usleep(timeout_interval);
+      }
+    }
+    else {
+      while(timestamp < compare) {
+	timestamp = *object;
+      }
     }
 
     cached_timestamp = timestamp;

@@ -52,7 +52,7 @@ glFinish (void)
   __sync();
 
   const useconds_t timeout = RSXGL_SYNC_SLEEP_INTERVAL * RSXGL_FINISH_SLEEP_ITERATIONS;
-  const useconds_t timeout_interval = RSXGL_SYNC_SLEEP_INTERVAL;
+  const useconds_t timeout_interval = ctx -> base.sync_sleep_interval;
 
   // Wait some interval for the GPU to finish:
   if(timeout > 0) {
