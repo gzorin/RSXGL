@@ -941,8 +941,6 @@ static inline void
 rsxgl_framebuffer_validate_complete(rsxgl_context_t * ctx,framebuffer_t & framebuffer)
 {
   if(framebuffer.invalid_complete) {
-    rsxgl_debug_printf("%s:\n",__PRETTY_FUNCTION__);
-
     framebuffer_dimension_size_type w = ~0, h = ~0;
     pipe_format color_pformat = PIPE_FORMAT_NONE, depth_pformat = PIPE_FORMAT_NONE;
     bool complete = true;
@@ -971,7 +969,6 @@ rsxgl_framebuffer_validate_complete(rsxgl_context_t * ctx,framebuffer_t & frameb
 	    }
 	    else if(!util_is_format_compatible(util_format_description(color_pformat),
 					       util_format_description(renderbuffer.pformat))) {
-	      rsxgl_debug_printf("\trenderbuffer attachment %u isn't compatible\n",(unsigned int)i);
 	      complete = false;
 	    }
 
@@ -979,7 +976,6 @@ rsxgl_framebuffer_validate_complete(rsxgl_context_t * ctx,framebuffer_t & frameb
 	    h = std::min(h,renderbuffer.size[1]);
 	  }
 	  else {
-	    rsxgl_debug_printf("\trenderbuffer attachment %u format isn't color\n",(unsigned int)i);
 	    complete = false;
 	  }
 	}
@@ -987,15 +983,12 @@ rsxgl_framebuffer_validate_complete(rsxgl_context_t * ctx,framebuffer_t & frameb
 	  texture_t & texture = texture_t::storage().at(framebuffer.attachments[i]);
 	  rsxgl_texture_validate_complete(ctx,texture);
 
-	  rsxgl_debug_printf("\ttexture attachment %u complete:%u format:%u\n",(unsigned int)i,(unsigned int)texture.complete,(unsigned int)texture.pformat);
-
 	  if(texture.complete && texture.dims == 2 && !util_format_is_depth_or_stencil(texture.pformat)) {
 	    if(color_pformat == PIPE_FORMAT_NONE) {
 	      color_pformat = texture.pformat;
 	    }
 	    else if(!util_is_format_compatible(util_format_description(color_pformat),
 					       util_format_description(texture.pformat))) {
-	      rsxgl_debug_printf("\ttexture attachment %u isn't compatible\n",(unsigned int)i);
 	      complete = false;
 	    }
 	    
@@ -1003,7 +996,6 @@ rsxgl_framebuffer_validate_complete(rsxgl_context_t * ctx,framebuffer_t & frameb
 	    h = std::min(h,texture.size[1]);
 	  }
 	  else {
-	    rsxgl_debug_printf("\ttexture attachment %u format isn't color\n",(unsigned int)i);
 	    complete = false;
 	  }
 	}
@@ -1022,7 +1014,6 @@ rsxgl_framebuffer_validate_complete(rsxgl_context_t * ctx,framebuffer_t & frameb
 	    h = std::min(h,renderbuffer.size[1]);
 	  }
 	  else {
-	    rsxgl_debug_printf("\trenderbuffer attachment depth format isn't depth\n");
 	    complete = false;
 	  }
 	}
@@ -1037,7 +1028,6 @@ rsxgl_framebuffer_validate_complete(rsxgl_context_t * ctx,framebuffer_t & frameb
 	    h = std::min(h,texture.size[1]);
 	  }
 	  else {
-	    rsxgl_debug_printf("\ttexture attachment depth format isn't depth\n");
 	    complete = false;
 	  }
 	}
@@ -1056,7 +1046,6 @@ rsxgl_framebuffer_validate_complete(rsxgl_context_t * ctx,framebuffer_t & frameb
 					      1,
 					      PIPE_BIND_SAMPLER_VIEW | PIPE_BIND_DEPTH_STENCIL));
 
-    rsxgl_debug_printf("\tresult: %u %u %u %ux%u\n",(unsigned int)complete,(unsigned int)color_pformat,(unsigned int)depth_pformat,(unsigned int)w,(unsigned int)h);
     framebuffer.complete = complete;
     framebuffer.write_mask.all = 0;
     
@@ -1136,8 +1125,6 @@ rsxgl_framebuffer_validate(rsxgl_context_t * ctx,framebuffer_t & framebuffer,con
   if(framebuffer.invalid) {
     rsxgl_framebuffer_validate_complete(ctx,framebuffer);
 
-    rsxgl_debug_printf("%s: %u\n",__PRETTY_FUNCTION__,(unsigned int)framebuffer.complete);
-
     if(framebuffer.complete) {
       uint16_t color_targets = 0;
       surface_t surfaces[RSXGL_MAX_ATTACHMENTS];
@@ -1204,7 +1191,7 @@ rsxgl_framebuffer_validate(rsxgl_context_t * ctx,framebuffer_t & framebuffer,con
 
       // Store data that gets passed down the command stream:
       framebuffer.format = (uint16_t)nvfx_get_framebuffer_format(framebuffer.color_pformat,framebuffer.depth_pformat) | (uint16_t)NV30_3D_RT_FORMAT_TYPE_LINEAR;
-      framebuffer.color_targets = color_targets;
+      framebuffer.color_targets = (color_targets) | ((color_targets & ~NV30_3D_RT_ENABLE_COLOR0) ? NV30_3D_RT_ENABLE_MRT : 0);
       
       for(framebuffer_t::attachment_size_type i = 0;i < RSXGL_MAX_ATTACHMENTS;++i) {
 	framebuffer.surfaces[i] = surfaces[i];
@@ -1240,7 +1227,6 @@ rsxgl_draw_framebuffer_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
   rsxgl_framebuffer_validate(ctx,framebuffer,timestamp);
 
   if(ctx -> invalid.parts.draw_framebuffer) {
-    rsxgl_debug_printf("validating draw framebuffer: %u\n",(unsigned int)ctx -> framebuffer_binding.names[RSXGL_DRAW_FRAMEBUFFER]);
     if(framebuffer.complete) {
       const uint32_t format = framebuffer.format;
       const uint32_t color_targets = framebuffer.color_targets;
@@ -1273,8 +1259,6 @@ rsxgl_draw_framebuffer_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
 	gcm_emit_at(buffer,8,color_targets);
 	
 	gcm_finish_n_commands(context,9);
-	
-	ctx -> can_draw = 1;
       }
       else {
 	uint32_t * buffer = gcm_reserve(context,2);
@@ -1283,8 +1267,6 @@ rsxgl_draw_framebuffer_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
 	gcm_emit_at(buffer,1,0);
 	
 	gcm_finish_n_commands(context,2);
-	
-	ctx -> can_draw = 0;
       }
 
       ctx -> invalid.parts.draw_framebuffer = 0;

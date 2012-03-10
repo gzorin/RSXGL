@@ -1194,7 +1194,9 @@ void
 rsxgl_texture_validate_complete(rsxgl_context_t * ctx,texture_t & texture)
 {
   if(texture.invalid_complete) {
+#if 0
     rsxgl_debug_printf("%s:%u\n",__PRETTY_FUNCTION__,(unsigned int)texture.dims);
+#endif
 
     texture_t::level_t * plevel = texture.levels;
 
@@ -1226,7 +1228,9 @@ rsxgl_texture_validate_complete(rsxgl_context_t * ctx,texture_t & texture)
       ++plevel;
     }
 
+#if 0
     rsxgl_debug_printf("\tcompleteness: %i\n",(int)complete);
+#endif
     texture.complete = complete;
 
     if(complete) {
@@ -1248,7 +1252,9 @@ rsxgl_texture_validate_complete(rsxgl_context_t * ctx,texture_t & texture)
       texture.num_levels = 0;
     }
 
+#if 0
     rsxgl_debug_printf("\tvalidated completeness\n");
+#endif
     texture.invalid_complete = 0;
   }
 }
@@ -1261,13 +1267,18 @@ rsxgl_texture_validate_storage(rsxgl_context_t * ctx,const memory_arena_t::name_
   rsxgl_assert(texture.dims != 0);
   rsxgl_assert(texture.pformat != PIPE_FORMAT_NONE);
 
+#if 0
   rsxgl_debug_printf("%s pformat:%u size:%ux%ux%u\n",__PRETTY_FUNCTION__,(unsigned int)texture.pformat,
 		     (unsigned int)texture.size[0],(unsigned int)texture.size[1],(unsigned int)texture.size[2]);
+#endif
 
   // pitch is aligned to 64 bytes so it can be attached to a framebuffer:
   const uint32_t pitch_tmp = util_format_get_stride(texture.pformat,texture.size[0]);
   const uint32_t pitch = texture.dims > 1 ? align_pot< uint32_t, 64 >(pitch_tmp) : pitch_tmp;
+
+#if 0
   rsxgl_debug_printf("\tpitch:%u\n",pitch);
+#endif
 
   uint32_t nbytes = 0;
   texture_t::dimension_size_type size[3] = { texture.size[0], texture.size[1], texture.size[2] };
@@ -1278,13 +1289,17 @@ rsxgl_texture_validate_storage(rsxgl_context_t * ctx,const memory_arena_t::name_
       size[j] = std::max(size[j] >> 1,1);
     }
   }
+#if 0
   rsxgl_debug_printf("\tarena:%u bytes:%u\n",(unsigned int)arena,nbytes);
+#endif
 
   texture.memory = rsxgl_arena_allocate(memory_arena_t::storage().at(arena),128,nbytes,0);
   texture.memory.owner = true;
 
   if(texture.memory) {
+#if 0
     rsxgl_debug_printf("\tgot memory\n");
+#endif
 
     texture.arena = arena;
 
@@ -1293,6 +1308,7 @@ rsxgl_texture_validate_storage(rsxgl_context_t * ctx,const memory_arena_t::name_
     
     const uint32_t fmt = pfmt -> fmt[4] | NV40_3D_TEX_FORMAT_LINEAR | (texture.rect ? NV40_3D_TEX_FORMAT_RECT : 0) | 0x8000;
     
+#if 0
     rsxgl_debug_printf("%s: dims:%u pformat:%u size:%ux%ux%u pitch:%u levels:%u bytes:%u fmt:%x\n",__PRETTY_FUNCTION__,
 		       (unsigned int)texture.dims,
 		       (unsigned int)texture.pformat,
@@ -1301,6 +1317,7 @@ rsxgl_texture_validate_storage(rsxgl_context_t * ctx,const memory_arena_t::name_
 		       (unsigned int)texture.num_levels,
 		       (unsigned int)nbytes,(unsigned int)fmt);
     rsxgl_debug_printf("\toffset:%u\n",texture.memory.offset);
+#endif
     
     texture.format =
       ((texture.memory.location == 0) ? NV30_3D_TEX_FORMAT_DMA0 : NV30_3D_TEX_FORMAT_DMA1) |
@@ -1644,9 +1661,11 @@ rsxgl_tex_subimage(rsxgl_context_t * ctx,texture_t & texture,GLint _level,GLint 
   }
 
   if(srcaddress != 0 && dstaddress != 0) {
+#if 0
     rsxgl_debug_printf("translate src:%u %u addr:%lx dst:%u %u addr:%lx\n",
 		       (unsigned int)psrcformat,(unsigned int)util_format_get_stride(psrcformat,width),(unsigned long)srcaddress,
 		       (unsigned int)pdstformat,(unsigned int)util_format_get_stride(pdstformat,width),(unsigned long)dstaddress);
+#endif
     util_format_translate(pdstformat,dstaddress,dstpitch,x,y,
 			  psrcformat,srcaddress,util_format_get_stride(psrcformat,width),0,0,width,height);
   }
@@ -1919,7 +1938,9 @@ rsxgl_texture_validate(rsxgl_context_t * ctx,texture_t & texture,const uint32_t 
   texture.timestamp = timestamp;
 
   if(texture.invalid) {
+#if 0
     rsxgl_debug_printf("%s\n",__PRETTY_FUNCTION__);
+#endif
 
     rsxgl_texture_reset_storage(texture);
     rsxgl_texture_validate_complete(ctx,texture);
@@ -1939,6 +1960,7 @@ rsxgl_texture_validate(rsxgl_context_t * ctx,texture_t & texture,const uint32_t 
 	texture_t::level_t * plevel = texture.levels;
 	for(texture_t::level_size_type i = 0,n = texture.num_levels;i < n;++i,++plevel) {
 	  if(plevel -> data != 0) {
+#if 0
 	    rsxgl_debug_printf("\tcopying mipmap level:%u pformat:%u pitch:%u size:%ux%ux%u from:%lx pdstformat:%u dstpitch:%u to:%lx\n",
 			       (unsigned int)i,(unsigned int)plevel -> pformat,(unsigned int)plevel -> pitch,
 			       (unsigned int)std::min(size[0],plevel -> size[0]),(unsigned int)std::min(size[1],plevel -> size[1]),(unsigned int)std::min(size[2],plevel -> size[2]),
@@ -1946,6 +1968,7 @@ rsxgl_texture_validate(rsxgl_context_t * ctx,texture_t & texture,const uint32_t 
 
 			       (unsigned int)pdstformat,(unsigned int)dstpitch,
 			       (unsigned long)dstaddress);
+#endif
 	    util_format_translate(pdstformat,dstaddress,dstpitch,0,0,
 				  plevel -> pformat,plevel -> data,plevel -> pitch,0,0,std::min(size[0],plevel -> size[0]),std::min(size[1],plevel -> size[1]));
 	  }
@@ -1955,15 +1978,21 @@ rsxgl_texture_validate(rsxgl_context_t * ctx,texture_t & texture,const uint32_t 
 	  }
 	}
       }
+#if 0
       else {
 	rsxgl_debug_printf("\tno memory\n");
       }
+#endif
     }
+#if 0
     else {
       rsxgl_debug_printf("\tnot complete\n");
     }
+#endif
 
+#if 0
     rsxgl_debug_printf("\tvalidated\n");
+#endif
         
     texture.invalid = 0;
   }

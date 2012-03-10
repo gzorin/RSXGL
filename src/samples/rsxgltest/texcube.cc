@@ -343,9 +343,9 @@ rsxgltest_draw()
     Eigen::AngleAxisf(DTOR(xyz[0]) * 360.0f,Eigen::Vector3f::UnitX());
 
   {
-    //glActiveTexture(GL_TEXTURE0);
-    //glBindTexture(GL_TEXTURE_2D,textures[0]);
-    glUniform1i(image_location,0);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D,textures[0]);
+    //glUniform1i(image_location,0);
 
     Eigen::Affine3f modelview = ViewMatrixInv * (Eigen::Affine3f::Identity() * Eigen::Translation3f(-5,0,0) * rotmat * Eigen::UniformScaling< float >(3.0));
     //Eigen::Affine3f modelview = ViewMatrixInv;
@@ -356,9 +356,9 @@ rsxgltest_draw()
   }
 
   {
-    //glActiveTexture(GL_TEXTURE0);
-    //glBindTexture(GL_TEXTURE_2D,textures[1]);
-    glUniform1i(image_location,1);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D,textures[1]);
+    //glUniform1i(image_location,1);
 
     Eigen::Affine3f modelview = ViewMatrixInv * (Eigen::Affine3f::Identity() * Eigen::Translation3f(5,0,0) * rotmat * Eigen::UniformScaling< float >(3.0));
     //Eigen::Affine3f modelview = ViewMatrixInv;

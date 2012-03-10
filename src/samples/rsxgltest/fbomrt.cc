@@ -411,10 +411,17 @@ rsxgltest_init(int argc,const char ** argv)
   glGenFramebuffers(1,&fbo);
 
   glBindFramebuffer(GL_FRAMEBUFFER,fbo);
+
+  GLenum bufs[2] = {
+    GL_COLOR_ATTACHMENT0,
+    GL_COLOR_ATTACHMENT1
+  };
+  glDrawBuffers(2,bufs);
+
   //glFramebufferRenderbuffer(GL_FRAMEBUFFER,GL_COLOR_ATTACHMENT0,GL_RENDERBUFFER,rbo[0]);
   //glFramebufferTexture(GL_FRAMEBUFFER,GL_COLOR_ATTACHMENT0,texture,0);
   glFramebufferTexture2D(GL_FRAMEBUFFER,GL_COLOR_ATTACHMENT0,GL_TEXTURE_2D,textures[1],0);
-  //glFramebufferTexture2D(GL_FRAMEBUFFER,GL_COLOR_ATTACHMENT1,GL_TEXTURE_2D,textures[2],0);
+  glFramebufferTexture2D(GL_FRAMEBUFFER,GL_COLOR_ATTACHMENT1,GL_TEXTURE_2D,textures[2],0);
   glFramebufferRenderbuffer(GL_FRAMEBUFFER,GL_DEPTH_ATTACHMENT,GL_RENDERBUFFER,rbo[1]);
 
   glBindFramebuffer(GL_FRAMEBUFFER,0);
@@ -512,7 +519,7 @@ rsxgltest_draw()
   }
 
   {
-    glBindTexture(GL_TEXTURE_2D,textures[1]);
+    glBindTexture(GL_TEXTURE_2D,textures[2]);
 
     Transform3f modelview = ViewMatrixInv * (Transform3f::Identity() * Eigen::Translation3f(5,0,0) * rotmat * Eigen::UniformScaling< float >(3.0));
     glUniformMatrix4fv(outer_program.TransMatrix,1,GL_FALSE,modelview.data());
