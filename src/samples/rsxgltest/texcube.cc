@@ -342,12 +342,6 @@ rsxgltest_draw()
     Eigen::AngleAxisf(DTOR(xyz[1]) * 360.0f,Eigen::Vector3f::UnitY()) *
     Eigen::AngleAxisf(DTOR(xyz[0]) * 360.0f,Eigen::Vector3f::UnitX());
 
-  glActiveTexture(GL_TEXTURE0);
-  glTexSubImage2D(GL_TEXTURE_2D,0,0,0,nagel_image.width,nagel_image.height,GL_RGBA,GL_UNSIGNED_BYTE,nagel_image.data);
-
-  //glActiveTexture(GL_TEXTURE1);
-  //glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,face_image.width,face_image.height,0,GL_RGBA,GL_UNSIGNED_BYTE,face_image.data);
-
   {
     //glActiveTexture(GL_TEXTURE0);
     //glBindTexture(GL_TEXTURE_2D,textures[0]);

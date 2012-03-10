@@ -691,18 +691,29 @@ glActiveTexture (GLenum texture)
   ctx -> active_texture = unit;
 }
 
+static inline uint8_t
+rsxgl_texture_target_dims(const GLenum target)
+{
+  if(target == GL_TEXTURE_1D || target == GL_TEXTURE_1D_ARRAY) {
+    return 1;
+  }
+  else if(target == GL_TEXTURE_2D || target == GL_TEXTURE_2D_ARRAY || target == GL_TEXTURE_RECTANGLE || target == GL_TEXTURE_CUBE_MAP || target == GL_TEXTURE_2D_MULTISAMPLE || target == GL_TEXTURE_2D_MULTISAMPLE_ARRAY) {
+    return 2;
+  }
+  else if(target == GL_TEXTURE_3D) {
+    return 3;
+  }
+  else {
+    return 0;
+  }
+}
+
 GLAPI void APIENTRY
 glBindTexture (GLenum target, GLuint texture_name)
 {
-  if(!(target == GL_TEXTURE_1D ||
-       target == GL_TEXTURE_2D ||
-       target == GL_TEXTURE_3D ||
-       target == GL_TEXTURE_1D_ARRAY ||
-       target == GL_TEXTURE_2D_ARRAY ||
-       target == GL_TEXTURE_RECTANGLE ||
-       target == GL_TEXTURE_CUBE_MAP ||
-       target == GL_TEXTURE_2D_MULTISAMPLE || 
-       target == GL_TEXTURE_2D_MULTISAMPLE_ARRAY)) {
+  const uint8_t dims = rsxgl_texture_target_dims(target);
+
+  if(dims == 0) {
     RSXGL_ERROR_(GL_INVALID_ENUM);
   }
 
@@ -710,8 +721,14 @@ glBindTexture (GLenum target, GLuint texture_name)
     RSXGL_ERROR_(GL_INVALID_VALUE);
   }
 
-  if(texture_name != 0 && !texture_t::storage().is_object(texture_name)) {
-    texture_t::storage().create_object(texture_name);
+  if(texture_name != 0) {
+    if(!texture_t::storage().is_object(texture_name)) {
+      texture_t::storage().create_object(texture_name);
+      texture_t::storage().at(texture_name).dims = dims;
+    }
+    else if(texture_t::storage().at(texture_name).dims != dims) {
+      RSXGL_ERROR_(GL_INVALID_OPERATION);
+    }
   }
 
   rsxgl_context_t * ctx = current_ctx();
@@ -1177,7 +1194,7 @@ void
 rsxgl_texture_validate_complete(rsxgl_context_t * ctx,texture_t & texture)
 {
   if(texture.invalid_complete) {
-    rsxgl_debug_printf("%s\n",__PRETTY_FUNCTION__);
+    rsxgl_debug_printf("%s:%u\n",__PRETTY_FUNCTION__,(unsigned int)texture.dims);
 
     texture_t::level_t * plevel = texture.levels;
 
@@ -1185,7 +1202,7 @@ rsxgl_texture_validate_complete(rsxgl_context_t * ctx,texture_t & texture)
     uint8_t dims = plevel -> dims;
     pipe_format pformat = plevel -> pformat;
 
-    bool complete = (dims != 0) && (pformat != PIPE_FORMAT_NONE);
+    bool complete = (dims == texture.dims) && (pformat != PIPE_FORMAT_NONE);
 
     bool cube = plevel -> cube, rect = plevel -> rect;
     ++plevel;
@@ -1213,7 +1230,6 @@ rsxgl_texture_validate_complete(rsxgl_context_t * ctx,texture_t & texture)
     texture.complete = complete;
 
     if(complete) {
-      texture.dims = dims;
       texture.pformat = pformat;
       texture.size[0] = texture.levels[0].size[0];
       texture.size[1] = texture.levels[0].size[1];
@@ -1223,7 +1239,6 @@ rsxgl_texture_validate_complete(rsxgl_context_t * ctx,texture_t & texture)
       texture.num_levels = level;
     }
     else {
-      texture.dims = 0;
       texture.pformat = PIPE_FORMAT_NONE;
       texture.size[0] = 0;
       texture.size[1] = 0;
@@ -1331,7 +1346,6 @@ rsxgl_texture_level_reset_storage(texture_t::level_t & level)
     level.memory = memory_t();
   }
   
-  level.dims = 0;
   level.pformat = PIPE_FORMAT_NONE;
   level.size[0] = 0;
   level.size[1] = 0;
@@ -1397,7 +1411,6 @@ rsxgl_tex_storage(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,c
 						  PIPE_BIND_SAMPLER_VIEW);
 
   if(pformat == PIPE_FORMAT_NONE) {
-    texture.dims = 0;
     texture.complete = 0;
     texture.pformat = PIPE_FORMAT_NONE;
     texture.cube = false;
@@ -1411,7 +1424,6 @@ rsxgl_tex_storage(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,c
     RSXGL_ERROR_(GL_INVALID_ENUM);
   }
   else {
-    texture.dims = dims;
     texture.complete = 1;
     texture.pformat = pformat;
     texture.cube = cube;

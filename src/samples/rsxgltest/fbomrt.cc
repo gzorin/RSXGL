@@ -379,7 +379,7 @@ rsxgltest_init(int argc,const char ** argv)
   // image asset:
   glBindTexture(GL_TEXTURE_2D,textures[0]);
 
-  glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,image.width,image.height,0,GL_BGRA,GL_UNSIGNED_BYTE,image.data);
+  glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,image.width,image.height,0,GL_RGBA,GL_UNSIGNED_BYTE,image.data);
 
   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
@@ -389,7 +389,7 @@ rsxgltest_init(int argc,const char ** argv)
     glBindTexture(GL_TEXTURE_2D,textures[i]);
 
     //glTexStorage2D(GL_TEXTURE_2D,1,GL_RGBA,image.width,image.height);
-    glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,image.width,image.height,0,GL_BGRA,GL_UNSIGNED_BYTE,0);
+    glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,image.width,image.height,0,GL_RGBA,GL_UNSIGNED_BYTE,0);
     
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
