@@ -40,13 +40,8 @@ state_t::state_t()
   scissor.width = 4096;
   scissor.height = 4096;
 
-  write_mask.parts.r = 1;
-  write_mask.parts.g = 1;
-  write_mask.parts.b = 1;
-  write_mask.parts.a = 1;
   color.clear = 0;
 
-  write_mask.parts.depth = 1;
   enable.depth_test = 0;
   depth.clear = 0xffffff;
   depth.func = RSXGL_LESS;
@@ -60,7 +55,6 @@ state_t::state_t()
   blend.dst_rgb_func = RSXGL_ZERO;
   blend.dst_alpha_func = RSXGL_ZERO;
 
-  write_mask.parts.stencil = 1;
   stencil.clear = 0;
   stencil.face[0].enable = 0;
   stencil.face[0].mask = 0xff;
@@ -130,6 +124,7 @@ union _ieee32_t {
   }
 };
 
+#if 0
 static inline void
 rsxgl_emit_color_write_mask(gcmContextData * context,uint32_t r,uint32_t g,uint32_t b,uint32_t a)
 {
@@ -157,6 +152,7 @@ rsxgl_emit_depth_write_mask(gcmContextData * context,uint32_t depth)
 
   gcm_finish_commands(context,&buffer);
 }
+#endif
 
 static inline uint32_t
 nv40_blend_func(uint32_t x)
@@ -287,15 +283,6 @@ rsxgl_state_validate(rsxgl_context_t * ctx)
     }
   }
 
-  // write masks:
-  write_mask_t write_mask;
-  write_mask.all = ctx -> framebuffer_binding[RSXGL_DRAW_FRAMEBUFFER].write_mask.all & s -> write_mask.all;
-
-  if(s -> invalid.parts.write_mask) {
-    rsxgl_emit_color_write_mask(context,write_mask.parts.r,write_mask.parts.g,write_mask.parts.b,write_mask.parts.a);
-    rsxgl_emit_depth_write_mask(context,write_mask.parts.depth);
-  }
-
   if(s -> invalid.parts.clear_color) {
     // clear color:
     buffer = gcm_reserve(context,2);
@@ -316,11 +303,12 @@ rsxgl_state_validate(rsxgl_context_t * ctx)
     gcm_finish_commands(context,&buffer);
   }
   
-  if(s -> invalid.parts.write_mask || s -> invalid.parts.depth) {
+  // TODO: do this if framebuffer has depth buffer:
+  if(s -> invalid.parts.draw_framebuffer || s -> invalid.parts.depth) {
     buffer = gcm_reserve(context,2);
 
     gcm_emit_method_at(buffer,0,NV30_3D_DEPTH_TEST_ENABLE,1);
-    gcm_emit_at(buffer,1,write_mask.parts.depth && s -> enable.depth_test);
+    gcm_emit_at(buffer,1,ctx -> framebuffer_binding[RSXGL_DRAW_FRAMEBUFFER].validated_write_mask.parts.depth && s -> enable.depth_test);
 
     gcm_finish_n_commands(context,2);
   }
@@ -391,20 +379,23 @@ rsxgl_state_validate(rsxgl_context_t * ctx)
   }
     
   // stencil:
-  if(s -> invalid.parts.write_mask || s -> invalid.parts.stencil) {
+  // TODO: do this if framebuffer has stencil buffer:
+  if(s -> invalid.parts.draw_framebuffer || s -> invalid.parts.stencil) {
+    const bool framebuffer_stencil = ctx -> framebuffer_binding[RSXGL_DRAW_FRAMEBUFFER].validated_write_mask.parts.stencil;
+
     buffer = gcm_reserve(context,4);
 
     gcm_emit_method_at(buffer,0,NV30_3D_STENCIL_ENABLE(0),1);
-    gcm_emit_at(buffer,1,write_mask.parts.stencil && s -> stencil.face[0].enable);
+    gcm_emit_at(buffer,1,framebuffer_stencil && s -> stencil.face[0].enable);
     gcm_emit_method_at(buffer,2,NV30_3D_STENCIL_ENABLE(1),1);
-    gcm_emit_at(buffer,3,write_mask.parts.stencil && s -> stencil.face[1].enable);
+    gcm_emit_at(buffer,3,framebuffer_stencil && s -> stencil.face[1].enable);
 
     gcm_finish_n_commands(context,4);
   }
 
   if(s -> invalid.parts.stencil) {
     for(int f = 0;f < 2;++f) {
-      if(write_mask.parts.stencil && s -> stencil.face[f].enable) {
+      if(s -> stencil.face[f].enable) {
 	buffer = gcm_reserve(context,8);
 	
 	gcm_emit_method_at(buffer,0,NV30_3D_STENCIL_MASK(f),7);

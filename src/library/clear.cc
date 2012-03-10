@@ -107,8 +107,7 @@ glClear(GLbitfield mask)
   uint32_t * buffer = gcm_reserve(context,2);
   gcm_emit_method(&buffer,NV30_3D_CLEAR_BUFFERS,1);
   
-  write_mask_t write_mask;
-  write_mask.all = ctx -> framebuffer_binding[RSXGL_DRAW_FRAMEBUFFER].write_mask.all & ctx -> state.write_mask.all;
+  const write_mask_t write_mask = ctx -> framebuffer_binding[RSXGL_DRAW_FRAMEBUFFER].validated_write_mask;
   
   gcm_emit(&buffer,
 	   (mask & GL_COLOR_BUFFER_BIT ? ((write_mask.parts.r ? NV30_3D_CLEAR_BUFFERS_COLOR_R : 0) |

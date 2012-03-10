@@ -122,6 +122,7 @@ struct framebuffer_t {
   write_mask_t write_masks[RSXGL_MAX_COLOR_ATTACHMENTS];
 
   uint8_t is_default:1, invalid:1, invalid_complete:1, complete:1;
+  write_mask_t validated_write_mask;
   pipe_format color_pformat, depth_pformat;
 
   uint16_t format, color_targets;

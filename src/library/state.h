@@ -99,10 +99,11 @@ struct state_t {
   union {
     uint32_t all;
     struct {
-      uint32_t viewport:1,
+      uint32_t 
+      draw_framebuffer:1,
+	viewport:1,
 	depth_range:1,
 	scissor:1,
-	write_mask:1,
 	clear_color:1,
 	clear_depth_stencil:1,
 	depth:1,
@@ -132,8 +133,6 @@ struct state_t {
   struct {
     uint64_t x:16,y:16,width:16,height:16;
   } scissor;
-
-  write_mask_t write_mask;
 
   struct {
     uint32_t clear;
