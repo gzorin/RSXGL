@@ -308,7 +308,7 @@ rsxgl_state_validate(rsxgl_context_t * ctx)
     buffer = gcm_reserve(context,2);
 
     gcm_emit_method_at(buffer,0,NV30_3D_DEPTH_TEST_ENABLE,1);
-    gcm_emit_at(buffer,1,ctx -> framebuffer_binding[RSXGL_DRAW_FRAMEBUFFER].validated_write_mask.parts.depth && s -> enable.depth_test);
+    gcm_emit_at(buffer,1,ctx -> framebuffer_binding[RSXGL_DRAW_FRAMEBUFFER].complete_write_mask.parts.depth && s -> enable.depth_test);
 
     gcm_finish_n_commands(context,2);
   }
@@ -381,7 +381,7 @@ rsxgl_state_validate(rsxgl_context_t * ctx)
   // stencil:
   // TODO: do this if framebuffer has stencil buffer:
   if(s -> invalid.parts.draw_framebuffer || s -> invalid.parts.stencil) {
-    const bool framebuffer_stencil = ctx -> framebuffer_binding[RSXGL_DRAW_FRAMEBUFFER].validated_write_mask.parts.stencil;
+    const bool framebuffer_stencil = ctx -> framebuffer_binding[RSXGL_DRAW_FRAMEBUFFER].complete_write_mask.parts.stencil;
 
     buffer = gcm_reserve(context,4);
 

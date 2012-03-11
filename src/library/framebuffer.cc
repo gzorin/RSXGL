@@ -328,7 +328,7 @@ framebuffer_t::framebuffer_t()
   write_masks[0].parts.depth = true;
   write_masks[0].parts.stencil = false;
 
-  validated_write_mask.all = 0;
+  complete_write_mask.all = 0;
 }
 
 framebuffer_t::~framebuffer_t()
@@ -1044,8 +1044,8 @@ rsxgl_framebuffer_validate_complete(rsxgl_context_t * ctx,framebuffer_t & frameb
   if(framebuffer.invalid_complete) {
     framebuffer_dimension_size_type w = ~0, h = ~0;
     pipe_format color_pformat = PIPE_FORMAT_NONE, depth_pformat = PIPE_FORMAT_NONE;
-    write_mask_t validated_write_mask;
-    validated_write_mask.all = 0;
+    write_mask_t complete_write_mask;
+    complete_write_mask.all = 0;
     
     bool complete = true;
 
@@ -1060,11 +1060,23 @@ rsxgl_framebuffer_validate_complete(rsxgl_context_t * ctx,framebuffer_t & frameb
 
       complete =
 	complete &&
-	((mask.parts.r || mask.parts.g || mask.parts.b || mask.parts.a) ? (color_pformat != PIPE_FORMAT_NONE && !util_format_is_depth_or_stencil(color_pformat)) : true) &&
-	((mask.parts.depth || mask.parts.stencil) ? (depth_pformat != PIPE_FORMAT_NONE && util_format_is_depth_or_stencil(depth_pformat)) : true);
+	((mask.parts.r || mask.parts.g || mask.parts.b || mask.parts.a) ? (color_pformat != PIPE_FORMAT_NONE &&
+									   !util_format_is_depth_or_stencil(color_pformat) &&
+									   (ctx -> screen() -> is_format_supported(ctx -> screen(),
+														   color_pformat,
+														   PIPE_TEXTURE_RECT,
+														   1,
+														   PIPE_BIND_SAMPLER_VIEW | PIPE_BIND_RENDER_TARGET))) : true) &&
+	((mask.parts.depth || mask.parts.stencil) ? (depth_pformat != PIPE_FORMAT_NONE &&
+						     util_format_is_depth_or_stencil(depth_pformat) &&
+						     (ctx -> screen() -> is_format_supported(ctx -> screen(),
+											     depth_pformat,
+											     PIPE_TEXTURE_RECT,
+											     1,
+											     PIPE_BIND_SAMPLER_VIEW | PIPE_BIND_DEPTH_STENCIL))) : true);
 
       if(complete) {
-	validated_write_mask.all |= mask.all;
+	complete_write_mask.all |= mask.all;
       }
     }
     else {
@@ -1081,7 +1093,12 @@ rsxgl_framebuffer_validate_complete(rsxgl_context_t * ctx,framebuffer_t & frameb
 	if(type == RSXGL_ATTACHMENT_TYPE_RENDERBUFFER) {
 	  renderbuffer_t & renderbuffer = renderbuffer_t::storage().at(framebuffer.attachments[i]);
 
-	  if(!util_format_is_depth_or_stencil(renderbuffer.pformat)) {
+	  if(!util_format_is_depth_or_stencil(renderbuffer.pformat) &&
+	     (ctx -> screen() -> is_format_supported(ctx -> screen(),
+						     renderbuffer.pformat,
+						     PIPE_TEXTURE_RECT,
+						     1,
+						     PIPE_BIND_SAMPLER_VIEW | PIPE_BIND_RENDER_TARGET))) {
 	    if(color_pformat == PIPE_FORMAT_NONE) {
 	      color_pformat = renderbuffer.pformat;
 	    }
@@ -1099,14 +1116,20 @@ rsxgl_framebuffer_validate_complete(rsxgl_context_t * ctx,framebuffer_t & frameb
 	  if(complete) {
 	    w = std::min(w,renderbuffer.size[0]);
 	    h = std::min(h,renderbuffer.size[1]);
-	    validated_write_mask.all |= mask.all;
+	    complete_write_mask.all |= mask.all;
 	  }
 	}
 	else if(type == RSXGL_ATTACHMENT_TYPE_TEXTURE) {
 	  texture_t & texture = texture_t::storage().at(framebuffer.attachments[i]);
 	  rsxgl_texture_validate_complete(ctx,texture);
 
-	  if(texture.complete && texture.dims == 2 && !util_format_is_depth_or_stencil(texture.pformat)) {
+	  if(texture.complete && texture.dims == 2 &&
+	     !util_format_is_depth_or_stencil(texture.pformat) &&
+	     (ctx -> screen() -> is_format_supported(ctx -> screen(),
+						     texture.pformat,
+						     PIPE_TEXTURE_RECT,
+						     1,
+						     PIPE_BIND_SAMPLER_VIEW | PIPE_BIND_RENDER_TARGET))) {
 	    if(color_pformat == PIPE_FORMAT_NONE) {
 	      color_pformat = texture.pformat;
 	    }
@@ -1124,7 +1147,7 @@ rsxgl_framebuffer_validate_complete(rsxgl_context_t * ctx,framebuffer_t & frameb
 	  if(complete) {
 	    w = std::min(w,texture.size[0]);
 	    h = std::min(h,texture.size[1]);
-	    validated_write_mask.all |= mask.all;
+	    complete_write_mask.all |= mask.all;
 	  }
 	}
       }
@@ -1135,7 +1158,12 @@ rsxgl_framebuffer_validate_complete(rsxgl_context_t * ctx,framebuffer_t & frameb
 	if(type == RSXGL_ATTACHMENT_TYPE_RENDERBUFFER) {
 	  renderbuffer_t & renderbuffer = renderbuffer_t::storage().at(framebuffer.attachments[4]);
 	  
-	  if(util_format_is_depth_or_stencil(renderbuffer.pformat)) {
+	  if(util_format_is_depth_or_stencil(renderbuffer.pformat) &&
+	     (ctx -> screen() -> is_format_supported(ctx -> screen(),
+						     renderbuffer.pformat,
+						     PIPE_TEXTURE_RECT,
+						     1,
+						     PIPE_BIND_SAMPLER_VIEW | PIPE_BIND_DEPTH_STENCIL))) {
 	    depth_pformat = renderbuffer.pformat;
 	    
 	    w = std::min(w,renderbuffer.size[0]);
@@ -1149,7 +1177,12 @@ rsxgl_framebuffer_validate_complete(rsxgl_context_t * ctx,framebuffer_t & frameb
 	  texture_t & texture = texture_t::storage().at(framebuffer.attachments[4]);
 	  rsxgl_texture_validate_complete(ctx,texture);
 	  
-	  if(texture.complete && texture.dims == 2 && util_format_is_depth_or_stencil(texture.pformat)) {
+	  if(texture.complete && texture.dims == 2 && util_format_is_depth_or_stencil(texture.pformat) &&
+	     (ctx -> screen() -> is_format_supported(ctx -> screen(),
+						     texture.pformat,
+						     PIPE_TEXTURE_RECT,
+						     1,
+						     PIPE_BIND_SAMPLER_VIEW | PIPE_BIND_DEPTH_STENCIL))) {
 	    depth_pformat = texture.pformat;
 	    
 	    w = std::min(w,texture.size[0]);
@@ -1161,24 +1194,11 @@ rsxgl_framebuffer_validate_complete(rsxgl_context_t * ctx,framebuffer_t & frameb
 	}
 
 	if(complete) {
-	  validated_write_mask.parts.depth |= framebuffer.write_masks[0].parts.depth;
-	  validated_write_mask.parts.stencil |= framebuffer.write_masks[0].parts.stencil;
+	  complete_write_mask.parts.depth |= framebuffer.write_masks[0].parts.depth;
+	  complete_write_mask.parts.stencil |= framebuffer.write_masks[0].parts.stencil;
 	}
       }
     }
-
-    // Check that the final formats are valid:
-    complete = complete &&
-      (ctx -> screen() -> is_format_supported(ctx -> screen(),
-					      color_pformat,
-					      PIPE_TEXTURE_RECT,
-					      1,
-					      PIPE_BIND_SAMPLER_VIEW | PIPE_BIND_RENDER_TARGET)) &&
-      (ctx -> screen() -> is_format_supported(ctx -> screen(),
-					      depth_pformat,
-					      PIPE_TEXTURE_RECT,
-					      1,
-					      PIPE_BIND_SAMPLER_VIEW | PIPE_BIND_DEPTH_STENCIL));
 
     if(complete) {
       framebuffer.complete = true;
@@ -1186,7 +1206,7 @@ rsxgl_framebuffer_validate_complete(rsxgl_context_t * ctx,framebuffer_t & frameb
       framebuffer.depth_pformat = depth_pformat;
       framebuffer.size[0] = w;
       framebuffer.size[1] = h;
-      framebuffer.validated_write_mask = validated_write_mask;
+      framebuffer.complete_write_mask = complete_write_mask;
     }
     else {
       framebuffer.complete = false;
@@ -1194,7 +1214,7 @@ rsxgl_framebuffer_validate_complete(rsxgl_context_t * ctx,framebuffer_t & frameb
       framebuffer.depth_pformat = PIPE_FORMAT_NONE;
       framebuffer.size[0] = 0;
       framebuffer.size[1] = 0;
-      framebuffer.validated_write_mask.all = 0;
+      framebuffer.complete_write_mask.all = 0;
     }
 
     framebuffer.invalid_complete = 0;
@@ -1245,9 +1265,6 @@ rsxgl_framebuffer_validate(rsxgl_context_t * ctx,framebuffer_t & framebuffer,con
     rsxgl_framebuffer_validate_complete(ctx,framebuffer);
 
     if(framebuffer.complete) {
-      write_mask_t validated_write_mask;
-      validated_write_mask.all = 0;
-
       uint16_t color_targets = 0;
       uint32_t color_mask = 0;
       uint16_t color_mask_mrt = 0, depth_mask = 0;
@@ -1342,8 +1359,6 @@ rsxgl_framebuffer_validate(rsxgl_context_t * ctx,framebuffer_t & framebuffer,con
       }
 
       // Store data that gets passed down the command stream:
-      framebuffer.validated_write_mask = validated_write_mask;
-
       framebuffer.format = (uint16_t)nvfx_get_framebuffer_format(framebuffer.color_pformat,framebuffer.depth_pformat) | (uint16_t)NV30_3D_RT_FORMAT_TYPE_LINEAR;
       framebuffer.color_targets = color_targets;
       framebuffer.color_mask = color_mask;
@@ -1403,7 +1418,7 @@ rsxgl_draw_framebuffer_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
 	rsxgl_debug_printf("%s format:%x color_targets:%x size:%ux%u color_mask:%x color_mask_mrt:%x depth_mask:%x\n",__PRETTY_FUNCTION__,
 			   format,color_targets,(unsigned int)w,(unsigned int)h,color_mask,color_mask_mrt,depth_mask);
 	
-	uint32_t * buffer = gcm_reserve(context,14);
+	uint32_t * buffer = gcm_reserve(context,15);
 	
 	gcm_emit_method_at(buffer,0,NV30_3D_RT_FORMAT,1);
 	gcm_emit_at(buffer,1,format | ((31 - __builtin_clz(w)) << NV30_3D_RT_FORMAT_LOG2_WIDTH__SHIFT) | ((31 - __builtin_clz(h)) << NV30_3D_RT_FORMAT_LOG2_HEIGHT__SHIFT));
@@ -1424,10 +1439,10 @@ rsxgl_draw_framebuffer_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
 	gcm_emit_method_at(buffer,11,NV40_3D_MRT_COLOR_MASK,1);
 	gcm_emit_at(buffer,12,color_mask_mrt);
 
-	gcm_emit_method_at(buffer,12,NV30_3D_DEPTH_WRITE_ENABLE,1);
-	gcm_emit_at(buffer,13,depth_mask);
+	gcm_emit_method_at(buffer,13,NV30_3D_DEPTH_WRITE_ENABLE,1);
+	gcm_emit_at(buffer,14,depth_mask);
 	
-	gcm_finish_n_commands(context,14);
+	gcm_finish_n_commands(context,15);
       }
       else {
 	uint32_t * buffer = gcm_reserve(context,2);

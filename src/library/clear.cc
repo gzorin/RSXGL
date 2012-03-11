@@ -105,19 +105,19 @@ glClear(GLbitfield mask)
   gcmContextData * context = ctx -> base.gcm_context;
   
   uint32_t * buffer = gcm_reserve(context,2);
-  gcm_emit_method(&buffer,NV30_3D_CLEAR_BUFFERS,1);
+  gcm_emit_method_at(buffer,0,NV30_3D_CLEAR_BUFFERS,1);
   
-  const write_mask_t write_mask = ctx -> framebuffer_binding[RSXGL_DRAW_FRAMEBUFFER].validated_write_mask;
+  const write_mask_t write_mask = ctx -> framebuffer_binding[RSXGL_DRAW_FRAMEBUFFER].complete_write_mask;
+
+  gcm_emit_at(buffer,1,
+	      (mask & GL_COLOR_BUFFER_BIT ? ((write_mask.parts.r ? NV30_3D_CLEAR_BUFFERS_COLOR_R : 0) |
+					     (write_mask.parts.g ? NV30_3D_CLEAR_BUFFERS_COLOR_G : 0) |
+					     (write_mask.parts.b ? NV30_3D_CLEAR_BUFFERS_COLOR_B : 0) |
+					     (write_mask.parts.a ? NV30_3D_CLEAR_BUFFERS_COLOR_A : 0)) : 0) |
+	      (mask & GL_DEPTH_BUFFER_BIT ? (write_mask.parts.depth ? NV30_3D_CLEAR_BUFFERS_DEPTH : 0) : 0) |
+	      (mask & GL_STENCIL_BUFFER_BIT ? (write_mask.parts.stencil ? NV30_3D_CLEAR_BUFFERS_STENCIL : 0) : 0));
   
-  gcm_emit(&buffer,
-	   (mask & GL_COLOR_BUFFER_BIT ? ((write_mask.parts.r ? NV30_3D_CLEAR_BUFFERS_COLOR_R : 0) |
-					  (write_mask.parts.g ? NV30_3D_CLEAR_BUFFERS_COLOR_G : 0) |
-					  (write_mask.parts.b ? NV30_3D_CLEAR_BUFFERS_COLOR_B : 0) |
-					  (write_mask.parts.a ? NV30_3D_CLEAR_BUFFERS_COLOR_A : 0)) : 0) |
-	   (mask & GL_DEPTH_BUFFER_BIT ? (write_mask.parts.depth ? NV30_3D_CLEAR_BUFFERS_DEPTH : 0) : 0) |
-	   (mask & GL_STENCIL_BUFFER_BIT ? (write_mask.parts.stencil ? NV30_3D_CLEAR_BUFFERS_STENCIL : 0) : 0));
-  
-  gcm_finish_commands(context,&buffer);
+  gcm_finish_n_commands(context,2);
     
   rsxgl_timestamp_post(ctx,timestamp);
   
