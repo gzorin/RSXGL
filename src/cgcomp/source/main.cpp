@@ -366,8 +366,8 @@ int compileFP(std::istream & in,std::ostream & out)
       dstcodeptr[n+3] = endian_fp((SWAP32(fpi[i].data[3])));
 
       fprintf(stderr,"%04u: %08x %08x %08x %08x\n",i,
-	      dstcodeptr[n + 0],dstcodeptr[n + 1],dstcodeptr[n + 2],dstcodeptr[n + 3]);
-
+	      SWAP32(dstcodeptr[n + 0]),SWAP32(dstcodeptr[n + 1]),SWAP32(dstcodeptr[n + 2]),SWAP32(dstcodeptr[n + 3]));
+      
       const uint32_t opcode = (fpi[i].data[0] & NVFX_FP_OP_OPCODE_MASK) >> NVFX_FP_OP_OPCODE_SHIFT;
       const uint32_t outreg = (fpi[i].data[0] & NVFX_FP_OP_OUT_REG_MASK) >> NVFX_FP_OP_OUT_REG_SHIFT;
 
