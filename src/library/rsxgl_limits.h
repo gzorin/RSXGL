@@ -46,8 +46,8 @@
 // Time interval, in microseconds, to sleep while waiting to sync with the RSX
 #define RSXGL_SYNC_SLEEP_INTERVAL 30
 
-#define RSXGL_MIGRATE_BUFFER_ALIGN 16
-#define RSXGL_MIGRATE_BUFFER_LOCATION 0
+#define RSXGL_VERTEX_MIGRATE_BUFFER_ALIGN 16
+#define RSXGL_VERTEX_MIGRATE_BUFFER_LOCATION 0
 
 // Maximum value for a drawing timestamp. It's set this way so that GL objects
 // can have 1 bit for a deleted flag, and the remaining 31 bits for a timestamp.

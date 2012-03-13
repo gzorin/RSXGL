@@ -203,12 +203,12 @@ rsxgl_draw_elements_init(rsxgl_context_t * ctx,const GLsizei count,const uint32_
   const uint32_t index_buffer_size = (uint32_t)rsxgl_element_type_bytes[rsx_type] * count;
 
   if(client_indices) {
-    migrate_buffer = rsxgl_migrate_memalign(context,16,index_buffer_size);
+    migrate_buffer = rsxgl_vertex_migrate_memalign(context,16,index_buffer_size);
     memcpy(migrate_buffer,indices,index_buffer_size);
     int32_t s = gcmAddressToOffset(migrate_buffer,&index_buffer_offset);
     rsxgl_assert(s == 0);
 
-    index_buffer_location = RSXGL_MIGRATE_BUFFER_LOCATION;
+    index_buffer_location = RSXGL_VERTEX_MIGRATE_BUFFER_LOCATION;
   }
   else {
     const uint32_t start = (uint32_t)((uint64_t)indices);
@@ -231,7 +231,7 @@ rsxgl_draw_elements_exit(rsxgl_context_t * ctx,rsxgl_draw_elements_info_t const 
 
   if(info.client_indices) {
     rsxgl_assert(info.migrate_buffer != 0);
-    rsxgl_migrate_free(context,info.migrate_buffer,info.migrate_buffer_size);
+    rsxgl_vertex_migrate_free(context,info.migrate_buffer,info.migrate_buffer_size);
   }
 }
 
@@ -943,7 +943,7 @@ glMultiDrawElements (const GLenum mode, const GLsizei *count, GLenum type, const
       uint32_t index_buffer_offsets[primcount];
       for(GLsizei i = 0;i < primcount;++i) {
 	index_buffer_sizes[i] = (uint32_t)rsxgl_element_type_bytes[rsx_type] * count[i];
-	migrate_buffers[i] = rsxgl_migrate_memalign(context,16,index_buffer_sizes[i]);
+	migrate_buffers[i] = rsxgl_vertex_migrate_memalign(context,16,index_buffer_sizes[i]);
 	memcpy(migrate_buffers[i],indices,index_buffer_sizes[i]);
 	int32_t s = gcmAddressToOffset(migrate_buffers[i],index_buffer_offsets + i);
 	rsxgl_assert(s == 0);
@@ -951,14 +951,14 @@ glMultiDrawElements (const GLenum mode, const GLsizei *count, GLenum type, const
       
       if(query_index == RSXGL_MAX_QUERY_OBJECTS) {
 	for(GLsizei i = 0;i < primcount;++i) {
-	  rsxgl_draw_elements_emit_index_buffer(context,rsx_type,index_buffer_offsets[i],RSXGL_MIGRATE_BUFFER_LOCATION);
+	  rsxgl_draw_elements_emit_index_buffer(context,rsx_type,index_buffer_offsets[i],RSXGL_VERTEX_MIGRATE_BUFFER_LOCATION);
 	  rsxgl_draw_array_elements(context,rsx_primitive_type,count[i]);
 	}
 	rsxgl_timestamp_post(ctx,timestamp + primcount - 1);
       }
       else {
 	for(GLsizei i = 0;i < primcount;++i) {
-	  rsxgl_draw_elements_emit_index_buffer(context,rsx_type,index_buffer_offsets[i],RSXGL_MIGRATE_BUFFER_LOCATION);
+	  rsxgl_draw_elements_emit_index_buffer(context,rsx_type,index_buffer_offsets[i],RSXGL_VERTEX_MIGRATE_BUFFER_LOCATION);
 	  rsxgl_draw_array_elements(context,rsx_primitive_type,count[i]);
 	  rsxgl_query_object_set(context,query_index);
 	  rsxgl_timestamp_post(ctx,timestamp++);
@@ -966,7 +966,7 @@ glMultiDrawElements (const GLenum mode, const GLsizei *count, GLenum type, const
       }
       
       for(GLsizei i = 0;i < primcount;++i) {
-	rsxgl_migrate_free(context,migrate_buffers[i],index_buffer_sizes[i]);
+	rsxgl_vertex_migrate_free(context,migrate_buffers[i],index_buffer_sizes[i]);
       }
     }
     else {
@@ -1034,7 +1034,7 @@ glMultiDrawElementsBaseVertex (GLenum mode, const GLsizei *count, GLenum type, c
       uint32_t index_buffer_offsets[primcount];
       for(GLsizei i = 0;i < primcount;++i) {
 	index_buffer_sizes[i] = (uint32_t)rsxgl_element_type_bytes[rsx_type] * count[i];
-	migrate_buffers[i] = rsxgl_migrate_memalign(context,16,index_buffer_sizes[i]);
+	migrate_buffers[i] = rsxgl_vertex_migrate_memalign(context,16,index_buffer_sizes[i]);
 	memcpy(migrate_buffers[i],indices,index_buffer_sizes[i]);
 	int32_t s = gcmAddressToOffset(migrate_buffers[i],index_buffer_offsets + i);
 	rsxgl_assert(s == 0);
@@ -1042,7 +1042,7 @@ glMultiDrawElementsBaseVertex (GLenum mode, const GLsizei *count, GLenum type, c
       
       if(query_index == RSXGL_MAX_QUERY_OBJECTS) {
 	for(GLsizei i = 0;i < primcount;++i) {
-	  rsxgl_draw_elements_emit_index_buffer(context,rsx_type,index_buffer_offsets[i],RSXGL_MIGRATE_BUFFER_LOCATION);
+	  rsxgl_draw_elements_emit_index_buffer(context,rsx_type,index_buffer_offsets[i],RSXGL_VERTEX_MIGRATE_BUFFER_LOCATION);
 	  rsxgl_draw_array_elements_base(context,basevertex[i]);
 	  rsxgl_draw_array_elements(context,rsx_primitive_type,count[i]);
 	}
@@ -1050,7 +1050,7 @@ glMultiDrawElementsBaseVertex (GLenum mode, const GLsizei *count, GLenum type, c
       }
       else {
 	for(GLsizei i = 0;i < primcount;++i) {
-	  rsxgl_draw_elements_emit_index_buffer(context,rsx_type,index_buffer_offsets[i],RSXGL_MIGRATE_BUFFER_LOCATION);
+	  rsxgl_draw_elements_emit_index_buffer(context,rsx_type,index_buffer_offsets[i],RSXGL_VERTEX_MIGRATE_BUFFER_LOCATION);
 	  rsxgl_draw_array_elements_base(context,basevertex[i]);
 	  rsxgl_draw_array_elements(context,rsx_primitive_type,count[i]);
 	  rsxgl_query_object_set(context,query_index);
@@ -1061,7 +1061,7 @@ glMultiDrawElementsBaseVertex (GLenum mode, const GLsizei *count, GLenum type, c
       rsxgl_draw_array_elements_base(context,0);
       
       for(GLsizei i = 0;i < primcount;++i) {
-	rsxgl_migrate_free(context,migrate_buffers[i],index_buffer_sizes[i]);
+	rsxgl_vertex_migrate_free(context,migrate_buffers[i],index_buffer_sizes[i]);
       }
     }
     else {

@@ -1828,26 +1828,66 @@ glGetTexLevelParameteriv (GLenum target, GLint level, GLenum pname, GLint *param
 GLAPI void APIENTRY
 glCopyTexImage1D (GLenum target, GLint level, GLenum internalformat, GLint x, GLint y, GLsizei width, GLint border)
 {
+  if(!(target == GL_TEXTURE_1D)) {
+    RSXGL_ERROR_(GL_INVALID_ENUM);
+  }
+
+  rsxgl_context_t * ctx = current_ctx();
+  texture_t & texture = ctx -> texture_binding[ctx -> active_texture];
+
+  //rsxgl_tex_subimage(ctx,texture,level,xoffset,0,0,width,1,1,format,type,pixels);
 }
 
 GLAPI void APIENTRY
 glCopyTexImage2D (GLenum target, GLint level, GLenum internalformat, GLint x, GLint y, GLsizei width, GLsizei height, GLint border)
 {
+  if(!(target == GL_TEXTURE_2D)) {
+    RSXGL_ERROR_(GL_INVALID_ENUM);
+  }
+
+  rsxgl_context_t * ctx = current_ctx();
+  texture_t & texture = ctx -> texture_binding[ctx -> active_texture];
+
+  //rsxgl_tex_subimage(ctx,texture,level,xoffset,0,0,width,1,1,format,type,pixels);
 }
 
 GLAPI void APIENTRY
 glCopyTexSubImage1D (GLenum target, GLint level, GLint xoffset, GLint x, GLint y, GLsizei width)
 {
+  if(!(target == GL_TEXTURE_1D)) {
+    RSXGL_ERROR_(GL_INVALID_ENUM);
+  }
+
+  rsxgl_context_t * ctx = current_ctx();
+  texture_t & texture = ctx -> texture_binding[ctx -> active_texture];
+
+  //rsxgl_tex_subimage(ctx,texture,level,xoffset,0,0,width,1,1,format,type,pixels);
 }
 
 GLAPI void APIENTRY
 glCopyTexSubImage2D (GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint x, GLint y, GLsizei width, GLsizei height)
 {
+  if(!(target == GL_TEXTURE_2D)) {
+    RSXGL_ERROR_(GL_INVALID_ENUM);
+  }
+
+  rsxgl_context_t * ctx = current_ctx();
+  texture_t & texture = ctx -> texture_binding[ctx -> active_texture];
+
+  //rsxgl_tex_subimage(ctx,texture,level,xoffset,0,0,width,1,1,format,type,pixels);
 }
 
 GLAPI void APIENTRY
 glCopyTexSubImage3D (GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLint x, GLint y, GLsizei width, GLsizei height)
 {
+  if(!(target == GL_TEXTURE_3D)) {
+    RSXGL_ERROR_(GL_INVALID_ENUM);
+  }
+
+  rsxgl_context_t * ctx = current_ctx();
+  texture_t & texture = ctx -> texture_binding[ctx -> active_texture];
+
+  //rsxgl_tex_subimage(ctx,texture,level,xoffset,0,0,width,1,1,format,type,pixels);
 }
 
 GLAPI void APIENTRY
