@@ -49,7 +49,7 @@ libGL_a_SOURCES = rsxgl_context.cc rsxgl_object_context.cc gl_fifo.c					\
 	error.cc get.cc state.cc enable.cc arena.cc buffer.cc clear.cc draw.cc	\
 	sync.cc query.cc							\
 	compiler_context.cc compiler_translate.c program.cc attribs.cc uniforms.cc textures.cc framebuffer.cc		\
-	ringbuffer_migrate.cc dumb_migrate.cc debug.c \
+	ringbuffer_migrate.cc dumb_migrate.cc texture_migrate.cc debug.c \
 	st_format.c
 libGL_a_CPPFLAGS = -D__RSX__ -I$(top_srcdir)/src -I\$(top_srcdir)/include $(PSL1GHT_CPPFLAGS) \
 	$(MESA_CPPFLAGS) $(LIBDRM_CPPFLAGS)

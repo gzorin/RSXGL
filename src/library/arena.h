@@ -17,11 +17,6 @@
 
 #include <boost/integer.hpp>
 
-enum memory_location {
-  RSXGL_MEMORY_LOCATION_LOCAL = 0,
-  RSXGL_MEMORY_LOCATION_MAIN = 1
-};
-
 enum rsxgl_arena_target {
   RSXGL_BUFFER_ARENA = 0,
   RSXGL_TEXTURE_ARENA = 1,

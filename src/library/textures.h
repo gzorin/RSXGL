@@ -106,7 +106,6 @@ struct texture_t {
     pipe_format pformat;
     dimension_size_type size[3];
     uint32_t pitch;
-    void * data;
     memory_t memory;
     memory_arena_t::name_type arena;
 

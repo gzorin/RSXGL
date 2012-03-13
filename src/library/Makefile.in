@@ -95,7 +95,8 @@ am_libGL_a_OBJECTS = libGL_a-rsxgl_context.$(OBJEXT) \
 	libGL_a-attribs.$(OBJEXT) libGL_a-uniforms.$(OBJEXT) \
 	libGL_a-textures.$(OBJEXT) libGL_a-framebuffer.$(OBJEXT) \
 	libGL_a-ringbuffer_migrate.$(OBJEXT) \
-	libGL_a-dumb_migrate.$(OBJEXT) libGL_a-debug.$(OBJEXT) \
+	libGL_a-dumb_migrate.$(OBJEXT) \
+	libGL_a-texture_migrate.$(OBJEXT) libGL_a-debug.$(OBJEXT) \
 	libGL_a-st_format.$(OBJEXT)
 libGL_a_OBJECTS = $(am_libGL_a_OBJECTS)
 DEFAULT_INCLUDES = -I.@am__isrc@
@@ -297,7 +298,7 @@ libGL_a_SOURCES = rsxgl_context.cc rsxgl_object_context.cc gl_fifo.c					\
 	error.cc get.cc state.cc enable.cc arena.cc buffer.cc clear.cc draw.cc	\
 	sync.cc query.cc							\
 	compiler_context.cc compiler_translate.c program.cc attribs.cc uniforms.cc textures.cc framebuffer.cc		\
-	ringbuffer_migrate.cc dumb_migrate.cc debug.c \
+	ringbuffer_migrate.cc dumb_migrate.cc texture_migrate.cc debug.c \
 	st_format.c
 
 libGL_a_CPPFLAGS = -D__RSX__ -I$(top_srcdir)/src -I\$(top_srcdir)/include $(PSL1GHT_CPPFLAGS) \
@@ -410,6 +411,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libGL_a-st_format.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libGL_a-state.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libGL_a-sync.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libGL_a-texture_migrate.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libGL_a-textures.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libGL_a-uniforms.Po@am__quote@
 
@@ -832,6 +834,20 @@ libGL_a-dumb_migrate.obj: dumb_migrate.cc
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='dumb_migrate.cc' object='libGL_a-dumb_migrate.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libGL_a_CPPFLAGS) $(CPPFLAGS) $(libGL_a_CXXFLAGS) $(CXXFLAGS) -c -o libGL_a-dumb_migrate.obj `if test -f 'dumb_migrate.cc'; then $(CYGPATH_W) 'dumb_migrate.cc'; else $(CYGPATH_W) '$(srcdir)/dumb_migrate.cc'; fi`
+
+libGL_a-texture_migrate.o: texture_migrate.cc
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libGL_a_CPPFLAGS) $(CPPFLAGS) $(libGL_a_CXXFLAGS) $(CXXFLAGS) -MT libGL_a-texture_migrate.o -MD -MP -MF $(DEPDIR)/libGL_a-texture_migrate.Tpo -c -o libGL_a-texture_migrate.o `test -f 'texture_migrate.cc' || echo '$(srcdir)/'`texture_migrate.cc
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/libGL_a-texture_migrate.Tpo $(DEPDIR)/libGL_a-texture_migrate.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='texture_migrate.cc' object='libGL_a-texture_migrate.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libGL_a_CPPFLAGS) $(CPPFLAGS) $(libGL_a_CXXFLAGS) $(CXXFLAGS) -c -o libGL_a-texture_migrate.o `test -f 'texture_migrate.cc' || echo '$(srcdir)/'`texture_migrate.cc
+
+libGL_a-texture_migrate.obj: texture_migrate.cc
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libGL_a_CPPFLAGS) $(CPPFLAGS) $(libGL_a_CXXFLAGS) $(CXXFLAGS) -MT libGL_a-texture_migrate.obj -MD -MP -MF $(DEPDIR)/libGL_a-texture_migrate.Tpo -c -o libGL_a-texture_migrate.obj `if test -f 'texture_migrate.cc'; then $(CYGPATH_W) 'texture_migrate.cc'; else $(CYGPATH_W) '$(srcdir)/texture_migrate.cc'; fi`
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/libGL_a-texture_migrate.Tpo $(DEPDIR)/libGL_a-texture_migrate.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='texture_migrate.cc' object='libGL_a-texture_migrate.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libGL_a_CPPFLAGS) $(CPPFLAGS) $(libGL_a_CXXFLAGS) $(CXXFLAGS) -c -o libGL_a-texture_migrate.obj `if test -f 'texture_migrate.cc'; then $(CYGPATH_W) 'texture_migrate.cc'; else $(CYGPATH_W) '$(srcdir)/texture_migrate.cc'; fi`
 install-nobase_ppu_includeHEADERS: $(nobase_ppu_include_HEADERS)
 	@$(NORMAL_INSTALL)
 	test -z "$(ppu_includedir)" || $(MKDIR_P) "$(DESTDIR)$(ppu_includedir)"

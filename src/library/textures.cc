@@ -9,6 +9,7 @@
 #include "rsxgl_context.h"
 #include "gl_constants.h"
 #include "textures.h"
+#include "texture_migrate.h"
 
 #include <GL3/gl3.h>
 #include "GL3/gl3ext.h"
@@ -611,13 +612,13 @@ texture_t::texture_t()
 
 texture_t::~texture_t()
 {
-  if(memory.offset != 0) {
+  if(memory.owner && memory) {
     rsxgl_arena_free(memory_arena_t::storage().at(arena),memory);
   }
 }
 
 texture_t::level_t::level_t()
-  : dims(0), cube(0), rect(0), pformat(PIPE_FORMAT_NONE), pitch(0), data(0)
+  : dims(0), cube(0), rect(0), pformat(PIPE_FORMAT_NONE), pitch(0), memory(RSXGL_TEXTURE_MIGRATE_BUFFER_LOCATION,0,1)
 {
   size[0] = 0;
   size[1] = 0;
@@ -626,7 +627,9 @@ texture_t::level_t::level_t()
 
 texture_t::level_t::~level_t()
 {
-  if(data != 0) free(data);
+  if(memory.owner && memory) {
+    rsxgl_texture_migrate_free(rsxgl_texture_migrate_address(memory.offset));
+  }
 }
 
 GLAPI void APIENTRY
@@ -1194,10 +1197,6 @@ void
 rsxgl_texture_validate_complete(rsxgl_context_t * ctx,texture_t & texture)
 {
   if(texture.invalid_complete) {
-#if 0
-    rsxgl_debug_printf("%s:%u\n",__PRETTY_FUNCTION__,(unsigned int)texture.dims);
-#endif
-
     texture_t::level_t * plevel = texture.levels;
 
     // Check the first level:
@@ -1228,9 +1227,6 @@ rsxgl_texture_validate_complete(rsxgl_context_t * ctx,texture_t & texture)
       ++plevel;
     }
 
-#if 0
-    rsxgl_debug_printf("\tcompleteness: %i\n",(int)complete);
-#endif
     texture.complete = complete;
 
     if(complete) {
@@ -1252,9 +1248,6 @@ rsxgl_texture_validate_complete(rsxgl_context_t * ctx,texture_t & texture)
       texture.num_levels = 0;
     }
 
-#if 0
-    rsxgl_debug_printf("\tvalidated completeness\n");
-#endif
     texture.invalid_complete = 0;
   }
 }
@@ -1267,18 +1260,9 @@ rsxgl_texture_validate_storage(rsxgl_context_t * ctx,const memory_arena_t::name_
   rsxgl_assert(texture.dims != 0);
   rsxgl_assert(texture.pformat != PIPE_FORMAT_NONE);
 
-#if 0
-  rsxgl_debug_printf("%s pformat:%u size:%ux%ux%u\n",__PRETTY_FUNCTION__,(unsigned int)texture.pformat,
-		     (unsigned int)texture.size[0],(unsigned int)texture.size[1],(unsigned int)texture.size[2]);
-#endif
-
   // pitch is aligned to 64 bytes so it can be attached to a framebuffer:
   const uint32_t pitch_tmp = util_format_get_stride(texture.pformat,texture.size[0]);
   const uint32_t pitch = texture.dims > 1 ? align_pot< uint32_t, 64 >(pitch_tmp) : pitch_tmp;
-
-#if 0
-  rsxgl_debug_printf("\tpitch:%u\n",pitch);
-#endif
 
   uint32_t nbytes = 0;
   texture_t::dimension_size_type size[3] = { texture.size[0], texture.size[1], texture.size[2] };
@@ -1289,18 +1273,11 @@ rsxgl_texture_validate_storage(rsxgl_context_t * ctx,const memory_arena_t::name_
       size[j] = std::max(size[j] >> 1,1);
     }
   }
-#if 0
-  rsxgl_debug_printf("\tarena:%u bytes:%u\n",(unsigned int)arena,nbytes);
-#endif
 
   texture.memory = rsxgl_arena_allocate(memory_arena_t::storage().at(arena),128,nbytes,0);
   texture.memory.owner = true;
 
   if(texture.memory) {
-#if 0
-    rsxgl_debug_printf("\tgot memory\n");
-#endif
-
     texture.arena = arena;
 
     const nvfx_texture_format * pfmt = nvfx_get_texture_format(texture.pformat);
@@ -1340,27 +1317,19 @@ rsxgl_texture_reset_storage(texture_t & texture)
 {
   if(texture.memory && texture.memory.owner) {
     rsxgl_arena_free(memory_arena_t::storage().at(texture.arena),texture.memory);
-    texture.memory = memory_t();
   }
   
   texture.format = 0;
   texture.pitch = 0;
   texture.remap = 0;
+  texture.memory = memory_t();
 }
 
 static inline void
 rsxgl_texture_level_reset_storage(texture_t::level_t & level)
 {
-  if(level.data != 0) {
-    free(level.data);
-    level.data = 0;
-  }
-  
-  if(level.memory) {
-    if(level.memory.owner) {
-      rsxgl_arena_free(memory_arena_t::storage().at(level.arena),level.memory);
-    }
-    level.memory = memory_t();
+  if(level.memory.owner && level.memory) {
+    rsxgl_texture_migrate_free(rsxgl_texture_migrate_address(level.memory.offset));
   }
   
   level.pformat = PIPE_FORMAT_NONE;
@@ -1368,6 +1337,7 @@ rsxgl_texture_level_reset_storage(texture_t::level_t & level)
   level.size[1] = 0;
   level.size[2] = 0;
   level.pitch = 0;
+  level.memory = memory_t();
 }
 
 static inline void
@@ -1407,7 +1377,6 @@ rsxgl_tex_storage(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,c
 #endif
 
   rsxgl_texture_reset_storage(texture);
-
   for(size_t i = 0;i < texture_t::max_levels;++i) {
     rsxgl_texture_level_reset_storage(texture.levels[i]);
   }
@@ -1481,14 +1450,16 @@ rsxgl_tex_image(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,con
     RSXGL_ERROR_(GL_INVALID_VALUE);
   }
 
-  const pipe_format pdstformat = rsxgl_choose_format(ctx -> screen(),
-						     glinternalformat,GL_NONE,GL_NONE,
-						     (dims == 1) ? PIPE_TEXTURE_1D :
-						     (dims == 2) ? (cube ? PIPE_TEXTURE_CUBE : (rect ? PIPE_TEXTURE_RECT : PIPE_TEXTURE_2D)) :
-						     (dims == 3) ? PIPE_TEXTURE_2D :
-						     PIPE_MAX_TEXTURE_TYPES,
-						     1,
-						     PIPE_BIND_SAMPLER_VIEW);
+  const pipe_format pdstformat = (texture.levels[0].pformat != PIPE_FORMAT_NONE) ?
+    texture.levels[0].pformat :
+    rsxgl_choose_format(ctx -> screen(),
+			glinternalformat,GL_NONE,GL_NONE,
+			(dims == 1) ? PIPE_TEXTURE_1D :
+			(dims == 2) ? (cube ? PIPE_TEXTURE_CUBE : (rect ? PIPE_TEXTURE_RECT : PIPE_TEXTURE_2D)) :
+			(dims == 3) ? PIPE_TEXTURE_2D :
+			PIPE_MAX_TEXTURE_TYPES,
+			1,
+			PIPE_BIND_SAMPLER_VIEW);
 
   if(pdstformat == PIPE_FORMAT_NONE) {
     RSXGL_ERROR_(GL_INVALID_VALUE);
@@ -1510,9 +1481,6 @@ rsxgl_tex_image(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,con
     texture.timestamp = 0;
   }
 #endif
-
-  //
-  rsxgl_texture_reset_storage(texture);
 
   // set the texture's invalid & allocated bits:
   texture.invalid = 1;
@@ -1544,13 +1512,16 @@ rsxgl_tex_image(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,con
   }
   // - else if data != 0, then:
   else if(data != 0) {
-    const size_t srcpitch = util_format_get_stride(psrcformat,width);
     const size_t nbytes = util_format_get_2d_size(pdstformat,dstpitch,height) * depth;
 
-    level.data = malloc(nbytes);
+    rsx_ptr_t ptr = rsxgl_texture_migrate_memalign(16,nbytes);
 
-    util_format_translate(pdstformat,level.data,dstpitch,0,0,
-			  psrcformat,data,srcpitch,0,0,width,height);
+    util_format_translate(pdstformat,ptr,dstpitch,0,0,
+			  psrcformat,data,util_format_get_stride(psrcformat,width),0,0,width,height);
+
+    level.memory.location = RSXGL_TEXTURE_MIGRATE_BUFFER_LOCATION;
+    level.memory.offset = rsxgl_texture_migrate_offset(ptr);
+    level.memory.owner = 1;
   }
 
   ctx -> invalid_textures |= texture.binding_bitfield;
@@ -1615,45 +1586,48 @@ rsxgl_tex_subimage(rsxgl_context_t * ctx,texture_t & texture,GLint _level,GLint 
       srcmem = ctx -> buffer_binding[RSXGL_PIXEL_UNPACK_BUFFER].memory + rsxgl_pointer_to_offset(data);
       dstmem = texture.memory + offset;
     }
-    // source is client memory - just do a memcpy:
+    // source is client memory - use util_format_translate:
     else {
       srcaddress = data;
       dstaddress = (uint8_t *)rsxgl_arena_address(memory_arena_t::storage().at(texture.arena),texture.memory + offset);
     }
   }
-  // texture hasn't been allocated:
-  else {
+  // texture hasn't been allocated, see if the texture level was specified:
+  else if(texture.levels[_level].pformat != PIPE_FORMAT_NONE) {
     texture_t::level_t & level = texture.levels[_level];
 
-    if(level.pformat != PIPE_FORMAT_NONE) {
-      // there is a pixel buffer object attached - obtain pointer to it, then memcpy:
-      if(ctx -> buffer_binding.names[RSXGL_PIXEL_UNPACK_BUFFER] != 0) {
-	srcaddress = rsxgl_arena_address(memory_arena_t::storage().at(ctx -> buffer_binding[RSXGL_PIXEL_UNPACK_BUFFER].arena),
-					 ctx -> buffer_binding[RSXGL_PIXEL_UNPACK_BUFFER].memory + rsxgl_pointer_to_offset(data));
-      }
-      // source is client memory:
-      else {
-	srcaddress = data;
-      }
-
-      size[0] = level.size[0];
-      size[1] = level.size[1];
-      size[2] = level.size[2];
-
-      pdstformat = level.pformat;
-      dstpitch = util_format_get_stride(pdstformat,size[0]);
-
-      if(level.data == 0) {
-	const size_t nbytes = util_format_get_2d_size(pdstformat,dstpitch,size[1]) * size[2];
-	level.data = malloc(nbytes);
-      }
-
-      dstaddress = level.data;
+    // there is a pixel buffer object attached - obtain pointer to it, then memcpy:
+    if(ctx -> buffer_binding.names[RSXGL_PIXEL_UNPACK_BUFFER] != 0) {
+      srcaddress = rsxgl_arena_address(memory_arena_t::storage().at(ctx -> buffer_binding[RSXGL_PIXEL_UNPACK_BUFFER].arena),
+				       ctx -> buffer_binding[RSXGL_PIXEL_UNPACK_BUFFER].memory + rsxgl_pointer_to_offset(data));
     }
-    // rsxgl_tex_image for this level was never called. fail:
+    // source is client memory:
     else {
-      RSXGL_ERROR_(GL_INVALID_OPERATION);
+      srcaddress = data;
     }
+    
+    size[0] = level.size[0];
+    size[1] = level.size[1];
+    size[2] = level.size[2];
+    
+    pdstformat = level.pformat;
+    dstpitch = level.pitch;
+    
+    if(!level.memory) {
+      const size_t nbytes = util_format_get_2d_size(pdstformat,dstpitch,size[1]) * size[2];
+      
+      rsx_ptr_t ptr = rsxgl_texture_migrate_memalign(16,nbytes);
+      
+      level.memory.location = RSXGL_TEXTURE_MIGRATE_BUFFER_LOCATION;
+      level.memory.offset = rsxgl_texture_migrate_offset(ptr);
+      level.memory.owner = 1;
+    }
+    
+    dstaddress = rsxgl_texture_migrate_address(level.memory.offset);
+  }
+  // rsxgl_tex_image for this level was never called. fail:
+  else {
+    RSXGL_ERROR_(GL_INVALID_OPERATION);
   }
 
   if((x + width) > size[0] || (y + height) > size[1] || (z + depth) > size[2]) {
@@ -1978,16 +1952,10 @@ rsxgl_texture_validate(rsxgl_context_t * ctx,texture_t & texture,const uint32_t 
   texture.timestamp = timestamp;
 
   if(texture.invalid) {
-#if 0
-    rsxgl_debug_printf("%s\n",__PRETTY_FUNCTION__);
-#endif
-
     rsxgl_texture_reset_storage(texture);
     rsxgl_texture_validate_complete(ctx,texture);
 
     if(texture.complete) {
-      rsxgl_assert(texture.num_levels > 0);
-
       rsxgl_texture_validate_storage(ctx,texture.levels[0].arena,texture);
 
       if(texture.memory) {
@@ -1999,7 +1967,7 @@ rsxgl_texture_validate(rsxgl_context_t * ctx,texture_t & texture,const uint32_t 
 	// transfer contents of each mipmap level:
 	texture_t::level_t * plevel = texture.levels;
 	for(texture_t::level_size_type i = 0,n = texture.num_levels;i < n;++i,++plevel) {
-	  if(plevel -> data != 0) {
+	  if(plevel -> memory) {
 #if 0
 	    rsxgl_debug_printf("\tcopying mipmap level:%u pformat:%u pitch:%u size:%ux%ux%u from:%lx pdstformat:%u dstpitch:%u to:%lx\n",
 			       (unsigned int)i,(unsigned int)plevel -> pformat,(unsigned int)plevel -> pitch,
@@ -2010,30 +1978,19 @@ rsxgl_texture_validate(rsxgl_context_t * ctx,texture_t & texture,const uint32_t 
 			       (unsigned long)dstaddress);
 #endif
 	    util_format_translate(pdstformat,dstaddress,dstpitch,0,0,
-				  plevel -> pformat,plevel -> data,plevel -> pitch,0,0,std::min(size[0],plevel -> size[0]),std::min(size[1],plevel -> size[1]));
+				  plevel -> pformat,rsxgl_texture_migrate_address(plevel -> memory.offset),plevel -> pitch,0,0,std::min(size[0],plevel -> size[0]),std::min(size[1],plevel -> size[1]));
 	  }
+
+	  rsxgl_texture_level_reset_storage(*plevel);
+
 	  dstaddress += dstpitch * size[1] * size[2];
 	  for(int j = 0;j < 3;++j) {
 	    size[j] = std::max(size[j] >> 1,1);
 	  }
 	}
       }
-#if 0
-      else {
-	rsxgl_debug_printf("\tno memory\n");
-      }
-#endif
     }
-#if 0
-    else {
-      rsxgl_debug_printf("\tnot complete\n");
-    }
-#endif
 
-#if 0
-    rsxgl_debug_printf("\tvalidated\n");
-#endif
-        
     texture.invalid = 0;
   }
 }

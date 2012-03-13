@@ -8,6 +8,9 @@
 #ifndef rsxgl_limits_H
 #define rsxgl_limits_H
 
+#define RSXGL_MEMORY_LOCATION_LOCAL 0
+#define RSXGL_MEMORY_LOCATION_MAIN 1
+
 // Limits of the hardware (Cell & RSX) go here. These shouldn't be changed:
 #define RSXGL_CACHE_LINE_SIZE 128
 #define RSXGL_CACHE_LINE_BITS 7
@@ -48,6 +51,9 @@
 
 #define RSXGL_VERTEX_MIGRATE_BUFFER_ALIGN 16
 #define RSXGL_VERTEX_MIGRATE_BUFFER_LOCATION 0
+
+#define RSXGL_TEXTURE_MIGRATE_BUFFER_ALIGN 1024 * 1024
+#define RSXGL_TEXTURE_MIGRATE_BUFFER_LOCATION 1
 
 // Maximum value for a drawing timestamp. It's set this way so that GL objects
 // can have 1 bit for a deleted flag, and the remaining 31 bits for a timestamp.
