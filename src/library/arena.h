@@ -12,6 +12,7 @@
 #include "gcm.h"
 #include "mem.h"
 #include "gl_object.h"
+#include "gl_fifo.h"
 
 #include <stddef.h>
 
@@ -124,6 +125,39 @@ static inline memory_t
 rsxgl_arena_memory(memory_arena_t & arena,rsx_ptr_t address)
 {
   return memory_t(arena.memory.location,arena.memory.offset + ((uint8_t *)address - (uint8_t *)(arena.address)),0);
+}
+
+static inline void
+rsxgl_memory_transfer(gcmContextData * context,
+		      const memory_t & dst,const int32_t dstpitch,const uint8_t dstbytes,
+		      const memory_t & src,const int32_t srcpitch,const uint8_t srcbytes,
+		      const uint32_t linelength,const uint32_t linecount)
+{
+  rsxgl_debug_printf("%s: dst:%u (%u) %u %u src:%u (%u) %u %u; %ux%u\n",
+		     __PRETTY_FUNCTION__,
+		     dst.offset,dst.location,dstpitch,dstbytes,
+		     src.offset,src.location,srcpitch,srcbytes,
+		     linelength,linecount);
+
+  uint32_t * buffer = gcm_reserve(context,12);
+
+  // NV_MEMORY_TO_MEMORY_FORMAT_DMA_BUFFER_IN = 0x184
+  gcm_emit_channel_method_at(buffer,0,1,0x184,2);
+  gcm_emit_at(buffer,1,src.location == RSXGL_MEMORY_LOCATION_MAIN ? RSXGL_DMA_MEMORY_HOST_BUFFER : RSXGL_DMA_MEMORY_FRAME_BUFFER);
+  gcm_emit_at(buffer,2,dst.location == RSXGL_MEMORY_LOCATION_MAIN ? RSXGL_DMA_MEMORY_HOST_BUFFER : RSXGL_DMA_MEMORY_FRAME_BUFFER);
+
+  // NV_MEMORY_TO_MEMORY_FORMAT_OFFSET_IN = 0x30c
+  gcm_emit_channel_method_at(buffer,3,1,0x30c,8);
+  gcm_emit_at(buffer,4,src.offset);
+  gcm_emit_at(buffer,5,dst.offset);
+  gcm_emit_at(buffer,6,srcpitch);
+  gcm_emit_at(buffer,7,dstpitch);
+  gcm_emit_at(buffer,8,linelength);
+  gcm_emit_at(buffer,9,linecount);
+  gcm_emit_at(buffer,10,((uint32_t)dstbytes << 8) | ((uint32_t)srcbytes));
+  gcm_emit_at(buffer,11,0);
+
+  gcm_finish_n_commands(context,12);
 }
 
 #endif
