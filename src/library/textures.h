@@ -107,7 +107,6 @@ struct texture_t {
     dimension_size_type size[3];
     uint32_t pitch;
     memory_t memory;
-    memory_arena_t::name_type arena;
 
     level_t();
     ~level_t();

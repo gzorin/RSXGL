@@ -303,7 +303,6 @@ rsxgl_state_validate(rsxgl_context_t * ctx)
     gcm_finish_commands(context,&buffer);
   }
   
-  // TODO: do this if framebuffer has depth buffer:
   if(s -> invalid.parts.draw_framebuffer || s -> invalid.parts.depth) {
     buffer = gcm_reserve(context,2);
 
@@ -379,7 +378,6 @@ rsxgl_state_validate(rsxgl_context_t * ctx)
   }
     
   // stencil:
-  // TODO: do this if framebuffer has stencil buffer:
   if(s -> invalid.parts.draw_framebuffer || s -> invalid.parts.stencil) {
     const bool framebuffer_stencil = ctx -> framebuffer_binding[RSXGL_DRAW_FRAMEBUFFER].complete_write_mask.parts.stencil;
 

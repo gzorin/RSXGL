@@ -1461,3 +1461,15 @@ rsxgl_draw_framebuffer_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
     }
   }
 }
+
+void
+rsxgl_read_framebuffer_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
+{
+  framebuffer_t & framebuffer = ctx -> framebuffer_binding[RSXGL_READ_FRAMEBUFFER];
+
+  rsxgl_framebuffer_validate(ctx,framebuffer,timestamp);
+
+  if(ctx -> invalid.parts.read_framebuffer) {
+    ctx -> invalid.parts.read_framebuffer = 0;
+  }
+}
