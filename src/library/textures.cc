@@ -1768,14 +1768,15 @@ rsxgl_copy_tex_image(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dim
 
   if(result) {
     const uint32_t timestamp = rsxgl_timestamp_create(ctx,1);
-    rsxgl_read_framebuffer_validate(ctx,timestamp);
+    
+    framebuffer_t & framebuffer = ctx -> framebuffer_binding[RSXGL_READ_FRAMEBUFFER];
+    rsxgl_framebuffer_validate(ctx,framebuffer,timestamp);
 
     texture_t::level_t & level = texture.levels[_level];
 
     if(!level.memory) {
       rsxgl_texture_level_validate_storage(level);
     }
-
     rsxgl_assert(level.memory);
 
     rsxgl_timestamp_post(ctx,timestamp);
@@ -2131,15 +2132,13 @@ rsxgl_texture_validate(rsxgl_context_t * ctx,texture_t & texture,const uint32_t 
 	  texture_t::level_t * plevel = texture.levels;
 	  for(texture_t::level_size_type i = 0,n = texture.num_levels;i < n;++i,++plevel) {
 	    if(plevel -> memory) {
-#if 0
-	      rsxgl_debug_printf("\tcopying mipmap level:%u pformat:%u pitch:%u size:%ux%ux%u from:%lx pdstformat:%u dstpitch:%u to:%lx\n",
+	      rsxgl_debug_printf("\tcopying mipmap level:%u pformat:%u pitch:%u size:%ux%ux%u from:%u pdstformat:%u dstpitch:%u to:%u\n",
 				 (unsigned int)i,(unsigned int)plevel -> pformat,(unsigned int)plevel -> pitch,
 				 (unsigned int)std::min(size[0],plevel -> size[0]),(unsigned int)std::min(size[1],plevel -> size[1]),(unsigned int)std::min(size[2],plevel -> size[2]),
-				 (unsigned long)plevel -> data,
+				 (unsigned long)plevel -> memory.offset,
 				 
 				 (unsigned int)pdstformat,(unsigned int)dstpitch,
-				 (unsigned long)dstaddress);
-#endif
+				 (unsigned long)texture.memory.offset);
 	      
 #if 0
 	      rsxgl_texture_blit(ctx,

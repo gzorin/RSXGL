@@ -313,10 +313,11 @@ framebuffer_t::framebuffer_t()
   size[0] = 0;
   size[1] = 0;
 
-  mapping.set(0,0);
+  draw_buffer_mapping.set(0,0);
   for(size_t i = 1;i < RSXGL_MAX_DRAW_BUFFERS;++i) {
-    mapping.set(i,RSXGL_MAX_COLOR_ATTACHMENTS);
+    draw_buffer_mapping.set(i,RSXGL_MAX_COLOR_ATTACHMENTS);
   }
+  read_buffer_mapping = 0;
 
   for(int i = 0;i < RSXGL_MAX_COLOR_ATTACHMENTS;++i) {
     write_masks[i].parts.r = true;
@@ -882,13 +883,13 @@ rsxgl_draw_buffers(rsxgl_context_t * ctx,const framebuffer_t::name_type framebuf
 
   if(framebuffer.is_default) {
     if(buffers[0] == GL_BACK) {
-      framebuffer.mapping.set(0,0);
+      framebuffer.draw_buffer_mapping.set(0,0);
     }
     else if(buffers[0] == GL_FRONT) {
-      framebuffer.mapping.set(0,1);
+      framebuffer.draw_buffer_mapping.set(0,1);
     }
     else if(buffers[0] == GL_NONE) {
-      framebuffer.mapping.set(0,RSXGL_MAX_COLOR_ATTACHMENTS);
+      framebuffer.draw_buffer_mapping.set(0,RSXGL_MAX_COLOR_ATTACHMENTS);
     }
     else {
       RSXGL_ERROR_(GL_INVALID_ENUM);
@@ -918,7 +919,7 @@ rsxgl_draw_buffers(rsxgl_context_t * ctx,const framebuffer_t::name_type framebuf
     }
 
     for(size_t i = 0;i < n;++i) {
-      framebuffer.mapping.set(i,rsx_buffers[i]);
+      framebuffer.draw_buffer_mapping.set(i,rsx_buffers[i]);
     }
   }
 
@@ -954,6 +955,48 @@ glDrawBuffers(GLsizei n, const GLenum *bufs)
     RSXGL_ERROR_(GL_INVALID_VALUE);
   }
   rsxgl_draw_buffers(current_ctx(),current_ctx() -> framebuffer_binding.names[RSXGL_DRAW_FRAMEBUFFER],n,bufs);
+}
+
+GLAPI void APIENTRY
+glReadBuffer (GLenum mode)
+{
+  struct rsxgl_context_t * ctx = current_ctx();
+  framebuffer_t & framebuffer = ctx -> framebuffer_binding[RSXGL_READ_FRAMEBUFFER];
+
+  uint32_t rsx_buffer = RSXGL_MAX_COLOR_ATTACHMENTS;
+
+  if(framebuffer.is_default) {
+    if(mode == GL_BACK) {
+      rsx_buffer = 0;
+    }
+    else if(mode == GL_FRONT) {
+      rsx_buffer = 1;
+    }
+    else if(mode == GL_NONE) {
+      rsx_buffer = RSXGL_MAX_COLOR_ATTACHMENTS;
+    }
+    else {
+      RSXGL_ERROR_(GL_INVALID_ENUM);
+    }
+  }
+  else {
+    if(mode >= GL_COLOR_ATTACHMENT0 && mode < (GL_COLOR_ATTACHMENT0 + RSXGL_MAX_COLOR_ATTACHMENTS)) {
+      rsx_buffer = (uint32_t)mode - (uint32_t)GL_COLOR_ATTACHMENT0;
+    }
+    else if(mode == GL_NONE) {
+      rsx_buffer = RSXGL_MAX_COLOR_ATTACHMENTS;
+    }
+    else {
+      RSXGL_ERROR_(GL_INVALID_ENUM);
+    }
+  }
+
+  framebuffer.read_buffer_mapping = rsx_buffer;
+
+  framebuffer.invalid = 1;
+  framebuffer.invalid_complete = 1;
+
+  RSXGL_NOERROR_();  
 }
 
 static inline void
@@ -1083,7 +1126,7 @@ rsxgl_framebuffer_validate_complete(rsxgl_context_t * ctx,framebuffer_t & frameb
     }
     else {
       // Color buffers:
-      for(framebuffer_t::mapping_t::const_iterator it = framebuffer.mapping.begin();complete && !it.done();it.next(framebuffer.mapping)) {
+      for(framebuffer_t::mapping_t::const_iterator it = framebuffer.draw_buffer_mapping.begin();complete && !it.done();it.next(framebuffer.draw_buffer_mapping)) {
 	const framebuffer_t::attachment_size_type i = it.value();
 	if(i == RSXGL_MAX_COLOR_ATTACHMENTS) continue;
 
@@ -1270,17 +1313,17 @@ rsxgl_framebuffer_validate(rsxgl_context_t * ctx,framebuffer_t & framebuffer,con
       uint16_t color_targets = 0;
       uint32_t color_mask = 0;
       uint16_t color_mask_mrt = 0, depth_mask = 0;
-      surface_t surfaces[RSXGL_MAX_ATTACHMENTS];
+      surface_t draw_surfaces[RSXGL_MAX_FRAMEBUFFER_SURFACES], read_surface;
 
       if(framebuffer.is_default) {
 	const write_mask_t mask = framebuffer.write_masks[0];
 
-	if(framebuffer.attachment_types.get(0) != RSXGL_ATTACHMENT_TYPE_NONE && framebuffer.mapping.get(0) < RSXGL_MAX_COLOR_ATTACHMENTS) {
-	  const uint32_t buffer = (framebuffer.mapping.get(0) == 0) ? ctx -> base.draw -> buffer : !ctx -> base.draw -> buffer;
-	  surfaces[RSXGL_COLOR_ATTACHMENT0].pitch = ctx -> base.draw -> color_pitch;
-	  surfaces[RSXGL_COLOR_ATTACHMENT0].memory.location = ctx -> base.draw -> color_buffer[buffer].location;
-	  surfaces[RSXGL_COLOR_ATTACHMENT0].memory.offset = ctx -> base.draw -> color_buffer[buffer].offset;
-	  surfaces[RSXGL_COLOR_ATTACHMENT0].memory.owner = 0;
+	if(framebuffer.attachment_types.get(0) != RSXGL_ATTACHMENT_TYPE_NONE && framebuffer.draw_buffer_mapping.get(0) < RSXGL_MAX_COLOR_ATTACHMENTS) {
+	  const uint32_t buffer = (framebuffer.draw_buffer_mapping.get(0) == 0) ? ctx -> base.draw -> buffer : !ctx -> base.draw -> buffer;
+	  draw_surfaces[RSXGL_FRAMEBUFFER_SURFACE_COLOR0].pitch = ctx -> base.draw -> color_pitch;
+	  draw_surfaces[RSXGL_FRAMEBUFFER_SURFACE_COLOR0].memory.location = ctx -> base.draw -> color_buffer[buffer].location;
+	  draw_surfaces[RSXGL_FRAMEBUFFER_SURFACE_COLOR0].memory.offset = ctx -> base.draw -> color_buffer[buffer].offset;
+	  draw_surfaces[RSXGL_FRAMEBUFFER_SURFACE_COLOR0].memory.owner = 0;
 	  
 	  color_targets = NV30_3D_RT_ENABLE_COLOR0;
 	  color_mask =
@@ -1295,17 +1338,26 @@ rsxgl_framebuffer_validate(rsxgl_context_t * ctx,framebuffer_t & framebuffer,con
 	}
 	
 	if(framebuffer.attachment_types.get(RSXGL_DEPTH_STENCIL_ATTACHMENT) != RSXGL_ATTACHMENT_TYPE_NONE) {
-	  surfaces[RSXGL_DEPTH_STENCIL_ATTACHMENT].pitch = ctx -> base.draw -> depth_pitch;
-	  surfaces[RSXGL_DEPTH_STENCIL_ATTACHMENT].memory.location = ctx -> base.draw -> depth_buffer.location;
-	  surfaces[RSXGL_DEPTH_STENCIL_ATTACHMENT].memory.offset = ctx -> base.draw -> depth_buffer.offset;
-	  surfaces[RSXGL_DEPTH_STENCIL_ATTACHMENT].memory.owner = 0;
+	  draw_surfaces[RSXGL_FRAMEBUFFER_SURFACE_DEPTH].pitch = ctx -> base.draw -> depth_pitch;
+	  draw_surfaces[RSXGL_FRAMEBUFFER_SURFACE_DEPTH].memory.location = ctx -> base.draw -> depth_buffer.location;
+	  draw_surfaces[RSXGL_FRAMEBUFFER_SURFACE_DEPTH].memory.offset = ctx -> base.draw -> depth_buffer.offset;
+	  draw_surfaces[RSXGL_FRAMEBUFFER_SURFACE_DEPTH].memory.owner = 0;
 
 	  depth_mask = mask.parts.depth ? 1 : 0;
+	}
+
+	if(framebuffer.read_buffer_mapping != RSXGL_MAX_COLOR_ATTACHMENTS) {
+	  const uint32_t buffer = (framebuffer.read_buffer_mapping == 0) ? ctx -> base.draw -> buffer : !ctx -> base.draw -> buffer;
+	  read_surface.pitch = ctx -> base.draw -> color_pitch;
+	  read_surface.memory.location = ctx -> base.draw -> color_buffer[buffer].location;
+	  read_surface.memory.offset = ctx -> base.draw -> color_buffer[buffer].offset;
+	  read_surface.memory.owner = 0;
 	}
       }
       else {
 	// Color buffers:
-	for(framebuffer_t::mapping_t::const_iterator it = framebuffer.mapping.begin();!it.done();it.next(framebuffer.mapping)) {
+	uint32_t i_draw_surface = RSXGL_FRAMEBUFFER_SURFACE_COLOR0;
+	for(framebuffer_t::mapping_t::const_iterator it = framebuffer.draw_buffer_mapping.begin();!it.done();it.next(framebuffer.draw_buffer_mapping),++i_draw_surface) {
 	  const framebuffer_t::attachment_size_type i = it.value();
 	  if(i == RSXGL_MAX_COLOR_ATTACHMENTS) continue;
 
@@ -1314,13 +1366,13 @@ rsxgl_framebuffer_validate(rsxgl_context_t * ctx,framebuffer_t & framebuffer,con
 	  
 	  if(type == RSXGL_ATTACHMENT_TYPE_RENDERBUFFER) {
 	    renderbuffer_t & renderbuffer = renderbuffer_t::storage().at(framebuffer.attachments[i]);
-	    surfaces[i] = renderbuffer.surface;
+	    draw_surfaces[i_draw_surface] = renderbuffer.surface;
 	  }
 	  else if(type == RSXGL_ATTACHMENT_TYPE_TEXTURE) {
 	    texture_t & texture = texture_t::storage().at(framebuffer.attachments[i]);
 	    
-	    surfaces[i].pitch = texture.pitch;
-	    surfaces[i].memory = texture.memory;
+	    draw_surfaces[i_draw_surface].pitch = texture.pitch;
+	    draw_surfaces[i_draw_surface].memory = texture.memory;
 	  }
 
 	  const write_mask_t mask = framebuffer.write_masks[i];
@@ -1343,20 +1395,35 @@ rsxgl_framebuffer_validate(rsxgl_context_t * ctx,framebuffer_t & framebuffer,con
 	}
 
 	// Depth buffer:
-	if(framebuffer.attachment_types.get(4) != RSXGL_ATTACHMENT_TYPE_NONE) {
-	  const uint32_t type = framebuffer.attachment_types.get(4);
+	if(framebuffer.attachment_types.get(RSXGL_DEPTH_STENCIL_ATTACHMENT) != RSXGL_ATTACHMENT_TYPE_NONE) {
+	  const uint32_t type = framebuffer.attachment_types.get(RSXGL_DEPTH_STENCIL_ATTACHMENT);
 	  if(type == RSXGL_ATTACHMENT_TYPE_RENDERBUFFER) {
-	    renderbuffer_t & renderbuffer = renderbuffer_t::storage().at(framebuffer.attachments[4]);
-	    surfaces[4] = renderbuffer.surface;
+	    renderbuffer_t & renderbuffer = renderbuffer_t::storage().at(framebuffer.attachments[RSXGL_DEPTH_STENCIL_ATTACHMENT]);
+	    draw_surfaces[RSXGL_FRAMEBUFFER_SURFACE_DEPTH] = renderbuffer.surface;
 	  }
 	  else if(type == RSXGL_ATTACHMENT_TYPE_TEXTURE) {
-	    texture_t & texture = texture_t::storage().at(framebuffer.attachments[4]);
-	    surfaces[4].pitch = texture.pitch;
-	    surfaces[4].memory = texture.memory;
+	    texture_t & texture = texture_t::storage().at(framebuffer.attachments[RSXGL_DEPTH_STENCIL_ATTACHMENT]);
+	    draw_surfaces[RSXGL_FRAMEBUFFER_SURFACE_DEPTH].pitch = texture.pitch;
+	    draw_surfaces[RSXGL_FRAMEBUFFER_SURFACE_DEPTH].memory = texture.memory;
 	  }
 
 	  const write_mask_t mask = framebuffer.write_masks[0];
 	  depth_mask = mask.parts.depth ? 1 : 0;
+	}
+
+	// Read buffer:
+	if(framebuffer.read_buffer_mapping != RSXGL_MAX_COLOR_ATTACHMENTS) {
+	  const uint32_t read_buffer_attachment = framebuffer.read_buffer_mapping;
+	  const uint32_t type = framebuffer.attachment_types.get(read_buffer_attachment);
+	  if(type == RSXGL_ATTACHMENT_TYPE_RENDERBUFFER) {
+	    renderbuffer_t & renderbuffer = renderbuffer_t::storage().at(framebuffer.attachments[read_buffer_attachment]);
+	    read_surface = renderbuffer.surface;
+	  }
+	  else if(type == RSXGL_ATTACHMENT_TYPE_TEXTURE) {
+	    texture_t & texture = texture_t::storage().at(framebuffer.attachments[read_buffer_attachment]);
+	    read_surface.pitch = texture.pitch;
+	    read_surface.memory = texture.memory;
+	  }
 	}
       }
 
@@ -1367,23 +1434,24 @@ rsxgl_framebuffer_validate(rsxgl_context_t * ctx,framebuffer_t & framebuffer,con
       framebuffer.color_mask_mrt = color_mask_mrt;
       framebuffer.depth_mask = depth_mask;
       
-      for(framebuffer_t::attachment_size_type i = 0;i < RSXGL_MAX_ATTACHMENTS;++i) {
-	framebuffer.surfaces[i] = surfaces[i];
+      for(framebuffer_t::attachment_size_type i = 0;i < RSXGL_MAX_FRAMEBUFFER_SURFACES;++i) {
+	framebuffer.draw_surfaces[i] = draw_surfaces[i];
       }
+      framebuffer.read_surface = read_surface;
       
 #if 0
       //
       if(color_pformat != PIPE_FORMAT_NONE && depth_pformat == PIPE_FORMAT_NONE) {
 	uint32_t pitch = 0;
 	for(framebuffer_t::attachment_size_type i = 0;i < RSXGL_MAX_COLOR_ATTACHMENTS && pitch == 0;++i) {
-	  pitch = surfaces[i].pitch;
+	  pitch = draw_surfaces[i].pitch;
 	}
-	framebuffer.surfaces[4].pitch = pitch;
+	framebuffer.draw_surfaces[4].pitch = pitch;
       }
       else if(color_pformat == PIPE_FORMAT_NONE && depth_pformat != PIPE_FORMAT_NONE) {
-	const uint32_t pitch = surfaces[4].pitch;
+	const uint32_t pitch = draw_surfaces[4].pitch;
 	for(framebuffer_t::attachment_size_type i = 0;i < RSXGL_MAX_COLOR_ATTACHMENTS;++i) {
-	  framebuffer.surfaces[i].pitch = pitch;
+	  framebuffer.draw_surfaces[i].pitch = pitch;
 	}
       }
 #endif
@@ -1411,8 +1479,8 @@ rsxgl_draw_framebuffer_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
       gcmContextData * context = ctx -> gcm_context();
       
       if(format != 0 && color_targets != 0) {
-	for(framebuffer_t::attachment_size_type i = 0;i < RSXGL_MAX_ATTACHMENTS;++i) {
-	  rsxgl_emit_surface(context,i,framebuffer.surfaces[i]);
+	for(framebuffer_t::attachment_size_type i = 0;i < RSXGL_MAX_FRAMEBUFFER_SURFACES;++i) {
+	  rsxgl_emit_surface(context,i,framebuffer.draw_surfaces[i]);
 	}
 
 	const uint16_t w = framebuffer.size[0], h = framebuffer.size[1];
@@ -1459,17 +1527,5 @@ rsxgl_draw_framebuffer_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
 
       ctx -> invalid.parts.draw_framebuffer = 0;
     }
-  }
-}
-
-void
-rsxgl_read_framebuffer_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
-{
-  framebuffer_t & framebuffer = ctx -> framebuffer_binding[RSXGL_READ_FRAMEBUFFER];
-
-  rsxgl_framebuffer_validate(ctx,framebuffer,timestamp);
-
-  if(ctx -> invalid.parts.read_framebuffer) {
-    ctx -> invalid.parts.read_framebuffer = 0;
   }
 }

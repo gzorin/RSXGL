@@ -78,6 +78,12 @@ enum rsxgl_framebuffer_target {
   RSXGL_MAX_FRAMEBUFFER_TARGETS = 2
 };
 
+enum rsxl_framebuffer_surface {
+  RSXGL_FRAMEBUFFER_SURFACE_COLOR0 = 0,
+  RSXGL_FRAMEBUFFER_SURFACE_DEPTH = RSXGL_MAX_DRAW_BUFFERS,
+  RSXGL_MAX_FRAMEBUFFER_SURFACES = RSXGL_FRAMEBUFFER_SURFACE_DEPTH + 1
+};
+
 enum rsxgl_framebuffer_attachment {
   RSXGL_COLOR_ATTACHMENT0,
   RSXGL_DEPTH_STENCIL_ATTACHMENT = RSXGL_COLOR_ATTACHMENT0 + RSXGL_MAX_COLOR_ATTACHMENTS,
@@ -117,7 +123,8 @@ struct framebuffer_t {
 
   typedef smint_array< RSXGL_MAX_COLOR_ATTACHMENTS, RSXGL_MAX_DRAW_BUFFERS > mapping_t;
   typedef mapping_t::index_type mapping_size_type;
-  mapping_t mapping;
+  mapping_t draw_buffer_mapping;
+  mapping_t::value_type read_buffer_mapping;
 
   write_mask_t write_masks[RSXGL_MAX_COLOR_ATTACHMENTS];
 
@@ -129,7 +136,7 @@ struct framebuffer_t {
   uint32_t color_mask;
   uint16_t color_mask_mrt, depth_mask;
   framebuffer_dimension_size_type size[2];
-  surface_t surfaces[RSXGL_MAX_ATTACHMENTS];
+  surface_t draw_surfaces[RSXGL_MAX_FRAMEBUFFER_SURFACES], read_surface;
 
   framebuffer_t();
   ~framebuffer_t();
@@ -140,6 +147,5 @@ struct rsxgl_context_t;
 void rsxgl_renderbuffer_validate(rsxgl_context_t *,renderbuffer_t &,const uint32_t);
 void rsxgl_framebuffer_validate(rsxgl_context_t *,framebuffer_t &,const uint32_t);
 void rsxgl_draw_framebuffer_validate(rsxgl_context_t *,const uint32_t);
-void rsxgl_read_framebuffer_validate(rsxgl_context_t *,const uint32_t);
 
 #endif
