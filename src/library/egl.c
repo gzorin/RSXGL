@@ -243,8 +243,8 @@ struct rsxegl_config_t rsxegl_configs[] = {
     .color_pixel_size = 4,
     .depth_pixel_size = 2,
 
-    .video_format = VIDEO_BUFFER_FORMAT_XBGR,
-    .color_pformat = PIPE_FORMAT_B8G8R8A8_UNORM,
+    .video_format = VIDEO_BUFFER_FORMAT_XRGB,
+    .color_pformat = PIPE_FORMAT_R8G8B8A8_UNORM,
     .depth_pformat = PIPE_FORMAT_Z16_UNORM
   },
 
@@ -261,8 +261,8 @@ struct rsxegl_config_t rsxegl_configs[] = {
     .color_pixel_size = 4,
     .depth_pixel_size = 4,
 
-    .video_format = VIDEO_BUFFER_FORMAT_XBGR,
-    .color_pformat = PIPE_FORMAT_B8G8R8A8_UNORM,
+    .video_format = VIDEO_BUFFER_FORMAT_XRGB,
+    .color_pformat = PIPE_FORMAT_R8G8B8A8_UNORM,
     .depth_pformat = PIPE_FORMAT_S8_UINT_Z24_UNORM
   },
 
@@ -279,8 +279,8 @@ struct rsxegl_config_t rsxegl_configs[] = {
     .color_pixel_size = 4,
     .depth_pixel_size = 2,
 
-    .video_format = VIDEO_BUFFER_FORMAT_XBGR,
-    .color_pformat = PIPE_FORMAT_B8G8R8X8_UNORM,
+    .video_format = VIDEO_BUFFER_FORMAT_XRGB,
+    .color_pformat = PIPE_FORMAT_R8G8B8_UNORM,
     .depth_pformat = PIPE_FORMAT_Z16_UNORM
   },
 
@@ -297,8 +297,8 @@ struct rsxegl_config_t rsxegl_configs[] = {
     .color_pixel_size = 4,
     .depth_pixel_size = 4,
 
-    .video_format = VIDEO_BUFFER_FORMAT_XBGR,
-    .color_pformat = PIPE_FORMAT_B8G8R8X8_UNORM,
+    .video_format = VIDEO_BUFFER_FORMAT_XRGB,
+    .color_pformat = PIPE_FORMAT_R8G8B8_UNORM,
     .depth_pformat = PIPE_FORMAT_S8_UINT_Z24_UNORM
   },
 
