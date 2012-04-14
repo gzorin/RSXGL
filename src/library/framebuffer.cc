@@ -11,7 +11,7 @@
 #include <GL3/gl3.h>
 #include "error.h"
 
-#include "gcm.h"
+#include <rsx/gcm_sys.h>
 #include "nv40.h"
 #include "gl_fifo.h"
 #include "cxxutil.h"

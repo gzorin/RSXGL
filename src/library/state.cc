@@ -4,16 +4,19 @@
 //
 // state.cc - GL functions mostly covered by section 4.1 of the OpenGL 3.1 spec.
 
-#include <GL3/gl3.h>
+#include "state.h"
 
-#include "gcm.h"
 #include "rsxgl_context.h"
 #include "gl_fifo.h"
 #include "nv40.h"
 #include "rsxgl_assert.h"
-#include "error.h"
-#include "state.h"
 #include "cxxutil.h"
+#include "gl_constants.h"
+
+#include <GL3/gl3.h>
+#include "error.h"
+
+#include <rsx/gcm_sys.h>
 
 #if defined(GLAPI)
 #undef GLAPI

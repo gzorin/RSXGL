@@ -4,7 +4,6 @@
 //
 // arena.cc - Create arenas from which memory may be allocated.
 
-#include "gcm.h"
 #include "arena.h"
 #include "rsxgl_context.h"
 #include "gl_object_storage.h"
@@ -12,6 +11,8 @@
 #include <GL3/gl3.h>
 #include "GL3/rsxgl3ext.h"
 #include "error.h"
+
+#include <rsx/gcm_sys.h>
 
 #include <stddef.h>
 #include <malloc.h>
@@ -27,9 +28,9 @@ memory_arena_t::storage_type & memory_arena_t::storage()
 }
 
 memory_t
-rsxgl_arena_allocate(memory_arena_t & arena,rsx_size_t align,rsx_size_t size,rsx_ptr_t * address)
+rsxgl_arena_allocate(memory_arena_t & arena,rsx_size_t align,rsx_size_t size,void * * address)
 {
-  rsx_ptr_t addr = mspace_memalign(arena.space,align,size);
+  void * addr = mspace_memalign(arena.space,align,size);
 
   if(addr == 0) {
     return memory_t();

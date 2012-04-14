@@ -4,19 +4,19 @@
 //
 // sync.cc - Implement the glFlush and glFinish functions, and OpenGL synchronization objects.
 
-#include <GL3/gl3.h>
+#include "sync.h"
 
 #include "gl_fifo.h"
 #include "rsxgl_assert.h"
 #include "debug.h"
-#include "error.h"
 #include "rsxgl_context.h"
 #include "state.h"
 #include "attribs.h"
 #include "uniforms.h"
-#include "sync.h"
-
 #include "gl_object.h"
+
+#include <GL3/gl3.h>
+#include "error.h"
 
 #if defined(GLAPI)
 #undef GLAPI

@@ -3,9 +3,10 @@
 #ifndef rsxgl_context_H
 #define rsxgl_context_H
 
-#include "rsxgl_assert.h"
-#include "gcm.h"
+#include <stddef.h>
+
 #include "egl_types.h"
+#include "rsxgl_assert.h"
 #include "rsxgl_object_context.h"
 #include "arena.h"
 #include "buffer.h"
@@ -22,8 +23,6 @@
 #include "bit_set.h"
 
 #include "pipe/p_context.h"
-
-#include <stddef.h>
 
 struct rsxgl_context_t {
   rsxegl_context_t base;

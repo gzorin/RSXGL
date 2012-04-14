@@ -2,7 +2,8 @@
 #define gl_fifo_H
 
 #include <rsx/gcm_sys.h>
-#include <rsxgl_assert.h>
+
+#include "rsxgl_assert.h"
 
 #ifdef __cplusplus
 extern "C" {

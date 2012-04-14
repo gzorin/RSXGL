@@ -20,7 +20,7 @@
 #include "GL3/rsxgl3ext.h"
 #include "error.h"
 
-#include "gcm.h"
+#include <rsx/gcm_sys.h>
 #include "nv40.h"
 #include "gl_fifo.h"
 #include "debug.h"
@@ -158,7 +158,7 @@ rsxgl_draw_init(rsxgl_context_t * ctx,GLenum mode,const uint32_t start,const uin
 
 struct rsxgl_draw_elements_info_t {
   const bool client_indices;
-  const_rsx_ptr_t migrate_buffer;
+  const void * migrate_buffer;
   const uint32_t migrate_buffer_size;
 
   rsxgl_draw_elements_info_t(const bool _client_indices,void const * _migrate_buffer,const uint32_t _migrate_buffer_size)
@@ -196,7 +196,7 @@ rsxgl_draw_elements_init(rsxgl_context_t * ctx,const GLsizei count,const uint32_
   gcmContextData * context = ctx -> gcm_context();
 
   const bool client_indices = ctx -> buffer_binding.names[RSXGL_ELEMENT_ARRAY_BUFFER] == 0;
-  rsx_ptr_t migrate_buffer = 0;
+  void * migrate_buffer = 0;
 
   uint32_t index_buffer_offset = 0, index_buffer_location = 0;
   const uint32_t index_buffer_size = (uint32_t)rsxgl_element_type_bytes[rsx_type] * count;
@@ -937,7 +937,7 @@ glMultiDrawElements (const GLenum mode, const GLsizei *count, GLenum type, const
     const bool client_indices = ctx -> buffer_binding.names[RSXGL_ELEMENT_ARRAY_BUFFER] == 0;
     
     if(client_indices) {
-      rsx_ptr_t migrate_buffers[primcount];
+      void * migrate_buffers[primcount];
       uint32_t index_buffer_sizes[primcount];
       uint32_t index_buffer_offsets[primcount];
       for(GLsizei i = 0;i < primcount;++i) {
@@ -1028,7 +1028,7 @@ glMultiDrawElementsBaseVertex (GLenum mode, const GLsizei *count, GLenum type, c
     const bool client_indices = ctx -> buffer_binding.names[RSXGL_ELEMENT_ARRAY_BUFFER] == 0;
     
     if(client_indices) {
-      rsx_ptr_t migrate_buffers[primcount];
+      void * migrate_buffers[primcount];
       uint32_t index_buffer_sizes[primcount];
       uint32_t index_buffer_offsets[primcount];
       for(GLsizei i = 0;i < primcount;++i) {

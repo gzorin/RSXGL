@@ -1,7 +1,7 @@
 #ifndef rsxgl_mem_H
 #define rsxgl_mem_H
 
-#include <gcm.h>
+#include <stdint.h>
 
 #define MSPACES 1
 #define ONLY_MSPACES 1
@@ -17,10 +17,12 @@
 extern "C" {
 #endif
 
-rsx_ptr_t rsxgl_rsx_malloc(rsx_size_t);
-rsx_ptr_t rsxgl_rsx_memalign(rsx_size_t,rsx_size_t);
-rsx_ptr_t rsxgl_rsx_realloc(rsx_ptr_t,rsx_size_t);
-void rsxgl_rsx_free(rsx_ptr_t);
+typedef uint32_t rsx_size_t;
+
+void * rsxgl_rsx_malloc(rsx_size_t);
+void * rsxgl_rsx_memalign(rsx_size_t,rsx_size_t);
+void * rsxgl_rsx_realloc(void *,rsx_size_t);
+void rsxgl_rsx_free(void *);
 
 #ifdef __cplusplus
 }

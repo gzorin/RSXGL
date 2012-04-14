@@ -8,18 +8,20 @@
 #ifndef rsxgl_sync_H
 #define rsxgl_sync_H
 
+#include <sys/unistd.h>
+#include <stddef.h>
+
+#include <algorithm>
+
+#include <boost/integer.hpp>
+
+#include <ppu_intrinsics.h>
+#include <rsx/gcm_sys.h>
+
 #include "nv40.h"
-#include "gcm.h"
 #include "gl_fifo.h"
 #include "rsxgl_assert.h"
 #include "rsxgl_limits.h"
-
-#include <sys/unistd.h>
-#include <algorithm>
-#include <stddef.h>
-#include <ppu_intrinsics.h>
-
-#include <boost/integer.hpp>
 
 //
 static inline void

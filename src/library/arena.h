@@ -9,7 +9,6 @@
 #define rsxgl_arena_H
 
 #include "rsxgl_limits.h"
-#include "gcm.h"
 #include "mem.h"
 #include "gl_object.h"
 #include "gl_fifo.h"
@@ -78,7 +77,7 @@ struct memory_arena_t {
 
   binding_bitfield_type binding_bitfield;
 
-  rsx_ptr_t address;
+  void * address;
   mspace space;
   memory_t memory;
   rsx_size_t size;
@@ -95,34 +94,34 @@ struct memory_arena_t {
 
   // functions:
   // allocate
-  rsx_ptr_t (*malloc_fn)(memory_arena_t *,rsx_size_t);
-  rsx_ptr_t (*memalign_fn)(memory_arena_t *,rsx_size_t,rsx_size_t);
+  void * (*malloc_fn)(memory_arena_t *,rsx_size_t);
+  void * (*memalign_fn)(memory_arena_t *,rsx_size_t,rsx_size_t);
 
   // resize (why?)
-  rsx_ptr_t (*realloc_fn)(memory_arena_t *,rsx_ptr_t,rsx_size_t);
+  void * (*realloc_fn)(memory_arena_t *,void *,rsx_size_t);
 
   // free
-  void (*free_fn)(memory_arena_t *,rsx_ptr_t);
+  void (*free_fn)(memory_arena_t *,void *);
 
   // address_to_offset
-  int32_t (*address_to_offset_fn)(memory_arena_t *,rsx_ptr_t,uint32_t *);
+  int32_t (*address_to_offset_fn)(memory_arena_t *,void *,uint32_t *);
 
   // offset_to_address
-  int32_t (*offset_to_address_fn)(memory_arena_t *,uint32_t,rsx_ptr_t *);
+  int32_t (*offset_to_address_fn)(memory_arena_t *,uint32_t,void * *);
 #endif
 };
 
-memory_t rsxgl_arena_allocate(memory_arena_t &,rsx_size_t,rsx_size_t,rsx_ptr_t * = 0);
+memory_t rsxgl_arena_allocate(memory_arena_t &,rsx_size_t,rsx_size_t,void * * = 0);
 void rsxgl_arena_free(memory_arena_t &,const memory_t &);
 
-static inline rsx_ptr_t
+static inline void *
 rsxgl_arena_address(memory_arena_t & arena,const memory_t & memory)
 {
   return (uint8_t *)arena.address + (ptrdiff_t)(memory.offset - arena.memory.offset);
 }
 
 static inline memory_t
-rsxgl_arena_memory(memory_arena_t & arena,rsx_ptr_t address)
+rsxgl_arena_memory(memory_arena_t & arena,void * address)
 {
   return memory_t(arena.memory.location,arena.memory.offset + ((uint8_t *)address - (uint8_t *)(arena.address)),0);
 }

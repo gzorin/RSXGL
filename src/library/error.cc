@@ -4,7 +4,7 @@
 //
 // error.c - Retrieve the current OpenGL error code.
 
-#include "gcm.h"
+#include <rsx/gcm_sys.h>
 
 #include <GL3/gl3.h>
 

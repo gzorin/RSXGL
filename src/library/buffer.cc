@@ -5,7 +5,7 @@
 // buffer.cc - Manage buffer objects.
 
 #include "rsxgl_context.h"
-#include "gcm.h"
+#include <rsx/gcm_sys.h>
 #include "gl_fifo.h"
 #include "buffer.h"
 #include "timestamp.h"
@@ -250,7 +250,7 @@ glBufferData (GLenum target, GLsizeiptr size, const GLvoid* data, GLenum usage)
 #endif
 
   // If a buffer is actually being requested, then allocate memory for it:
-  rsx_ptr_t address = 0;
+  void * address = 0;
   
   if(size > 0) {
     buffer -> invalid = 1;
@@ -315,7 +315,7 @@ glBufferSubData (GLenum target, GLintptr offset, GLsizeiptr size, const GLvoid* 
     RSXGL_ERROR_(GL_INVALID_VALUE);
   }
 
-  rsx_ptr_t address = rsxgl_arena_address(memory_arena_t::storage().at(buffer.arena),buffer.memory);
+  void * address = rsxgl_arena_address(memory_arena_t::storage().at(buffer.arena),buffer.memory);
 
   if(address != 0 && data != 0 && size > 0) {
     // TODO - if a pending operation depends upon this buffer, wait for that operation to finish:
@@ -358,7 +358,7 @@ glGetBufferSubData (GLenum target, GLintptr offset, GLsizeiptr size, GLvoid *dat
     RSXGL_ERROR_(GL_INVALID_VALUE);
   }
 
-  rsx_ptr_t address = rsxgl_arena_address(memory_arena_t::storage().at(buffer.arena),buffer.memory);
+  void * address = rsxgl_arena_address(memory_arena_t::storage().at(buffer.arena),buffer.memory);
 
   if(address != 0 && data != 0 && size > 0) {
     // TODO - wait for pending operations to finish:

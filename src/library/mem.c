@@ -3,6 +3,8 @@
 #include "debug.h"
 #include "mem.h"
 
+#include <rsx/gcm_sys.h>
+
 #define MSPACES 1
 #define ONLY_MSPACES 1
 #define HAVE_MMAP 0
@@ -44,26 +46,26 @@ rsxgl_rsx_mspace()
   return _rsx_mspace;
 }
 
-rsx_ptr_t
+void *
 rsxgl_rsx_malloc(rsx_size_t size)
 {  
   return mspace_malloc(rsxgl_rsx_mspace(),size);
 }
 
-rsx_ptr_t
+void *
 rsxgl_rsx_memalign(rsx_size_t alignment,rsx_size_t size)
 {
   return mspace_memalign(rsxgl_rsx_mspace(),alignment,size);
 }
 
-rsx_ptr_t
-rsxgl_rsx_realloc(rsx_ptr_t mem,rsx_size_t size)
+void *
+rsxgl_rsx_realloc(void * mem,rsx_size_t size)
 {
   return mspace_realloc(rsxgl_rsx_mspace(),mem,size);
 }
 
 void
-rsxgl_rsx_free(rsx_ptr_t mem)
+rsxgl_rsx_free(void * mem)
 {
   mspace_free(rsxgl_rsx_mspace(),mem);
 }

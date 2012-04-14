@@ -4,20 +4,22 @@
 //
 // ringbuffer_migrate.cc
 
-#include "rsxgl_config.h"
+#include "migrate.h"
 
+#include "rsxgl_config.h"
 #include "debug.h"
 #include "rsxgl_assert.h"
 #include "rsxgl_limits.h"
 #include "mem.h"
 #include "sync.h"
-#include "migrate.h"
+
+#include <rsx/gcm_sys.h>
 
 // Size of migration buffer:
 static uint32_t rsxgl_vertex_migrate_size = RSXGL_CONFIG_vertex_migrate_buffer_size, rsxgl_vertex_migrate_align = RSXGL_VERTEX_MIGRATE_BUFFER_ALIGN;
 
 // 
-static rsx_ptr_t _rsxgl_vertex_migrate_buffer = 0;
+static void * _rsxgl_vertex_migrate_buffer = 0;
 static uint8_t rsxgl_vertex_migrate_sync = 0;
 
 // Head and tail position of the buffer:
@@ -29,7 +31,7 @@ static uint32_t rsxgl_vertex_migrate_stack = 0;
 #endif
 
 static inline
-rsx_ptr_t rsxgl_vertex_migrate_buffer()
+void * rsxgl_vertex_migrate_buffer()
 {
   if(_rsxgl_vertex_migrate_buffer == 0) {
     //
@@ -52,10 +54,10 @@ rsx_ptr_t rsxgl_vertex_migrate_buffer()
   return _rsxgl_vertex_migrate_buffer;
 }
 
-rsx_ptr_t
+void *
 rsxgl_ringbuffer_migrate_memalign(gcmContextData *,const rsx_size_t align,const rsx_size_t size)
 {
-  rsx_ptr_t buffer = rsxgl_vertex_migrate_buffer();
+  void * buffer = rsxgl_vertex_migrate_buffer();
 
   rsxgl_assert(buffer != 0);
   rsxgl_assert(rsxgl_vertex_migrate_sync != 0);
@@ -109,7 +111,7 @@ rsxgl_ringbuffer_migrate_memalign(gcmContextData *,const rsx_size_t align,const 
 }
 
 void
-rsxgl_ringbuffer_migrate_free(gcmContextData * context,const_rsx_ptr_t ptr,const rsx_size_t size)
+rsxgl_ringbuffer_migrate_free(gcmContextData * context,const void * ptr,const rsx_size_t size)
 {
   rsxgl_assert(_rsxgl_vertex_migrate_buffer != 0);
   rsxgl_assert(rsxgl_vertex_migrate_sync != 0);

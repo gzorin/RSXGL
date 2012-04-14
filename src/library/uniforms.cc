@@ -13,7 +13,7 @@
 #include <GL3/gl3.h>
 #include "error.h"
 
-#include "gcm.h"
+#include <rsx/gcm_sys.h>
 #include "nv40.h"
 #include "gl_fifo.h"
 #include "ieee32_t.h"
@@ -486,7 +486,7 @@ glGetUniformuiv (GLuint program, GLint location, GLuint *params)
 }
 
 // From program.cc:
-extern rsx_ptr_t rsx_ucode_address;
+extern void * rsx_ucode_address;
 extern uint32_t rsx_ucode_offset;
 
 static inline uint32_t *

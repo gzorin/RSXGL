@@ -6,7 +6,7 @@
 
 #include <GL3/gl3.h>
 
-#include "gcm.h"
+#include <rsx/gcm_sys.h>
 #include "rsxgl_context.h"
 #include "gl_fifo.h"
 #include "nv40.h"

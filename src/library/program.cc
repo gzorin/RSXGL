@@ -14,7 +14,7 @@
 #include "program.h"
 #include "compiler_context.h"
 
-#include "gcm.h"
+#include <rsx/gcm_sys.h>
 #include "nv40.h"
 
 #define MSPACES 1
@@ -582,7 +582,7 @@ rsxgl_main_ucode_mspace()
 }
 
 //
-rsx_ptr_t rsx_ucode_address = 0;
+void * rsx_ucode_address = 0;
 uint32_t rsx_ucode_offset = 0;
 
 static inline uint32_t *

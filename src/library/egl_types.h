@@ -5,14 +5,14 @@
 #include <stdint.h>
 #include <EGL/egl.h>
 
-#include "gcm.h"
-
 #include "pipe/p_screen.h"
 #include "pipe/p_format.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+  typedef struct _gcmCtxData gcmContextData;
 
 struct rsxegl_memory_t {
   uint32_t location:1, offset:30, owner:1;

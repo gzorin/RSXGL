@@ -7,14 +7,7 @@
 #ifndef rsxgl_state_H
 #define rsxgl_state_H
 
-#include "gcm.h"
-#include "gl_constants.h"
-#include "gl_types.h"
-#include "rsxgl_context.h"
-
-#include <cstddef>
-#include <bitset>
-#include <boost/integer.hpp>
+#include <stdint.h>
 
 enum compare_funcs {
   RSXGL_NEVER = 0,

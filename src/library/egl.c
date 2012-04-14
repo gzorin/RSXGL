@@ -1,13 +1,3 @@
-#include <EGL/egl.h>
-#include "GL3/rsxgl.h"
-
-#include <stdlib.h>
-#include <malloc.h>
-#include <string.h>
-#include <assert.h>
-
-#include <sysutil/video.h>
-#include "gcm.h"
 #include "mem.h"
 #include "nv40.h"
 
@@ -17,6 +7,17 @@
 
 #include "util/u_format.h"
 #include "nouveau/nouveau_winsys.h"
+
+#include <stdlib.h>
+#include <malloc.h>
+#include <string.h>
+#include <assert.h>
+
+#include <EGL/egl.h>
+#include "GL3/rsxgl.h"
+
+#include <sysutil/video.h>
+#include <rsx/gcm_sys.h>
 
 //
 #if !defined(NDEBUG)
@@ -570,7 +571,7 @@ eglCreateWindowSurface(EGLDisplay _dpy,EGLConfig _config,EGLNativeWindowType win
     color_buffer_size = util_format_get_2d_size(config -> color_pformat,surface -> color_pitch,surface -> height),
     depth_buffer_size = util_format_get_2d_size(config -> depth_pformat,surface -> depth_pitch,surface -> height);
 
-  rsx_ptr_t buffers[] = {
+  void * buffers[] = {
     rsxgl_rsx_memalign(64,color_buffer_size),
     rsxgl_rsx_memalign(64,color_buffer_size),
     rsxgl_rsx_memalign(64,depth_buffer_size)

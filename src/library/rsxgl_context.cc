@@ -1,12 +1,17 @@
-#include "debug.h"
 #include "rsxgl_context.h"
+
+#include "debug.h"
 #include "framebuffer.h"
 #include "migrate.h"
 #include "nv40.h"
 #include "timestamp.h"
 #include "rsxgl_limits.h"
 #include "cxxutil.h"
+
+#include <GL3/gl3.h>
 #include "GL3/rsxgl.h"
+
+#include <rsx/gcm_sys.h>
 
 extern "C" {
 

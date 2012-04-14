@@ -15,7 +15,7 @@
 #include "GL3/gl3ext.h"
 #include "error.h"
 
-#include "gcm.h"
+#include <rsx/gcm_sys.h>
 #include "nv40.h"
 #include "gl_fifo.h"
 #include "cxxutil.h"
@@ -1090,10 +1090,10 @@ rsxgl_get_tex_level_offset_size(const texture_t::dimension_size_type _size[3],
 static inline void
 rsxgl_util_format_translate_dma(rsxgl_context_t * ctx,
 				enum pipe_format dst_format,
-				rsx_ptr_t dstbase, const memory_t & dstmem, unsigned dst_stride,
+				void * dstbase, const memory_t & dstmem, unsigned dst_stride,
 				unsigned dst_x, unsigned dst_y,
 				enum pipe_format src_format,
-				rsx_ptr_t srcbase, const memory_t & srcmem, unsigned src_stride,
+				void * srcbase, const memory_t & srcmem, unsigned src_stride,
 				unsigned src_x, unsigned src_y,
 				unsigned width, unsigned height)
 {
@@ -1124,8 +1124,8 @@ rsxgl_util_format_translate_dma(rsxgl_context_t * ctx,
 		       (unsigned int)src_format,(unsigned int)dst_format);
 
 #if 0
-    rsx_ptr_t dstaddress = (uint8_t *)dstbase + dstmem.offset;
-    rsx_ptr_t srcaddress = (uint8_t *)srcbase + srcmem.offset;
+    void * dstaddress = (uint8_t *)dstbase + dstmem.offset;
+    void * srcaddress = (uint8_t *)srcbase + srcmem.offset;
 
     rsxgl_assert(dstaddress != 0);
     rsxgl_assert(srcaddress != 0);
@@ -1288,7 +1288,7 @@ rsxgl_texture_level_validate_storage(texture_t::level_t & level)
 
   const size_t nbytes = util_format_get_2d_size(level.pformat,level.pitch,level.size[1]) * level.size[2];
 
-  rsx_ptr_t ptr = rsxgl_texture_migrate_memalign(16,nbytes);
+  void * ptr = rsxgl_texture_migrate_memalign(16,nbytes);
 
   level.memory.location = RSXGL_TEXTURE_MIGRATE_BUFFER_LOCATION;
   level.memory.offset = rsxgl_texture_migrate_offset(ptr);
