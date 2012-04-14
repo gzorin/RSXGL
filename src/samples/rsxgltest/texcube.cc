@@ -298,11 +298,19 @@ rsxgltest_init(int argc,const char ** argv)
   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
 
   //
+  GLuint face_buffer = 0;
+  glGenBuffers(1,&face_buffer);
+  glBindBuffer(GL_PIXEL_UNPACK_BUFFER,face_buffer);
+  glBufferData(GL_PIXEL_UNPACK_BUFFER,face_image.width * face_image.height * 4 * sizeof(GL_UNSIGNED_BYTE),face_image.data,GL_STATIC_DRAW);
+
   glActiveTexture(GL_TEXTURE1);
 
   glBindTexture(GL_TEXTURE_2D,textures[1]);
   glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,face_image.width,face_image.height,0,GL_RGBA,GL_UNSIGNED_BYTE,0);
-  glTexSubImage2D(GL_TEXTURE_2D,0,0,0,face_image.width,face_image.height,GL_RGBA,GL_UNSIGNED_BYTE,face_image.data);
+  //glTexSubImage2D(GL_TEXTURE_2D,0,0,0,face_image.width,face_image.height,GL_RGBA,GL_UNSIGNED_BYTE,face_image.data);
+  glTexSubImage2D(GL_TEXTURE_2D,0,0,0,face_image.width,face_image.height,GL_RGBA,GL_UNSIGNED_BYTE,0);
+
+  glBindBuffer(GL_PIXEL_UNPACK_BUFFER,0);
 
   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);

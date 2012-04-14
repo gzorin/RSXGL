@@ -658,7 +658,7 @@ glDeleteTextures (GLsizei n, const GLuint *textures)
     if(texture_t::storage().is_object(texture_name)) {
       ctx -> texture_binding.unbind_from_all(texture_name);
 
-      // TODO - orphan it, instead of doing this:
+      // TODO: orphan it, instead of doing this:
       texture_t & texture = texture_t::storage().at(texture_name);
       if(texture.timestamp > 0) {
 	rsxgl_timestamp_wait(ctx,texture.timestamp);
@@ -1443,7 +1443,7 @@ rsxgl_tex_storage(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,c
   }
 
 #if 0
-  // TODO - Orphan the texture
+  // TODO: Orphan the texture
   if(texture.timestamp != 0 && (!rsxgl_timestamp_passed(ctx -> cached_timestamp,ctx -> timestamp_sync,texture.timestamp))) {
   }
 #else
@@ -1543,7 +1543,7 @@ rsxgl_tex_image_format(rsxgl_context_t * ctx,texture_t & texture,const uint8_t d
   }
 
 #if 0
-  // TODO - Orphan the texture
+  // TODO: Orphan the texture
   if(texture.timestamp != 0 && (!rsxgl_timestamp_passed(ctx -> cached_timestamp,ctx -> timestamp_sync,texture.timestamp))) {
     texture.timestamp = 0;
   }
@@ -1590,7 +1590,7 @@ rsxgl_tex_subimage_init(rsxgl_context_t * ctx,texture_t & texture,GLint _level,G
     RSXGL_ERROR(GL_INVALID_VALUE,false);
   }
 
-  // TODO - Asynchronous updating:
+  // TODO: Asynchronous updating:
   if(texture.timestamp > 0) {
     rsxgl_timestamp_wait(ctx,texture.timestamp);
     texture.timestamp = 0;
@@ -2150,7 +2150,7 @@ rsxgl_textures_validate(rsxgl_context_t * ctx,program_t & program,const uint32_t
   gcmContextData * context = ctx -> base.gcm_context;
 
   // Invalidate the texture cache.
-  // TODO - determine when this is necessary to do, and only do it then.
+  // TODO: determine when this is necessary to do, and only do it then.
   {
     uint32_t * buffer = gcm_reserve(context,4);
 
@@ -2199,7 +2199,7 @@ rsxgl_textures_validate(rsxgl_context_t * ctx,program_t & program,const uint32_t
     if(invalid_it.test() || invalid_samplers.test(api_index)) {
       validated.set(api_index);
 
-      // TODO - Set LOD min, max, bias:
+      // TODO: Set LOD min, max, bias:
     }
     if(invalid_it.test() || invalid_textures.test(api_index)) {
       texture_t & texture = ctx -> texture_binding[api_index];
@@ -2292,7 +2292,7 @@ rsxgl_textures_validate(rsxgl_context_t * ctx,program_t & program,const uint32_t
       gcm_emit_method(&buffer,NV30_3D_TEX_WRAP(index),1);
       gcm_emit(&buffer,wrap | compare);
 
-      // TODO - Set LOD min, max, bias:
+      // TODO: Set LOD min, max, bias:
       
       gcm_finish_commands(context,&buffer);
 
