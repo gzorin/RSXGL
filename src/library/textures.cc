@@ -1262,8 +1262,11 @@ rsxgl_util_format_translate_dma(rsxgl_context_t * ctx,
 			  srcmem + (src_x * blocksize) + (src_y * src_stride),src_stride,1,
 			  linelength,height);
   }
-#if 0
   else {
+    rsxgl_debug_printf("%s: non-trivial transfer didn't happen src:%x dst:%x\n",__PRETTY_FUNCTION__,
+		       (unsigned int)src_format,(unsigned int)dst_format);
+
+#if 0
     rsx_ptr_t dstaddress = (uint8_t *)dstbase + dstmem.offset;
     rsx_ptr_t srcaddress = (uint8_t *)srcbase + srcmem.offset;
 
@@ -1273,8 +1276,8 @@ rsxgl_util_format_translate_dma(rsxgl_context_t * ctx,
     util_format_translate(dst_format,dstaddress,dst_stride,dst_x,dst_y,
 			  src_format,srcaddress,src_stride,src_x,src_y,
 			  width,height);
-  }
 #endif
+  }
 }
 
 void
@@ -1772,44 +1775,29 @@ rsxgl_copy_tex_image(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dim
     framebuffer_t & framebuffer = ctx -> framebuffer_binding[RSXGL_READ_FRAMEBUFFER];
     rsxgl_framebuffer_validate(ctx,framebuffer,timestamp);
 
-    texture_t::level_t & level = texture.levels[_level];
-
-    if(!level.memory) {
-      rsxgl_texture_level_validate_storage(level);
-    }
-    rsxgl_assert(level.memory);
-
-    rsxgl_timestamp_post(ctx,timestamp);
-
-#if 0
-    const pipe_format psrcformat = rsxgl_choose_source_format(format,type);
-
-    if(psrcformat == PIPE_FORMAT_NONE) {
-      RSXGL_ERROR_(GL_INVALID_VALUE);
-    }
-
-    if(ctx -> buffer_binding.names[RSXGL_PIXEL_UNPACK_BUFFER] != 0 ||
-       data != 0) {
+    if(framebuffer.color_pformat != PIPE_FORMAT_NONE && framebuffer.read_surface.memory) {
       texture_t::level_t & level = texture.levels[_level];
-
       if(!level.memory) {
 	rsxgl_texture_level_validate_storage(level);
       }
-
       rsxgl_assert(level.memory);
 
-      if(ctx -> buffer_binding.names[RSXGL_PIXEL_UNPACK_BUFFER] != 0) {
-	rsxgl_util_format_translate_dma(ctx,
-					level.pformat,0,level.memory,level.pitch,0,0,
-					psrcformat,0,ctx -> buffer_binding[RSXGL_PIXEL_UNPACK_BUFFER].memory + rsxgl_pointer_to_offset(data),util_format_get_stride(psrcformat,width),0,0,
-					width,height);
-      }
-      else if(data != 0) {
-	util_format_translate(level.pformat,rsxgl_texture_migrate_address(level.memory.offset),level.pitch,0,0,
-			      psrcformat,data,util_format_get_stride(psrcformat,width),0,0,width,height);
-      }
+      rsxgl_util_format_translate_dma(ctx,
+				      level.pformat,
+				      0,level.memory,level.pitch,0,0,
+				      framebuffer.color_pformat,
+				      0,framebuffer.read_surface.memory,framebuffer.read_surface.pitch,
+				      std::min((unsigned)x,(unsigned)framebuffer.size[0] - 1),std::min((unsigned)y,(unsigned)framebuffer.size[1] - 1),
+				      std::min((unsigned)width,(unsigned)framebuffer.size[0] - x),std::min((unsigned)height,(unsigned)framebuffer.size[1] - y));
     }
-#endif
+    else {
+      rsxgl_debug_printf("%s: didn't invoke transfer\n",__PRETTY_FUNCTION__);
+    }
+
+    rsxgl_timestamp_post(ctx,timestamp);
+  }
+  else {
+    rsxgl_debug_printf("%s: format failed\n",__PRETTY_FUNCTION__);
   }
 }
 
@@ -1984,7 +1972,7 @@ glCopyTexImage2D (GLenum target, GLint level, GLenum internalformat, GLint x, GL
   rsxgl_context_t * ctx = current_ctx();
   texture_t & texture = ctx -> texture_binding[ctx -> active_texture];
 
-  //rsxgl_tex_subimage(ctx,texture,level,xoffset,0,0,width,1,1,format,type,pixels);
+  rsxgl_copy_tex_image(ctx,texture,2,false,false,level,internalformat,x,y,width,height);
 }
 
 GLAPI void APIENTRY
@@ -2132,6 +2120,7 @@ rsxgl_texture_validate(rsxgl_context_t * ctx,texture_t & texture,const uint32_t 
 	  texture_t::level_t * plevel = texture.levels;
 	  for(texture_t::level_size_type i = 0,n = texture.num_levels;i < n;++i,++plevel) {
 	    if(plevel -> memory) {
+#if 0
 	      rsxgl_debug_printf("\tcopying mipmap level:%u pformat:%u pitch:%u size:%ux%ux%u from:%u pdstformat:%u dstpitch:%u to:%u\n",
 				 (unsigned int)i,(unsigned int)plevel -> pformat,(unsigned int)plevel -> pitch,
 				 (unsigned int)std::min(size[0],plevel -> size[0]),(unsigned int)std::min(size[1],plevel -> size[1]),(unsigned int)std::min(size[2],plevel -> size[2]),
@@ -2139,6 +2128,7 @@ rsxgl_texture_validate(rsxgl_context_t * ctx,texture_t & texture,const uint32_t 
 				 
 				 (unsigned int)pdstformat,(unsigned int)dstpitch,
 				 (unsigned long)texture.memory.offset);
+#endif
 	      
 #if 0
 	      rsxgl_texture_blit(ctx,
