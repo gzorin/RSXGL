@@ -1957,7 +1957,7 @@ glCopyTexSubImage1D (GLenum target, GLint level, GLint xoffset, GLint x, GLint y
   rsxgl_context_t * ctx = current_ctx();
   texture_t & texture = ctx -> texture_binding[ctx -> active_texture];
 
-  //rsxgl_tex_subimage(ctx,texture,level,xoffset,0,0,width,1,1,format,type,pixels);
+  rsxgl_copy_tex_subimage(ctx,texture,level,xoffset,0,0,x,y,width,1);
 }
 
 GLAPI void APIENTRY
@@ -1983,7 +1983,7 @@ glCopyTexSubImage3D (GLenum target, GLint level, GLint xoffset, GLint yoffset, G
   rsxgl_context_t * ctx = current_ctx();
   texture_t & texture = ctx -> texture_binding[ctx -> active_texture];
 
-  //rsxgl_tex_subimage(ctx,texture,level,xoffset,0,0,width,1,1,format,type,pixels);
+  rsxgl_copy_tex_subimage(ctx,texture,level,xoffset,yoffset,zoffset,x,y,width,height);
 }
 
 GLAPI void APIENTRY
