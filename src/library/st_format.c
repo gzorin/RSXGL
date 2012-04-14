@@ -1701,3 +1701,113 @@ rsxgl_get_format_depth_bit_depth(enum pipe_format pformat,int _channel)
   }
   return 0;
 }
+
+enum pipe_format
+rsxgl_choose_source_format(const GLenum format,const GLenum type)
+{
+  if(format == GL_RED) {
+    if(type == GL_UNSIGNED_BYTE) {
+      return PIPE_FORMAT_R8_UNORM;
+    }
+    else if(type == GL_BYTE) {
+      return PIPE_FORMAT_R8_SNORM;
+    }
+    else if(type == GL_UNSIGNED_SHORT) {
+      return PIPE_FORMAT_R16_UNORM;
+    }
+    else if(type == GL_SHORT) {
+      return PIPE_FORMAT_R16_SNORM;
+    }
+    else if(type == GL_UNSIGNED_INT) {
+      return PIPE_FORMAT_R32_UNORM;
+    }
+    else if(type == GL_INT) {
+      return PIPE_FORMAT_R32_SNORM;
+    }
+    else if(type == GL_FLOAT) {
+      return PIPE_FORMAT_R32_FLOAT;
+    }
+  }
+  else if(format == GL_RG) {
+    if(type == GL_UNSIGNED_BYTE) {
+      return PIPE_FORMAT_R8G8_UNORM;
+    }
+    else if(type == GL_BYTE) {
+      return PIPE_FORMAT_R8G8_SNORM;
+    }
+    else if(type == GL_UNSIGNED_SHORT) {
+      return PIPE_FORMAT_R16G16_UNORM;
+    }
+    else if(type == GL_SHORT) {
+      return PIPE_FORMAT_R16G16_SNORM;
+    }
+    else if(type == GL_UNSIGNED_INT) {
+      return PIPE_FORMAT_R32G32_UNORM;
+    }
+    else if(type == GL_INT) {
+      return PIPE_FORMAT_R32G32_SNORM;
+    }
+    else if(type == GL_FLOAT) {
+      return PIPE_FORMAT_R32G32_FLOAT;
+    }
+  }
+  else if(format == GL_RGB) {
+    if(type == GL_UNSIGNED_BYTE) {
+      return PIPE_FORMAT_R8G8B8_UNORM;
+    }
+    else if(type == GL_BYTE) {
+      return PIPE_FORMAT_R8G8B8_SNORM;
+    }
+    else if(type == GL_UNSIGNED_SHORT) {
+      return PIPE_FORMAT_R16G16B16_UNORM;
+    }
+    else if(type == GL_SHORT) {
+      return PIPE_FORMAT_R16G16B16_SNORM;
+    }
+    else if(type == GL_UNSIGNED_INT) {
+      return PIPE_FORMAT_R32G32B32_UNORM;
+    }
+    else if(type == GL_INT) {
+      return PIPE_FORMAT_R32G32B32_SNORM;
+    }
+    else if(type == GL_FLOAT) {
+      return PIPE_FORMAT_R32G32B32_FLOAT;
+    }
+  }
+  else if(format == GL_BGR) {
+    if(type == GL_UNSIGNED_BYTE) {
+      return PIPE_FORMAT_X8R8G8B8_UNORM;
+    }
+    
+  }
+  else if(format == GL_RGBA) {
+    if(type == GL_UNSIGNED_BYTE) {
+      return PIPE_FORMAT_R8G8B8A8_UNORM;
+    }
+    else if(type == GL_BYTE) {
+      return PIPE_FORMAT_R8G8B8A8_SNORM;
+    }
+    else if(type == GL_UNSIGNED_SHORT) {
+      return PIPE_FORMAT_R16G16B16A16_UNORM;
+    }
+    else if(type == GL_SHORT) {
+      return PIPE_FORMAT_R16G16B16A16_SNORM;
+    }
+    else if(type == GL_UNSIGNED_INT) {
+      return PIPE_FORMAT_R32G32B32A32_UNORM;
+    }
+    else if(type == GL_INT) {
+      return PIPE_FORMAT_R32G32B32A32_SNORM;
+    }
+    else if(type == GL_FLOAT) {
+      return PIPE_FORMAT_R32G32B32A32_FLOAT;
+    }
+  }
+  else if(format == GL_BGRA) {
+    if(type == GL_UNSIGNED_BYTE) {
+      return PIPE_FORMAT_A8R8G8B8_UNORM;
+    }
+  }
+
+  return PIPE_FORMAT_NONE;
+}

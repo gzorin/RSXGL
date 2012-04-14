@@ -26,6 +26,10 @@ extern "C" {
 		      GLenum format, GLenum type,
 		      enum pipe_texture_target target, unsigned sample_count,
 		      unsigned bindings);
+
+  enum pipe_format
+  rsxgl_choose_source_format(const GLenum format,const GLenum type);
+
   int
   rsxgl_get_format_color_bit_depth(enum pipe_format pformat,int channel);
   
@@ -1288,6 +1292,51 @@ glCheckFramebufferStatus (GLenum target)
   }
   else {
     RSXGL_NOERROR(GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER);
+  }
+}
+
+GLAPI void APIENTRY
+glReadPixels (GLint x, GLint y, GLsizei width, GLsizei height, GLenum format, GLenum type, GLvoid *pixels)
+{
+  if(width < 0 || height < 0) {
+    RSXGL_ERROR_(GL_INVALID_VALUE);
+  }
+
+  if((type == GL_UNSIGNED_BYTE_3_3_2 || type == GL_UNSIGNED_BYTE_2_3_3_REV || type == GL_UNSIGNED_SHORT_5_6_5 || type == GL_UNSIGNED_SHORT_5_6_5_REV) && (format != GL_RGB)) {
+    RSXGL_ERROR_(GL_INVALID_OPERATION);
+  }
+
+  if((type == GL_UNSIGNED_SHORT_4_4_4_4 || type == GL_UNSIGNED_SHORT_4_4_4_4_REV || type == GL_UNSIGNED_SHORT_5_5_5_1 || type == GL_UNSIGNED_SHORT_1_5_5_5_REV || type == GL_UNSIGNED_INT_8_8_8_8 || type == GL_UNSIGNED_INT_8_8_8_8_REV || type == GL_UNSIGNED_INT_10_10_10_2 || type == GL_UNSIGNED_INT_2_10_10_10_REV) && (format != GL_RGBA || format != GL_BGRA)) {
+    RSXGL_ERROR_(GL_INVALID_OPERATION);
+  }
+
+  const pipe_format pdstformat = rsxgl_choose_source_format(format,type);
+
+  if(pdstformat == PIPE_FORMAT_NONE) {
+    RSXGL_ERROR_(GL_INVALID_ENUM);
+  }
+
+  rsxgl_context_t * ctx = current_ctx();
+
+  framebuffer_t & framebuffer = ctx -> framebuffer_binding[RSXGL_READ_FRAMEBUFFER];
+
+  x = std::min(std::max(x,0),(GLint)framebuffer.size[0] - 1);
+  y = std::min(std::max(y,0),(GLint)framebuffer.size[1] - 1);
+  width = std::min(width,(GLsizei)framebuffer.size[0]);
+  height = std::min(height,(GLsizei)framebuffer.size[1]);
+
+  if((format == GL_STENCIL_INDEX || format == GL_DEPTH_COMPONENT || format == GL_DEPTH_STENCIL) && (framebuffer.attachment_types.get(RSXGL_DEPTH_STENCIL_ATTACHMENT) == RSXGL_ATTACHMENT_TYPE_NONE)) {
+    RSXGL_ERROR_(GL_INVALID_OPERATION);
+  }
+
+  if(ctx -> buffer_binding.is_anything_bound(RSXGL_PIXEL_PACK_BUFFER)) {
+    buffer_t & buffer = ctx -> buffer_binding[RSXGL_PIXEL_PACK_BUFFER];
+
+    if(buffer.mapped) {
+      RSXGL_ERROR_(GL_INVALID_OPERATION);
+    }
+  }
+  else {
   }
 }
 
