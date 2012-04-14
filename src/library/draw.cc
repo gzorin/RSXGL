@@ -29,7 +29,6 @@
 
 #include <string.h>
 #include <boost/integer/static_log2.hpp>
-#include <boost/tuple/tuple.hpp>
 
 #if defined(GLAPI)
 #undef GLAPI
