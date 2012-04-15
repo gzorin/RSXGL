@@ -336,17 +336,17 @@ nvfx_get_framebuffer_format(enum pipe_format cformat,enum pipe_format zformat)
   if(cformat != PIPE_FORMAT_NONE) {
     switch (cformat) {
     case PIPE_FORMAT_B8G8R8X8_UNORM:
-      format |= NV30_3D_RT_FORMAT_COLOR_X8R8G8B8;
+      format |= NV30_3D_RT_FORMAT_COLOR_X8B8G8R8;
       break;
     case PIPE_FORMAT_B8G8R8A8_UNORM:
     case 0:
-      format |= NV30_3D_RT_FORMAT_COLOR_A8R8G8B8;
+      format |= NV30_3D_RT_FORMAT_COLOR_A8B8G8R8;
       break;
     case PIPE_FORMAT_R8G8B8X8_UNORM:
-      format |= NV30_3D_RT_FORMAT_COLOR_X8B8G8R8;
+      format |= NV30_3D_RT_FORMAT_COLOR_X8R8G8B8;
       break;
     case PIPE_FORMAT_R8G8B8A8_UNORM:
-      format |= NV30_3D_RT_FORMAT_COLOR_A8B8G8R8;
+      format |= NV30_3D_RT_FORMAT_COLOR_A8R8G8B8;
       break;
     case PIPE_FORMAT_B5G6R5_UNORM:
       format |= NV30_3D_RT_FORMAT_COLOR_R5G6B5;

@@ -329,10 +329,16 @@ extern "C"
 int
 rsxgltest_draw()
 {
+#if 0
   float rgb[3] = {
     compute_sine_wave(rgb_waves,rsxgltest_elapsed_time),
     compute_sine_wave(rgb_waves + 1,rsxgltest_elapsed_time),
     compute_sine_wave(rgb_waves + 2,rsxgltest_elapsed_time)
+  };
+#endif
+
+  float rgb[3] = {
+    1,0,0
   };
 
   glClearColor(rgb[0],rgb[1],rgb[2],1.0);
