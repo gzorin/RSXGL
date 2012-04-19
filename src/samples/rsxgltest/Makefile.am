@@ -65,8 +65,8 @@ occlusion2_sources = occlusion2.cc occlusion.vert occlusion.frag
 copyteximage_objects = nagel_bin.o
 copyteximage_sources = copyteximage.cc texture.c fbo_inner.vert fbo_inner.frag nagel.bin
 
-objects = $(texcube_objects)
-sources = $(texcube_sources)
+objects = $(fbo_objects)
+sources = $(fbo_sources)
 
 rsxgltest_elf_DEPENDENCIES = $(top_builddir)/src/library/libEGL.a $(top_builddir)/src/library/libGL.a	\
 	$(objects)

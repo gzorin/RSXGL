@@ -362,8 +362,8 @@ rsxgltest_init(int argc,const char ** argv)
   glGenRenderbuffers(2,rbo);
   report_glerror("glGenRenderbuffers");
 
-  //glBindRenderbuffer(GL_RENDERBUFFER,rbo[0]);
-  //glRenderbufferStorage(GL_RENDERBUFFER,GL_RGBA,image.width,image.height);
+  glBindRenderbuffer(GL_RENDERBUFFER,rbo[0]);
+  glRenderbufferStorage(GL_RENDERBUFFER,GL_RGBA,image.width,image.height);
 
   glBindRenderbuffer(GL_RENDERBUFFER,rbo[1]);
   glRenderbufferStorage(GL_RENDERBUFFER,GL_DEPTH_COMPONENT,image.width,image.height);
@@ -374,9 +374,8 @@ rsxgltest_init(int argc,const char ** argv)
   glGenFramebuffers(1,&fbo);
 
   glBindFramebuffer(GL_FRAMEBUFFER,fbo);
-  //glFramebufferRenderbuffer(GL_FRAMEBUFFER,GL_COLOR_ATTACHMENT0,GL_RENDERBUFFER,rbo[0]);
-  //glFramebufferTexture(GL_FRAMEBUFFER,GL_COLOR_ATTACHMENT0,texture,0);
-  glFramebufferTexture2D(GL_FRAMEBUFFER,GL_COLOR_ATTACHMENT0,GL_TEXTURE_2D,textures[1],0);
+  glFramebufferRenderbuffer(GL_FRAMEBUFFER,GL_COLOR_ATTACHMENT0,GL_RENDERBUFFER,rbo[0]);
+  //glFramebufferTexture2D(GL_FRAMEBUFFER,GL_COLOR_ATTACHMENT0,GL_TEXTURE_2D,textures[1],0);
   glFramebufferRenderbuffer(GL_FRAMEBUFFER,GL_DEPTH_ATTACHMENT,GL_RENDERBUFFER,rbo[1]);
 
   glBindFramebuffer(GL_FRAMEBUFFER,0);
@@ -432,14 +431,15 @@ rsxgltest_draw()
     glDrawElements(GL_TRIANGLES,36,GL_UNSIGNED_INT,0 /*client_indices*/);
   }
 
+  glBindTexture(GL_TEXTURE_2D,textures[1]);
+  glCopyTexSubImage2D(GL_TEXTURE_2D,0,0,0,0,0,image.width,image.height);
+
   //
   glBindFramebuffer(GL_FRAMEBUFFER,0);
   glViewport(0,0,rsxgltest_width,rsxgltest_height);
 
   glClearColor(rgb[0],rgb[1],rgb[2],1.0);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-  glBindTexture(GL_TEXTURE_2D,textures[1]);
 
   {
     glUniformMatrix4fv(ProjMatrix_location,1,GL_FALSE,ProjMatrix.data());
