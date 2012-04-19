@@ -20,4 +20,4 @@ m4/lt~obsolete.m4
 *.o
 src/cgcomp/nv40asm
 src/cgcomp/nv40c
-
+*~
