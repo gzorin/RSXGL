@@ -9,6 +9,8 @@
 
 #include <stdint.h>
 
+#include "pixel_store.h"
+
 enum compare_funcs {
   RSXGL_NEVER = 0,
   RSXGL_LESS = 1,
@@ -72,13 +74,6 @@ enum cull_face {
 enum face {
   RSXGL_FACE_CW = 0,
   RSXGL_FACE_CCW = 1
-};
-
-enum pixel_store_alignment {
-  RSXGL_PIXEL_STORE_ALIGNMENT_1 = 0,
-  RSXGL_PIXEL_STORE_ALIGNMENT_2 = 1,
-  RSXGL_PIXEL_STORE_ALIGNMENT_4 = 2,
-  RSXGL_PIXEL_STORE_ALIGNMENT_8 = 3
 };
 
 enum conditional_render_status {
@@ -157,10 +152,7 @@ struct state_t {
     float offsetFactor, offsetUnits;    
   } polygon;
 
-  struct {
-    uint8_t swap_bytes:1,lsb_first:1,alignment;
-    uint32_t row_length, image_height, skip_pixels, skip_rows, skip_images;
-  } pixelstore_pack, pixelstore_unpack;
+  pixel_store_t pixelstore_pack, pixelstore_unpack;
 
   float lineWidth;
   float pointSize;
