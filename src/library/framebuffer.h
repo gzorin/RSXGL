@@ -137,6 +137,7 @@ struct framebuffer_t {
   uint16_t color_mask_mrt, depth_mask;
   framebuffer_dimension_size_type size[2];
   surface_t draw_surfaces[RSXGL_MAX_FRAMEBUFFER_SURFACES], read_surface;
+  void * read_address;
 
   framebuffer_t();
   ~framebuffer_t();

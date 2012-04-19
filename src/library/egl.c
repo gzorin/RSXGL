@@ -586,6 +586,10 @@ eglCreateWindowSurface(EGLDisplay _dpy,EGLConfig _config,EGLNativeWindowType win
   if(buffers[2] == 0) {
     RSXEGL_ERROR(EGL_BAD_ALLOC,EGL_NO_SURFACE);
   }
+
+  surface -> color_address[0] = buffers[0];
+  surface -> color_address[1] = buffers[1];
+  surface -> depth_address = buffers[2];
   
   uint32_t offsets[] = { 0,0,0 };
   

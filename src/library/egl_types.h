@@ -50,6 +50,7 @@ struct rsxegl_surface_t {
   uint32_t color_pixel_size, depth_pixel_size;
 
   // Address in RSX memory of the color and depth buffers:
+  void * color_address[2], * depth_address;
   struct rsxegl_memory_t color_buffer[2], depth_buffer;
 };
 

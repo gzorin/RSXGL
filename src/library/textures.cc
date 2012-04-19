@@ -1090,10 +1090,10 @@ rsxgl_get_tex_level_offset_size(const texture_t::dimension_size_type _size[3],
 static inline void
 rsxgl_util_format_translate_dma(rsxgl_context_t * ctx,
 				enum pipe_format dst_format,
-				void * dstbase, const memory_t & dstmem, unsigned dst_stride,
+				void * dstaddress, const memory_t & dstmem, unsigned dst_stride,
 				unsigned dst_x, unsigned dst_y,
 				enum pipe_format src_format,
-				void * srcbase, const memory_t & srcmem, unsigned src_stride,
+				void * srcaddress, const memory_t & srcmem, unsigned src_stride,
 				unsigned src_x, unsigned src_y,
 				unsigned width, unsigned height)
 {
@@ -1123,17 +1123,12 @@ rsxgl_util_format_translate_dma(rsxgl_context_t * ctx,
     rsxgl_debug_printf("%s: non-trivial transfer didn't happen src:%x dst:%x\n",__PRETTY_FUNCTION__,
 		       (unsigned int)src_format,(unsigned int)dst_format);
 
-#if 0
-    void * dstaddress = (uint8_t *)dstbase + dstmem.offset;
-    void * srcaddress = (uint8_t *)srcbase + srcmem.offset;
-
     rsxgl_assert(dstaddress != 0);
     rsxgl_assert(srcaddress != 0);
 
     util_format_translate(dst_format,dstaddress,dst_stride,dst_x,dst_y,
 			  src_format,srcaddress,src_stride,src_x,src_y,
 			  width,height);
-#endif
   }
 }
 
@@ -1500,8 +1495,8 @@ rsxgl_tex_subimage_init(rsxgl_context_t * ctx,texture_t & texture,GLint _level,G
     *pdstformat = texture.pformat;
     *dstpitch = texture.pitch;
 
-    *dstmem = texture.memory + offset;
     *dstaddress = rsxgl_arena_address(memory_arena_t::storage().at(texture.arena),texture.memory + offset);
+    *dstmem = texture.memory + offset;
   }
   // texture hasn't been allocated, see if the texture level was specified:
   else if(texture.levels[_level].pformat != PIPE_FORMAT_NONE) {
@@ -1518,11 +1513,14 @@ rsxgl_tex_subimage_init(rsxgl_context_t * ctx,texture_t & texture,GLint _level,G
     *pdstformat = level.pformat;
     *dstpitch = level.pitch;
 
-    *dstmem = level.memory;
     *dstaddress = rsxgl_texture_migrate_address(level.memory.offset);
+    *dstmem = level.memory;
   }
   // rsxgl_tex_image for this level was never called. fail:
   else {
+    *dstaddress = 0;
+    *dstmem = memory_t();
+
     RSXGL_ERROR(GL_INVALID_OPERATION,false);
   }
 
@@ -1557,9 +1555,14 @@ rsxgl_tex_image(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,con
       rsxgl_assert(level.memory);
 
       if(ctx -> buffer_binding.names[RSXGL_PIXEL_UNPACK_BUFFER] != 0) {
+	const buffer_t & srcbuffer = ctx -> buffer_binding[RSXGL_PIXEL_UNPACK_BUFFER];
+	const memory_t & srcmem = srcbuffer.memory + rsxgl_pointer_to_offset(data);
+
 	rsxgl_util_format_translate_dma(ctx,
-					level.pformat,0,level.memory,level.pitch,0,0,
-					psrcformat,0,ctx -> buffer_binding[RSXGL_PIXEL_UNPACK_BUFFER].memory + rsxgl_pointer_to_offset(data),util_format_get_stride(psrcformat,width),0,0,
+					level.pformat,
+					rsxgl_texture_migrate_address(level.memory.offset),level.memory,level.pitch,0,0,
+					psrcformat,
+					rsxgl_arena_address(memory_arena_t::storage().at(srcbuffer.arena),srcmem),srcmem,util_format_get_stride(psrcformat,width),0,0,
 					width,height);
       }
       else if(data != 0) {
@@ -1588,13 +1591,23 @@ rsxgl_tex_subimage(rsxgl_context_t * ctx,texture_t & texture,GLint _level,GLint 
       RSXGL_ERROR_(GL_INVALID_ENUM);
     }
 
-    if(ctx -> buffer_binding.names[RSXGL_PIXEL_UNPACK_BUFFER] != 0 && dstmem) {
+    rsxgl_assert(dstaddress != 0);
+    rsxgl_assert(dstmem);
+
+    if(ctx -> buffer_binding.names[RSXGL_PIXEL_UNPACK_BUFFER] != 0) {
+      const buffer_t & srcbuffer = ctx -> buffer_binding[RSXGL_PIXEL_UNPACK_BUFFER];
+      const memory_t & srcmem = srcbuffer.memory + rsxgl_pointer_to_offset(data);
+
       rsxgl_util_format_translate_dma(ctx,
-				      pdstformat,0,dstmem,dstpitch,x,y,
-				      psrcformat,0,ctx -> buffer_binding[RSXGL_PIXEL_UNPACK_BUFFER].memory + rsxgl_pointer_to_offset(data),util_format_get_stride(psrcformat,width),0,0,
+				      pdstformat,
+				      dstaddress,dstmem,dstpitch,x,y,
+				      psrcformat,
+				      rsxgl_arena_address(memory_arena_t::storage().at(srcbuffer.arena),srcmem),srcmem,util_format_get_stride(psrcformat,width),0,0,
 				      width,height);
     }
-    else if(data && dstaddress) {
+    else if(data) {
+      rsxgl_assert(dstaddress != 0);
+
       util_format_translate(pdstformat,dstaddress,dstpitch,x,y,
 			    psrcformat,data,util_format_get_stride(psrcformat,width),0,0,width,height);
     }
@@ -1619,13 +1632,14 @@ rsxgl_copy_tex_image(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dim
       if(!level.memory) {
 	rsxgl_texture_level_validate_storage(level);
       }
+
       rsxgl_assert(level.memory);
 
       rsxgl_util_format_translate_dma(ctx,
 				      level.pformat,
-				      0,level.memory,level.pitch,0,0,
+				      rsxgl_texture_migrate_address(level.memory.offset),level.memory,level.pitch,0,0,
 				      framebuffer.color_pformat,
-				      0,framebuffer.read_surface.memory,framebuffer.read_surface.pitch,
+				      framebuffer.read_address,framebuffer.read_surface.memory,framebuffer.read_surface.pitch,
 				      std::min((unsigned)x,(unsigned)framebuffer.size[0] - 1),std::min((unsigned)y,(unsigned)framebuffer.size[1] - 1),
 				      std::min((unsigned)width,(unsigned)framebuffer.size[0] - x),std::min((unsigned)height,(unsigned)framebuffer.size[1] - y));
     }
@@ -1652,12 +1666,15 @@ rsxgl_copy_tex_subimage(rsxgl_context_t * ctx,texture_t & texture,GLint _level,G
     framebuffer_t & framebuffer = ctx -> framebuffer_binding[RSXGL_READ_FRAMEBUFFER];
     rsxgl_framebuffer_validate(ctx,framebuffer,timestamp);
 
-    if(framebuffer.color_pformat != PIPE_FORMAT_NONE && framebuffer.read_surface.memory && dstmem) {
+    if(framebuffer.color_pformat != PIPE_FORMAT_NONE && framebuffer.read_surface.memory) {
+      rsxgl_assert(dstaddress != 0);
+      rsxgl_assert(dstmem);
+
       rsxgl_util_format_translate_dma(ctx,
 				      pdstformat,
-				      0,dstmem,dstpitch,0,0,
+				      dstaddress,dstmem,dstpitch,0,0,
 				      framebuffer.color_pformat,
-				      0,framebuffer.read_surface.memory,framebuffer.read_surface.pitch,
+				      framebuffer.read_address,framebuffer.read_surface.memory,framebuffer.read_surface.pitch,
 				      std::min((unsigned)x,(unsigned)framebuffer.size[0] - 1),std::min((unsigned)y,(unsigned)framebuffer.size[1] - 1),
 				      std::min((unsigned)width,(unsigned)framebuffer.size[0] - x),std::min((unsigned)height,(unsigned)framebuffer.size[1] - y));
     }
@@ -2002,11 +2019,13 @@ rsxgl_texture_validate(rsxgl_context_t * ctx,texture_t & texture,const uint32_t 
 				 std::min(size[0],plevel -> size[0]),std::min(size[1],plevel -> size[1]));
 #endif
 
+	      const memory_t dstmem = texture.memory + dstoffset;
+
 	      rsxgl_util_format_translate_dma(ctx,
 					      pdstformat,
-					      memory_arena_t::storage().at(texture.arena).address,texture.memory + dstoffset,dstpitch,0,0,
+					      rsxgl_arena_address(memory_arena_t::storage().at(texture.arena),dstmem),dstmem,dstpitch,0,0,
 					      plevel -> pformat,
-					      rsxgl_texture_migrate_base(),plevel -> memory,plevel -> pitch,0,0,
+					      rsxgl_texture_migrate_address(plevel -> memory.offset),plevel -> memory,plevel -> pitch,0,0,
 					      std::min(size[0],plevel -> size[0]),std::min(size[1],plevel -> size[1]));
 
 	      if(plevel -> memory.owner) {

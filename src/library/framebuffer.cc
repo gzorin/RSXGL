@@ -305,7 +305,8 @@ framebuffer_t::storage_type & framebuffer_t::storage()
 framebuffer_t::framebuffer_t()
   : is_default(0), invalid(0), invalid_complete(0), complete(0), color_pformat(PIPE_FORMAT_NONE), depth_pformat(PIPE_FORMAT_NONE),
     format(0), color_targets(0),
-    color_mask(0), color_mask_mrt(0), depth_mask(0)
+    color_mask(0), color_mask_mrt(0), depth_mask(0),
+    read_address(0)
 {
   for(size_t i = 0;i < RSXGL_MAX_ATTACHMENTS;++i) {
     attachment_types.set(i,RSXGL_ATTACHMENT_TYPE_NONE);
@@ -1363,6 +1364,7 @@ rsxgl_framebuffer_validate(rsxgl_context_t * ctx,framebuffer_t & framebuffer,con
       uint32_t color_mask = 0;
       uint16_t color_mask_mrt = 0, depth_mask = 0;
       surface_t draw_surfaces[RSXGL_MAX_FRAMEBUFFER_SURFACES], read_surface;
+      void * read_address = 0;
 
       if(framebuffer.is_default) {
 	const write_mask_t mask = framebuffer.write_masks[0];
@@ -1396,11 +1398,12 @@ rsxgl_framebuffer_validate(rsxgl_context_t * ctx,framebuffer_t & framebuffer,con
 	}
 
 	if(framebuffer.read_buffer_mapping != RSXGL_MAX_COLOR_ATTACHMENTS) {
-	  const uint32_t buffer = (framebuffer.read_buffer_mapping == 0) ? ctx -> base.draw -> buffer : !ctx -> base.draw -> buffer;
-	  read_surface.pitch = ctx -> base.draw -> color_pitch;
-	  read_surface.memory.location = ctx -> base.draw -> color_buffer[buffer].location;
-	  read_surface.memory.offset = ctx -> base.draw -> color_buffer[buffer].offset;
+	  const uint32_t buffer = (framebuffer.read_buffer_mapping == 0) ? ctx -> base.read -> buffer : !ctx -> base.read -> buffer;
+	  read_surface.pitch = ctx -> base.read -> color_pitch;
+	  read_surface.memory.location = ctx -> base.read -> color_buffer[buffer].location;
+	  read_surface.memory.offset = ctx -> base.read -> color_buffer[buffer].offset;
 	  read_surface.memory.owner = 0;
+	  read_address = ctx -> base.read -> color_address[buffer];
 	}
       }
       else {
@@ -1467,11 +1470,13 @@ rsxgl_framebuffer_validate(rsxgl_context_t * ctx,framebuffer_t & framebuffer,con
 	  if(type == RSXGL_ATTACHMENT_TYPE_RENDERBUFFER) {
 	    renderbuffer_t & renderbuffer = renderbuffer_t::storage().at(framebuffer.attachments[read_buffer_attachment]);
 	    read_surface = renderbuffer.surface;
+	    read_address = rsxgl_arena_address(memory_arena_t::storage().at(renderbuffer.arena),renderbuffer.surface.memory);
 	  }
 	  else if(type == RSXGL_ATTACHMENT_TYPE_TEXTURE) {
 	    texture_t & texture = texture_t::storage().at(framebuffer.attachments[read_buffer_attachment]);
 	    read_surface.pitch = texture.pitch;
 	    read_surface.memory = texture.memory;
+	    read_address = rsxgl_arena_address(memory_arena_t::storage().at(texture.arena),texture.memory);
 	  }
 	}
       }
@@ -1487,6 +1492,7 @@ rsxgl_framebuffer_validate(rsxgl_context_t * ctx,framebuffer_t & framebuffer,con
 	framebuffer.draw_surfaces[i] = draw_surfaces[i];
       }
       framebuffer.read_surface = read_surface;
+      framebuffer.read_address = read_address;
       
 #if 0
       //
