@@ -1093,7 +1093,7 @@ rsxgl_util_format_translate_dma(rsxgl_context_t * ctx,
 				void * dstaddress, const memory_t & dstmem, unsigned dst_stride,
 				unsigned dst_x, unsigned dst_y,
 				enum pipe_format src_format,
-				void * srcaddress, const memory_t & srcmem, unsigned src_stride,
+				const void * srcaddress, const memory_t & srcmem, unsigned src_stride,
 				unsigned src_x, unsigned src_y,
 				unsigned width, unsigned height)
 {
@@ -1544,6 +1544,11 @@ rsxgl_tex_image(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,con
       RSXGL_ERROR_(GL_INVALID_VALUE);
     }
 
+    const pixel_store_t unpack = ctx -> state.pixelstore_unpack;
+    const uint32_t srcpitch = util_format_get_stride(psrcformat,unpack.row_length ? unpack.row_length : width);
+    const uint32_t srcoffset = (srcpitch * unpack.skip_rows) + (util_format_get_stride(psrcformat,1) * unpack.skip_pixels);
+    data = (const uint8_t *)data + srcoffset;
+
     if(ctx -> buffer_binding.names[RSXGL_PIXEL_UNPACK_BUFFER] != 0 ||
        data != 0) {
       texture_t::level_t & level = texture.levels[_level];
@@ -1562,12 +1567,12 @@ rsxgl_tex_image(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,con
 					level.pformat,
 					rsxgl_texture_migrate_address(level.memory.offset),level.memory,level.pitch,0,0,
 					psrcformat,
-					rsxgl_arena_address(memory_arena_t::storage().at(srcbuffer.arena),srcmem),srcmem,util_format_get_stride(psrcformat,width),0,0,
+					rsxgl_arena_address(memory_arena_t::storage().at(srcbuffer.arena),srcmem),srcmem,srcpitch,0,0,
 					width,height);
       }
       else if(data != 0) {
 	util_format_translate(level.pformat,rsxgl_texture_migrate_address(level.memory.offset),level.pitch,0,0,
-			      psrcformat,data,util_format_get_stride(psrcformat,width),0,0,width,height);
+			      psrcformat,data,srcpitch,0,0,width,height);
       }
     }
   }
@@ -1593,6 +1598,11 @@ rsxgl_tex_subimage(rsxgl_context_t * ctx,texture_t & texture,GLint _level,GLint 
 
     rsxgl_assert(dstaddress != 0);
     rsxgl_assert(dstmem);
+    
+    const pixel_store_t unpack = ctx -> state.pixelstore_unpack;
+    const uint32_t srcpitch = util_format_get_stride(psrcformat,unpack.row_length ? unpack.row_length : width);
+    const uint32_t srcoffset = (srcpitch * unpack.skip_rows) + (util_format_get_stride(psrcformat,1) * unpack.skip_pixels);
+    data = (const uint8_t *)data + srcoffset;
 
     if(ctx -> buffer_binding.names[RSXGL_PIXEL_UNPACK_BUFFER] != 0) {
       const buffer_t & srcbuffer = ctx -> buffer_binding[RSXGL_PIXEL_UNPACK_BUFFER];
@@ -1602,14 +1612,14 @@ rsxgl_tex_subimage(rsxgl_context_t * ctx,texture_t & texture,GLint _level,GLint 
 				      pdstformat,
 				      dstaddress,dstmem,dstpitch,x,y,
 				      psrcformat,
-				      rsxgl_arena_address(memory_arena_t::storage().at(srcbuffer.arena),srcmem),srcmem,util_format_get_stride(psrcformat,width),0,0,
+				      rsxgl_arena_address(memory_arena_t::storage().at(srcbuffer.arena),srcmem),srcmem,srcpitch,0,0,
 				      width,height);
     }
     else if(data) {
       rsxgl_assert(dstaddress != 0);
 
       util_format_translate(pdstformat,dstaddress,dstpitch,x,y,
-			    psrcformat,data,util_format_get_stride(psrcformat,width),0,0,width,height);
+			    psrcformat,data,srcpitch,0,0,width,height);
     }
 
     RSXGL_NOERROR_();

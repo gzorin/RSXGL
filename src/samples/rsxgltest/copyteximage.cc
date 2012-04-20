@@ -417,8 +417,8 @@ rsxgltest_draw()
   }
 
   glBindTexture(GL_TEXTURE_2D,textures[1]);
-    //glCopyTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,0,0,image.width,image.height,0);
-    glCopyTexSubImage2D(GL_TEXTURE_2D,0,0,0,0,0,image.width,image.height);
+  //glCopyTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,0,0,image.width,image.height,0);
+  glCopyTexSubImage2D(GL_TEXTURE_2D,0,0,0,0,0,image.width,image.height);
 
   //
   glViewport(0,0,rsxgltest_width,rsxgltest_height);
