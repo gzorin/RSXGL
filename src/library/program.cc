@@ -306,10 +306,14 @@ program_t::program_t()
   : deleted(0), timestamp(0),
     linked(0), validated(0), invalid_uniforms(0), ref_count(0),
     attrib_name_max_length(0), uniform_name_max_length(0),
-    mesa_program(0), nvfx_vp(0), nvfx_fp(0),
+    mesa_program(0), nvfx_vp(0), nvfx_fp(0), nvfx_streamvp(0), nvfx_streamfp(0),
     vp_ucode_offset(~0), fp_ucode_offset(~0), vp_num_insn(0), fp_num_insn(0), 
+    streamvp_ucode_offset(~0), streamfp_ucode_offset(~0), streamvp_num_insn(0), streamfp_num_insn(0), 
     vp_input_mask(0), vp_output_mask(0), vp_num_internal_const(0),
-    fp_control(0), instanceid_index(~0), point_sprite_control(0),
+    fp_control(0),
+    streamvp_input_mask(0), streamvp_output_mask(0), streamvp_num_internal_const(0),
+    streamfp_control(0), 
+    instanceid_index(~0), point_sprite_control(0),
     uniform_values(0), program_offsets(0)
 {
   attached_shaders().construct();
@@ -696,6 +700,14 @@ glLinkProgram (GLuint program_name)
     mspace_free(rsxgl_rsx_ucode_mspace(),rsxgl_rsx_ucode_address(program.fp_ucode_offset));
     program.fp_ucode_offset = ~0U;
   }
+  if(program.streamvp_ucode_offset != ~0U) {
+    mspace_free(rsxgl_main_ucode_mspace(),rsxgl_main_ucode_address(program.streamvp_ucode_offset));
+    program.streamvp_ucode_offset = ~0U;
+  }
+  if(program.streamfp_ucode_offset != ~0U) {
+    mspace_free(rsxgl_rsx_ucode_mspace(),rsxgl_rsx_ucode_address(program.streamfp_ucode_offset));
+    program.streamfp_ucode_offset = ~0U;
+  }
   program.names().destruct();
   program.attrib_table().destruct();
   program.uniform_table().destruct();
@@ -733,10 +745,14 @@ glLinkProgram (GLuint program_name)
   info += std::string(program.mesa_program -> InfoLog);
 
   if(program.mesa_program -> LinkStatus) {
-    program.nvfx_vp = cctx -> translate_vp(program.mesa_program);
+    pipe_stream_output_info stream_info;
+
+    program.nvfx_vp = cctx -> translate_vp(program.mesa_program,&stream_info);
     program.nvfx_fp = cctx -> translate_fp(program.mesa_program);
     rsxgl_assert(program.nvfx_vp != 0);
     rsxgl_assert(program.nvfx_fp != 0);
+
+    rsxgl_debug_printf("VP stream outputs: %u\n",stream_info.num_outputs);
 
     cctx -> link_vp_fp(program.nvfx_vp,program.nvfx_fp);
 
@@ -1493,6 +1509,36 @@ glGetFragDataLocation (GLuint program_name, const GLchar *name)
   // TODO: implement this
 
   RSXGL_NOERROR(-1);
+}
+
+GLAPI void APIENTRY
+glTransformFeedbackVaryings (GLuint program_name, GLsizei count, const GLchar* *varyings, GLenum bufferMode)
+{
+  if(!program_t::storage().is_object(program_name)) {
+    RSXGL_ERROR_(GL_INVALID_VALUE);
+  }
+
+  if(!(bufferMode == GL_INTERLEAVED_ATTRIBS || bufferMode == GL_SEPARATE_ATTRIBS)) {
+    RSXGL_ERROR_(GL_INVALID_VALUE);
+  }
+
+  program_t & program = program_t::storage().at(program_name);
+
+  compiler_context_t * cctx = current_ctx() -> compiler_context();
+  cctx -> transform_feedback_varyings(program.mesa_program,count,varyings,bufferMode);
+  
+  RSXGL_NOERROR_();
+}
+
+GLAPI void APIENTRY
+glGetTransformFeedbackVarying (GLuint program_name, GLuint index, GLsizei bufSize, GLsizei *length, GLsizei *size, GLenum *type, GLchar *name)
+{
+  // TODO: implement this
+  if(!program_t::storage().is_object(program_name)) {
+    RSXGL_ERROR_(GL_INVALID_VALUE);
+  }
+
+  RSXGL_NOERROR_();
 }
 
 void

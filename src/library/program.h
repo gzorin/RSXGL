@@ -245,8 +245,8 @@ struct program_t {
   sampler_uniform_table_type::const_type sampler_uniform_table() const { return sampler_uniform_table_type::const_type(sampler_uniform_table_values,sampler_uniform_table_size); }
 
   gl_shader_program * mesa_program;
-  nvfx_vertex_program * nvfx_vp;
-  nvfx_fragment_program * nvfx_fp;
+  nvfx_vertex_program * nvfx_vp, * nvfx_streamvp;
+  nvfx_fragment_program * nvfx_fp, * nvfx_streamfp;
 
   // --- hot:
   //
@@ -257,11 +257,13 @@ struct program_t {
   // to return the effective address of a program's microcode:
   typedef uint32_t ucode_offset_type;
 
-  ucode_offset_type vp_ucode_offset, fp_ucode_offset;
-  instruction_size_type vp_num_insn, fp_num_insn;
+  ucode_offset_type vp_ucode_offset, fp_ucode_offset, streamvp_ucode_offset, streamfp_ucode_offset;
+  instruction_size_type vp_num_insn, fp_num_insn, streamvp_num_insn, streamfp_num_insn;
 
   uint32_t vp_input_mask, vp_output_mask, vp_num_internal_const;
   uint32_t fp_control;
+  uint32_t streamvp_input_mask, streamvp_output_mask, streamvp_num_internal_const;
+  uint32_t streamfp_control;
   uint32_t instanceid_index, point_sprite_control;
   bit_set< RSXGL_MAX_TEXTURE_COORDS > fp_texcoords, fp_texcoord2D, fp_texcoord3D;
 

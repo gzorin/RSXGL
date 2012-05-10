@@ -23,8 +23,9 @@ char * strdup(const char *s1);
 #include "glsl/program.h"
 
 extern "C" {
-  struct nvfx_vertex_program * compiler_context__translate_vp(struct gl_context * mesa_ctx, struct gl_shader_program * program);
+  struct nvfx_vertex_program * compiler_context__translate_vp(struct gl_context * mesa_ctx, struct gl_shader_program * program,struct pipe_stream_output_info * stream_info);
   struct nvfx_fragment_program * compiler_context__translate_fp(struct gl_context * mesa_ctx,struct gl_shader_program * program);
+  void compiler_context__translate_stream_vp_fp(struct gl_context * mesa_ctx,struct gl_shader_program * program,struct pipe_stream_output_info * stream_info,struct nvfx_vertex_program ** vp,struct nvfx_fragment_program ** fp);
   void compiler_context__link_vp_fp(struct gl_context * mesa_ctx,struct nvfx_vertex_program * vp,struct nvfx_fragment_program * fp);
 }
 
@@ -125,6 +126,9 @@ compiler_context_t::compiler_context_t(pipe_context * pipe)
   mesa_ctx -> Const.FragmentProgram.MaxUniformComponents = RSXGL__VERTEX__MAX_PROGRAM_UNIFORM_COMPONENTS;
   
   mesa_ctx -> Const.MaxDrawBuffers = RSXGL_MAX_DRAW_BUFFERS;
+
+  mesa_ctx -> Const.MaxTransformFeedbackSeparateComponents = 16;
+  mesa_ctx -> Const.MaxTransformFeedbackInterleavedComponents = 0;
 
   mesa_ctx -> Driver.NewShader = new_shader;
   mesa_ctx -> Driver.NewProgram = new_program;
@@ -262,6 +266,32 @@ compiler_context_t::bind_frag_data_location(struct gl_shader_program * program,u
 }
 
 void
+compiler_context_t::transform_feedback_varyings(struct gl_shader_program * program,unsigned int count,const char ** names,unsigned int bufferMode)
+{
+  if(program -> TransformFeedback.VaryingNames != 0) {
+    for(unsigned int i = 0,n = program -> TransformFeedback.NumVarying;i < n;++i) {
+      if(program -> TransformFeedback.VaryingNames[i] != 0) {
+	free(program -> TransformFeedback.VaryingNames[i]);
+      }
+    }
+    free(program -> TransformFeedback.VaryingNames);
+    program -> TransformFeedback.NumVarying = 0;
+    program -> TransformFeedback.VaryingNames = 0;
+  }
+
+  if(count > 0 && names != 0) {
+    program -> TransformFeedback.NumVarying = count;
+    program -> TransformFeedback.BufferMode = bufferMode;
+    program -> TransformFeedback.VaryingNames = (char **)malloc(sizeof(char *) * count);
+    for(unsigned int i = 0;i < count;++i) {
+      if(names[i] != 0) {
+	program -> TransformFeedback.VaryingNames[i] = strdup(names[i]);
+      }
+    }
+  }
+}
+
+void
 compiler_context_t::link_program(struct gl_shader_program * program)
 {
   link_shaders(mesa_ctx,program);
@@ -277,9 +307,9 @@ compiler_context_t::destroy_program(struct gl_shader_program * program)
 }
 
 struct nvfx_vertex_program *
-compiler_context_t::translate_vp(struct gl_shader_program * program)
+compiler_context_t::translate_vp(struct gl_shader_program * program,struct pipe_stream_output_info * stream_info)
 {
-  return compiler_context__translate_vp(mesa_ctx,program);
+  return compiler_context__translate_vp(mesa_ctx,program,stream_info);
 }
 
 void
@@ -295,6 +325,13 @@ struct nvfx_fragment_program *
 compiler_context_t::translate_fp(struct gl_shader_program * program)
 {
   return compiler_context__translate_fp(mesa_ctx,program);
+}
+
+std::pair< struct nvfx_vertex_program *,struct nvfx_fragment_program * >
+compiler_context_t::translate_stream_vp_fp(struct gl_shader_program * program,struct pipe_stream_output_info * stream_info)
+{
+  std::pair< struct nvfx_vertex_program *,struct nvfx_fragment_program * > result;
+  compiler_context__translate_stream_vp_fp(mesa_ctx,program,stream_info,&result.first,&result.second);
 }
 
 void

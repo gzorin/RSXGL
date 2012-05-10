@@ -18,7 +18,7 @@ extern struct nvfx_fragment_program*
 nvfx_fragprog_translate(struct nvfx_context *nvfx,struct nvfx_pipe_fragment_program *pfp,boolean emulate_sprite_flipping);
 
 struct nvfx_vertex_program *
-compiler_context__translate_vp(struct gl_context * mesa_ctx, struct gl_shader_program * program)
+compiler_context__translate_vp(struct gl_context * mesa_ctx, struct gl_shader_program * program, struct pipe_stream_output_info * stream_info)
 {
   if(!program -> LinkStatus ||
      program->_LinkedShaders[MESA_SHADER_VERTEX] == 0 ||
@@ -68,7 +68,7 @@ compiler_context__translate_vp(struct gl_context * mesa_ctx, struct gl_shader_pr
 
   st_translate_stream_output_info(vp->glsl_to_tgsi,
 				  vp->result_to_output,
-				  &tgsi.stream_output);
+				  stream_info);
 
   struct tgsi_shader_info info;
   tgsi_scan_shader(tgsi.tokens,&info);
@@ -386,6 +386,185 @@ compiler_context__translate_fp(struct gl_context * mesa_ctx,struct gl_shader_pro
  end:
 
   return nvfx_fp;
+}
+
+void
+compiler_context__translate_stream_vp_fp(struct gl_context * mesa_ctx,struct gl_shader_program * program,struct pipe_stream_output_info * stream_info,struct nvfx_vertex_program ** pnvfx_vp,struct nvfx_fragment_program ** pnvfx_fp)
+{
+  *pnvfx_vp = 0;
+  *pnvfx_fp = 0;
+
+  if(!program -> LinkStatus ||
+     program->_LinkedShaders[MESA_SHADER_VERTEX] == 0 ||
+     program->_LinkedShaders[MESA_SHADER_VERTEX]->Program == 0) {
+    return;
+  }
+
+  struct nvfx_vertex_program * nvfx_vp = 0;
+  struct nvfx_fragment_program * nvfx_fp = 0;
+
+  //
+  // Create the stream vertex program:
+  struct st_vertex_program * vp = st_vertex_program((struct gl_vertex_program *)program->_LinkedShaders[MESA_SHADER_VERTEX]->Program);
+  st_prepare_vertex_program(mesa_ctx, vp);
+
+  struct ureg_program * streamvp_ureg = ureg_create(TGSI_PROCESSOR_VERTEX);
+  
+  if(streamvp_ureg == 0) {
+    return;
+  }
+
+  // Redirect whatever writes to TGSI_SEMANTIC_POSITION to a generic output instead:
+  unsigned int attr = 0;
+  for (attr = VERT_RESULT_VAR0; attr < VERT_RESULT_MAX; attr++) {
+    if ((vp->Base.Base.OutputsWritten & BITFIELD64_BIT(attr)) == 0) {
+      break;
+    }
+  }
+  
+  if(attr < VERT_RESULT_MAX) {
+    for(unsigned int i = 0,n = vp -> num_outputs;i < n;++i) {
+      if(vp -> output_semantic_name[i] == TGSI_SEMANTIC_POSITION) {
+	vp -> output_semantic_name[i] = TGSI_SEMANTIC_GENERIC;
+	vp -> output_semantic_index[i] = (FRAG_ATTRIB_VAR0 -
+					  FRAG_ATTRIB_TEX0 +
+					  attr -
+					  VERT_RESULT_VAR0);
+	break;
+      }
+    }
+  }
+  
+  // Add a VERT_ATTRIB:
+  unsigned int vertexid_index = ~0;
+  
+  for(attr = 0;attr < VERT_ATTRIB_MAX;++attr) {
+    if ((vp->Base.Base.InputsRead & BITFIELD64_BIT(attr)) != 0) {
+      vp->input_to_index[attr] = vp->num_inputs;
+      vp->index_to_input[vp->num_inputs] = attr;
+      vertexid_index = vp->num_inputs++;
+      break;
+    }
+  }
+  
+  if(attr < VERT_ATTRIB_MAX) {
+    struct ureg_src vertexid_input = ureg_DECL_vs_input(streamvp_ureg,vertexid_index);
+    struct ureg_dst vertexid_output = ureg_DECL_output(streamvp_ureg,TGSI_SEMANTIC_POSITION,0);
+    ureg_MOV(streamvp_ureg,vertexid_output,vertexid_input);
+  }
+  
+  enum pipe_error error = st_translate_program(mesa_ctx,
+					       TGSI_PROCESSOR_VERTEX,
+					       streamvp_ureg,
+					       vp->glsl_to_tgsi,
+					       &vp->Base.Base,
+					       /* inputs */
+					       vp->num_inputs,
+					       vp->input_to_index,
+					       NULL, /* input semantic name */
+					       NULL, /* input semantic index */
+					       NULL, /* interp mode */
+					       /* outputs */
+					       vp->num_outputs,
+					       vp->result_to_output,
+					       vp->output_semantic_name,
+					       vp->output_semantic_index,
+					       0 );
+
+  if(error) {
+    goto end;
+  }
+
+  struct pipe_shader_state tgsi;
+  tgsi.tokens = ureg_get_tokens(streamvp_ureg,NULL);
+
+  if(tgsi.tokens == 0) {
+    goto end;
+  }
+
+  struct tgsi_shader_info info;
+  tgsi_scan_shader(tgsi.tokens,&info);
+  nvfx_vp = nvfx_vertprog_translate((struct nvfx_context *)(st_context(mesa_ctx) -> pipe),&tgsi,&info);
+
+  /* If exec or data segments moved we need to patch the program to
+   * fixup offsets and register IDs.
+   */
+  const unsigned vp_exec_start = 0;
+
+#if 0
+  // TODO: do this
+  rsxgl_debug_printf("%u branch relocs\n",nvfx_vp->branch_relocs.size);
+
+  if (nvfx_vp->exec_start != vp_exec_start) {
+    rsxgl_debug_printf("vp_relocs %u -> %u\n", nvfx_vp->exec_start, vp_exec_start);
+    for(unsigned i = 0; i < nvfx_vp->branch_relocs.size; i += sizeof(struct nvfx_relocation))
+      {
+	struct nvfx_relocation* reloc = (struct nvfx_relocation*)((char*)nvfx_vp->branch_relocs.data + i);
+	uint32_t* hw = nvfx_vp->insns[reloc->location].data;
+	unsigned target = vp_exec_start + reloc->target;
+	
+	rsxgl_debug_printf("vp_reloc hw %u -> hw %u\n", reloc->location, target);
+	
+	  {
+	    hw[3] &=~ NV40_VP_INST_IADDRL_MASK;
+	    hw[3] |= (target & 7) << NV40_VP_INST_IADDRL_SHIFT;
+	    
+	    hw[2] &=~ NV40_VP_INST_IADDRH_MASK;
+	    hw[2] |= ((target >> 3) & 0x3f) << NV40_VP_INST_IADDRH_SHIFT;
+	  }
+      }
+    
+    nvfx_vp->exec_start = vp_exec_start;
+  }
+#endif
+
+#undef NVFX_VP
+#define NVFX_VP(c) (NV40_VP_##c)
+
+  for(unsigned i = 0; i < nvfx_vp->const_relocs.size; i += sizeof(struct nvfx_relocation))
+    {
+      struct nvfx_relocation* reloc = (struct nvfx_relocation*)((char*)nvfx_vp->const_relocs.data + i);
+      struct nvfx_vertex_program_exec *vpi = &nvfx_vp->insns[reloc->location];
+      
+      vpi->data[1] &= ~NVFX_VP(INST_CONST_SRC_MASK);
+      vpi->data[1] |=
+	(reloc->target) <<
+	NVFX_VP(INST_CONST_SRC_SHIFT);
+    }
+
+  //
+  // Create the stream fragment program:
+  struct ureg_program *streamfp_ureg;
+    
+  streamfp_ureg = ureg_create(TGSI_PROCESSOR_FRAGMENT);
+  
+  for(unsigned int i = 0;i < stream_info -> num_outputs;++i) {
+    const unsigned int slot = stream_info -> output[i].register_index;
+    
+    ureg_MOV(streamfp_ureg,
+	     ureg_DECL_output(streamfp_ureg,TGSI_SEMANTIC_COLOR,i),
+	     ureg_DECL_fs_input(streamfp_ureg,vp -> output_semantic_name[slot],vp -> output_semantic_index[slot],TGSI_INTERPOLATE_CONSTANT));
+  }
+
+  //
+  struct nvfx_pipe_fragment_program fp;
+  
+  fp.pipe.tokens = ureg_get_tokens(streamfp_ureg, NULL );
+  if(fp.pipe.tokens == 0) {
+    goto end;
+  }
+
+  tgsi_scan_shader(fp.pipe.tokens,&fp.info);
+  nvfx_fp = nvfx_fragprog_translate((struct nvfx_context *)(st_context(mesa_ctx) -> pipe),&fp,FALSE);
+  
+  //
+  *pnvfx_vp = nvfx_vp;
+  *pnvfx_fp = nvfx_fp;
+
+ end:
+
+  if(streamvp_ureg != 0) ureg_destroy(streamvp_ureg);
+  if(streamfp_ureg != 0) ureg_destroy(streamfp_ureg);
 }
 
 void
