@@ -752,8 +752,6 @@ glLinkProgram (GLuint program_name)
     rsxgl_assert(program.nvfx_vp != 0);
     rsxgl_assert(program.nvfx_fp != 0);
 
-    rsxgl_debug_printf("VP stream outputs: %u\n",stream_info.num_outputs);
-
     cctx -> link_vp_fp(program.nvfx_vp,program.nvfx_fp);
 
     // Move attached shaders to linked shaders:
@@ -763,75 +761,51 @@ glLinkProgram (GLuint program_name)
     // Start a new attached shaders array:
     program.attached_shaders().construct();
 
-#if 0
-    // Dump VP: microcode:
     {
-      rsxgl_debug_printf("VP microcode: %u instructions\n",program.nvfx_vp -> nr_insns);
-      for(unsigned int i = 0,n = program.nvfx_vp -> nr_insns;i < n;++i) {
-	rsxgl_debug_printf("%04u: %x %x %x %x\n",i,
-			   program.nvfx_vp -> insns[i].data[0],
-			   program.nvfx_vp -> insns[i].data[1],
-			   program.nvfx_vp -> insns[i].data[2],
-			   program.nvfx_vp -> insns[i].data[3]);
-      }
-    }
-
-    // Dump FP microcode:
-    {
-      rsxgl_debug_printf("FP microcode: %u instructions\n",program.nvfx_fp -> insn_len / 4);
-      for(unsigned int i = 0,n = program.nvfx_fp -> insn_len / 4;i < n;++i) {
-	rsxgl_debug_printf("%04u: %08x %08x %08x %08x\n",i,
-			   program.nvfx_fp -> insn[i*4],
-			   program.nvfx_fp -> insn[i*4+1],
-			   program.nvfx_fp -> insn[i*4+2],
-			   program.nvfx_fp -> insn[i*4+3]);
-      }
-    }
-#endif
-
-    //
-    // Migrate vertex program microcode to cache-aligned memory:
-    {
-      static const std::string kVPUcodeAllocFail("Failed to allocate space for vertex program microcode");
-
-      struct nvfx_vertex_program_exec * address = (struct nvfx_vertex_program_exec *)mspace_memalign(rsxgl_main_ucode_mspace(),RSXGL_CACHE_LINE_SIZE,program.nvfx_vp -> nr_insns * sizeof(struct nvfx_vertex_program_exec));
-      if(address == 0) {
-	info += kVPUcodeAllocFail;
-	//goto fail;
-      }
-      else {
-	program.vp_ucode_offset = rsxgl_vp_ucode_offset(address);
+      //
+      // Migrate vertex program microcode to cache-aligned memory:
+      {
+	static const std::string kVPUcodeAllocFail("Failed to allocate space for vertex program microcode");
 	
-	memcpy(address,program.nvfx_vp -> insns,program.nvfx_vp -> nr_insns * sizeof(struct nvfx_vertex_program_exec));
-
-	program.vp_num_insn = program.nvfx_vp -> nr_insns;
-	program.vp_input_mask = program.nvfx_vp -> ir;
-      }
-    }
-    
-    // Migrate fragment program microcode to RSX memory, performing endian swap along the way:
-    {
-      static const std::string kFPUcodeAllocFail("Failed to allocate space for fragment program microcode");
-      
-      uint32_t * address = (uint32_t *)mspace_memalign(rsxgl_rsx_ucode_mspace(),RSXGL_CACHE_LINE_SIZE,program.nvfx_fp -> insn_len * sizeof(uint32_t));
-      if(address == 0) {
-	info += kFPUcodeAllocFail;
-	//goto fail;
-      }
-      else {
-	program.fp_ucode_offset = rsxgl_rsx_ucode_offset(address);
-	
-	//memcpy(address,program.nvfx_fp -> insn,program.nvfx_fp -> insn_len * sizeof(uint32_t));
-	for(unsigned int i = 0,n = program.nvfx_fp -> insn_len;i < n;++i) {
-	  address[i] = endian_fp(program.nvfx_fp -> insn[i]);
+	struct nvfx_vertex_program_exec * address = (struct nvfx_vertex_program_exec *)mspace_memalign(rsxgl_main_ucode_mspace(),RSXGL_CACHE_LINE_SIZE,program.nvfx_vp -> nr_insns * sizeof(struct nvfx_vertex_program_exec));
+	if(address == 0) {
+	  info += kVPUcodeAllocFail;
+	  //goto fail;
 	}
-
-	program.fp_num_insn = program.nvfx_fp -> insn_len / 4;
-	program.fp_control = program.nvfx_fp -> fp_control;
+	else {
+	  program.vp_ucode_offset = rsxgl_vp_ucode_offset(address);
+	  
+	  memcpy(address,program.nvfx_vp -> insns,program.nvfx_vp -> nr_insns * sizeof(struct nvfx_vertex_program_exec));
+	  
+	  program.vp_num_insn = program.nvfx_vp -> nr_insns;
+	  program.vp_input_mask = program.nvfx_vp -> ir;
+	}
       }
-    }
+      
+      // Migrate fragment program microcode to RSX memory, performing endian swap along the way:
+      {
+	static const std::string kFPUcodeAllocFail("Failed to allocate space for fragment program microcode");
+	
+	uint32_t * address = (uint32_t *)mspace_memalign(rsxgl_rsx_ucode_mspace(),RSXGL_CACHE_LINE_SIZE,program.nvfx_fp -> insn_len * sizeof(uint32_t));
+	if(address == 0) {
+	  info += kFPUcodeAllocFail;
+	  //goto fail;
+	}
+	else {
+	  program.fp_ucode_offset = rsxgl_rsx_ucode_offset(address);
+	  
+	  //memcpy(address,program.nvfx_fp -> insn,program.nvfx_fp -> insn_len * sizeof(uint32_t));
+	  for(unsigned int i = 0,n = program.nvfx_fp -> insn_len;i < n;++i) {
+	    address[i] = endian_fp(program.nvfx_fp -> insn[i]);
+	  }
+	  
+	  program.fp_num_insn = program.nvfx_fp -> insn_len / 4;
+	  program.fp_control = program.nvfx_fp -> fp_control;
+	}
+      }
 
-    program.vp_output_mask = program.nvfx_vp -> outregs | program.nvfx_fp -> outregs;
+      program.vp_output_mask = program.nvfx_vp -> outregs | program.nvfx_fp -> outregs;
+    }
 
     // Things that get accumulated:
     // program_offsets - uint32_t's
@@ -1187,6 +1161,87 @@ glLinkProgram (GLuint program_name)
     // TODO: deal with these:
     program.instanceid_index = ~0;
     program.point_sprite_control = 0;
+
+    // Create stream programs if any varyings are captured.
+    // This seems to clobber the original vertex program's data such that the main rendering program's
+    // attribute assignments get messed up. This isn't good, but, for now, creating the stream programs
+    // takes place after RSXGL is otherwise finished creating the rendering programs.
+    rsxgl_debug_printf("VP stream outputs: %u\n",stream_info.num_outputs);
+    if(stream_info.num_outputs > 0) {
+      std::tie(program.nvfx_streamvp,program.nvfx_streamfp) = cctx -> translate_stream_vp_fp(program.mesa_program,&stream_info);
+      rsxgl_assert(program.nvfx_streamvp != 0);
+      rsxgl_assert(program.nvfx_streamfp != 0);
+      
+      cctx -> link_vp_fp(program.nvfx_streamvp,program.nvfx_streamfp);
+
+      // Dump VP: microcode:
+      {
+	rsxgl_debug_printf("VP microcode: %u instructions\n",program.nvfx_streamvp -> nr_insns);
+	for(unsigned int i = 0,n = program.nvfx_streamvp -> nr_insns;i < n;++i) {
+	  rsxgl_debug_printf("%04u: %x %x %x %x\n",i,
+			     program.nvfx_streamvp -> insns[i].data[0],
+			     program.nvfx_streamvp -> insns[i].data[1],
+			     program.nvfx_streamvp -> insns[i].data[2],
+			     program.nvfx_streamvp -> insns[i].data[3]);
+	}
+      }
+      
+      // Dump FP microcode:
+      {
+	rsxgl_debug_printf("FP microcode: %u instructions\n",program.nvfx_streamfp -> insn_len / 4);
+	for(unsigned int i = 0,n = program.nvfx_streamfp -> insn_len / 4;i < n;++i) {
+	  rsxgl_debug_printf("%04u: %08x %08x %08x %08x\n",i,
+			     program.nvfx_streamfp -> insn[i*4],
+			     program.nvfx_streamfp -> insn[i*4+1],
+			     program.nvfx_streamfp -> insn[i*4+2],
+			     program.nvfx_streamfp -> insn[i*4+3]);
+	}
+      }
+
+      //
+      // Migrate vertex program microcode to cache-aligned memory:
+      {
+	static const std::string kVPUcodeAllocFail("Failed to allocate space for stream vertex program microcode");
+	
+	struct nvfx_vertex_program_exec * address = (struct nvfx_vertex_program_exec *)mspace_memalign(rsxgl_main_ucode_mspace(),RSXGL_CACHE_LINE_SIZE,program.nvfx_streamvp -> nr_insns * sizeof(struct nvfx_vertex_program_exec));
+	if(address == 0) {
+	  info += kVPUcodeAllocFail;
+	  //goto fail;
+	}
+	else {
+	  program.streamvp_ucode_offset = rsxgl_vp_ucode_offset(address);
+	  
+	  memcpy(address,program.nvfx_streamvp -> insns,program.nvfx_streamvp -> nr_insns * sizeof(struct nvfx_vertex_program_exec));
+	  
+	  program.streamvp_num_insn = program.nvfx_streamvp -> nr_insns;
+	  program.streamvp_input_mask = program.nvfx_streamvp -> ir;
+	}
+      }
+      
+      // Migrate fragment program microcode to RSX memory, performing endian swap along the way:
+      {
+	static const std::string kFPUcodeAllocFail("Failed to allocate space for stream fragment program microcode");
+	
+	uint32_t * address = (uint32_t *)mspace_memalign(rsxgl_rsx_ucode_mspace(),RSXGL_CACHE_LINE_SIZE,program.nvfx_streamfp -> insn_len * sizeof(uint32_t));
+	if(address == 0) {
+	  info += kFPUcodeAllocFail;
+	  //goto fail;
+	}
+	else {
+	  program.streamfp_ucode_offset = rsxgl_rsx_ucode_offset(address);
+	  
+	  //memcpy(address,program.nvfx_streamfp -> insn,program.nvfx_streamfp -> insn_len * sizeof(uint32_t));
+	  for(unsigned int i = 0,n = program.nvfx_streamfp -> insn_len;i < n;++i) {
+	    address[i] = endian_fp(program.nvfx_streamfp -> insn[i]);
+	  }
+	  
+	  program.streamfp_num_insn = program.nvfx_streamfp -> insn_len / 4;
+	  program.streamfp_control = program.nvfx_streamfp -> fp_control;
+	}
+      }
+
+      program.streamvp_output_mask = program.nvfx_streamvp -> outregs | program.nvfx_streamfp -> outregs;
+    }
 
     program.linked = GL_TRUE;
 

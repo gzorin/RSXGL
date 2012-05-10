@@ -391,27 +391,35 @@ compiler_context__translate_fp(struct gl_context * mesa_ctx,struct gl_shader_pro
 void
 compiler_context__translate_stream_vp_fp(struct gl_context * mesa_ctx,struct gl_shader_program * program,struct pipe_stream_output_info * stream_info,struct nvfx_vertex_program ** pnvfx_vp,struct nvfx_fragment_program ** pnvfx_fp)
 {
+  rsxgl_debug_printf("%s\n",__PRETTY_FUNCTION__);
+
+  struct nvfx_vertex_program * nvfx_vp = 0;
+  struct nvfx_fragment_program * nvfx_fp = 0;
+  struct ureg_program * streamvp_ureg = 0;
+  struct ureg_program *streamfp_ureg = 0;
+
+  int count = 0;
+
   *pnvfx_vp = 0;
   *pnvfx_fp = 0;
 
   if(!program -> LinkStatus ||
      program->_LinkedShaders[MESA_SHADER_VERTEX] == 0 ||
      program->_LinkedShaders[MESA_SHADER_VERTEX]->Program == 0) {
-    return;
+    goto end;
   }
-
-  struct nvfx_vertex_program * nvfx_vp = 0;
-  struct nvfx_fragment_program * nvfx_fp = 0;
 
   //
   // Create the stream vertex program:
   struct st_vertex_program * vp = st_vertex_program((struct gl_vertex_program *)program->_LinkedShaders[MESA_SHADER_VERTEX]->Program);
   st_prepare_vertex_program(mesa_ctx, vp);
 
-  struct ureg_program * streamvp_ureg = ureg_create(TGSI_PROCESSOR_VERTEX);
+  rsxgl_debug_printf("\t%i\n",count++);
+
+  streamvp_ureg = ureg_create(TGSI_PROCESSOR_VERTEX);
   
   if(streamvp_ureg == 0) {
-    return;
+    goto end;
   }
 
   // Redirect whatever writes to TGSI_SEMANTIC_POSITION to a generic output instead:
@@ -427,9 +435,9 @@ compiler_context__translate_stream_vp_fp(struct gl_context * mesa_ctx,struct gl_
       if(vp -> output_semantic_name[i] == TGSI_SEMANTIC_POSITION) {
 	vp -> output_semantic_name[i] = TGSI_SEMANTIC_GENERIC;
 	vp -> output_semantic_index[i] = (FRAG_ATTRIB_VAR0 -
-					  FRAG_ATTRIB_TEX0 +
-					  attr -
-					  VERT_RESULT_VAR0);
+					       FRAG_ATTRIB_TEX0 +
+					       attr -
+					       VERT_RESULT_VAR0);
 	break;
       }
     }
@@ -437,11 +445,13 @@ compiler_context__translate_stream_vp_fp(struct gl_context * mesa_ctx,struct gl_
   
   // Add a VERT_ATTRIB:
   unsigned int vertexid_index = ~0;
-  
+
   for(attr = 0;attr < VERT_ATTRIB_MAX;++attr) {
     if ((vp->Base.Base.InputsRead & BITFIELD64_BIT(attr)) != 0) {
       vp->input_to_index[attr] = vp->num_inputs;
       vp->index_to_input[vp->num_inputs] = attr;
+
+      // TODO: Return vertexid_index to the calling program.
       vertexid_index = vp->num_inputs++;
       break;
     }
@@ -452,6 +462,8 @@ compiler_context__translate_stream_vp_fp(struct gl_context * mesa_ctx,struct gl_
     struct ureg_dst vertexid_output = ureg_DECL_output(streamvp_ureg,TGSI_SEMANTIC_POSITION,0);
     ureg_MOV(streamvp_ureg,vertexid_output,vertexid_input);
   }
+
+  rsxgl_debug_printf("\t%i\n",count++);
   
   enum pipe_error error = st_translate_program(mesa_ctx,
 					       TGSI_PROCESSOR_VERTEX,
@@ -475,6 +487,8 @@ compiler_context__translate_stream_vp_fp(struct gl_context * mesa_ctx,struct gl_
     goto end;
   }
 
+  rsxgl_debug_printf("\t%i\n",count++);
+
   struct pipe_shader_state tgsi;
   tgsi.tokens = ureg_get_tokens(streamvp_ureg,NULL);
 
@@ -482,9 +496,13 @@ compiler_context__translate_stream_vp_fp(struct gl_context * mesa_ctx,struct gl_
     goto end;
   }
 
+  rsxgl_debug_printf("\t%i\n",count++);
+
   struct tgsi_shader_info info;
   tgsi_scan_shader(tgsi.tokens,&info);
   nvfx_vp = nvfx_vertprog_translate((struct nvfx_context *)(st_context(mesa_ctx) -> pipe),&tgsi,&info);
+
+  rsxgl_debug_printf("\t%i\n",count++);
 
   /* If exec or data segments moved we need to patch the program to
    * fixup offsets and register IDs.
@@ -532,10 +550,10 @@ compiler_context__translate_stream_vp_fp(struct gl_context * mesa_ctx,struct gl_
 	NVFX_VP(INST_CONST_SRC_SHIFT);
     }
 
+  rsxgl_debug_printf("\t%i\n",count++);
+
   //
   // Create the stream fragment program:
-  struct ureg_program *streamfp_ureg;
-    
   streamfp_ureg = ureg_create(TGSI_PROCESSOR_FRAGMENT);
   
   for(unsigned int i = 0;i < stream_info -> num_outputs;++i) {
@@ -546,6 +564,8 @@ compiler_context__translate_stream_vp_fp(struct gl_context * mesa_ctx,struct gl_
 	     ureg_DECL_fs_input(streamfp_ureg,vp -> output_semantic_name[slot],vp -> output_semantic_index[slot],TGSI_INTERPOLATE_CONSTANT));
   }
 
+  rsxgl_debug_printf("\t%i\n",count++);
+
   //
   struct nvfx_pipe_fragment_program fp;
   
@@ -554,12 +574,18 @@ compiler_context__translate_stream_vp_fp(struct gl_context * mesa_ctx,struct gl_
     goto end;
   }
 
+  rsxgl_debug_printf("\t%i\n",count++);
+
   tgsi_scan_shader(fp.pipe.tokens,&fp.info);
   nvfx_fp = nvfx_fragprog_translate((struct nvfx_context *)(st_context(mesa_ctx) -> pipe),&fp,FALSE);
+
+  rsxgl_debug_printf("\t%i\n",count++);
   
   //
   *pnvfx_vp = nvfx_vp;
   *pnvfx_fp = nvfx_fp;
+
+  rsxgl_debug_printf("\tsuccess creating stream programs\n");
 
  end:
 

@@ -332,6 +332,7 @@ compiler_context_t::translate_stream_vp_fp(struct gl_shader_program * program,st
 {
   std::pair< struct nvfx_vertex_program *,struct nvfx_fragment_program * > result;
   compiler_context__translate_stream_vp_fp(mesa_ctx,program,stream_info,&result.first,&result.second);
+  return result;
 }
 
 void
