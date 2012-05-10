@@ -71,9 +71,9 @@ fpclassify(double x)
 }
 
 #elif defined(__APPLE__) || defined(__CYGWIN__) || defined(__FreeBSD__) || \
-     defined(__OpenBSD__) || defined(__NetBSD__) || defined(__DragonFly__) || \
-     (defined(__sun) && defined(__C99FEATURES__)) || defined(__MINGW32__) || \
-     (defined(__sun) && defined(__GNUC__)) || defined(ANDROID) || defined(__HAIKU__)
+  defined(__OpenBSD__) || defined(__NetBSD__) || defined(__DragonFly__) || defined(__lv2ppu__) || \
+  (defined(__sun) && defined(__C99FEATURES__)) || defined(__MINGW32__) || \
+  (defined(__sun) && defined(__GNUC__)) || defined(ANDROID) || defined(__HAIKU__)
 
 /* fpclassify is available. */
 

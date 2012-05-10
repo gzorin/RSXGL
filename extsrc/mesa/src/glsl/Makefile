@@ -28,7 +28,7 @@ CXX_SOURCES = \
 LIBS = \
 	$(TOP)/src/glsl/libglsl.a
 
-APPS = glsl_compiler glsl_test glcpp/glcpp
+#APPS = glsl_compiler glsl_test glcpp/glcpp
 
 GLSL2_C_SOURCES = \
 	../mesa/program/hash_table.c \
@@ -108,6 +108,7 @@ depend: $(ALL_SOURCES) Makefile
 clean: clean-dricore
 	rm -f $(GLCPP_OBJECTS) $(GLSL2_OBJECTS) $(TEST_OBJECTS) $(OBJECTS) lib$(LIBNAME).a depend depend.bak builtin_function.cpp builtin_function.o builtin_stubs.o builtin_compiler
 	-rm -f $(APPS)
+	make -f Makefile-builtins clean
 
 clean-dricore:
 	-rm -f $(OBJECTS_DRICORE) $(TOP)/$(LIB_DIR)/libglsl.so libglsl.so
@@ -162,8 +163,11 @@ glcpp/glcpp-lex.c: glcpp/glcpp-lex.l
 glcpp/glcpp-parse.c: glcpp/glcpp-parse.y
 	$(BISON) -v -o "$@" --defines=glcpp/glcpp-parse.h $<
 
-builtin_compiler: $(GLSL2_OBJECTS) $(OBJECTS) builtin_stubs.o
-	$(APP_CXX) $(INCLUDES) $(CXXFLAGS) $(LDFLAGS) $(OBJECTS) $(GLSL2_OBJECTS) builtin_stubs.o -o $@
+#builtin_compiler: $(GLSL2_OBJECTS) $(OBJECTS) builtin_stubs.o
+#	$(APP_CXX) $(INCLUDES) $(CXXFLAGS) $(LDFLAGS) $(OBJECTS) $(GLSL2_OBJECTS) builtin_stubs.o -o $@
+
+builtin_compiler:
+	@make -f Makefile-builtins builtin_compiler
 
 builtin_function.cpp: builtins/profiles/* builtins/ir/* builtins/tools/generate_builtins.py builtins/tools/texture_builtins.py builtin_compiler
 	@echo Regenerating builtin_function.cpp...

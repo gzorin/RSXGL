@@ -152,13 +152,15 @@ _mesa_new_shader(struct gl_context *ctx, GLuint name, GLenum type);
 gl_shader *
 read_builtins(GLenum target, const char *protos, const char **functions, unsigned count)
 {
-   struct gl_context fakeCtx;
-   fakeCtx.API = API_OPENGL;
-   fakeCtx.Const.GLSLVersion = 130;
-   fakeCtx.Extensions.ARB_ES2_compatibility = true;
+   struct gl_context * fakeCtx = (struct gl_context *)calloc(1,sizeof(gl_context));
+   memset(fakeCtx,0,sizeof(*fakeCtx));
+
+   fakeCtx -> API = API_OPENGL;
+   fakeCtx -> Const.GLSLVersion = 130;
+   fakeCtx -> Extensions.ARB_ES2_compatibility = true;
    gl_shader *sh = _mesa_new_shader(NULL, 0, target);
    struct _mesa_glsl_parse_state *st =
-      new(sh) _mesa_glsl_parse_state(&fakeCtx, target, sh);
+      new(sh) _mesa_glsl_parse_state(fakeCtx, target, sh);
 
    st->language_version = 130;
    st->symbols->language_version = 130;
@@ -190,6 +192,8 @@ read_builtins(GLenum target, const char *protos, const char **functions, unsigne
 
    reparent_ir(sh->ir, sh);
    delete st;
+
+free(fakeCtx);
 
    return sh;
 }
