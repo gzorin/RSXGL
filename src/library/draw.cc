@@ -1305,3 +1305,39 @@ glPrimitiveRestartIndex (GLuint index)
   ctx -> state.primitiveRestartIndex = index;
   ctx -> state.invalid.parts.primitive_restart = 1;
 }
+
+GLAPI void APIENTRY
+glBeginTransformFeedback (GLenum primitiveMode)
+{
+  const uint32_t rsx_primitive_type = rsxgl_draw_mode(primitiveMode);
+
+  if(!(rsx_primitive_type == NV30_3D_VERTEX_BEGIN_END_POINTS ||
+       rsx_primitive_type == NV30_3D_VERTEX_BEGIN_END_LINES ||
+       rsx_primitive_type == NV30_3D_VERTEX_BEGIN_END_TRIANGLES)) {
+    RSXGL_ERROR_(GL_INVALID_OPERATION);
+  }
+
+  rsxgl_context_t * ctx = current_ctx();
+
+  if(ctx -> state.enable.transform_feedback_mode != 0) {
+    RSXGL_ERROR_(GL_INVALID_OPERATION);
+  }
+
+  ctx -> state.enable.transform_feedback_mode = rsx_primitive_type;
+
+  RSXGL_NOERROR_();
+}
+
+GLAPI void APIENTRY
+glEndTransformFeedback (void)
+{
+  rsxgl_context_t * ctx = current_ctx();
+
+  if(ctx -> state.enable.transform_feedback_mode == 0) {
+    RSXGL_ERROR_(GL_INVALID_OPERATION);
+  }
+
+  ctx -> state.enable.transform_feedback_mode = 0;
+
+  RSXGL_NOERROR_();
+}

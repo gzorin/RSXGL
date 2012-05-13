@@ -21,6 +21,9 @@
 #define RSXGL_MAX_SYNC_OBJECTS 192
 #define RSXGL_MAX_QUERY_OBJECTS 2048
 
+#define RSXGL_MAX_TRANSFORM_FEEDBACK_SEPARATE_COMPONENTS 16
+#define RSXGL_MAX_TRANSFORM_FEEDBACK_INTERLEAVED_COMPONENTS 0
+
 // End hardware limits
 
 // These limits are arbitrary, but they ought to correspond to the maximum value of various
@@ -58,7 +61,5 @@
 // Maximum value for a drawing timestamp. It's set this way so that GL objects
 // can have 1 bit for a deleted flag, and the remaining 31 bits for a timestamp.
 #define RSXGL_MAX_TIMESTAMP (((uint32_t)1 << 31) - 1)
-
-// End software limits.
 
 #endif

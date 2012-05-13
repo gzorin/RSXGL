@@ -1,5 +1,6 @@
 #include "compiler_context.h"
 #include "gl_constants.h"
+#include "rsxgl_limits.h"
 #include "rsxgl_assert.h"
 #include "debug.h"
 
@@ -127,8 +128,8 @@ compiler_context_t::compiler_context_t(pipe_context * pipe)
   
   mesa_ctx -> Const.MaxDrawBuffers = RSXGL_MAX_DRAW_BUFFERS;
 
-  mesa_ctx -> Const.MaxTransformFeedbackSeparateComponents = 16;
-  mesa_ctx -> Const.MaxTransformFeedbackInterleavedComponents = 0;
+  mesa_ctx -> Const.MaxTransformFeedbackSeparateComponents = RSXGL_MAX_TRANSFORM_FEEDBACK_SEPARATE_COMPONENTS;
+  mesa_ctx -> Const.MaxTransformFeedbackInterleavedComponents = RSXGL_MAX_TRANSFORM_FEEDBACK_INTERLEAVED_COMPONENTS;
 
   mesa_ctx -> Driver.NewShader = new_shader;
   mesa_ctx -> Driver.NewProgram = new_program;
