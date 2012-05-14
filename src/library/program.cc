@@ -313,7 +313,7 @@ program_t::program_t()
     fp_control(0),
     streamvp_input_mask(0), streamvp_output_mask(0), streamvp_num_internal_const(0),
     streamfp_control(0), 
-    instanceid_index(~0), point_sprite_control(0),
+    vertexid_index(~0), instanceid_index(~0), point_sprite_control(0),
     uniform_values(0), program_offsets(0)
 {
   attached_shaders().construct();
@@ -1168,7 +1168,8 @@ glLinkProgram (GLuint program_name)
     // takes place after RSXGL is otherwise finished creating the rendering programs.
     rsxgl_debug_printf("VP stream outputs: %u\n",stream_info.num_outputs);
     if(stream_info.num_outputs > 0) {
-      std::tie(program.nvfx_streamvp,program.nvfx_streamfp) = cctx -> translate_stream_vp_fp(program.mesa_program,&stream_info);
+      unsigned int vertexid_index = 0;
+      std::tie(program.nvfx_streamvp,program.nvfx_streamfp) = cctx -> translate_stream_vp_fp(program.mesa_program,&stream_info,&vertexid_index);
       rsxgl_assert(program.nvfx_streamvp != 0);
       rsxgl_assert(program.nvfx_streamfp != 0);
       
@@ -1241,6 +1242,20 @@ glLinkProgram (GLuint program_name)
       }
 
       program.streamvp_output_mask = program.nvfx_streamvp -> outregs | program.nvfx_streamfp -> outregs;
+      program.vertexid_index = vertexid_index;
+    }
+    else {
+      program.nvfx_streamvp = 0;
+      program.nvfx_streamfp = 0;
+      program.streamvp_ucode_offset = ~0;
+      program.streamfp_ucode_offset = ~0;
+      program.streamvp_num_insn = 0;
+      program.streamfp_num_insn = 0;
+      program.streamvp_input_mask = 0;
+      program.streamvp_output_mask = 0;
+      program.streamvp_num_internal_const = 0;
+      program.streamfp_control = 0;
+      program.vertexid_index = ~0;
     }
 
     program.linked = GL_TRUE;

@@ -23,7 +23,9 @@ enum rsxgl_buffer_target {
   RSXGL_TEXTURE_BUFFER = 6,
   RSXGL_TRANSFORM_FEEDBACK_BUFFER = 7,
   RSXGL_UNIFORM_BUFFER = 8,
-  RSXGL_MAX_BUFFER_TARGETS = 9
+  RSXGL_TRANSFORM_FEEDBACK_BUFFER0 = RSXGL_UNIFORM_BUFFER + 1,
+  RSXGL_UNIFORM_BUFFER0 = RSXGL_TRANSFORM_FEEDBACK_BUFFER0 + RSXGL_MAX_TRANSFORM_FEEDBACK_BUFFER_BINDINGS,
+  RSXGL_MAX_BUFFER_TARGETS = RSXGL_UNIFORM_BUFFER0 + RSXGL_MAX_UNIFORM_BUFFER_BINDINGS
 };
 
 enum rsxgl_buffer_access {
@@ -64,7 +66,7 @@ struct buffer_t {
   memory_arena_t::name_type arena;
   rsx_size_t size;
 
-  uint32_t mapped_offset, mapped_size;
+  rsx_size_t mapped_offset, mapped_size;
 
   buffer_t()
     : deleted(0), timestamp(0), ref_count(0), invalid(0), usage(0), mapped(0), arena(0), size(0), mapped_offset(0), mapped_size(0) {

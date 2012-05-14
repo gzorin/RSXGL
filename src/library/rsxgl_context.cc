@@ -62,6 +62,10 @@ rsxgl_context_t::rsxgl_context_t(const struct rsxegl_config_t * config,gcmContex
   timestamp_sync = rsxgl_sync_object_allocate();
   rsxgl_assert(timestamp_sync != 0);
   rsxgl_sync_cpu_signal(timestamp_sync,0);
+
+  for(size_t i = 0,n = (RSXGL_MAX_TRANSFORM_FEEDBACK_BUFFER_BINDINGS + RSXGL_MAX_UNIFORM_BUFFER_BINDINGS);i < n;++i) {
+    buffer_binding_offset_size[i] = std::make_pair(0,0);
+  }
 }
 
 rsxgl_context_t::~rsxgl_context_t()

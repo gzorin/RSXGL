@@ -40,7 +40,7 @@ struct compiler_context_t {
   
   struct nvfx_fragment_program * translate_fp(struct gl_shader_program *);
 
-  std::pair< struct nvfx_vertex_program *,struct nvfx_fragment_program * > translate_stream_vp_fp(struct gl_shader_program *,struct pipe_stream_output_info *);
+  std::pair< struct nvfx_vertex_program *,struct nvfx_fragment_program * > translate_stream_vp_fp(struct gl_shader_program *,struct pipe_stream_output_info *,unsigned int *);
 
   void link_vp_fp(struct nvfx_vertex_program *,struct nvfx_fragment_program *);
 

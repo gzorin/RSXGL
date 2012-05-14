@@ -264,7 +264,7 @@ struct program_t {
   uint32_t fp_control;
   uint32_t streamvp_input_mask, streamvp_output_mask, streamvp_num_internal_const;
   uint32_t streamfp_control;
-  uint32_t instanceid_index, point_sprite_control;
+  uint32_t vertexid_index, instanceid_index, point_sprite_control;
   bit_set< RSXGL_MAX_TEXTURE_COORDS > fp_texcoords, fp_texcoord2D, fp_texcoord3D;
 
   // Vertex attribs that are enabled:

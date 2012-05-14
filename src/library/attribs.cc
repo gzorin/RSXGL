@@ -817,7 +817,7 @@ glVertexAttribDivisor (GLuint index, GLuint divisor)
   rsxgl_context_t * ctx = current_ctx();
   attribs_t & attribs = ctx -> attribs_binding[0];
 
-  // TODO - Implement this
+  // TODO: Implement this
 }
 
 void

@@ -389,7 +389,7 @@ compiler_context__translate_fp(struct gl_context * mesa_ctx,struct gl_shader_pro
 }
 
 void
-compiler_context__translate_stream_vp_fp(struct gl_context * mesa_ctx,struct gl_shader_program * program,struct pipe_stream_output_info * stream_info,struct nvfx_vertex_program ** pnvfx_vp,struct nvfx_fragment_program ** pnvfx_fp)
+compiler_context__translate_stream_vp_fp(struct gl_context * mesa_ctx,struct gl_shader_program * program,struct pipe_stream_output_info * stream_info,struct nvfx_vertex_program ** pnvfx_vp,struct nvfx_fragment_program ** pnvfx_fp,unsigned int * pvertexid_index)
 {
   rsxgl_debug_printf("%s\n",__PRETTY_FUNCTION__);
 
@@ -451,11 +451,12 @@ compiler_context__translate_stream_vp_fp(struct gl_context * mesa_ctx,struct gl_
       vp->input_to_index[attr] = vp->num_inputs;
       vp->index_to_input[vp->num_inputs] = attr;
 
-      // TODO: Return vertexid_index to the calling program.
       vertexid_index = vp->num_inputs++;
       break;
     }
   }
+
+  *pvertexid_index = vertexid_index;
   
   if(attr < VERT_ATTRIB_MAX) {
     struct ureg_src vertexid_input = ureg_DECL_vs_input(streamvp_ureg,vertexid_index);

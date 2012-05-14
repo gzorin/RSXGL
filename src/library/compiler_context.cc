@@ -26,7 +26,7 @@ char * strdup(const char *s1);
 extern "C" {
   struct nvfx_vertex_program * compiler_context__translate_vp(struct gl_context * mesa_ctx, struct gl_shader_program * program,struct pipe_stream_output_info * stream_info);
   struct nvfx_fragment_program * compiler_context__translate_fp(struct gl_context * mesa_ctx,struct gl_shader_program * program);
-  void compiler_context__translate_stream_vp_fp(struct gl_context * mesa_ctx,struct gl_shader_program * program,struct pipe_stream_output_info * stream_info,struct nvfx_vertex_program ** vp,struct nvfx_fragment_program ** fp);
+  void compiler_context__translate_stream_vp_fp(struct gl_context * mesa_ctx,struct gl_shader_program * program,struct pipe_stream_output_info * stream_info,struct nvfx_vertex_program ** vp,struct nvfx_fragment_program ** fp,unsigned int * pvertexid_index);
   void compiler_context__link_vp_fp(struct gl_context * mesa_ctx,struct nvfx_vertex_program * vp,struct nvfx_fragment_program * fp);
 }
 
@@ -329,10 +329,10 @@ compiler_context_t::translate_fp(struct gl_shader_program * program)
 }
 
 std::pair< struct nvfx_vertex_program *,struct nvfx_fragment_program * >
-compiler_context_t::translate_stream_vp_fp(struct gl_shader_program * program,struct pipe_stream_output_info * stream_info)
+compiler_context_t::translate_stream_vp_fp(struct gl_shader_program * program,struct pipe_stream_output_info * stream_info,unsigned int * vertexid_index)
 {
   std::pair< struct nvfx_vertex_program *,struct nvfx_fragment_program * > result;
-  compiler_context__translate_stream_vp_fp(mesa_ctx,program,stream_info,&result.first,&result.second);
+  compiler_context__translate_stream_vp_fp(mesa_ctx,program,stream_info,&result.first,&result.second,vertexid_index);
   return result;
 }
 
