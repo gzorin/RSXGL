@@ -1310,6 +1310,7 @@ glUseProgram (GLuint program_name)
 
     ctx -> program_binding.bind(RSXGL_ACTIVE_PROGRAM,program_name);
     ctx -> invalid.parts.program = 1;
+    ctx -> state.enable.transform_feedback_program = program_t::storage().at(program_name).vp_num_insn > 0;
 
     if(prev_program_name != 0) {
       const program_t::texture_assignments_bitfield_type

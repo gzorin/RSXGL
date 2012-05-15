@@ -106,6 +106,7 @@ state_t::state_t()
   primitiveRestartIndex = 0;
 
   enable.conditional_render_status = RSXGL_CONDITIONAL_RENDER_INACTIVE;
+  enable.transform_feedback_program = 0;
   enable.transform_feedback_mode = 0;
 }
 
