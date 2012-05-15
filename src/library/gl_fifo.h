@@ -105,6 +105,45 @@ gcm_return_cmd()
   return 0x00020000;
 }
 
+static inline uint32_t
+gcm_begin_list(gcmContextData * context)
+{
+  // Calculate the offset that gets passed to a "call" method:
+  uint32_t call_offset = 0;
+  int32_t s = gcmAddressToOffset(context -> current + 1,&call_offset);
+  rsxgl_assert(s == 0);
+
+  // Add a nop - this gets replaced by gcm_finish_list with a "jump" method:
+  uint32_t * buffer = gcm_reserve(context,1);
+  gcm_emit_at(buffer,0,0);
+  gcm_finish_n_commands(context,1);
+}
+
+static inline void
+gcm_finish_list(gcmContextData * context,const uint32_t call_offset,const bool call)
+{
+  // Calculate the offset to "jump" to, in order to skip a command list that may or may not be called right now.
+  uint32_t jump_offset = 0;
+  int32_t s = gcmAddressToOffset(context -> current,&jump_offset);
+  rsxgl_assert(s == 0);
+
+  // Replace the nop added by gcm_begin_list with a "jump" to jump_offset:
+  uint32_t * buffer = context -> current - (jump_offset - call_offset) - 1;
+  gcm_emit_at(buffer,0,gcm_jump_cmd(jump_offset));
+
+  // Insert the "return" method, and optionally a "call" method to invoke the list immediately:
+  const uint32_t n = call ? 2 : 1;
+
+  buffer = gcm_reserve(context,n);
+  gcm_emit_at(buffer,0,gcm_return_cmd());
+
+  if(call) {
+    gcm_emit_at(buffer,1,gcm_call_cmd(call_offset));
+  }
+
+  gcm_finish_n_commands(context,n);
+}
+
 #ifdef __cplusplus
 }
 #endif
