@@ -709,6 +709,17 @@ glDrawArrays (GLenum mode, GLint first, GLsizei count)
     // draw!
     const uint32_t timestamp = rsxgl_draw_init(ctx,mode,first,count,1);
     rsxgl_draw_arrays(context,rsx_primitive_type,first,count);
+
+    // if feedback:
+    // - start display list
+    // - emit draw instructions
+    // - end display list
+    // - rsxgl_feedback_framebuffer_validate - bind feedback buffers
+    // - rsxgl_feedback_program_validate
+    // - call the list
+    // else:
+    // - emit draw instructions
+
     rsxgl_timestamp_post(ctx,timestamp);
   }
 
@@ -788,10 +799,18 @@ glDrawElements (GLenum mode, GLsizei count, GLenum type, const GLvoid* indices)
     const uint32_t timestamp = rsxgl_draw_init(ctx,mode,0,0,1);
     
     const rsxgl_draw_elements_info_t info = rsxgl_draw_elements_init(ctx,count,rsx_type,indices,timestamp);
-    rsxgl_draw_array_elements(context,rsx_primitive_type,count);
-    rsxgl_timestamp_post(ctx,timestamp);
-    
+
+    if(ctx -> state.enable.transform_feedback_program && ctx -> state.enable.transform_feedback_mode) {
+      const uint32_t list_offset = gcm_begin_list(context);
+      rsxgl_draw_array_elements(context,rsx_primitive_type,count);
+      gcm_finish_list(context,list_offset,true);
+    }
+    else {
+      rsxgl_draw_array_elements(context,rsx_primitive_type,count);
+    }
     rsxgl_draw_elements_exit(ctx,info);
+
+    rsxgl_timestamp_post(ctx,timestamp);
   }
 
   RSXGL_NOERROR_();

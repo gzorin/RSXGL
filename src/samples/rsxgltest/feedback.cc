@@ -328,6 +328,10 @@ rsxgltest_init(int argc,const char ** argv)
 
   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+
+  // Buffer that stores transform feedback result:
+  glBindBuffer(GL_TRANSFORM_FEEDBACK_BUFFER,buffers[1]);
+  glBufferData(GL_TRANSFORM_FEEDBACK_BUFFER,sizeof(float) * 3 * 36,0,GL_STATIC_DRAW);
 }
 
 extern "C"
@@ -371,7 +375,9 @@ rsxgltest_draw()
     //Eigen::Affine3f modelview(Eigen::Affine3f::Identity());
     glUniformMatrix4fv(TransMatrix_location,1,GL_FALSE,modelview.data());
 
+    glBeginTransformFeedback(GL_TRIANGLES);
     glDrawElements(GL_TRIANGLES,36,GL_UNSIGNED_INT,client_indices);
+    glEndTransformFeedback();
   }
 
   {
