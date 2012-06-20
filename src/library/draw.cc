@@ -299,7 +299,7 @@ void rsxgl_process_batch(gcmContextData * context,const uint32_t n,const Operati
 // is apparently the much lower number of 3, and for a decent-sized mesh, it really
 // ought to be one so that cache invalidation instructions can be submitted for each
 // batch.
-// TODO - Investigate this further.
+// TODO: Investigate this further.
 #define RSXGL_VERTEX_BATCH_MAX_FIFO_METHOD_ARGS 1
 //#define RSXGL_VERTEX_BATCH_MAX_FIFO_METHOD_ARGS 3
 //#define RSXGL_VERTEX_BATCH_MAX_FIFO_METHOD_ARGS 2047
@@ -1174,7 +1174,7 @@ rsxgl_draw_array_elements_instanced(gcmContextData * context,const uint32_t rsx_
 static inline uint32_t
 rsxgl_draw_instances(gcmContextData * context,const uint32_t primcount,const uint32_t instanceid_index,const uint32_t call_offset)
 {
-  // TODO - Break instances into smaller batches based upon the size of the command buffer:
+  // TODO: Break instances into smaller batches based upon the size of the command buffer.
 
   const uint32_t call_cmd = gcm_call_cmd(call_offset);
 

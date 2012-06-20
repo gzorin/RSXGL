@@ -49,10 +49,15 @@ struct attribs_t {
   ieee32_t defaults[RSXGL_MAX_VERTEX_ATTRIBS][4];
 
   bit_set< RSXGL_MAX_VERTEX_ATTRIBS > enabled;
-  uint32_t memory_offset[RSXGL_MAX_VERTEX_ATTRIBS];
+  uint32_t offset[RSXGL_MAX_VERTEX_ATTRIBS];
   smint_array< 15, RSXGL_MAX_VERTEX_ATTRIBS > type;
   smint_array< 3, RSXGL_MAX_VERTEX_ATTRIBS > size;
   uint8_t stride[RSXGL_MAX_VERTEX_ATTRIBS];
+
+#if (RSXGL_CONFIG_client_attribs == 1)
+  bit_set< RSXGL_MAX_VERTEX_ATTRIBS > client_buffer_enabled;
+  void * client_buffer[RSXGL_MAX_VERTEX_ATTRIBS];
+#endif
 
   attribs_t() {
     for(size_t i = 0;i < RSXGL_MAX_VERTEX_ATTRIBS;++i) {
@@ -60,7 +65,11 @@ struct attribs_t {
       defaults[i][1].f = 0.0f;
       defaults[i][2].f = 0.0f;
       defaults[i][3].f = 1.0f;
-      memory_offset[i] = 0;
+      offset[i] = 0;
+
+#if (RSXGL_CONFIG_client_attribs == 1)
+      client_buffer[i] = 0;
+#endif
     }
   }
 

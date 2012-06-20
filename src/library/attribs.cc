@@ -321,7 +321,7 @@ glGetVertexAttribPointerv (GLuint index, GLenum pname, GLvoid** pointer)
   attribs_t & attribs = ctx -> attribs_binding[0];
 
   if(pname == GL_VERTEX_ATTRIB_ARRAY_POINTER) {
-    *pointer = (GLvoid *)((uint64_t)attribs.memory_offset[index]);
+    *pointer = (GLvoid *)((uint64_t)attribs.offset[index]);
   }
 
   RSXGL_NOERROR_();
@@ -338,7 +338,7 @@ rsxgl_vertex_attrib(rsxgl_context_t * ctx,uint32_t rsx_type,GLuint index,const T
   attribs_t & attribs = ctx -> attribs_binding[0];
 
   attribs.buffers.bind(index,0);
-  attribs.memory_offset[index] = 0;
+  attribs.offset[index] = 0;
 
   set_gpu_data(attribs.defaults[index][0],v0);
   if(Size >= 1) set_gpu_data(attribs.defaults[index][1],v1);
@@ -762,23 +762,51 @@ rsxgl_vertex_attrib_pointer(rsxgl_context_t * ctx,uint32_t rsx_type,GLuint index
     RSXGL_ERROR_(GL_INVALID_VALUE);
   }
 
+#if (RSXGL_CONFIG_client_attribs == 0)
   if(ctx -> buffer_binding.names[RSXGL_ARRAY_BUFFER] == 0 && pointer != 0) {
     RSXGL_ERROR_(GL_INVALID_OPERATION);
   }
+#endif
 
   attribs_t & attribs = ctx -> attribs_binding[0];
 
-  attribs.buffers.bind(index,ctx -> buffer_binding.names[RSXGL_ARRAY_BUFFER]);
-
-  if(ctx -> buffer_binding.names[RSXGL_ARRAY_BUFFER] != 0) {
-    attribs.memory_offset[index] = rsxgl_pointer_to_offset(pointer);
+#if (RSXGL_CONFIG_client_attribs == 1)
+  if(ctx -> buffer_binding.names[RSXGL_ARRAY_BUFFER] != 0 || pointer != 0) {
+    if(ctx -> buffer_binding.names[RSXGL_ARRAY_BUFFER] != 0) {
+      attribs.buffers.bind(index,ctx -> buffer_binding.names[RSXGL_ARRAY_BUFFER]);
+      attribs.offset[index] = rsxgl_pointer_to_offset(pointer);
+      attribs.client_buffer[i] = 0;
+      attribs.client_buffer_enabled.reset(index);
+    }
+    else {
+      attribs.buffers.bind(index,0);
+      attribs.offset[index] = 0;
+      attribs.client_buffer[i] = pointer;
+      attribs.client_buffer_enabled.set(index);
+    }
     attribs.type.set(index,rsx_type);
     attribs.size.set(index,size - 1);
     attribs.stride[index] = stride;
   }
   else {
-    attribs.memory_offset[index] = 0;
+    attribs.buffers.bind(index,0);
+    attribs.offset[index] = 0;
+    attribs.client_buffer[i] = 0;
+    attribs.client_buffer_enabled.reset(index);
   }
+#else
+  attribs.buffers.bind(index,ctx -> buffer_binding.names[RSXGL_ARRAY_BUFFER]);
+
+  if(ctx -> buffer_binding.names[RSXGL_ARRAY_BUFFER] != 0) {
+    attribs.offset[index] = rsxgl_pointer_to_offset(pointer);
+    attribs.type.set(index,rsx_type);
+    attribs.size.set(index,size - 1);
+    attribs.stride[index] = stride;
+  }
+  else {
+    attribs.offset[index] = 0;
+  }
+#endif
 
   ctx -> invalid_attribs.set(index);
   
@@ -828,7 +856,12 @@ rsxgl_attribs_validate(rsxgl_context_t * ctx,const bit_set< RSXGL_MAX_VERTEX_ATT
   attribs_t & attribs = ctx -> attribs_binding[0];
   const bit_set< RSXGL_MAX_VERTEX_ATTRIBS > required_buffer_attribs = attribs.enabled & program_attribs;
   const bit_set< RSXGL_MAX_VERTEX_ATTRIBS > invalid_attribs = ctx -> invalid_attribs & program_attribs;
-  bit_set< RSXGL_MAX_VERTEX_ATTRIBS > invalid_pointer_attribs = invalid_attribs & attribs.enabled;
+#if (RSXGL_CONFIG_client_attribs == 1)
+  bit_set< RSXGL_MAX_VERTEX_ATTRIBS > invalid_buffer_attribs = invalid_attribs & attribs.enabled & ~attribs.client_buffer_enabled;
+  bit_set< RSXGL_MAX_VERTEX_ATTRIBS > invalid_client_buffer_attribs = attribs.enabled & attribs.client_buffer_enabled;
+#else
+  bit_set< RSXGL_MAX_VERTEX_ATTRIBS > invalid_buffer_attribs = invalid_attribs & attribs.enabled;
+#endif
   const bit_set< RSXGL_MAX_VERTEX_ATTRIBS > invalid_constant_attribs = invalid_attribs & ~attribs.enabled;
 
   // Validate the vertex cache
@@ -856,23 +889,23 @@ rsxgl_attribs_validate(rsxgl_context_t * ctx,const bit_set< RSXGL_MAX_VERTEX_ATT
   for(size_t i = 0;i < RSXGL_MAX_VERTEX_ATTRIBS;++i) {
     if(!required_buffer_attribs.test(i)) continue;
     if(attribs.buffers.names[i] == 0) {
-      invalid_pointer_attribs.reset(i);
+      invalid_buffer_attribs.reset(i);
       continue;
     }
     rsxgl_buffer_validate(ctx,attribs.buffers[i],start,length,timestamp);
   }
 
   // TODO: Somewhere in here, make it so that attribs with nothing attached will disable fetching by the RSX (by setting NV30_3D_VTXFMT_SIZE to 0):
-  if(invalid_pointer_attribs.any()) {
+  if(invalid_buffer_attribs.any()) {
     uint32_t * buffer = gcm_reserve(context,4 * RSXGL_MAX_VERTEX_ATTRIBS);
     size_t nbuffer = 0;
 
     for(size_t i = 0;i < RSXGL_MAX_VERTEX_ATTRIBS;++i) {
-      if(!invalid_pointer_attribs.test(i)) continue;
+      if(!invalid_buffer_attribs.test(i)) continue;
       const buffer_t & vbo = attribs.buffers[i];
       if(!vbo.memory) continue;
 
-      const memory_t memory = vbo.memory + attribs.memory_offset[i];
+      const memory_t memory = vbo.memory + attribs.offset[i];
 
       gcm_emit_method_at(buffer,nbuffer + 0,NV30_3D_VTXBUF(i),1);
       gcm_emit_at(buffer,nbuffer + 1,memory.offset | ((uint32_t)memory.location << 31));
@@ -887,6 +920,17 @@ rsxgl_attribs_validate(rsxgl_context_t * ctx,const bit_set< RSXGL_MAX_VERTEX_ATT
 
     gcm_finish_n_commands(context,nbuffer);
   }
+
+#if (RSXGL_CONFIG_client_attribs == 1)
+  if(invalid_client_buffer_attribs.any()) {
+    for(size_t i = 0;i < RSXGL_MAX_VERTEX_ATTRIBS;++i) {
+      if(!invalid_client_buffer_attribs.test(i)) continue;
+
+      // TODO: Migrate client-side data to RSX-mapped memory.
+      
+    }
+  }
+#endif
 
   if(invalid_constant_attribs.any()) {
     uint32_t * buffer = gcm_reserve(context,5 * RSXGL_MAX_VERTEX_ATTRIBS);
