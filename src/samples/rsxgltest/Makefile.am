@@ -68,8 +68,8 @@ copyteximage_sources = copyteximage.cc texture.c fbo_inner.vert fbo_inner.frag n
 feedback_objects = nagel_bin.o gradient_png.o face_png.o
 feedback_sources = feedback.cc texture.c texcube.vert texcube.frag nagel.bin face.png gradient.png
 
-objects = $(feedback_objects)
-sources = $(feedback_sources)
+objects = $(texcube_objects)
+sources = $(texcube_sources)
 
 rsxgltest_elf_DEPENDENCIES = $(top_builddir)/src/library/libEGL.a $(top_builddir)/src/library/libGL.a	\
 	$(objects)
