@@ -3,6 +3,7 @@
 
 #include <rsx/gcm_sys.h>
 
+#include "debug.h"
 #include "rsxgl_assert.h"
 
 #ifdef __cplusplus
@@ -90,12 +91,14 @@ gcm_finish_n_commands(gcmContextData * context,uint32_t n)
 static inline uint32_t
 gcm_jump_cmd(const uint32_t offset)
 {
+  rsxgl_assert((offset & 0x3) == 0);
   return 0x20000000 | offset;
 }
 
 static inline uint32_t
 gcm_call_cmd(const uint32_t offset)
 {
+  rsxgl_assert((offset & 0x3) == 0);
   return 0x00000002 | offset;
 }
 
@@ -115,8 +118,12 @@ gcm_begin_list(gcmContextData * context)
 
   // Add a nop - this gets replaced by gcm_finish_list with a "jump" method:
   uint32_t * buffer = gcm_reserve(context,1);
+  rsxgl_debug_printf("%s: jump buffer:%lu call_offset:%u\n",__PRETTY_FUNCTION__,(unsigned long)buffer,call_offset);
+
   gcm_emit_at(buffer,0,0);
   gcm_finish_n_commands(context,1);
+
+  return call_offset;
 }
 
 static inline void
@@ -124,17 +131,20 @@ gcm_finish_list(gcmContextData * context,const uint32_t call_offset,const bool c
 {
   // Calculate the offset to "jump" to, in order to skip a command list that may or may not be called right now.
   uint32_t jump_offset = 0;
-  int32_t s = gcmAddressToOffset(context -> current,&jump_offset);
+  int32_t s = gcmAddressToOffset(context -> current + 1,&jump_offset);
   rsxgl_assert(s == 0);
 
   // Replace the nop added by gcm_begin_list with a "jump" to jump_offset:
-  uint32_t * buffer = context -> current - (jump_offset - call_offset) - 1;
+  uint32_t * buffer = (uint32_t *)((uint8_t *)context -> current - (jump_offset - call_offset));
+  rsxgl_debug_printf("%s: call_offset:%u call buffer:%lu jump buffer:%lu jump_offset:%u\n",__PRETTY_FUNCTION__,call_offset,(unsigned long)context -> current,(unsigned long)buffer,jump_offset);
+
   gcm_emit_at(buffer,0,gcm_jump_cmd(jump_offset));
 
   // Insert the "return" method, and optionally a "call" method to invoke the list immediately:
   const uint32_t n = call ? 2 : 1;
 
   buffer = gcm_reserve(context,n);
+
   gcm_emit_at(buffer,0,gcm_return_cmd());
 
   if(call) {
