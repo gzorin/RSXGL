@@ -166,11 +166,15 @@ struct rsxgl_draw_elements_info_t {
   }
 };
 
+#define NV30_3D_IDXBUF_FORMAT_TYPE_U8 2
+
 static const uint8_t rsxgl_element_nv40_type[RSXGL_MAX_ELEMENT_TYPES] = {
   NV30_3D_IDXBUF_FORMAT_TYPE_U32,
   NV30_3D_IDXBUF_FORMAT_TYPE_U16,
-  2
+  NV30_3D_IDXBUF_FORMAT_TYPE_U8
 };
+
+#undef NV30_3D_IDXBUF_FORMAT_TYPE_U8
 
 static const uint8_t rsxgl_element_type_bytes[RSXGL_MAX_ELEMENT_TYPES] = {
   sizeof(uint32_t),
@@ -191,7 +195,7 @@ rsxgl_draw_elements_emit_index_buffer(gcmContextData * context,const uint32_t rs
 }
 
 static inline rsxgl_draw_elements_info_t
-rsxgl_draw_elements_init(rsxgl_context_t * ctx,const GLsizei count,const uint32_t rsx_type,const GLvoid * indices,const uint32_t timestamp)
+rsxgl_draw_elements_init(rsxgl_context_t * ctx,const GLuint start,const GLuint end,const GLsizei count,const uint32_t rsx_type,const GLvoid * indices,const uint32_t timestamp)
 {
   gcmContextData * context = ctx -> gcm_context();
 
@@ -797,9 +801,7 @@ glDrawElements (GLenum mode, GLsizei count, GLenum type, const GLvoid* indices)
     
     //
     const uint32_t timestamp = rsxgl_draw_init(ctx,mode,0,0,1);
-    
-    const rsxgl_draw_elements_info_t info = rsxgl_draw_elements_init(ctx,count,rsx_type,indices,timestamp);
-
+    const rsxgl_draw_elements_info_t info = rsxgl_draw_elements_init(ctx,0,0,count,rsx_type,indices,timestamp);
     if(ctx -> state.enable.transform_feedback_program && ctx -> state.enable.transform_feedback_mode) {
       const uint32_t list_offset = gcm_begin_list(context);
       rsxgl_draw_array_elements(context,rsx_primitive_type,count);
@@ -808,9 +810,8 @@ glDrawElements (GLenum mode, GLsizei count, GLenum type, const GLvoid* indices)
     else {
       rsxgl_draw_array_elements(context,rsx_primitive_type,count);
     }
-    rsxgl_draw_elements_exit(ctx,info);
-
     rsxgl_timestamp_post(ctx,timestamp);
+    rsxgl_draw_elements_exit(ctx,info);
   }
 
   RSXGL_NOERROR_();
@@ -838,13 +839,11 @@ glDrawElementsBaseVertex (GLenum mode, GLsizei count, GLenum type, const GLvoid 
     gcmContextData * context = ctx -> gcm_context();
     
     const uint32_t timestamp = rsxgl_draw_init(ctx,mode,0,0,1);
-    
-    const rsxgl_draw_elements_info_t info = rsxgl_draw_elements_init(ctx,count,rsx_type,indices,timestamp);
+    const rsxgl_draw_elements_info_t info = rsxgl_draw_elements_init(ctx,0,0,count,rsx_type,indices,timestamp);
     rsxgl_draw_array_elements_base(context,basevertex);
     rsxgl_draw_array_elements(context,rsx_primitive_type,count);
     rsxgl_timestamp_post(ctx,timestamp);
     rsxgl_draw_array_elements_base(context,0);
-    
     rsxgl_draw_elements_exit(ctx,info);
   }
 
@@ -877,12 +876,10 @@ glDrawRangeElements (GLenum mode, GLuint start, GLuint end, GLsizei count, GLenu
     // draw!
     gcmContextData * context = ctx -> gcm_context();
     
-    const uint32_t timestamp = rsxgl_draw_init(ctx,mode,start,end - start,1);
-    
-    const rsxgl_draw_elements_info_t info = rsxgl_draw_elements_init(ctx,count,rsx_type,indices,timestamp);
+    const uint32_t timestamp = rsxgl_draw_init(ctx,mode,start,end - start,1);    
+    const rsxgl_draw_elements_info_t info = rsxgl_draw_elements_init(ctx,start,end,count,rsx_type,indices,timestamp);
     rsxgl_draw_array_elements(context,rsx_primitive_type,count);
     rsxgl_timestamp_post(ctx,timestamp);
-    
     rsxgl_draw_elements_exit(ctx,info);
   }
 
@@ -914,14 +911,12 @@ glDrawRangeElementsBaseVertex (GLenum mode, GLuint start, GLuint end, GLsizei co
   if(ctx -> state.enable.conditional_render_status != RSXGL_CONDITIONAL_RENDER_ACTIVE_WAIT_FAIL) {
     gcmContextData * context = ctx -> gcm_context();
     
-    const uint32_t timestamp = rsxgl_draw_init(ctx,mode,start,end - start,1);
-    
-    const rsxgl_draw_elements_info_t info = rsxgl_draw_elements_init(ctx,count,rsx_type,indices,timestamp);
+    const uint32_t timestamp = rsxgl_draw_init(ctx,mode,start,end - start,1);    
+    const rsxgl_draw_elements_info_t info = rsxgl_draw_elements_init(ctx,start,end,count,rsx_type,indices,timestamp);
     rsxgl_draw_array_elements_base(context,basevertex);
     rsxgl_draw_array_elements(context,rsx_primitive_type,count);
     rsxgl_timestamp_post(ctx,timestamp);
     rsxgl_draw_array_elements_base(context,0);
-    
     rsxgl_draw_elements_exit(ctx,info);
   }
 
@@ -1040,11 +1035,10 @@ glMultiDrawElementsBaseVertex (GLenum mode, const GLsizei *count, GLenum type, c
   if(ctx -> state.enable.conditional_render_status != RSXGL_CONDITIONAL_RENDER_ACTIVE_WAIT_FAIL) {
     gcmContextData * context = ctx -> gcm_context();
     
-    uint32_t timestamp = rsxgl_draw_init(ctx,mode,0,0,primcount);
-    
     const rsxgl_query_object_index_type query_index = ctx -> any_samples_passed_query;
-    
     const bool client_indices = ctx -> buffer_binding.names[RSXGL_ELEMENT_ARRAY_BUFFER] == 0;
+
+    uint32_t timestamp = rsxgl_draw_init(ctx,mode,0,0,primcount);
     
     if(client_indices) {
       void * migrate_buffers[primcount];
@@ -1252,20 +1246,17 @@ glDrawElementsInstanced (const GLenum mode, const GLsizei count, const GLenum ty
   if(ctx -> state.enable.conditional_render_status != RSXGL_CONDITIONAL_RENDER_ACTIVE_WAIT_FAIL) {
     gcmContextData * context = ctx -> gcm_context();
     
-    const uint32_t timestamp = rsxgl_draw_init(ctx,mode,0,0,primcount);
-    
     const rsxgl_query_object_index_type query_index = ctx -> any_samples_passed_query;
-    
-    const rsxgl_draw_elements_info_t info = rsxgl_draw_elements_init(ctx,count,rsx_type,indices,timestamp);
-    
     const uint32_t instanceid_index = ctx -> program_binding[RSXGL_ACTIVE_PROGRAM].instanceid_index;
+
+    const uint32_t timestamp = rsxgl_draw_init(ctx,mode,0,0,primcount);    
+    const rsxgl_draw_elements_info_t info = rsxgl_draw_elements_init(ctx,0,0,count,rsx_type,indices,timestamp);
     if(instanceid_index != ~0 && primcount > 1) {
       rsxgl_draw_instances(context,primcount,instanceid_index,rsxgl_draw_array_elements_instanced(context,rsx_primitive_type,count));
     }
     else {
       rsxgl_draw_array_elements(context,rsx_primitive_type,count);
-    }
-    
+    }    
     rsxgl_timestamp_post(ctx,timestamp + primcount - 1);
     rsxgl_draw_elements_exit(ctx,info);
   }
@@ -1293,23 +1284,20 @@ glDrawElementsInstancedBaseVertex (GLenum mode, GLsizei count, GLenum type, cons
 
   if(ctx -> state.enable.conditional_render_status != RSXGL_CONDITIONAL_RENDER_ACTIVE_WAIT_FAIL) {
     gcmContextData * context = ctx -> gcm_context();
+
+    const rsxgl_query_object_index_type query_index = ctx -> any_samples_passed_query;
+    const uint32_t instanceid_index = ctx -> program_binding[RSXGL_ACTIVE_PROGRAM].instanceid_index;
     
     const uint32_t timestamp = rsxgl_draw_init(ctx,mode,0,0,primcount);
-    
-    const rsxgl_query_object_index_type query_index = ctx -> any_samples_passed_query;
-    
-    const rsxgl_draw_elements_info_t info = rsxgl_draw_elements_init(ctx,count,rsx_type,indices,timestamp);
-    
+    const rsxgl_draw_elements_info_t info = rsxgl_draw_elements_init(ctx,0,0,count,rsx_type,indices,timestamp);
     rsxgl_draw_array_elements_base(context,basevertex);
-    
-    const uint32_t instanceid_index = ctx -> program_binding[RSXGL_ACTIVE_PROGRAM].instanceid_index;
     if(instanceid_index != ~0 && primcount > 1) {
       rsxgl_draw_instances(context,primcount,instanceid_index,rsxgl_draw_array_elements_instanced(context,rsx_primitive_type,count));
     }
     else {
       rsxgl_draw_array_elements(context,rsx_primitive_type,count);
     }
-    
+    rsxgl_draw_array_elements_base(context,0);
     rsxgl_timestamp_post(ctx,timestamp + primcount - 1);
     rsxgl_draw_elements_exit(ctx,info);
   }
