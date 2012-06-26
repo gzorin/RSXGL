@@ -599,7 +599,7 @@ compiler_context__link_vp_fp(struct gl_context * mesa_ctx,struct nvfx_vertex_pro
 {
   struct nvfx_context * nvfx = (struct nvfx_context *)(st_context(mesa_ctx) -> pipe);
 
-  const unsigned sprite_coord_enable = 0;
+  const unsigned sprite_coord_enable = 1;
   boolean emulate_sprite_flipping = FALSE;
 
   int sprite_real_input = -1;

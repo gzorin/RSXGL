@@ -44,8 +44,10 @@ glEnable (GLenum cap)
   case GL_PRIMITIVE_RESTART:
     ctx -> state.enable.primitive_restart = 1;
     ctx -> state.invalid.parts.primitive_restart = 1;
-    RSXGL_NOERROR_();
-
+    break;
+  case GL_VERTEX_PROGRAM_POINT_SIZE:
+    ctx -> state.enable.pointSize = 1;
+    break;
   default:
     RSXGL_ERROR_(GL_INVALID_ENUM);
   };
@@ -82,8 +84,10 @@ glDisable (GLenum cap)
   case GL_PRIMITIVE_RESTART:
     ctx -> state.enable.primitive_restart = 0;
     ctx -> state.invalid.parts.primitive_restart = 1;
-    RSXGL_NOERROR_();
-
+    break;
+  case GL_VERTEX_PROGRAM_POINT_SIZE:
+    ctx -> state.enable.pointSize = 0;
+    break;
   default:
     RSXGL_ERROR_(GL_INVALID_ENUM);
   };
@@ -113,6 +117,9 @@ glIsEnabled (GLenum cap)
     break;
   case GL_PRIMITIVE_RESTART:
     RSXGL_NOERROR(ctx -> state.enable.primitive_restart);
+    break;
+  case GL_VERTEX_PROGRAM_POINT_SIZE:
+    RSXGL_NOERROR(ctx -> state.enable.pointSize);
     break;
   default:
     RSXGL_ERROR(GL_INVALID_ENUM,GL_FALSE);

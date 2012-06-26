@@ -1162,6 +1162,7 @@ glLinkProgram (GLuint program_name)
     program.instanceid_index = ~0;
     program.point_sprite_control = 0;
 
+#if 0
     // Create stream programs if any varyings are captured.
     // This seems to clobber the original vertex program's data such that the main rendering program's
     // attribute assignments get messed up. This isn't good, but, for now, creating the stream programs
@@ -1257,6 +1258,7 @@ glLinkProgram (GLuint program_name)
       program.streamfp_control = 0;
       program.vertexid_index = ~0;
     }
+#endif
 
     program.linked = GL_TRUE;
 

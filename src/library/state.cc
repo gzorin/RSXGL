@@ -82,6 +82,8 @@ state_t::state_t()
   polygon.offsetUnits = 0;
 
   lineWidth = 1.0f;
+
+  enable.pointSize = 0;
   pointSize = 1.0f;
 
   pixelstore_pack.swap_bytes = 0;

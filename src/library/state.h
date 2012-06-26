@@ -109,7 +109,7 @@ struct state_t {
   } invalid;
 
   struct {
-    uint32_t blend:1, scissor:1, depth_test:1, primitive_restart:1, conditional_render_status:2, transform_feedback_program:1, transform_feedback_mode:4;
+    uint32_t blend:1, scissor:1, depth_test:1, primitive_restart:1, pointSize:1, conditional_render_status:2, transform_feedback_program:1, transform_feedback_mode:4;
   } enable;
 
   struct {
