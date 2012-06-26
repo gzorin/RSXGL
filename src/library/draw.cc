@@ -29,6 +29,7 @@
 
 #include <string.h>
 #include <boost/integer/static_log2.hpp>
+#include <algorithm>
 
 #if defined(GLAPI)
 #undef GLAPI
@@ -694,6 +695,180 @@ rsxgl_draw_array_elements_base(gcmContextData * context,const uint32_t base)
   gcm_finish_n_commands(context,2);
 }
 
+// Tags for draw behavior:
+namespace {
+  namespace draw_tags {
+    // How many primitives?
+    struct single {};
+    struct multi {};
+    struct instanced {};
+
+    // Arrays or elements?
+    struct arrays {};
+    struct elements {};
+
+    // How to obtain element range?
+    struct no_range {};
+    struct scan_range {};
+    struct explicit_range {};
+
+    // How to handle base vertex?
+    struct no_base {};
+    struct zero_base {};
+    struct explicit_base {};
+  };
+};
+
+namespace {
+
+#if 0
+  struct draw_params {
+    gcmContextData * const context;
+    const uint32_t rsx_primitive_type;
+    const GLsizei primitive_count;
+    const GLint * const first;
+    const GLsizei * const count;
+    const uint32_t rsx_element_type;
+    const GLint element_base;
+    const GLuint min_element, max_element;
+    const GLvoid * const element_indices;
+    
+    data_params(gcmContextData * _context,
+		const uint32_t _rsx_primitive_type,
+		const GLsizei _primitive_count,const GLint * _first,const GLsizei * _count,
+		const uint32_t _rsx_element_type,const GLint _element_base,const GLuint _min_element,const GLuint _max_element,const GLvoid * _element_indices)
+      : context(_context),
+	rsx_primitive_type(_rsx_primitive_type), primitive_count(_primitive_count), first(_first), count(_count), rsx_element_type(_rsx_element_type), element_base(_element_base), min_element(_min_element), max_element(_max_element), element_indices(_element_indices) {
+    }
+  };
+#endif
+
+  template< typename SingleOrMulti, typename ArrayOrElements, typename Range, typename Base >
+  struct draw_concept;
+
+  template< >
+  struct draw_concept< draw_tags::single, draw_tags::arrays, draw_tags::no_range, draw_tags::no_base > {
+    struct data_type {
+      gcmContextData * const context;
+      const uint32_t rsx_primitive_type;
+      const GLint * const first;
+      const GLsizei * const count;
+
+      data_type(gcmContextData * _context,
+		const uint32_t _rsx_primitive_type,
+		const GLsizei _primitive_count,const GLint * _first,const GLsizei * _count,
+		const uint32_t _rsx_element_type,const GLint _element_base,const GLuint _min_element,const GLuint _max_element,const GLvoid * _element_indices)
+	: context(_context),
+	  rsx_primitive_type(_rsx_primitive_type), first(_first), count(_count) {
+      }
+    };
+
+    static std::pair< uint32_t, uint32_t > index_range(data_type & data) {
+      return std::make_pair(*data.first,*data.count);
+    }
+
+    static size_t iteration_count(data_type & data) {
+      return 1;
+    }
+
+    static void begin(data_type &) {
+    }
+
+    static void iteration(data_type & data,const size_t) {
+      rsxgl_draw_arrays(data.context,data.rsx_primitive_type,*data.first,*data.count);
+    }
+
+    static void end(data_type &) {
+    }
+  };
+
+  template< >
+  struct draw_concept< draw_tags::multi, draw_tags::arrays, draw_tags::no_range, draw_tags::no_base > {
+    struct data_type {
+      gcmContextData * const context;
+      const uint32_t rsx_primitive_type;
+      const GLsizei primitive_count;
+      const GLint * const first;
+      const GLsizei * const count;
+
+      data_type(gcmContextData * _context,
+		const uint32_t _rsx_primitive_type,
+		const GLsizei _primitive_count,const GLint * _first,const GLsizei * _count,
+		const uint32_t _rsx_element_type,const GLint _element_base,const GLuint _min_element,const GLuint _max_element,const GLvoid * _element_indices)
+	: context(_context),
+	  rsx_primitive_type(_rsx_primitive_type), primitive_count(_primitive_count), first(_first), count(_count) {
+      }
+    };
+
+    static std::pair< uint32_t, uint32_t > index_range(data_type & data) {
+      const GLint * min_first = std::min_element(data.first,data.first + data.primitive_count);
+      const GLsizei * max_count = std::max_element(data.count,data.count + data.primitive_count);
+      return std::make_pair(*min_first,*max_count);
+    }
+
+    static size_t iteration_count(data_type & data) {
+      return data.primitive_count;
+    }
+  };
+
+};
+
+template< typename SingleOrMulti, typename ArrayOrElements, typename Range, typename Base >
+static inline void
+rsxgl_draw(rsxgl_context_t * ctx,
+	   const uint32_t rsx_primitive_type,
+	   const GLsizei primitive_count,const GLint * first,const GLsizei * count,
+	   const uint32_t rsx_element_type,const GLint element_base,const GLuint min_element,const GLuint max_element,const GLvoid * element_indices)
+{
+  rsxgl_debug_printf("%s\n",__PRETTY_FUNCTION__);
+
+  gcmContextData * const context = ctx -> gcm_context();
+
+  typedef draw_concept< SingleOrMulti, ArrayOrElements, Range, Base > draw_concept_type;
+  typedef typename draw_concept_type::data_type draw_data_type;
+
+  draw_data_type data(context,rsx_primitive_type,primitive_count,first,count,rsx_element_type,element_base,min_element,max_element,element_indices);
+
+  // Compute the range of array elements used by this draw call:
+  const std::pair< uint32_t, uint32_t > index_range = draw_concept_type::index_range(data);
+
+  // Number of iterations:
+  const size_t iteration_count = draw_concept_type::iteration_count(data);
+
+  // - always compute timestamp(s):
+  uint32_t timestamp = rsxgl_timestamp_create(ctx,iteration_count);
+  const uint32_t last_timestamp = timestamp + iteration_count - 1;
+
+  // validate everything:
+  // - always validate state, attribs, etc.
+  rsxgl_draw_framebuffer_validate(ctx,last_timestamp);
+  rsxgl_state_validate(ctx);
+  rsxgl_program_validate(ctx,last_timestamp);
+  rsxgl_attribs_validate(ctx,ctx -> program_binding[RSXGL_ACTIVE_PROGRAM].attribs_enabled,index_range.first,index_range.second,last_timestamp);
+  rsxgl_uniforms_validate(ctx,ctx -> program_binding[RSXGL_ACTIVE_PROGRAM]);
+  rsxgl_textures_validate(ctx,ctx -> program_binding[RSXGL_ACTIVE_PROGRAM],last_timestamp);
+
+  // - maybe migrate client indices
+  // - maybe set base vertex
+  draw_concept_type::begin(data);
+
+  // Iterate:
+  // - for each iteration:
+  //   - on first, maybe cache as "display list"
+  //   - maybe set base vertex
+  //   - maybe update query object
+  //   - post timestamp
+  for(size_t i = 0;i < iteration_count;++i,++timestamp) {
+    draw_concept_type::iteration(data,i);
+    rsxgl_timestamp_post(ctx,timestamp);
+  }
+
+  // Exit:
+  // - maybe free client indices
+  // - maybe reset base vertex
+  draw_concept_type::begin(data);
+}
+
 //
 GLAPI void APIENTRY
 glDrawArrays (GLenum mode, GLint first, GLsizei count)
@@ -710,21 +885,14 @@ glDrawArrays (GLenum mode, GLint first, GLsizei count)
   }
 
   if(ctx -> state.enable.conditional_render_status != RSXGL_CONDITIONAL_RENDER_ACTIVE_WAIT_FAIL) {
+    rsxgl_draw< draw_tags::single, draw_tags::arrays, draw_tags::no_range, draw_tags::no_base >(ctx,rsx_primitive_type,1,&first,&count,0,0,0,0,0);
+
+#if 0
     // draw!
     const uint32_t timestamp = rsxgl_draw_init(ctx,mode,first,count,1);
     rsxgl_draw_arrays(context,rsx_primitive_type,first,count);
-
-    // if feedback:
-    // - start display list
-    // - emit draw instructions
-    // - end display list
-    // - rsxgl_feedback_framebuffer_validate - bind feedback buffers
-    // - rsxgl_feedback_program_validate
-    // - call the list
-    // else:
-    // - emit draw instructions
-
     rsxgl_timestamp_post(ctx,timestamp);
+#endif
   }
 
   RSXGL_NOERROR_();
