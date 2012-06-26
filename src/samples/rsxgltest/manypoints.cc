@@ -67,6 +67,11 @@ GLuint texture = 0;
 GLint ProjMatrix_location = -1, TransMatrix_location = -1, color_location = -1, texture_location = -1;
 
 const GLuint npoints = 1000;
+const GLuint batchsize = 256;
+const GLuint nbatch = (npoints / batchsize) + ((npoints % batchsize) ? 1 : 0);
+
+GLint batchfirst[nbatch];
+GLsizei batchcount[nbatch];
 
 #define DTOR(X) ((X)*0.01745329f)
 #define RTOD(d) ((d)*57.295788f)
@@ -189,6 +194,13 @@ rsxgltest_init(int argc,const char ** argv)
     geometry[5] = 1.0;
   }
 
+  GLint first = 0;
+  for(size_t i = 0;i < nbatch;++i) {
+    batchfirst[i] = first;
+    batchcount[i] = (i == (nbatch - 1)) ? (npoints % batchsize) : (batchsize);
+    first += batchsize;
+  }
+
   glUnmapBuffer(GL_ARRAY_BUFFER);
 
   glEnableVertexAttribArray(vertex_location);
@@ -216,6 +228,8 @@ extern "C"
 int
 rsxgltest_draw()
 {
+  static int frame = 0;
+
   float rgb[3] = {
     compute_sine_wave(rgb_waves,rsxgltest_elapsed_time),
     compute_sine_wave(rgb_waves + 1,rsxgltest_elapsed_time),
@@ -241,8 +255,15 @@ rsxgltest_draw()
     Eigen::Affine3f modelview = ViewMatrixInv * (Eigen::Affine3f::Identity() * Eigen::Translation3f(0,0,0) * rotmat);
     glUniformMatrix4fv(TransMatrix_location,1,GL_FALSE,modelview.data());
 
-    glDrawArrays(GL_POINTS,0,npoints);
+    if(frame % 2) {
+      glDrawArrays(GL_POINTS,0,npoints);
+    }
+    else {
+      glMultiDrawArrays(GL_POINTS,batchfirst,batchcount,nbatch);
+    }
   }
+
+  ++frame;
 
   return 1;
 }
