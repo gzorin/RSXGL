@@ -721,110 +721,85 @@ namespace {
 
 namespace {
 
-#if 0
-  struct draw_params {
+  template< typename SingleOrMulti, typename ArrayOrElements, typename Range, typename Base >
+  struct draw_functions;
+
+  struct draw_functions_base {
     gcmContextData * const context;
     const uint32_t rsx_primitive_type;
-    const GLsizei primitive_count;
-    const GLint * const first;
-    const GLsizei * const count;
-    const uint32_t rsx_element_type;
-    const GLint element_base;
-    const GLuint min_element, max_element;
-    const GLvoid * const element_indices;
-    
-    data_params(gcmContextData * _context,
-		const uint32_t _rsx_primitive_type,
-		const GLsizei _primitive_count,const GLint * _first,const GLsizei * _count,
-		const uint32_t _rsx_element_type,const GLint _element_base,const GLuint _min_element,const GLuint _max_element,const GLvoid * _element_indices)
-      : context(_context),
-	rsx_primitive_type(_rsx_primitive_type), primitive_count(_primitive_count), first(_first), count(_count), rsx_element_type(_rsx_element_type), element_base(_element_base), min_element(_min_element), max_element(_max_element), element_indices(_element_indices) {
+
+    draw_functions_base(gcmContextData * _context,const uint32_t _rsx_primitive_type)
+      : context(_context), rsx_primitive_type(_rsx_primitive_type) {
     }
   };
-#endif
-
-  template< typename SingleOrMulti, typename ArrayOrElements, typename Range, typename Base >
-  struct draw_concept;
 
   template< >
-  struct draw_concept< draw_tags::single, draw_tags::arrays, draw_tags::no_range, draw_tags::no_base > {
-    struct data_type {
-      gcmContextData * const context;
-      const uint32_t rsx_primitive_type;
-      const GLint * const first;
-      const GLsizei * const count;
+  struct draw_functions< draw_tags::single, draw_tags::arrays, draw_tags::no_range, draw_tags::no_base > : public draw_functions_base {
+    const GLint * const first;
+    const GLsizei * const count;
 
-      data_type(rsxgl_context_t * _ctx,
-		const uint32_t _rsx_primitive_type,
-		const GLsizei _primitive_count,const GLint * _first,const GLsizei * _count,
-		const uint32_t _rsx_element_type,const GLint _element_base,const GLuint _min_element,const GLuint _max_element,const GLvoid * _element_indices)
-	: context(_ctx -> gcm_context()),
-	  rsx_primitive_type(_rsx_primitive_type), first(_first), count(_count) {
-      }
-    };
-
-    static std::pair< uint32_t, uint32_t > index_range(data_type & data) {
-      return std::make_pair(*data.first,*data.count);
+    draw_functions(rsxgl_context_t * _ctx,
+		   const uint32_t _rsx_primitive_type,
+		   const GLsizei _primitive_count,const GLint * _first,const GLsizei * _count,
+		   const uint32_t _rsx_element_type,const GLint _element_base,const GLuint _min_element,const GLuint _max_element,const GLvoid ** _element_indices)
+      : draw_functions_base(_ctx -> gcm_context(), _rsx_primitive_type),
+	first(_first), count(_count) {
     }
 
-    static size_t iteration_count(data_type & data) {
+    std::pair< uint32_t, uint32_t > index_range() {
+      return std::make_pair(*first,*count);
+    }
+
+    size_t iteration_count() {
       return 1;
     }
 
-    static void begin(data_type &) {
+    void start() {}
+
+    void iteration(const size_t) {
+      rsxgl_draw_arrays(context,rsx_primitive_type,*first,*count);
     }
 
-    static void iteration(data_type & data,const size_t) {
-      rsxgl_draw_arrays(data.context,data.rsx_primitive_type,*data.first,*data.count);
-    }
-
-    static void end(data_type &) {
-    }
+    void finish() {}
   };
 
   template< >
-  struct draw_concept< draw_tags::multi, draw_tags::arrays, draw_tags::no_range, draw_tags::no_base > {
-    struct data_type {
-      gcmContextData * const context;
-      const uint32_t rsx_primitive_type;
-      const GLsizei primitive_count;
-      const GLint * const first;
-      const GLsizei * const count;
+  struct draw_functions< draw_tags::multi, draw_tags::arrays, draw_tags::no_range, draw_tags::no_base > : public draw_functions_base {
+    const GLsizei primitive_count;
+    const GLint * const first;
+    const GLsizei * const count;
+    
+    const rsxgl_query_object_index_type query_index;
+    
+    draw_functions(rsxgl_context_t * _ctx,
+		   const uint32_t _rsx_primitive_type,
+		   const GLsizei _primitive_count,const GLint * _first,const GLsizei * _count,
+		   const uint32_t _rsx_element_type,const GLint _element_base,const GLuint _min_element,const GLuint _max_element,const GLvoid ** _element_indices)
+      : draw_functions_base(_ctx -> gcm_context(),_rsx_primitive_type),
+	primitive_count(_primitive_count), first(_first), count(_count),
+	query_index(_ctx -> any_samples_passed_query) {
+    }
 
-      const rsxgl_query_object_index_type query_index;
-
-      data_type(rsxgl_context_t * _ctx,
-		const uint32_t _rsx_primitive_type,
-		const GLsizei _primitive_count,const GLint * _first,const GLsizei * _count,
-		const uint32_t _rsx_element_type,const GLint _element_base,const GLuint _min_element,const GLuint _max_element,const GLvoid * _element_indices)
-	: context(_ctx -> gcm_context()),
-	  rsx_primitive_type(_rsx_primitive_type), primitive_count(_primitive_count), first(_first), count(_count),
-	  query_index(_ctx -> any_samples_passed_query) {
-      }
-    };
-
-    static std::pair< uint32_t, uint32_t > index_range(data_type & data) {
-      const GLint * min_first = std::min_element(data.first,data.first + data.primitive_count);
-      const GLsizei * max_count = std::max_element(data.count,data.count + data.primitive_count);
+    std::pair< uint32_t, uint32_t > index_range() {
+      const GLint * min_first = std::min_element(first,first + primitive_count);
+      const GLsizei * max_count = std::max_element(count,count + primitive_count);
       return std::make_pair(*min_first,*max_count);
     }
 
-    static size_t iteration_count(data_type & data) {
-      return data.primitive_count;
+    size_t iteration_count() {
+      return primitive_count;
     }
 
-    static void begin(data_type &) {
-    }
+    void start() {}
 
-    static void iteration(data_type & data,const size_t i) {
-      rsxgl_draw_arrays(data.context,data.rsx_primitive_type,data.first[i],data.count[i]);
-      if(data.query_index != RSXGL_MAX_QUERY_OBJECTS) {
-	rsxgl_query_object_set(data.context,data.query_index);
+    void iteration(const size_t i) {
+      rsxgl_draw_arrays(context,rsx_primitive_type,first[i],count[i]);
+      if(query_index != RSXGL_MAX_QUERY_OBJECTS) {
+	rsxgl_query_object_set(context,query_index);
       }
     }
 
-    static void end(data_type &) {
-    }
+    void finish() {}
   };
 
 };
@@ -834,20 +809,18 @@ static inline void
 rsxgl_draw(rsxgl_context_t * ctx,
 	   const uint32_t rsx_primitive_type,
 	   const GLsizei primitive_count,const GLint * first,const GLsizei * count,
-	   const uint32_t rsx_element_type,const GLint element_base,const GLuint min_element,const GLuint max_element,const GLvoid * element_indices)
+	   const uint32_t rsx_element_type,const GLint element_base,const GLuint min_element,const GLuint max_element,const GLvoid ** element_indices)
 {
   rsxgl_debug_printf("%s\n",__PRETTY_FUNCTION__);
 
-  typedef draw_concept< SingleOrMulti, ArrayOrElements, Range, Base > draw_concept_type;
-  typedef typename draw_concept_type::data_type draw_data_type;
-
-  draw_data_type data(ctx,rsx_primitive_type,primitive_count,first,count,rsx_element_type,element_base,min_element,max_element,element_indices);
+  typedef draw_functions< SingleOrMulti, ArrayOrElements, Range, Base > draw_functions_type;
+  draw_functions_type functions(ctx,rsx_primitive_type,primitive_count,first,count,rsx_element_type,element_base,min_element,max_element,element_indices);
 
   // Compute the range of array elements used by this draw call:
-  const std::pair< uint32_t, uint32_t > index_range = draw_concept_type::index_range(data);
+  const std::pair< uint32_t, uint32_t > index_range = functions.index_range();
 
   // Number of iterations:
-  const size_t iteration_count = draw_concept_type::iteration_count(data);
+  const size_t iteration_count = functions.iteration_count();
 
   // - always compute timestamp(s):
   uint32_t timestamp = rsxgl_timestamp_create(ctx,iteration_count);
@@ -864,7 +837,7 @@ rsxgl_draw(rsxgl_context_t * ctx,
 
   // - maybe migrate client indices
   // - maybe set base vertex
-  draw_concept_type::begin(data);
+  functions.start();
 
   // Iterate:
   // - for each iteration:
@@ -873,14 +846,14 @@ rsxgl_draw(rsxgl_context_t * ctx,
   //   - maybe update query object
   //   - post timestamp
   for(size_t i = 0;i < iteration_count;++i,++timestamp) {
-    draw_concept_type::iteration(data,i);
+    functions.iteration(i);
     rsxgl_timestamp_post(ctx,timestamp);
   }
 
   // Exit:
   // - maybe free client indices
   // - maybe reset base vertex
-  draw_concept_type::end(data);
+  functions.finish();
 }
 
 //
