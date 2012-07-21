@@ -695,6 +695,7 @@ rsxgl_draw_array_elements_base(gcmContextData * context,const uint32_t base)
   gcm_finish_n_commands(context,2);
 }
 
+#if 0
 // Tags for draw behavior:
 namespace {
   namespace draw_tags {
@@ -855,6 +856,83 @@ rsxgl_draw(rsxgl_context_t * ctx,
   // - maybe reset base vertex
   functions.finish();
 }
+#endif
+
+namespace {
+  template< typename ElementRangePolicy, typename IterationPolicy, typename DrawPolicy >
+  void rsxgl_draw(rsxgl_context_t * ctx,const ElementRangePolicy & elementRangePolicy,const IterationPolicy & iterationPolicy,const DrawPolicy & drawPolicy)
+  {
+    rsxgl_debug_printf("%s\n",__PRETTY_FUNCTION__);
+
+    // Compute the range of array elements used by this draw call:
+    const std::pair< uint32_t, uint32_t > index_range = elementRangePolicy.range();
+
+    // Iteration:
+    typename IterationPolicy::iterator it = iterationPolicy.begin(), it_end = iterationPolicy.end();
+
+    // Timestamps, determined by the number of iterations:
+    const size_t timestampCount = it_end - it;
+    uint32_t timestamp = rsxgl_timestamp_create(ctx,timestampCount);
+    const uint32_t lastTimestamp = timestamp + timestampCount - 1;
+
+    // Validate state:
+    rsxgl_draw_framebuffer_validate(ctx,lastTimestamp);
+    rsxgl_state_validate(ctx);
+    rsxgl_program_validate(ctx,lastTimestamp);
+    rsxgl_attribs_validate(ctx,ctx -> program_binding[RSXGL_ACTIVE_PROGRAM].attribs_enabled,index_range.first,index_range.second,lastTimestamp);
+    rsxgl_uniforms_validate(ctx,ctx -> program_binding[RSXGL_ACTIVE_PROGRAM]);
+    rsxgl_textures_validate(ctx,ctx -> program_binding[RSXGL_ACTIVE_PROGRAM],lastTimestamp);
+
+    // Draw functions:
+    gcmContextData * gcm_context = ctx -> gcm_context();
+
+    drawPolicy.begin(gcm_context);
+    for(;it != it_end;++it,++timestamp) {
+      drawPolicy.draw(gcm_context,it);
+      rsxgl_timestamp_post(ctx,timestamp);
+    }
+    drawPolicy.end(gcm_context);
+  }
+
+  struct single_iteration_policy {
+    typedef unsigned int iterator;
+    
+    iterator begin() const {
+      return 0;
+    }
+    
+    iterator end() const {
+      return 1;
+    }
+  };
+
+  struct multi_iteration_policy {
+    typedef unsigned int iterator;
+    
+    GLsizei primcount;
+    
+    multi_iteration_policy(GLsizei _primcount) : primcount(_primcount) {}
+    
+    iterator begin() const {
+      return 0;
+    }
+    
+    iterator end() const {
+      return primcount;
+    }
+  };
+
+  struct array_draw_policy {
+    const uint32_t rsx_primitive_type;
+    
+    array_draw_policy(uint32_t _rsx_primitive_type)
+      : rsx_primitive_type(_rsx_primitive_type) {
+    }
+    
+    void begin(gcmContextData *) const {}
+    void end(gcmContextData *) const {}
+  };
+}
 
 //
 GLAPI void APIENTRY
@@ -871,7 +949,31 @@ glDrawArrays (GLenum mode, GLint first, GLsizei count)
   }
 
   if(ctx -> state.enable.conditional_render_status != RSXGL_CONDITIONAL_RENDER_ACTIVE_WAIT_FAIL) {
-    rsxgl_draw< draw_tags::single, draw_tags::arrays, draw_tags::no_range, draw_tags::no_base >(ctx,rsx_primitive_type,1,&first,&count,0,0,0,0,0);
+    struct element_range_policy {
+      const GLint first;
+      const GLsizei count;
+
+      element_range_policy(GLint _first,GLint _count) : first(_first), count(_count) {}
+
+      std::pair< uint32_t, uint32_t > range() const {
+	return std::pair< uint32_t, uint32_t >(first,count);
+      }
+    };
+
+    struct draw_policy : public array_draw_policy {
+      const GLint first;
+      const GLsizei count;
+
+      draw_policy(uint32_t _rsx_primitive_type,GLint _first,GLint _count)
+	: array_draw_policy(_rsx_primitive_type), first(_first), count(_count) {
+      }
+
+      void draw(gcmContextData * gcm_context,unsigned int) const {
+	rsxgl_draw_arrays(gcm_context,rsx_primitive_type,first,count);
+      }
+    };
+
+    rsxgl_draw(ctx,element_range_policy(first,count),single_iteration_policy(),draw_policy(rsx_primitive_type,first,count));
   }
 
   RSXGL_NOERROR_();
@@ -891,7 +993,39 @@ glMultiDrawArrays (GLenum mode, const GLint *first, const GLsizei *count, const 
   }
 
   if(ctx -> state.enable.conditional_render_status != RSXGL_CONDITIONAL_RENDER_ACTIVE_WAIT_FAIL) {
-    rsxgl_draw< draw_tags::multi, draw_tags::arrays, draw_tags::no_range, draw_tags::no_base >(ctx,rsx_primitive_type,primcount,first,count,0,0,0,0,0);
+    //rsxgl_draw< draw_tags::multi, draw_tags::arrays, draw_tags::no_range, draw_tags::no_base >(ctx,rsx_primitive_type,primcount,first,count,0,0,0,0,0);
+
+    struct element_range_policy {
+      const GLint * first;
+      const GLsizei * count;
+      const GLsizei primcount;
+
+      element_range_policy(const GLint * _first,const GLint * _count,GLsizei _primcount) : first(_first), count(_count), primcount(_primcount) {}
+
+      std::pair< uint32_t, uint32_t > range() const {
+	return std::pair< uint32_t, uint32_t >(*std::min_element(first,first + primcount),*std::max_element(count,count + primcount));
+      }
+    };
+
+    struct draw_policy : public array_draw_policy {
+      const GLint * first;
+      const GLsizei * count;
+      const rsxgl_query_object_index_type query_index;
+      const bool set_query_object;
+
+      draw_policy(uint32_t _rsx_primitive_type,const GLint * _first,const GLint * _count,rsxgl_query_object_index_type _query_index)
+	: array_draw_policy(_rsx_primitive_type), first(_first), count(_count), query_index(_query_index), set_query_object(query_index != RSXGL_MAX_QUERY_OBJECTS) {
+      }
+
+      void draw(gcmContextData * gcm_context,unsigned int i) const {
+	rsxgl_draw_arrays(gcm_context,rsx_primitive_type,first[i],count[i]);
+	if(set_query_object) {
+	  rsxgl_query_object_set(gcm_context,query_index);
+	}
+      }
+    };
+
+    rsxgl_draw(ctx,element_range_policy(first,count,primcount),multi_iteration_policy(primcount),draw_policy(rsx_primitive_type,first,count,ctx -> any_samples_passed_query));
   }
 }
 
@@ -925,14 +1059,7 @@ glDrawElements (GLenum mode, GLsizei count, GLenum type, const GLvoid* indices)
     //
     const uint32_t timestamp = rsxgl_draw_init(ctx,mode,0,0,1);
     const rsxgl_draw_elements_info_t info = rsxgl_draw_elements_init(ctx,0,0,count,rsx_type,indices,timestamp);
-    if(ctx -> state.enable.transform_feedback_program && ctx -> state.enable.transform_feedback_mode) {
-      const uint32_t list_offset = gcm_begin_list(context);
-      rsxgl_draw_array_elements(context,rsx_primitive_type,count);
-      gcm_finish_list(context,list_offset,true);
-    }
-    else {
-      rsxgl_draw_array_elements(context,rsx_primitive_type,count);
-    }
+    rsxgl_draw_array_elements(context,rsx_primitive_type,count);
     rsxgl_timestamp_post(ctx,timestamp);
     rsxgl_draw_elements_exit(ctx,info);
   }
