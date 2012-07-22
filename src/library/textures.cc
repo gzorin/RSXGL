@@ -1222,7 +1222,6 @@ rsxgl_texture_validate_storage(rsxgl_context_t * ctx,texture_t & texture)
     
     const uint32_t fmt = pfmt -> fmt[4] | NV40_3D_TEX_FORMAT_LINEAR | (texture.rect ? NV40_3D_TEX_FORMAT_RECT : 0) | 0x8000;
     
-#if 0
     rsxgl_debug_printf("%s: dims:%u pformat:%u size:%ux%ux%u pitch:%u levels:%u bytes:%u fmt:%x\n",__PRETTY_FUNCTION__,
 		       (unsigned int)texture.dims,
 		       (unsigned int)texture.pformat,
@@ -1231,7 +1230,6 @@ rsxgl_texture_validate_storage(rsxgl_context_t * ctx,texture_t & texture)
 		       (unsigned int)texture.num_levels,
 		       (unsigned int)nbytes,(unsigned int)fmt);
     rsxgl_debug_printf("\toffset:%u\n",texture.memory.offset);
-#endif
     
     texture.format =
       ((texture.memory.location == 0) ? NV30_3D_TEX_FORMAT_DMA0 : NV30_3D_TEX_FORMAT_DMA1) |
@@ -2124,19 +2122,35 @@ rsxgl_textures_validate(rsxgl_context_t * ctx,program_t & program,const uint32_t
       // TODO: Set LOD min, max, bias:
     }
     if(invalid_it.test() || invalid_textures.test(api_index)) {
+#if 0
+      rsxgl_debug_printf("trying to activate vertex sampler: %u\n",index);
+#endif
+
       texture_t & texture = ctx -> texture_binding[api_index];
 
       rsxgl_texture_validate(ctx,texture,timestamp);
       
       if(texture.memory) {
+#if 0
+	rsxgl_debug_printf("\tit has memory\n");
+#endif
+
 	const uint32_t format = texture.format & (0x3 | NV30_3D_TEX_FORMAT_DIMS__MASK | NV30_3D_TEX_FORMAT_FORMAT__MASK | NV40_3D_TEX_FORMAT_MIPMAP_COUNT__MASK);
 	const uint32_t format_format = (format & NV30_3D_TEX_FORMAT_FORMAT__MASK);
 
+#if 0
+	rsxgl_debug_printf("\ttexture.format: %x format: %x format_format: %x\n",texture.format,format,format_format);
+#endif
+
 	static const uint32_t
 	  RGBA32F_format = NV40_3D_TEX_FORMAT_FORMAT_RGBA32F | NV40_3D_TEX_FORMAT_LINEAR | 0x9000,
-	  R32F_format = 0x1b00 | NV40_3D_TEX_FORMAT_LINEAR | 0x9000;
+	  R32F_format = 0x1c00 | NV40_3D_TEX_FORMAT_LINEAR | 0x9000;
 
 	if(format_format == RGBA32F_format || format_format == R32F_format) {
+#if 0
+	  rsxgl_debug_printf("\tactivating vertex sampler: %u\n",index);
+#endif
+
 	  // activate the texture:
 	  uint32_t * buffer = gcm_reserve(context,9);
 

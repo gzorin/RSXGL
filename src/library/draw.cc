@@ -783,11 +783,52 @@ namespace {
     
   protected:
     void draw(gcmContextData * gcm_context,uint32_t first,uint32_t count) const {
-      rsxgl_draw_arrays(gcm_context,rsx_primitive_type,first,count);
+      if(rsx_primitive_type == NV30_3D_VERTEX_BEGIN_END_POINTS) {
+	rsxgl_draw_array_operations< RSXGL_MAX_DRAW_BATCH_SIZE, rsxgl_draw_points > op(first);
+	rsxgl_process_batch< RSXGL_VERTEX_BATCH_MAX_FIFO_METHOD_ARGS > (gcm_context,count,op);
+	gcm_context -> current = op.buffer;
+      }
+      else if(rsx_primitive_type == NV30_3D_VERTEX_BEGIN_END_LINES) {
+	rsxgl_draw_array_operations< RSXGL_MAX_DRAW_BATCH_SIZE, rsxgl_draw_lines > op(first);
+	rsxgl_process_batch< RSXGL_VERTEX_BATCH_MAX_FIFO_METHOD_ARGS > (gcm_context,count,op);
+	gcm_context -> current = op.buffer;
+      }
+      else if(rsx_primitive_type == NV30_3D_VERTEX_BEGIN_END_LINE_STRIP) {
+	rsxgl_draw_array_operations< RSXGL_MAX_DRAW_BATCH_SIZE, rsxgl_draw_line_strip > op(first);
+	rsxgl_process_batch< RSXGL_VERTEX_BATCH_MAX_FIFO_METHOD_ARGS > (gcm_context,count,op);
+	gcm_context -> current = op.buffer;
+      }
+      else if(rsx_primitive_type == NV30_3D_VERTEX_BEGIN_END_TRIANGLES) {
+	rsxgl_draw_array_operations< RSXGL_MAX_DRAW_BATCH_SIZE, rsxgl_draw_triangles > op(first);
+	rsxgl_process_batch< RSXGL_VERTEX_BATCH_MAX_FIFO_METHOD_ARGS > (gcm_context,count,op);
+	gcm_context -> current = op.buffer;
+      }
+      else if(rsx_primitive_type == NV30_3D_VERTEX_BEGIN_END_TRIANGLE_STRIP) {
+	rsxgl_draw_array_operations< RSXGL_MAX_DRAW_BATCH_SIZE, rsxgl_draw_triangle_strip > op(first);
+	rsxgl_process_batch< RSXGL_VERTEX_BATCH_MAX_FIFO_METHOD_ARGS > (gcm_context,count,op);
+	gcm_context -> current = op.buffer;
+      }
     }
 
-    uint32_t commandCount(uint32_t count) const {
-      return rsxgl_count_arrays(rsx_primitive_type,count);
+    uint32_t countDrawCommands(uint32_t count) const {
+      if(rsx_primitive_type == NV30_3D_VERTEX_BEGIN_END_POINTS) {
+	return rsxgl_count_batch< RSXGL_VERTEX_BATCH_MAX_FIFO_METHOD_ARGS, rsxgl_draw_array_operations< RSXGL_MAX_DRAW_BATCH_SIZE, rsxgl_draw_points > > (count);
+      }
+      else if(rsx_primitive_type == NV30_3D_VERTEX_BEGIN_END_LINES) {
+	return rsxgl_count_batch< RSXGL_VERTEX_BATCH_MAX_FIFO_METHOD_ARGS, rsxgl_draw_array_operations< RSXGL_MAX_DRAW_BATCH_SIZE, rsxgl_draw_line_strip > > (count);
+      }
+      else if(rsx_primitive_type == NV30_3D_VERTEX_BEGIN_END_LINE_STRIP) {
+	return rsxgl_count_batch< RSXGL_VERTEX_BATCH_MAX_FIFO_METHOD_ARGS, rsxgl_draw_array_operations< RSXGL_MAX_DRAW_BATCH_SIZE, rsxgl_draw_line_strip > > (count);
+      }
+      else if(rsx_primitive_type == NV30_3D_VERTEX_BEGIN_END_TRIANGLES) {
+	return rsxgl_count_batch< RSXGL_VERTEX_BATCH_MAX_FIFO_METHOD_ARGS, rsxgl_draw_array_operations< RSXGL_MAX_DRAW_BATCH_SIZE, rsxgl_draw_triangles > > (count);
+      }
+      else if(rsx_primitive_type == NV30_3D_VERTEX_BEGIN_END_TRIANGLE_STRIP) {
+	return rsxgl_count_batch< RSXGL_VERTEX_BATCH_MAX_FIFO_METHOD_ARGS, rsxgl_draw_array_operations< RSXGL_MAX_DRAW_BATCH_SIZE, rsxgl_draw_triangle_strip > > (count);
+      }
+      else {
+	return 0;
+      }
     }
   };
 
@@ -874,7 +915,7 @@ namespace {
       }
     }
 
-    void draw(gcmContextData * gcm_context,uint32_t count,uint32_t offset) const {
+    void emitIndexBufferCommands(gcmContextData * gcm_context,uint32_t offset) const {
       // Emit the commands for this buffer:
       uint32_t * buffer = gcm_reserve(gcm_context,3);
       
@@ -883,8 +924,34 @@ namespace {
       gcm_emit_at(buffer,2,(uint32_t)rsxgl_element_nv40_type[rsx_element_type] | index_buffer_location);
       
       gcm_finish_n_commands(gcm_context,3);
+    }
 
-      rsxgl_draw_array_elements(gcm_context,rsx_primitive_type,count);
+    void emitDrawCommands(gcmContextData * gcm_context,uint32_t count) const {
+      if(rsx_primitive_type == NV30_3D_VERTEX_BEGIN_END_POINTS) {
+	rsxgl_draw_array_elements_operations< RSXGL_MAX_DRAW_BATCH_SIZE, rsxgl_draw_points > op;
+	rsxgl_process_batch< RSXGL_INDEX_BATCH_MAX_FIFO_METHOD_ARGS > (gcm_context,count,op);
+	gcm_context -> current = op.buffer;
+      }
+      else if(rsx_primitive_type == NV30_3D_VERTEX_BEGIN_END_LINES) {
+	rsxgl_draw_array_elements_operations< RSXGL_MAX_DRAW_BATCH_SIZE, rsxgl_draw_line_strip > op;
+	rsxgl_process_batch< RSXGL_INDEX_BATCH_MAX_FIFO_METHOD_ARGS > (gcm_context,count,op);
+	gcm_context -> current = op.buffer;
+      }
+      else if(rsx_primitive_type == NV30_3D_VERTEX_BEGIN_END_LINE_STRIP) {
+	rsxgl_draw_array_elements_operations< RSXGL_MAX_DRAW_BATCH_SIZE, rsxgl_draw_line_strip > op;
+	rsxgl_process_batch< RSXGL_INDEX_BATCH_MAX_FIFO_METHOD_ARGS > (gcm_context,count,op);
+	gcm_context -> current = op.buffer;
+      }
+      else if(rsx_primitive_type == NV30_3D_VERTEX_BEGIN_END_TRIANGLES) {
+	rsxgl_draw_array_elements_operations< RSXGL_MAX_DRAW_BATCH_SIZE, rsxgl_draw_triangles > op;
+	rsxgl_process_batch< RSXGL_INDEX_BATCH_MAX_FIFO_METHOD_ARGS > (gcm_context,count,op);
+	gcm_context -> current = op.buffer;
+      }
+      else if(rsx_primitive_type == NV30_3D_VERTEX_BEGIN_END_TRIANGLE_STRIP) {
+	rsxgl_draw_array_elements_operations< RSXGL_MAX_DRAW_BATCH_SIZE, rsxgl_draw_triangle_strip > op;
+	rsxgl_process_batch< RSXGL_INDEX_BATCH_MAX_FIFO_METHOD_ARGS > (gcm_context,count,op);
+	gcm_context -> current = op.buffer;
+      }
     }
 
     void end(gcmContextData * context) const {
@@ -894,8 +961,25 @@ namespace {
       }
     }
 
-    uint32_t commandCount(uint32_t count) const {
-      return rsxgl_count_array_elements(rsx_primitive_type,count);
+    uint32_t countDrawCommands(uint32_t count) const {
+      if(rsx_primitive_type == NV30_3D_VERTEX_BEGIN_END_POINTS) {
+	return rsxgl_count_batch< RSXGL_INDEX_BATCH_MAX_FIFO_METHOD_ARGS, rsxgl_draw_array_elements_operations< RSXGL_MAX_DRAW_BATCH_SIZE, rsxgl_draw_points > > (count);
+      }
+      else if(rsx_primitive_type == NV30_3D_VERTEX_BEGIN_END_LINES) {
+	return rsxgl_count_batch< RSXGL_INDEX_BATCH_MAX_FIFO_METHOD_ARGS, rsxgl_draw_array_elements_operations< RSXGL_MAX_DRAW_BATCH_SIZE, rsxgl_draw_line_strip > > (count);
+      }
+      else if(rsx_primitive_type == NV30_3D_VERTEX_BEGIN_END_LINE_STRIP) {
+	return rsxgl_count_batch< RSXGL_INDEX_BATCH_MAX_FIFO_METHOD_ARGS, rsxgl_draw_array_elements_operations< RSXGL_MAX_DRAW_BATCH_SIZE, rsxgl_draw_line_strip > > (count);
+      }
+      else if(rsx_primitive_type == NV30_3D_VERTEX_BEGIN_END_TRIANGLES) {
+	return rsxgl_count_batch< RSXGL_INDEX_BATCH_MAX_FIFO_METHOD_ARGS, rsxgl_draw_array_elements_operations< RSXGL_MAX_DRAW_BATCH_SIZE, rsxgl_draw_triangles > > (count);
+      }
+      else if(rsx_primitive_type == NV30_3D_VERTEX_BEGIN_END_TRIANGLE_STRIP) {
+	return rsxgl_count_batch< RSXGL_INDEX_BATCH_MAX_FIFO_METHOD_ARGS, rsxgl_draw_array_elements_operations< RSXGL_MAX_DRAW_BATCH_SIZE, rsxgl_draw_triangle_strip > > (count);
+      }
+      else {
+	return 0;
+      }
     }
   };
 
@@ -931,6 +1015,7 @@ namespace {
 
       // call location - current position + 1
       // jump location - current position + 1 word + nwords + 1 word
+      call_offset = 0;
       uint32_t jump_offset = 0;
       int32_t s = 0;
       
@@ -959,6 +1044,8 @@ namespace {
       gcm_emit_at(buffer,1,instanceid_index);
       gcm_emit_at(buffer,2,tmp.u);
       gcm_emit_at(buffer,3,call_cmd);
+
+      gcm_finish_n_commands(gcm_context,4);
 
       multi_draw_policy::draw(gcm_context);
     }
@@ -1084,7 +1171,8 @@ namespace {
     }
 
     void draw(gcmContextData * gcm_context,uint32_t timestamp,unsigned int) const {
-      element_draw_policy::draw(gcm_context,count,offset);
+      element_draw_policy::emitIndexBufferCommands(gcm_context,offset);
+      element_draw_policy::emitDrawCommands(gcm_context,count);
     }
 
     void end(gcmContextData * gcm_context,uint32_t) const {
@@ -1154,9 +1242,9 @@ glDrawRangeElements (GLenum mode, GLuint start, GLuint end, GLsizei count, GLenu
 
 namespace {
   struct draw_elements_base_policy : public element_draw_policy, public base_element_draw_policy {
-    GLsizei count;
+    const GLsizei count;
     const GLvoid * indices;
-    GLint basevertex;
+    const GLint basevertex;
 
     mutable uint32_t offset;
     
@@ -1168,7 +1256,8 @@ namespace {
     
     void draw(gcmContextData * gcm_context,uint32_t timestamp,unsigned int) const {
       base_element_draw_policy::draw(gcm_context,basevertex);
-      element_draw_policy::draw(gcm_context,count,offset);
+      element_draw_policy::emitIndexBufferCommands(gcm_context,offset);
+      element_draw_policy::emitDrawCommands(gcm_context,count);
     }
     
     void end(gcmContextData * gcm_context,uint32_t timestamp) const {
@@ -1265,7 +1354,9 @@ glMultiDrawElements (const GLenum mode, const GLsizei *count, GLenum type, const
       }
       
       void draw(gcmContextData * gcm_context,uint32_t timestamp,unsigned int i) const {
-	element_draw_policy::draw(gcm_context,count[i],offsets.get()[i]);
+	element_draw_policy::emitIndexBufferCommands(gcm_context,offsets.get()[i]);
+	element_draw_policy::emitDrawCommands(gcm_context,count[i]);
+
 	multi_draw_policy::draw(gcm_context);
       }
       
@@ -1315,7 +1406,8 @@ glMultiDrawElementsBaseVertex (GLenum mode, const GLsizei *count, GLenum type, c
       
       void draw(gcmContextData * gcm_context,uint32_t timestamp,unsigned int i) const {
 	base_element_draw_policy::draw(gcm_context,basevertex[i]);
-	element_draw_policy::draw(gcm_context,count[i],offsets.get()[i]);
+	element_draw_policy::emitIndexBufferCommands(gcm_context,offsets.get()[i]);
+	element_draw_policy::emitDrawCommands(gcm_context,count[i]);
 	multi_draw_policy::draw(gcm_context);
       }
       
@@ -1425,22 +1517,6 @@ glDrawArraysInstanced (GLenum mode, GLint first, GLsizei count, GLsizei primcoun
   }
 
   if(ctx -> state.enable.conditional_render_status != RSXGL_CONDITIONAL_RENDER_ACTIVE_WAIT_FAIL) {
-#if 0
-    const uint32_t timestamp = rsxgl_draw_init(ctx,mode,0,0,primcount);
-    
-    const rsxgl_query_object_index_type query_index = ctx -> any_samples_passed_query;
-    
-    const uint32_t instanceid_index = ctx -> program_binding[RSXGL_ACTIVE_PROGRAM].instanceid_index;
-    if(instanceid_index != ~0 && primcount > 1) {
-      rsxgl_draw_instances(context,primcount,instanceid_index,rsxgl_draw_arrays_instanced(context,rsx_primitive_type,first,count));
-    }
-    else {
-      rsxgl_draw_arrays_instanced(context,rsx_primitive_type,first,count);
-    }
-    
-    rsxgl_timestamp_post(ctx,timestamp + primcount - 1);
-#endif
-
     struct draw_policy : public array_draw_policy, public instanced_draw_policy {
       const GLint first;
       const GLsizei count;
@@ -1449,7 +1525,7 @@ glDrawArraysInstanced (GLenum mode, GLint first, GLsizei count, GLsizei primcoun
 	: array_draw_policy(_rsx_primitive_type), instanced_draw_policy(_ctx), first(_first), count(_count) {}
 
       void begin(gcmContextData * gcm_context,uint32_t) const {
-	instanced_draw_policy::beginInstance(gcm_context,array_draw_policy::commandCount(count));
+	instanced_draw_policy::beginInstance(gcm_context,array_draw_policy::countDrawCommands(count));
 	array_draw_policy::draw(gcm_context,first,count);
 	instanced_draw_policy::endInstance(gcm_context);
       }
@@ -1491,24 +1567,6 @@ glDrawElementsInstanced (const GLenum mode, const GLsizei count, const GLenum ty
   }
 
   if(ctx -> state.enable.conditional_render_status != RSXGL_CONDITIONAL_RENDER_ACTIVE_WAIT_FAIL) {
-#if 0
-    gcmContextData * context = ctx -> gcm_context();
-    
-    const rsxgl_query_object_index_type query_index = ctx -> any_samples_passed_query;
-    const uint32_t instanceid_index = ctx -> program_binding[RSXGL_ACTIVE_PROGRAM].instanceid_index;
-
-    const uint32_t timestamp = rsxgl_draw_init(ctx,mode,0,0,primcount);    
-    const rsxgl_draw_elements_info_t info = rsxgl_draw_elements_init(ctx,0,0,count,rsx_element_type,indices,timestamp);
-    if(instanceid_index != ~0 && primcount > 1) {
-      rsxgl_draw_instances(context,primcount,instanceid_index,rsxgl_draw_array_elements_instanced(context,rsx_primitive_type,count));
-    }
-    else {
-      rsxgl_draw_array_elements(context,rsx_primitive_type,count);
-    }    
-    rsxgl_timestamp_post(ctx,timestamp + primcount - 1);
-    rsxgl_draw_elements_exit(ctx,info);
-#endif
-
     struct draw_policy : public element_draw_policy, public instanced_draw_policy {
       const GLsizei count;
       const GLvoid * indices;
@@ -1520,9 +1578,10 @@ glDrawElementsInstanced (const GLenum mode, const GLsizei count, const GLenum ty
 
       void begin(gcmContextData * gcm_context,uint32_t timestamp) const {
 	element_draw_policy::begin(gcm_context,timestamp,&count,&indices,1,&offset);
+	element_draw_policy::emitIndexBufferCommands(gcm_context,offset);
 
-	instanced_draw_policy::beginInstance(gcm_context,element_draw_policy::commandCount(count));
-	element_draw_policy::draw(gcm_context,count,offset);
+	instanced_draw_policy::beginInstance(gcm_context,element_draw_policy::countDrawCommands(count));
+	element_draw_policy::emitDrawCommands(gcm_context,count);
 	instanced_draw_policy::endInstance(gcm_context);
       }
 
@@ -1565,23 +1624,41 @@ glDrawElementsInstancedBaseVertex (GLenum mode, GLsizei count, GLenum type, cons
   }
 
   if(ctx -> state.enable.conditional_render_status != RSXGL_CONDITIONAL_RENDER_ACTIVE_WAIT_FAIL) {
-    gcmContextData * context = ctx -> gcm_context();
+    struct draw_policy : public element_draw_policy, public base_element_draw_policy, public instanced_draw_policy {
+      const GLsizei count;
+      const GLvoid * indices;
+      const GLint basevertex;
 
-    const rsxgl_query_object_index_type query_index = ctx -> any_samples_passed_query;
-    const uint32_t instanceid_index = ctx -> program_binding[RSXGL_ACTIVE_PROGRAM].instanceid_index;
-    
-    const uint32_t timestamp = rsxgl_draw_init(ctx,mode,0,0,primcount);
-    const rsxgl_draw_elements_info_t info = rsxgl_draw_elements_init(ctx,0,0,count,rsx_element_type,indices,timestamp);
-    rsxgl_draw_array_elements_base(context,basevertex);
-    if(instanceid_index != ~0 && primcount > 1) {
-      rsxgl_draw_instances(context,primcount,instanceid_index,rsxgl_draw_array_elements_instanced(context,rsx_primitive_type,count));
+      mutable uint32_t offset;
+
+      draw_policy(rsxgl_context_t * _ctx,uint32_t _rsx_primitive_type,uint32_t _rsx_element_type,GLsizei _count,const GLvoid * _indices,GLint _basevertex)
+	: element_draw_policy(_ctx,_rsx_primitive_type,_rsx_element_type), instanced_draw_policy(_ctx), count(_count), indices(_indices), basevertex(_basevertex) {}
+
+      void begin(gcmContextData * gcm_context,uint32_t timestamp) const {
+	element_draw_policy::begin(gcm_context,timestamp,&count,&indices,1,&offset);
+	base_element_draw_policy::draw(gcm_context,basevertex);
+	element_draw_policy::emitIndexBufferCommands(gcm_context,offset);
+
+	instanced_draw_policy::beginInstance(gcm_context,element_draw_policy::countDrawCommands(count));
+	element_draw_policy::emitDrawCommands(gcm_context,count);
+	instanced_draw_policy::endInstance(gcm_context);
+      }
+
+      void draw(gcmContextData * gcm_context,uint32_t,unsigned int i) const {
+	instanced_draw_policy::draw(gcm_context,i);
+      }
+
+      void end(gcmContextData * gcm_context,uint32_t) const {
+	element_draw_policy::end(gcm_context);
+      }
+    };
+
+    if(ctx -> program_binding[RSXGL_ACTIVE_PROGRAM].instanceid_index != ~0 && primcount > 1) {
+      rsxgl_draw(ctx,ignore_element_range_policy(),multi_iteration_policy(primcount),draw_policy(ctx,rsx_primitive_type,rsx_element_type,count,indices,basevertex));
     }
     else {
-      rsxgl_draw_array_elements(context,rsx_primitive_type,count);
+      rsxgl_draw(ctx,ignore_element_range_policy(),single_iteration_policy(),draw_elements_base_policy(ctx,rsx_primitive_type,rsx_element_type,count,indices,basevertex));
     }
-    rsxgl_draw_array_elements_base(context,0);
-    rsxgl_timestamp_post(ctx,timestamp + primcount - 1);
-    rsxgl_draw_elements_exit(ctx,info);
   }
 
   RSXGL_NOERROR_();

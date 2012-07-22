@@ -154,6 +154,10 @@ struct program_t {
       bool operator()(const value_type & lhs,const char * rhs) const {
 	return strcmp(names.values + lhs.first,rhs) < 0;
       }
+
+      bool operator()(const char * rhs,const value_type & lhs) const {
+	return strcmp(names.values + lhs.first,rhs) < 0;
+      }
     };
 
     struct find_eq {
@@ -162,6 +166,10 @@ struct program_t {
       find_eq(names_type::const_type & _names) : names(_names) {}
 
       bool operator()(const value_type & lhs,const char * rhs) const {
+	return strcmp(names.values + lhs.first,rhs) == 0;
+      }
+
+      bool operator()(const char * rhs,const value_type & lhs) const {
 	return strcmp(names.values + lhs.first,rhs) == 0;
       }
     };

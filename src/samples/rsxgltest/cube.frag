@@ -1,3 +1,4 @@
+#version 130
 varying vec3 c;
 
 void

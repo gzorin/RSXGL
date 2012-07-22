@@ -11,8 +11,8 @@
 #include "sine_wave.h"
 
 #include <stddef.h>
-#include "cube_vpo.h"
-#include "cube_fpo.h"
+#include "cube_vert.h"
+#include "cube_frag.h"
 
 #include <io/pad.h>
 
@@ -82,7 +82,7 @@ Eigen::Affine3f ViewMatrixInv =
 		   )
 		  ).inverse();
 
-const GLuint ncubes = 100;
+const GLuint ncubes = 10;
 
 extern "C"
 void
@@ -115,8 +115,33 @@ rsxgltest_init(int argc,const char ** argv)
   glAttachShader(program,shaders[1]);
 
   // Supply shader binaries:
-  glShaderBinary(1,shaders,0,cube_vpo,cube_vpo_size);
-  glShaderBinary(1,shaders + 1,0,cube_fpo,cube_fpo_size);
+  //glShaderBinary(1,shaders,0,cube_vpo,cube_vpo_size);
+  //glShaderBinary(1,shaders + 1,0,cube_fpo,cube_fpo_size);
+
+  // Supply shader SOURCES!
+  char szInfo[2048];
+
+  const GLchar * shader_srcs[] = { (const GLchar *)cube_vert, (const GLchar *)cube_frag };
+  GLint shader_srcs_lengths[] = { cube_vert_len, cube_frag_len };
+  GLint compiled = 0;
+
+  glShaderSource(shaders[0],1,shader_srcs,shader_srcs_lengths);
+  glCompileShader(shaders[0]);
+
+  glGetShaderiv(shaders[0],GL_COMPILE_STATUS,&compiled);
+  tcp_printf("shader compile status: %i\n",compiled);
+
+  glGetShaderInfoLog(shaders[0],2048,0,szInfo);
+  tcp_printf("%s\n",szInfo);
+
+  glShaderSource(shaders[1],1,shader_srcs + 1,shader_srcs_lengths + 1);
+  glCompileShader(shaders[1]);
+
+  glGetShaderiv(shaders[1],GL_COMPILE_STATUS,&compiled);
+  tcp_printf("shader compile status: %i\n",compiled);
+
+  glGetShaderInfoLog(shaders[1],2048,0,szInfo);
+  tcp_printf("%s\n",szInfo);
 
   // Link the program for real:
   glLinkProgram(program);

@@ -16,7 +16,8 @@ BUILT_SOURCES = textures_vpo.h textures_fpo.h \
 	occlusion_vpo.h occlusion_fpo.h \
 	gradient_png.h \
 	texcube_vert.h texcube_frag.h \
-	points_vert.h points_frag.h
+	points_vert.h points_frag.h \
+	cube_vert.h cube_frag.h
 CLEANFILES = draw_vpo.h draw_fpo.h draw_vpo.o draw_fpo.o \
 	textures_vpo.h textures_fpo.h textures_vpo.o textures_fpo.o \
 	manypoints_vpo.h manypoints_fpo.h manypoints_vpo.o manypoints_fpo.o \
@@ -31,7 +32,8 @@ CLEANFILES = draw_vpo.h draw_fpo.h draw_vpo.o draw_fpo.o \
 	face_png.o face_png.h \
 	gradient_png.o gradient_png.h \
 	texcube_vert.h texcube_frag.h \
-	points_vert.h points_frag.h
+	points_vert.h points_frag.h \
+	cube_vert.h cube_frag.h
 
 # clear.c viewport_scissor.c buffer.c program.c draw.c uniforms.c textures.c cube.cc
 clear_objects = 
@@ -46,7 +48,7 @@ textures_sources = textures.c texture.c textures.vert textures.frag dice.bin
 manypoints_objects = face_png.o
 manypoints_sources = manypoints.cc texture.c points.vert points.frag face.png
 
-manycubes_objects = cube_vpo.o cube_fpo.o
+manycubes_objects = 
 manycubes_sources = manycubes.cc cube.vert cube.frag
 
 texcube_objects = nagel_bin.o gradient_png.o face_png.o

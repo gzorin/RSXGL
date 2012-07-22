@@ -1158,8 +1158,19 @@ glLinkProgram (GLuint program_name)
       }
     }
 
-    // TODO: deal with these:
-    program.instanceid_index = ~0;
+    {
+      program_t::uniform_table_type::type table = program.uniform_table();
+
+      const std::pair< bool, program_t::uniform_size_type > tmp = table.find(program.names(),"rsxgl_InstanceID");
+      if(tmp.first) {
+	program.instanceid_index = table[tmp.second].second.vp_index;
+      }
+      else {
+	program.instanceid_index = ~0;
+      }
+    }
+
+    // TODO: deal with this:
     program.point_sprite_control = 0;
 
 #if 0
