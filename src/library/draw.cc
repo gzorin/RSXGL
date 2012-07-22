@@ -122,8 +122,8 @@ rsxgl_check_draw_elements(rsxgl_context_t * ctx,GLenum mode,GLenum type)
   const uint32_t rsx_primitive_type = rsxgl_draw_mode(mode);
   RSXGL_FORWARD_ERROR(std::make_pair(~0U, RSXGL_MAX_ELEMENT_TYPES));
 
-  const uint32_t rsx_type = rsxgl_draw_elements_type(type);
-  if(rsx_type == RSXGL_MAX_ELEMENT_TYPES) {
+  const uint32_t rsx_element_type = rsxgl_draw_elements_type(type);
+  if(rsx_element_type == RSXGL_MAX_ELEMENT_TYPES) {
     RSXGL_ERROR(GL_INVALID_ENUM,std::make_pair(~0U,RSXGL_MAX_ELEMENT_TYPES));
   }
 
@@ -137,7 +137,7 @@ rsxgl_check_draw_elements(rsxgl_context_t * ctx,GLenum mode,GLenum type)
   rsxgl_check_unmapped_arrays(ctx,ctx -> program_binding[RSXGL_ACTIVE_PROGRAM].attribs_enabled);
   RSXGL_FORWARD_ERROR(std::make_pair(~0U, RSXGL_MAX_ELEMENT_TYPES));
 
-  return std::make_pair(rsx_primitive_type,rsx_type);
+  return std::make_pair(rsx_primitive_type,rsx_element_type);
 }
 
 static inline uint32_t
@@ -184,19 +184,19 @@ static const uint8_t rsxgl_element_type_bytes[RSXGL_MAX_ELEMENT_TYPES] = {
 };
 
 static inline void
-rsxgl_draw_elements_emit_index_buffer(gcmContextData * context,const uint32_t rsx_type,const uint32_t offset,const uint32_t location)
+rsxgl_draw_elements_emit_index_buffer(gcmContextData * context,const uint32_t rsx_element_type,const uint32_t offset,const uint32_t location)
 {
   uint32_t * buffer = gcm_reserve(context,3);
   
   gcm_emit_method_at(buffer,0,NV30_3D_IDXBUF_OFFSET,2);
   gcm_emit_at(buffer,1,offset);
-  gcm_emit_at(buffer,2,(uint32_t)rsxgl_element_nv40_type[rsx_type] | location);
+  gcm_emit_at(buffer,2,(uint32_t)rsxgl_element_nv40_type[rsx_element_type] | location);
   
   gcm_finish_n_commands(context,3);
 }
 
 static inline rsxgl_draw_elements_info_t
-rsxgl_draw_elements_init(rsxgl_context_t * ctx,const GLuint start,const GLuint end,const GLsizei count,const uint32_t rsx_type,const GLvoid * indices,const uint32_t timestamp)
+rsxgl_draw_elements_init(rsxgl_context_t * ctx,const GLuint start,const GLuint end,const GLsizei count,const uint32_t rsx_element_type,const GLvoid * indices,const uint32_t timestamp)
 {
   gcmContextData * context = ctx -> gcm_context();
 
@@ -204,7 +204,7 @@ rsxgl_draw_elements_init(rsxgl_context_t * ctx,const GLuint start,const GLuint e
   void * migrate_buffer = 0;
 
   uint32_t index_buffer_offset = 0, index_buffer_location = 0;
-  const uint32_t index_buffer_size = (uint32_t)rsxgl_element_type_bytes[rsx_type] * count;
+  const uint32_t index_buffer_size = (uint32_t)rsxgl_element_type_bytes[rsx_element_type] * count;
 
   if(client_indices) {
     migrate_buffer = rsxgl_vertex_migrate_memalign(context,16,index_buffer_size);
@@ -223,7 +223,7 @@ rsxgl_draw_elements_init(rsxgl_context_t * ctx,const GLuint start,const GLuint e
     index_buffer_location = index_buffer.memory.location;
   }
 
-  rsxgl_draw_elements_emit_index_buffer(context,rsx_type,index_buffer_offset,index_buffer_location);
+  rsxgl_draw_elements_emit_index_buffer(context,rsx_element_type,index_buffer_offset,index_buffer_location);
 
   return rsxgl_draw_elements_info_t(client_indices,migrate_buffer,index_buffer_size);
 }
@@ -695,169 +695,6 @@ rsxgl_draw_array_elements_base(gcmContextData * context,const uint32_t base)
   gcm_finish_n_commands(context,2);
 }
 
-#if 0
-// Tags for draw behavior:
-namespace {
-  namespace draw_tags {
-    // How many primitives?
-    struct single {};
-    struct multi {};
-    struct instanced {};
-
-    // Arrays or elements?
-    struct arrays {};
-    struct elements {};
-
-    // How to obtain element range?
-    struct no_range {};
-    struct scan_range {};
-    struct explicit_range {};
-
-    // How to handle base vertex?
-    struct no_base {};
-    struct zero_base {};
-    struct explicit_base {};
-  };
-};
-
-namespace {
-
-  template< typename SingleOrMulti, typename ArrayOrElements, typename Range, typename Base >
-  struct draw_functions;
-
-  struct draw_functions_base {
-    gcmContextData * const context;
-    const uint32_t rsx_primitive_type;
-
-    draw_functions_base(gcmContextData * _context,const uint32_t _rsx_primitive_type)
-      : context(_context), rsx_primitive_type(_rsx_primitive_type) {
-    }
-  };
-
-  template< >
-  struct draw_functions< draw_tags::single, draw_tags::arrays, draw_tags::no_range, draw_tags::no_base > : public draw_functions_base {
-    const GLint * const first;
-    const GLsizei * const count;
-
-    draw_functions(rsxgl_context_t * _ctx,
-		   const uint32_t _rsx_primitive_type,
-		   const GLsizei _primitive_count,const GLint * _first,const GLsizei * _count,
-		   const uint32_t _rsx_element_type,const GLint _element_base,const GLuint _min_element,const GLuint _max_element,const GLvoid ** _element_indices)
-      : draw_functions_base(_ctx -> gcm_context(), _rsx_primitive_type),
-	first(_first), count(_count) {
-    }
-
-    std::pair< uint32_t, uint32_t > index_range() {
-      return std::make_pair(*first,*count);
-    }
-
-    size_t iteration_count() {
-      return 1;
-    }
-
-    void start() {}
-
-    void iteration(const size_t) {
-      rsxgl_draw_arrays(context,rsx_primitive_type,*first,*count);
-    }
-
-    void finish() {}
-  };
-
-  template< >
-  struct draw_functions< draw_tags::multi, draw_tags::arrays, draw_tags::no_range, draw_tags::no_base > : public draw_functions_base {
-    const GLsizei primitive_count;
-    const GLint * const first;
-    const GLsizei * const count;
-    
-    const rsxgl_query_object_index_type query_index;
-    
-    draw_functions(rsxgl_context_t * _ctx,
-		   const uint32_t _rsx_primitive_type,
-		   const GLsizei _primitive_count,const GLint * _first,const GLsizei * _count,
-		   const uint32_t _rsx_element_type,const GLint _element_base,const GLuint _min_element,const GLuint _max_element,const GLvoid ** _element_indices)
-      : draw_functions_base(_ctx -> gcm_context(),_rsx_primitive_type),
-	primitive_count(_primitive_count), first(_first), count(_count),
-	query_index(_ctx -> any_samples_passed_query) {
-    }
-
-    std::pair< uint32_t, uint32_t > index_range() {
-      const GLint * min_first = std::min_element(first,first + primitive_count);
-      const GLsizei * max_count = std::max_element(count,count + primitive_count);
-      return std::make_pair(*min_first,*max_count);
-    }
-
-    size_t iteration_count() {
-      return primitive_count;
-    }
-
-    void start() {}
-
-    void iteration(const size_t i) {
-      rsxgl_draw_arrays(context,rsx_primitive_type,first[i],count[i]);
-      if(query_index != RSXGL_MAX_QUERY_OBJECTS) {
-	rsxgl_query_object_set(context,query_index);
-      }
-    }
-
-    void finish() {}
-  };
-
-};
-
-template< typename SingleOrMulti, typename ArrayOrElements, typename Range, typename Base >
-static inline void
-rsxgl_draw(rsxgl_context_t * ctx,
-	   const uint32_t rsx_primitive_type,
-	   const GLsizei primitive_count,const GLint * first,const GLsizei * count,
-	   const uint32_t rsx_element_type,const GLint element_base,const GLuint min_element,const GLuint max_element,const GLvoid ** element_indices)
-{
-  rsxgl_debug_printf("%s\n",__PRETTY_FUNCTION__);
-
-  typedef draw_functions< SingleOrMulti, ArrayOrElements, Range, Base > draw_functions_type;
-  draw_functions_type functions(ctx,rsx_primitive_type,primitive_count,first,count,rsx_element_type,element_base,min_element,max_element,element_indices);
-
-  // Compute the range of array elements used by this draw call:
-  const std::pair< uint32_t, uint32_t > index_range = functions.index_range();
-
-  // Number of iterations:
-  const size_t iteration_count = functions.iteration_count();
-
-  // - always compute timestamp(s):
-  uint32_t timestamp = rsxgl_timestamp_create(ctx,iteration_count);
-  const uint32_t last_timestamp = timestamp + iteration_count - 1;
-
-  // validate everything:
-  // - always validate state, attribs, etc.
-  rsxgl_draw_framebuffer_validate(ctx,last_timestamp);
-  rsxgl_state_validate(ctx);
-  rsxgl_program_validate(ctx,last_timestamp);
-  rsxgl_attribs_validate(ctx,ctx -> program_binding[RSXGL_ACTIVE_PROGRAM].attribs_enabled,index_range.first,index_range.second,last_timestamp);
-  rsxgl_uniforms_validate(ctx,ctx -> program_binding[RSXGL_ACTIVE_PROGRAM]);
-  rsxgl_textures_validate(ctx,ctx -> program_binding[RSXGL_ACTIVE_PROGRAM],last_timestamp);
-
-  // - maybe migrate client indices
-  // - maybe set base vertex
-  functions.start();
-
-  // Iterate:
-  // - for each iteration:
-  //   - on first, maybe cache as "display list"
-  //   - maybe set base vertex
-  //   - maybe update query object
-  //   - post timestamp
-  for(size_t i = 0;i < iteration_count;++i,++timestamp) {
-    functions.iteration(i);
-    rsxgl_timestamp_post(ctx,timestamp);
-  }
-
-  // Exit:
-  // - maybe free client indices
-  // - maybe reset base vertex
-  functions.finish();
-}
-#endif
-
 namespace {
   template< typename ElementRangePolicy, typename IterationPolicy, typename DrawPolicy >
   void rsxgl_draw(rsxgl_context_t * ctx,const ElementRangePolicy & elementRangePolicy,const IterationPolicy & iterationPolicy,const DrawPolicy & drawPolicy)
@@ -886,13 +723,29 @@ namespace {
     // Draw functions:
     gcmContextData * gcm_context = ctx -> gcm_context();
 
-    drawPolicy.begin(gcm_context);
+    drawPolicy.begin(gcm_context,timestamp);
     for(;it != it_end;++it,++timestamp) {
-      drawPolicy.draw(gcm_context,it);
+      drawPolicy.draw(gcm_context,timestamp,it);
       rsxgl_timestamp_post(ctx,timestamp);
     }
-    drawPolicy.end(gcm_context);
+    drawPolicy.end(gcm_context,timestamp);
   }
+
+  struct ignore_element_range_policy {
+    std::pair< uint32_t, uint32_t > range() const {
+      return std::pair< uint32_t, uint32_t >(0,0);
+    }
+  };
+
+  struct start_end_element_range_policy {
+    const GLuint start, end;
+    
+    start_end_element_range_policy(GLuint _start,GLuint _end) : start(_start), end(_end) {}
+    
+    std::pair< uint32_t, uint32_t > range() const {
+      return std::pair< uint32_t, uint32_t >(start,end - start);
+    }
+  };
 
   struct single_iteration_policy {
     typedef unsigned int iterator;
@@ -926,11 +779,163 @@ namespace {
     const uint32_t rsx_primitive_type;
     
     array_draw_policy(uint32_t _rsx_primitive_type)
-      : rsx_primitive_type(_rsx_primitive_type) {
+      : rsx_primitive_type(_rsx_primitive_type) {}
+    
+  protected:
+
+    void draw(gcmContextData * gcm_context,uint32_t first,uint32_t count) const {
+      rsxgl_draw_arrays(gcm_context,rsx_primitive_type,first,count);
+    }
+  };
+
+  struct element_draw_policy {
+    rsxgl_context_t * ctx;
+    const uint32_t rsx_primitive_type, rsx_element_type;
+
+    const bool client_indices;
+
+    element_draw_policy(rsxgl_context_t * _ctx,uint32_t _rsx_primitive_type,uint32_t _rsx_element_type)
+      : ctx(_ctx), rsx_primitive_type(_rsx_primitive_type), rsx_element_type(_rsx_element_type),
+
+	client_indices(ctx -> buffer_binding.names[RSXGL_ELEMENT_ARRAY_BUFFER] == 0),
+	migrate_buffer(0), migrate_buffer_size(0) {}
+
+  protected:
+
+    mutable void * migrate_buffer;
+    mutable uint32_t migrate_buffer_size;
+    mutable uint32_t index_buffer_offset, index_buffer_location;
+
+    void begin(gcmContextData * context,uint32_t timestamp,const GLsizei * count,const GLvoid * const* indices,GLsizei primcount,uint32_t * offsets) const {
+      index_buffer_offset = 0;
+      index_buffer_location = 0;
+      
+      // Migrate client-side index array to RSX:
+      if(client_indices) {
+	migrate_buffer_size = (uint32_t)rsxgl_element_type_bytes[rsx_element_type] * std::accumulate(count,count + primcount,0);
+	migrate_buffer = rsxgl_vertex_migrate_memalign(context,16,migrate_buffer_size);
+
+	uint8_t * pmigrate_buffer = (uint8_t *)migrate_buffer;
+	uint32_t offset = 0;
+	for(GLsizei i = 0;i < primcount;++i) {
+	  const size_t size = (uint32_t)rsxgl_element_type_bytes[rsx_element_type] * *count;
+	  memcpy(pmigrate_buffer,*indices,size);
+	  *offsets = offset;
+	  pmigrate_buffer += size;
+	  offset += size;
+	  ++count;
+	  ++indices;
+	  ++offsets;
+	}
+
+	int32_t s = gcmAddressToOffset(migrate_buffer,&index_buffer_offset);
+	rsxgl_assert(s == 0);
+	
+	index_buffer_location = RSXGL_VERTEX_MIGRATE_BUFFER_LOCATION;
+      }
+      // Validate the RSX buffer:
+      else {
+	uint32_t start = std::numeric_limits< uint32_t >::max(), end = std::numeric_limits< uint32_t >::min();
+
+	for(GLsizei i = 0;i < primcount;++i) {
+	  const uint32_t offset = (uint32_t)((uint64_t)*indices);
+	  *offsets = offset;
+	  start = std::min(start,offset);
+	  end = std::max(end,offset + *count);
+	  ++count;
+	  ++indices;
+	  ++offsets;
+	}
+
+	rsxgl_buffer_validate(ctx,ctx -> buffer_binding[RSXGL_ELEMENT_ARRAY_BUFFER],start,end,timestamp + primcount - 1);
+	
+	const buffer_t & index_buffer = ctx -> buffer_binding[RSXGL_ELEMENT_ARRAY_BUFFER];
+	index_buffer_offset = index_buffer.memory.offset;
+	index_buffer_location = index_buffer.memory.location;
+      }
+    }
+
+    void draw(gcmContextData * gcm_context,uint32_t count,uint32_t offset) const {
+      // Emit the commands for this buffer:
+      uint32_t * buffer = gcm_reserve(gcm_context,3);
+      
+      gcm_emit_method_at(buffer,0,NV30_3D_IDXBUF_OFFSET,2);
+      gcm_emit_at(buffer,1,index_buffer_offset + offset);
+      gcm_emit_at(buffer,2,(uint32_t)rsxgl_element_nv40_type[rsx_element_type] | index_buffer_location);
+      
+      gcm_finish_n_commands(gcm_context,3);
+
+      rsxgl_draw_array_elements(gcm_context,rsx_primitive_type,count);
+    }
+
+    void end(gcmContextData * context) const {
+      if(client_indices) {
+	rsxgl_assert(migrate_buffer != 0);
+	rsxgl_vertex_migrate_free(context,migrate_buffer,migrate_buffer_size);
+      }
+    }
+  };
+
+  struct base_element_draw_policy {
+  protected:
+    void draw(gcmContextData * context,uint32_t base) const {
+      uint32_t * buffer = gcm_reserve(context,2);
+      gcm_emit_method_at(buffer,0,0x173c,1);
+      gcm_emit_at(buffer,1,base);
+      gcm_finish_n_commands(context,2);
+    }
+
+    void end(gcmContextData * context) const {
+      uint32_t * buffer = gcm_reserve(context,2);
+      gcm_emit_method_at(buffer,0,0x173c,1);
+      gcm_emit_at(buffer,1,0);
+      gcm_finish_n_commands(context,2);
+    }
+  };
+
+  struct draw_elements_policy : public element_draw_policy {
+    GLsizei count;
+    const GLvoid * indices;
+
+    mutable uint32_t offset;
+    
+    draw_elements_policy(rsxgl_context_t * _ctx,uint32_t _rsx_primitive_type,uint32_t _rsx_element_type,GLsizei _count,const GLvoid * _indices) : element_draw_policy(_ctx,_rsx_primitive_type,_rsx_element_type), count(_count), indices(_indices) {}
+    
+    void begin(gcmContextData * gcm_context,uint32_t timestamp) const {
+      element_draw_policy::begin(gcm_context,timestamp,&count,&indices,1,&offset);
+    }
+
+    void draw(gcmContextData * gcm_context,uint32_t timestamp,unsigned int) const {
+      element_draw_policy::draw(gcm_context,count,offset);
+    }
+
+    void end(gcmContextData * gcm_context,uint32_t) const {
+      element_draw_policy::end(gcm_context);
+    }
+  };
+
+  struct draw_elements_base_policy : public element_draw_policy, public base_element_draw_policy {
+    GLsizei count;
+    const GLvoid * indices;
+    GLint basevertex;
+
+    mutable uint32_t offset;
+    
+    draw_elements_base_policy(rsxgl_context_t * _ctx,uint32_t _rsx_primitive_type,uint32_t _rsx_element_type,GLsizei _count,const GLvoid * _indices,GLint _basevertex) : element_draw_policy(_ctx,_rsx_primitive_type,_rsx_element_type), count(_count), indices(_indices), basevertex(_basevertex) {}
+    
+    void begin(gcmContextData * gcm_context,uint32_t timestamp) const {
+      element_draw_policy::begin(gcm_context,timestamp,&count,&indices,1,&offset);
     }
     
-    void begin(gcmContextData *) const {}
-    void end(gcmContextData *) const {}
+    void draw(gcmContextData * gcm_context,uint32_t timestamp,unsigned int) const {
+      base_element_draw_policy::draw(gcm_context,basevertex);
+      element_draw_policy::draw(gcm_context,count,offset);
+    }
+    
+    void end(gcmContextData * gcm_context,uint32_t timestamp) const {
+      element_draw_policy::end(gcm_context);
+      base_element_draw_policy::end(gcm_context);
+    }
   };
 }
 
@@ -968,11 +973,15 @@ glDrawArrays (GLenum mode, GLint first, GLsizei count)
 	: array_draw_policy(_rsx_primitive_type), first(_first), count(_count) {
       }
 
-      void draw(gcmContextData * gcm_context,unsigned int) const {
-	rsxgl_draw_arrays(gcm_context,rsx_primitive_type,first,count);
-      }
-    };
+      void begin(gcmContextData * context,uint32_t) const {}
+      void end(gcmContextData * context,uint32_t) const {}
 
+      void draw(gcmContextData * gcm_context,uint32_t,unsigned int) const {
+	array_draw_policy::draw(gcm_context,first,count);
+      }
+      
+    };
+    
     rsxgl_draw(ctx,element_range_policy(first,count),single_iteration_policy(),draw_policy(rsx_primitive_type,first,count));
   }
 
@@ -993,8 +1002,6 @@ glMultiDrawArrays (GLenum mode, const GLint *first, const GLsizei *count, const 
   }
 
   if(ctx -> state.enable.conditional_render_status != RSXGL_CONDITIONAL_RENDER_ACTIVE_WAIT_FAIL) {
-    //rsxgl_draw< draw_tags::multi, draw_tags::arrays, draw_tags::no_range, draw_tags::no_base >(ctx,rsx_primitive_type,primcount,first,count,0,0,0,0,0);
-
     struct element_range_policy {
       const GLint * first;
       const GLsizei * count;
@@ -1003,7 +1010,15 @@ glMultiDrawArrays (GLenum mode, const GLint *first, const GLsizei *count, const 
       element_range_policy(const GLint * _first,const GLint * _count,GLsizei _primcount) : first(_first), count(_count), primcount(_primcount) {}
 
       std::pair< uint32_t, uint32_t > range() const {
-	return std::pair< uint32_t, uint32_t >(*std::min_element(first,first + primcount),*std::max_element(count,count + primcount));
+	GLint start = std::numeric_limits< GLint >::max();
+	GLsizei end = std::numeric_limits< GLsizei >::min();
+
+	for(GLsizei i = 0;i < primcount;++i) {
+	  start = std::min(start,first[i]);
+	  end = std::max(end,first[i] + count[i]);
+	}
+	
+	return std::pair< uint32_t, uint32_t >(start,end - start);
       }
     };
 
@@ -1017,8 +1032,11 @@ glMultiDrawArrays (GLenum mode, const GLint *first, const GLsizei *count, const 
 	: array_draw_policy(_rsx_primitive_type), first(_first), count(_count), query_index(_query_index), set_query_object(query_index != RSXGL_MAX_QUERY_OBJECTS) {
       }
 
-      void draw(gcmContextData * gcm_context,unsigned int i) const {
-	rsxgl_draw_arrays(gcm_context,rsx_primitive_type,first[i],count[i]);
+      void begin(gcmContextData * context,uint32_t) const {}
+      void end(gcmContextData * context,uint32_t) const {}
+
+      void draw(gcmContextData * gcm_context,uint32_t,unsigned int i) const {
+	array_draw_policy::draw(gcm_context,first[i],count[i]);
 	if(set_query_object) {
 	  rsxgl_query_object_set(gcm_context,query_index);
 	}
@@ -1036,8 +1054,8 @@ glDrawElements (GLenum mode, GLsizei count, GLenum type, const GLvoid* indices)
   rsxgl_context_t * ctx = current_ctx();
 
   RSXGL_FORWARD_ERROR_BEGIN();
-  uint32_t rsx_primitive_type = 0, rsx_type = 0;
-  std::tie(rsx_primitive_type,rsx_type) = rsxgl_check_draw_elements(ctx,mode,type);
+  uint32_t rsx_primitive_type = 0, rsx_element_type = 0;
+  std::tie(rsx_primitive_type,rsx_element_type) = rsxgl_check_draw_elements(ctx,mode,type);
   RSXGL_FORWARD_ERROR_END();
 
   if(!(type == GL_UNSIGNED_BYTE || type == GL_UNSIGNED_SHORT || type == GL_UNSIGNED_INT)) {
@@ -1053,15 +1071,19 @@ glDrawElements (GLenum mode, GLsizei count, GLenum type, const GLvoid* indices)
   }
 
   if(ctx -> state.enable.conditional_render_status != RSXGL_CONDITIONAL_RENDER_ACTIVE_WAIT_FAIL) {
+#if 0
     // draw!
     gcmContextData * context = ctx -> gcm_context();
     
     //
     const uint32_t timestamp = rsxgl_draw_init(ctx,mode,0,0,1);
-    const rsxgl_draw_elements_info_t info = rsxgl_draw_elements_init(ctx,0,0,count,rsx_type,indices,timestamp);
+    const rsxgl_draw_elements_info_t info = rsxgl_draw_elements_init(ctx,0,0,count,rsx_element_type,indices,timestamp);
     rsxgl_draw_array_elements(context,rsx_primitive_type,count);
     rsxgl_timestamp_post(ctx,timestamp);
     rsxgl_draw_elements_exit(ctx,info);
+#endif
+
+    rsxgl_draw(ctx,ignore_element_range_policy(),single_iteration_policy(),draw_elements_policy(ctx,rsx_primitive_type,rsx_element_type,count,indices));
   }
 
   RSXGL_NOERROR_();
@@ -1073,8 +1095,8 @@ glDrawElementsBaseVertex (GLenum mode, GLsizei count, GLenum type, const GLvoid 
   rsxgl_context_t * ctx = current_ctx();
 
   RSXGL_FORWARD_ERROR_BEGIN();
-  uint32_t rsx_primitive_type = 0, rsx_type = 0;
-  std::tie(rsx_primitive_type,rsx_type) = rsxgl_check_draw_elements(ctx,mode,type);
+  uint32_t rsx_primitive_type = 0, rsx_element_type = 0;
+  std::tie(rsx_primitive_type,rsx_element_type) = rsxgl_check_draw_elements(ctx,mode,type);
   RSXGL_FORWARD_ERROR_END();
 
   if(count < 0) {
@@ -1086,15 +1108,19 @@ glDrawElementsBaseVertex (GLenum mode, GLsizei count, GLenum type, const GLvoid 
   }
 
   if(ctx -> state.enable.conditional_render_status != RSXGL_CONDITIONAL_RENDER_ACTIVE_WAIT_FAIL) {
+#if 0
     gcmContextData * context = ctx -> gcm_context();
     
     const uint32_t timestamp = rsxgl_draw_init(ctx,mode,0,0,1);
-    const rsxgl_draw_elements_info_t info = rsxgl_draw_elements_init(ctx,0,0,count,rsx_type,indices,timestamp);
+    const rsxgl_draw_elements_info_t info = rsxgl_draw_elements_init(ctx,0,0,count,rsx_element_type,indices,timestamp);
     rsxgl_draw_array_elements_base(context,basevertex);
     rsxgl_draw_array_elements(context,rsx_primitive_type,count);
     rsxgl_timestamp_post(ctx,timestamp);
     rsxgl_draw_array_elements_base(context,0);
     rsxgl_draw_elements_exit(ctx,info);
+#endif
+
+    rsxgl_draw(ctx,ignore_element_range_policy(),single_iteration_policy(),draw_elements_base_policy(ctx,rsx_primitive_type,rsx_element_type,count,indices,basevertex));
   }
 
   RSXGL_NOERROR_();
@@ -1106,8 +1132,8 @@ glDrawRangeElements (GLenum mode, GLuint start, GLuint end, GLsizei count, GLenu
   rsxgl_context_t * ctx = current_ctx();
 
   RSXGL_FORWARD_ERROR_BEGIN();
-  uint32_t rsx_primitive_type = 0, rsx_type = 0;
-  std::tie(rsx_primitive_type,rsx_type) = rsxgl_check_draw_elements(ctx,mode,type);
+  uint32_t rsx_primitive_type = 0, rsx_element_type = 0;
+  std::tie(rsx_primitive_type,rsx_element_type) = rsxgl_check_draw_elements(ctx,mode,type);
   RSXGL_FORWARD_ERROR_END();
 
   if(count < 0) {
@@ -1123,14 +1149,18 @@ glDrawRangeElements (GLenum mode, GLuint start, GLuint end, GLsizei count, GLenu
   }
 
   if(ctx -> state.enable.conditional_render_status != RSXGL_CONDITIONAL_RENDER_ACTIVE_WAIT_FAIL) {
+#if 0
     // draw!
     gcmContextData * context = ctx -> gcm_context();
     
     const uint32_t timestamp = rsxgl_draw_init(ctx,mode,start,end - start,1);    
-    const rsxgl_draw_elements_info_t info = rsxgl_draw_elements_init(ctx,start,end,count,rsx_type,indices,timestamp);
+    const rsxgl_draw_elements_info_t info = rsxgl_draw_elements_init(ctx,start,end,count,rsx_element_type,indices,timestamp);
     rsxgl_draw_array_elements(context,rsx_primitive_type,count);
     rsxgl_timestamp_post(ctx,timestamp);
     rsxgl_draw_elements_exit(ctx,info);
+#endif
+
+    rsxgl_draw(ctx,start_end_element_range_policy(start,end),single_iteration_policy(),draw_elements_policy(ctx,rsx_primitive_type,rsx_element_type,count,indices));    
   }
 
   RSXGL_NOERROR_();
@@ -1142,8 +1172,8 @@ glDrawRangeElementsBaseVertex (GLenum mode, GLuint start, GLuint end, GLsizei co
   rsxgl_context_t * ctx = current_ctx();
 
   RSXGL_FORWARD_ERROR_BEGIN();
-  uint32_t rsx_primitive_type = 0, rsx_type = 0;
-  std::tie(rsx_primitive_type,rsx_type) = rsxgl_check_draw_elements(ctx,mode,type);
+  uint32_t rsx_primitive_type = 0, rsx_element_type = 0;
+  std::tie(rsx_primitive_type,rsx_element_type) = rsxgl_check_draw_elements(ctx,mode,type);
   RSXGL_FORWARD_ERROR_END();
 
   if(count < 0) {
@@ -1159,15 +1189,19 @@ glDrawRangeElementsBaseVertex (GLenum mode, GLuint start, GLuint end, GLsizei co
   }
 
   if(ctx -> state.enable.conditional_render_status != RSXGL_CONDITIONAL_RENDER_ACTIVE_WAIT_FAIL) {
+#if 0
     gcmContextData * context = ctx -> gcm_context();
     
     const uint32_t timestamp = rsxgl_draw_init(ctx,mode,start,end - start,1);    
-    const rsxgl_draw_elements_info_t info = rsxgl_draw_elements_init(ctx,start,end,count,rsx_type,indices,timestamp);
+    const rsxgl_draw_elements_info_t info = rsxgl_draw_elements_init(ctx,start,end,count,rsx_element_type,indices,timestamp);
     rsxgl_draw_array_elements_base(context,basevertex);
     rsxgl_draw_array_elements(context,rsx_primitive_type,count);
     rsxgl_timestamp_post(ctx,timestamp);
     rsxgl_draw_array_elements_base(context,0);
     rsxgl_draw_elements_exit(ctx,info);
+#endif
+
+    rsxgl_draw(ctx,start_end_element_range_policy(start,end),single_iteration_policy(),draw_elements_base_policy(ctx,rsx_primitive_type,rsx_element_type,count,indices,basevertex));
   }
 
   RSXGL_NOERROR_();
@@ -1179,8 +1213,8 @@ glMultiDrawElements (const GLenum mode, const GLsizei *count, GLenum type, const
   rsxgl_context_t * ctx = current_ctx();
 
   RSXGL_FORWARD_ERROR_BEGIN();
-  uint32_t rsx_primitive_type = 0, rsx_type = 0;
-  std::tie(rsx_primitive_type,rsx_type) = rsxgl_check_draw_elements(ctx,mode,type);
+  uint32_t rsx_primitive_type = 0, rsx_element_type = 0;
+  std::tie(rsx_primitive_type,rsx_element_type) = rsxgl_check_draw_elements(ctx,mode,type);
   RSXGL_FORWARD_ERROR_END();
 
   if(primcount < 0) {
@@ -1205,7 +1239,7 @@ glMultiDrawElements (const GLenum mode, const GLsizei *count, GLenum type, const
       uint32_t index_buffer_sizes[primcount];
       uint32_t index_buffer_offsets[primcount];
       for(GLsizei i = 0;i < primcount;++i) {
-	index_buffer_sizes[i] = (uint32_t)rsxgl_element_type_bytes[rsx_type] * count[i];
+	index_buffer_sizes[i] = (uint32_t)rsxgl_element_type_bytes[rsx_element_type] * count[i];
 	migrate_buffers[i] = rsxgl_vertex_migrate_memalign(context,16,index_buffer_sizes[i]);
 	memcpy(migrate_buffers[i],indices,index_buffer_sizes[i]);
 	int32_t s = gcmAddressToOffset(migrate_buffers[i],index_buffer_offsets + i);
@@ -1214,14 +1248,14 @@ glMultiDrawElements (const GLenum mode, const GLsizei *count, GLenum type, const
       
       if(query_index == RSXGL_MAX_QUERY_OBJECTS) {
 	for(GLsizei i = 0;i < primcount;++i) {
-	  rsxgl_draw_elements_emit_index_buffer(context,rsx_type,index_buffer_offsets[i],RSXGL_VERTEX_MIGRATE_BUFFER_LOCATION);
+	  rsxgl_draw_elements_emit_index_buffer(context,rsx_element_type,index_buffer_offsets[i],RSXGL_VERTEX_MIGRATE_BUFFER_LOCATION);
 	  rsxgl_draw_array_elements(context,rsx_primitive_type,count[i]);
 	}
 	rsxgl_timestamp_post(ctx,timestamp + primcount - 1);
       }
       else {
 	for(GLsizei i = 0;i < primcount;++i) {
-	  rsxgl_draw_elements_emit_index_buffer(context,rsx_type,index_buffer_offsets[i],RSXGL_VERTEX_MIGRATE_BUFFER_LOCATION);
+	  rsxgl_draw_elements_emit_index_buffer(context,rsx_element_type,index_buffer_offsets[i],RSXGL_VERTEX_MIGRATE_BUFFER_LOCATION);
 	  rsxgl_draw_array_elements(context,rsx_primitive_type,count[i]);
 	  rsxgl_query_object_set(context,query_index);
 	  rsxgl_timestamp_post(ctx,timestamp++);
@@ -1246,14 +1280,14 @@ glMultiDrawElements (const GLenum mode, const GLsizei *count, GLenum type, const
       
       if(query_index == RSXGL_MAX_QUERY_OBJECTS) {
 	for(GLsizei i = 0;i < primcount;++i) {
-	  rsxgl_draw_elements_emit_index_buffer(context,rsx_type,index_buffer.memory.offset + (uint32_t)((uint64_t)indices[i]),location);
+	  rsxgl_draw_elements_emit_index_buffer(context,rsx_element_type,index_buffer.memory.offset + (uint32_t)((uint64_t)indices[i]),location);
 	  rsxgl_draw_array_elements(context,rsx_primitive_type,count[i]);
 	}
 	rsxgl_timestamp_post(ctx,timestamp + primcount - 1);
       }
       else {
 	for(GLsizei i = 0;i < primcount;++i) {
-	  rsxgl_draw_elements_emit_index_buffer(context,rsx_type,index_buffer.memory.offset + (uint32_t)((uint64_t)indices[i]),location);
+	  rsxgl_draw_elements_emit_index_buffer(context,rsx_element_type,index_buffer.memory.offset + (uint32_t)((uint64_t)indices[i]),location);
 	  rsxgl_draw_array_elements(context,rsx_primitive_type,count[i]);
 	  rsxgl_timestamp_post(ctx,timestamp++);
 	}
@@ -1270,8 +1304,8 @@ glMultiDrawElementsBaseVertex (GLenum mode, const GLsizei *count, GLenum type, c
   rsxgl_context_t * ctx = current_ctx();
 
   RSXGL_FORWARD_ERROR_BEGIN();
-  uint32_t rsx_primitive_type = 0, rsx_type = 0;
-  std::tie(rsx_primitive_type,rsx_type) = rsxgl_check_draw_elements(ctx,mode,type);
+  uint32_t rsx_primitive_type = 0, rsx_element_type = 0;
+  std::tie(rsx_primitive_type,rsx_element_type) = rsxgl_check_draw_elements(ctx,mode,type);
   RSXGL_FORWARD_ERROR_END();
 
   if(primcount < 0) {
@@ -1295,7 +1329,7 @@ glMultiDrawElementsBaseVertex (GLenum mode, const GLsizei *count, GLenum type, c
       uint32_t index_buffer_sizes[primcount];
       uint32_t index_buffer_offsets[primcount];
       for(GLsizei i = 0;i < primcount;++i) {
-	index_buffer_sizes[i] = (uint32_t)rsxgl_element_type_bytes[rsx_type] * count[i];
+	index_buffer_sizes[i] = (uint32_t)rsxgl_element_type_bytes[rsx_element_type] * count[i];
 	migrate_buffers[i] = rsxgl_vertex_migrate_memalign(context,16,index_buffer_sizes[i]);
 	memcpy(migrate_buffers[i],indices,index_buffer_sizes[i]);
 	int32_t s = gcmAddressToOffset(migrate_buffers[i],index_buffer_offsets + i);
@@ -1304,7 +1338,7 @@ glMultiDrawElementsBaseVertex (GLenum mode, const GLsizei *count, GLenum type, c
       
       if(query_index == RSXGL_MAX_QUERY_OBJECTS) {
 	for(GLsizei i = 0;i < primcount;++i) {
-	  rsxgl_draw_elements_emit_index_buffer(context,rsx_type,index_buffer_offsets[i],RSXGL_VERTEX_MIGRATE_BUFFER_LOCATION);
+	  rsxgl_draw_elements_emit_index_buffer(context,rsx_element_type,index_buffer_offsets[i],RSXGL_VERTEX_MIGRATE_BUFFER_LOCATION);
 	  rsxgl_draw_array_elements_base(context,basevertex[i]);
 	  rsxgl_draw_array_elements(context,rsx_primitive_type,count[i]);
 	}
@@ -1312,7 +1346,7 @@ glMultiDrawElementsBaseVertex (GLenum mode, const GLsizei *count, GLenum type, c
       }
       else {
 	for(GLsizei i = 0;i < primcount;++i) {
-	  rsxgl_draw_elements_emit_index_buffer(context,rsx_type,index_buffer_offsets[i],RSXGL_VERTEX_MIGRATE_BUFFER_LOCATION);
+	  rsxgl_draw_elements_emit_index_buffer(context,rsx_element_type,index_buffer_offsets[i],RSXGL_VERTEX_MIGRATE_BUFFER_LOCATION);
 	  rsxgl_draw_array_elements_base(context,basevertex[i]);
 	  rsxgl_draw_array_elements(context,rsx_primitive_type,count[i]);
 	  rsxgl_query_object_set(context,query_index);
@@ -1340,7 +1374,7 @@ glMultiDrawElementsBaseVertex (GLenum mode, const GLsizei *count, GLenum type, c
       
       if(query_index == RSXGL_MAX_QUERY_OBJECTS) {
 	for(GLsizei i = 0;i < primcount;++i) {
-	  rsxgl_draw_elements_emit_index_buffer(context,rsx_type,index_buffer.memory.offset + (uint32_t)((uint64_t)indices[i]),location);
+	  rsxgl_draw_elements_emit_index_buffer(context,rsx_element_type,index_buffer.memory.offset + (uint32_t)((uint64_t)indices[i]),location);
 	  rsxgl_draw_array_elements_base(context,basevertex[i]);
 	  rsxgl_draw_array_elements(context,rsx_primitive_type,count[i]);
 	}
@@ -1348,7 +1382,7 @@ glMultiDrawElementsBaseVertex (GLenum mode, const GLsizei *count, GLenum type, c
       }
       else {    
 	for(GLsizei i = 0;i < primcount;++i) {
-	  rsxgl_draw_elements_emit_index_buffer(context,rsx_type,index_buffer.memory.offset + (uint32_t)((uint64_t)indices[i]),location);
+	  rsxgl_draw_elements_emit_index_buffer(context,rsx_element_type,index_buffer.memory.offset + (uint32_t)((uint64_t)indices[i]),location);
 	  rsxgl_draw_array_elements_base(context,basevertex[i]);
 	  rsxgl_draw_array_elements(context,rsx_primitive_type,count[i]);
 	  
@@ -1481,8 +1515,8 @@ glDrawElementsInstanced (const GLenum mode, const GLsizei count, const GLenum ty
   rsxgl_context_t * ctx = current_ctx();
 
   RSXGL_FORWARD_ERROR_BEGIN();
-  uint32_t rsx_primitive_type = 0, rsx_type = 0;
-  std::tie(rsx_primitive_type,rsx_type) = rsxgl_check_draw_elements(ctx,mode,type);
+  uint32_t rsx_primitive_type = 0, rsx_element_type = 0;
+  std::tie(rsx_primitive_type,rsx_element_type) = rsxgl_check_draw_elements(ctx,mode,type);
   RSXGL_FORWARD_ERROR_END();
 
   if(count < 0) {
@@ -1500,7 +1534,7 @@ glDrawElementsInstanced (const GLenum mode, const GLsizei count, const GLenum ty
     const uint32_t instanceid_index = ctx -> program_binding[RSXGL_ACTIVE_PROGRAM].instanceid_index;
 
     const uint32_t timestamp = rsxgl_draw_init(ctx,mode,0,0,primcount);    
-    const rsxgl_draw_elements_info_t info = rsxgl_draw_elements_init(ctx,0,0,count,rsx_type,indices,timestamp);
+    const rsxgl_draw_elements_info_t info = rsxgl_draw_elements_init(ctx,0,0,count,rsx_element_type,indices,timestamp);
     if(instanceid_index != ~0 && primcount > 1) {
       rsxgl_draw_instances(context,primcount,instanceid_index,rsxgl_draw_array_elements_instanced(context,rsx_primitive_type,count));
     }
@@ -1520,8 +1554,8 @@ glDrawElementsInstancedBaseVertex (GLenum mode, GLsizei count, GLenum type, cons
   rsxgl_context_t * ctx = current_ctx();
 
   RSXGL_FORWARD_ERROR_BEGIN();
-  uint32_t rsx_primitive_type = 0, rsx_type = 0;
-  std::tie(rsx_primitive_type,rsx_type) = rsxgl_check_draw_elements(ctx,mode,type);
+  uint32_t rsx_primitive_type = 0, rsx_element_type = 0;
+  std::tie(rsx_primitive_type,rsx_element_type) = rsxgl_check_draw_elements(ctx,mode,type);
   RSXGL_FORWARD_ERROR_END();
 
   if(count < 0) {
@@ -1539,7 +1573,7 @@ glDrawElementsInstancedBaseVertex (GLenum mode, GLsizei count, GLenum type, cons
     const uint32_t instanceid_index = ctx -> program_binding[RSXGL_ACTIVE_PROGRAM].instanceid_index;
     
     const uint32_t timestamp = rsxgl_draw_init(ctx,mode,0,0,primcount);
-    const rsxgl_draw_elements_info_t info = rsxgl_draw_elements_init(ctx,0,0,count,rsx_type,indices,timestamp);
+    const rsxgl_draw_elements_info_t info = rsxgl_draw_elements_init(ctx,0,0,count,rsx_element_type,indices,timestamp);
     rsxgl_draw_array_elements_base(context,basevertex);
     if(instanceid_index != ~0 && primcount > 1) {
       rsxgl_draw_instances(context,primcount,instanceid_index,rsxgl_draw_array_elements_instanced(context,rsx_primitive_type,count));
