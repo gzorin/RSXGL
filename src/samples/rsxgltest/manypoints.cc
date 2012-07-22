@@ -72,6 +72,11 @@ const GLuint nbatch = (npoints / batchsize) + ((npoints % batchsize) ? 1 : 0);
 
 GLint batchfirst[nbatch];
 GLsizei batchcount[nbatch];
+GLvoid const * batchoffsets[nbatch];
+
+GLuint * client_elements = 0;
+GLvoid const * client_batchindices[nbatch];
+GLuint elements = 0;
 
 #define DTOR(X) ((X)*0.01745329f)
 #define RTOD(d) ((d)*57.295788f)
@@ -194,14 +199,37 @@ rsxgltest_init(int argc,const char ** argv)
     geometry[5] = 1.0;
   }
 
+  glUnmapBuffer(GL_ARRAY_BUFFER);
+
+  client_elements = (GLuint *)malloc(sizeof(GLuint) * npoints);
+  for(size_t i = 0;i < npoints;++i) {
+    client_elements[i] = i;
+  }
+
   GLint first = 0;
   for(size_t i = 0;i < nbatch;++i) {
     batchfirst[i] = first;
     batchcount[i] = (i == (nbatch - 1)) ? (npoints % batchsize) : (batchsize);
+    batchoffsets[i] = (GLvoid const*)((uint64_t)first * sizeof(GLuint));
+    client_batchindices[i] = client_elements + first;
     first += batchsize;
   }
 
-  glUnmapBuffer(GL_ARRAY_BUFFER);
+  glGenBuffers(1,&elements);
+
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,elements);
+
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER,sizeof(GLuint) * npoints,0,GL_STATIC_DRAW);
+  
+  GLuint * pelements = (GLuint *)glMapBuffer(GL_ELEMENT_ARRAY_BUFFER,GL_WRITE_ONLY);
+
+  for(size_t i = 0;i < npoints;++i) {
+    pelements[i] = i;
+  }
+
+  glUnmapBuffer(GL_ELEMENT_ARRAY_BUFFER);
+
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,0);
 
   glEnableVertexAttribArray(vertex_location);
   //glEnableVertexAttribArray(color_location);
@@ -255,11 +283,29 @@ rsxgltest_draw()
     Eigen::Affine3f modelview = ViewMatrixInv * (Eigen::Affine3f::Identity() * Eigen::Translation3f(0,0,0) * rotmat);
     glUniformMatrix4fv(TransMatrix_location,1,GL_FALSE,modelview.data());
 
-    if(frame % 2) {
+    int which = frame % 6;
+
+    if(which == 0) {
       glDrawArrays(GL_POINTS,0,npoints);
     }
-    else {
+    else if(which == 1) {
       glMultiDrawArrays(GL_POINTS,batchfirst,batchcount,nbatch);
+    }
+    else if(which == 2) {
+      glDrawElements(GL_POINTS,npoints,GL_UNSIGNED_INT,client_elements);
+    }
+    else if(which == 3) {
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,elements);
+      glDrawElements(GL_POINTS,npoints,GL_UNSIGNED_INT,0);
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,0);
+    }
+    else if(which == 4) {
+      glMultiDrawElements(GL_POINTS,batchcount,GL_UNSIGNED_INT,client_batchindices,nbatch);
+    }
+    else if(which == 5) {
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,elements);
+      glMultiDrawElements(GL_POINTS,batchcount,GL_UNSIGNED_INT,batchoffsets,nbatch);
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,0);
     }
   }
 
