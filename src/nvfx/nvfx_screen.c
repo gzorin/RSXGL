@@ -573,12 +573,17 @@ nvfx_screen_create(struct nouveau_device *dev)
 	screen->inline_cost_per_hardware_cost = atof(debug_get_option("NVFX_INLINE_COST_PER_HARDWARE_COST", "1.0"));
 	screen->static_reuse_threshold = atof(debug_get_option("NVFX_STATIC_REUSE_THRESHOLD", "2.0"));
 
+#if !defined(__RSXGL__)
 	/* We don't advertise these by default because filtering and blending doesn't work as
 	 * it should, due to several restrictions.
 	 * The only exception is fp16 on nv40.
 	 */
 	screen->advertise_fp16 = debug_get_bool_option("NVFX_FP16", !!screen->use_nv4x);
 	screen->advertise_fp32 = debug_get_bool_option("NVFX_FP32", 0);
+#else
+	screen->advertise_fp16 = TRUE;
+	screen->advertise_fp32 = TRUE;
+#endif
 
 	screen->vertex_buffer_reloc_flags = nvfx_screen_get_vertex_buffer_flags(screen);
 
