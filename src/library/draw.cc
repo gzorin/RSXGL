@@ -140,22 +140,6 @@ rsxgl_check_draw_elements(rsxgl_context_t * ctx,GLenum mode,GLenum type)
   return std::make_pair(rsx_primitive_type,rsx_element_type);
 }
 
-#define NV30_3D_IDXBUF_FORMAT_TYPE_U8 2
-
-static const uint8_t rsxgl_element_nv40_type[RSXGL_MAX_ELEMENT_TYPES] = {
-  NV30_3D_IDXBUF_FORMAT_TYPE_U32,
-  NV30_3D_IDXBUF_FORMAT_TYPE_U16,
-  NV30_3D_IDXBUF_FORMAT_TYPE_U8
-};
-
-#undef NV30_3D_IDXBUF_FORMAT_TYPE_U8
-
-static const uint8_t rsxgl_element_type_bytes[RSXGL_MAX_ELEMENT_TYPES] = {
-  sizeof(uint32_t),
-  sizeof(uint16_t),
-  sizeof(uint8_t)
-};
-
 // This function is designed to split an iteration into groups (RSX method invocations) & batches
 // as required by the hardware. max_method_args is the total number of arguments accepted by a
 // single "method" - this should pretty much be set to 2047. batch_size can vary depending upon
@@ -586,7 +570,7 @@ namespace {
       : rsx_primitive_type(_rsx_primitive_type) {}
     
   protected:
-    void draw(gcmContextData * gcm_context,uint32_t first,uint32_t count) const {
+    void emitDrawCommands(gcmContextData * gcm_context,uint32_t first,uint32_t count) const {
       if(rsx_primitive_type == NV30_3D_VERTEX_BEGIN_END_POINTS) {
 	rsxgl_draw_array_operations< RSXGL_MAX_DRAW_BATCH_SIZE, rsxgl_draw_points > op(first);
 	rsxgl_process_batch< RSXGL_VERTEX_BATCH_MAX_FIFO_METHOD_ARGS > (gcm_context,count,op);
@@ -670,6 +654,12 @@ namespace {
     mutable uint32_t index_buffer_offset, index_buffer_location;
 
     void begin(gcmContextData * context,uint32_t timestamp,const GLsizei * count,const GLvoid * const* indices,GLsizei primcount,uint32_t * offsets) const {
+      static const uint8_t rsxgl_element_type_bytes[RSXGL_MAX_ELEMENT_TYPES] = {
+	sizeof(uint32_t),
+	sizeof(uint16_t),
+	sizeof(uint8_t)
+      };
+
       index_buffer_offset = 0;
       index_buffer_location = 0;
       
@@ -720,6 +710,14 @@ namespace {
     }
 
     void emitIndexBufferCommands(gcmContextData * gcm_context,uint32_t offset) const {
+#define NV30_3D_IDXBUF_FORMAT_TYPE_U8 2
+      static const uint8_t rsxgl_element_nv40_type[RSXGL_MAX_ELEMENT_TYPES] = {
+	NV30_3D_IDXBUF_FORMAT_TYPE_U32,
+	NV30_3D_IDXBUF_FORMAT_TYPE_U16,
+	NV30_3D_IDXBUF_FORMAT_TYPE_U8
+      };
+#undef NV30_3D_IDXBUF_FORMAT_TYPE_U8
+
       // Emit the commands for this buffer:
       uint32_t * buffer = gcm_reserve(gcm_context,3);
       
@@ -880,7 +878,7 @@ namespace {
     void end(gcmContextData * context,uint32_t) const {}
     
     void draw(gcmContextData * gcm_context,uint32_t,unsigned int) const {
-      array_draw_policy::draw(gcm_context,first,count);
+      array_draw_policy::emitDrawCommands(gcm_context,first,count);
     }
   };
 }
@@ -952,7 +950,7 @@ glMultiDrawArrays (GLenum mode, const GLint *first, const GLsizei *count, const 
       void end(gcmContextData * context,uint32_t) const {}
 
       void draw(gcmContextData * gcm_context,uint32_t,unsigned int i) const {
-	array_draw_policy::draw(gcm_context,first[i],count[i]);
+	array_draw_policy::emitDrawCommands(gcm_context,first[i],count[i]);
 	multi_draw_policy::draw(gcm_context);
       }
     };
@@ -1255,7 +1253,7 @@ glDrawArraysInstanced (GLenum mode, GLint first, GLsizei count, GLsizei primcoun
 
       void begin(gcmContextData * gcm_context,uint32_t) const {
 	instanced_draw_policy::beginInstance(gcm_context,array_draw_policy::countDrawCommands(count));
-	array_draw_policy::draw(gcm_context,first,count);
+	array_draw_policy::emitDrawCommands(gcm_context,first,count);
 	instanced_draw_policy::endInstance(gcm_context);
       }
 
