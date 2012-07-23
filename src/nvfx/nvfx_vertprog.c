@@ -142,6 +142,10 @@ emit_src(struct nvfx_context* nvfx, struct nvfx_vpc *vpc, uint32_t *hw, int pos,
 		sr |= (NVFX_VP(SRC_REG_TYPE_INPUT) <<
 		       NVFX_VP(SRC_REG_TYPE_SHIFT));
 		break;
+	case NVFXSR_VPTEXINPUT:
+          sr |= (NVFX_VP(SRC_REG_TYPE_INPUT) << NVFX_VP(SRC_REG_TYPE_SHIFT));
+          sr |= (src.reg.index << NVFX_VP(SRC_TEMP_SRC_SHIFT));
+          break;                                                                                                                                                                                                  
 	default:
 		assert(0);
 	}
@@ -502,7 +506,7 @@ nvfx_vertprog_parse_instruction(struct nvfx_context* nvfx, struct nvfx_vpc *vpc,
 			/* handled above */
 			break;
 		case TGSI_FILE_SAMPLER:
-		  /* TODO: Implement this. */
+		  src[i] = nvfx_src(nvfx_reg(NVFXSR_VPTEXINPUT,fsrc->Register.Index));
 		  break;
 		default:
 			NOUVEAU_ERR("bad src file: \n");
@@ -786,7 +790,7 @@ nvfx_vertprog_parse_instruction(struct nvfx_context* nvfx, struct nvfx_vpc *vpc,
 		break;
 
 	case TGSI_OPCODE_TEX:
-	  /* TODO: Implement this. */
+	  nvfx_vp_emit(vpc,arith(sat, VEC, TXL, dst, mask, src[0], src[1], none));
 	  break;
 
 	default:
