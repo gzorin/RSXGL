@@ -82,7 +82,7 @@ Eigen::Affine3f ViewMatrixInv =
 		   )
 		  ).inverse();
 
-const GLuint ncubes = 10;
+const GLuint ncubes = 100;
 
 extern "C"
 void
@@ -312,7 +312,7 @@ rsxgltest_init(int argc,const char ** argv)
       memcpy(ptmp,m.data(),sizeof(float) * 16);
     }
 
-    glTexSubImage1D(GL_TEXTURE_1D,0,0,ncubes * 4,GL_BGRA,GL_FLOAT,tmp);
+    glTexSubImage1D(GL_TEXTURE_1D,0,0,ncubes * 4,GL_RGBA,GL_FLOAT,tmp);
 
     delete [] tmp;
   }

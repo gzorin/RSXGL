@@ -26,8 +26,7 @@ main(void)
   		texture1D(texture,i + _delta2),
   		texture1D(texture,i + _delta3));
 
-  //gl_Position = ProjMatrix * (TransMatrix * m * vec4(position,1));
-  gl_Position = ProjMatrix * (TransMatrix * vec4(position,1));
+  gl_Position = ProjMatrix * (TransMatrix * m * vec4(position,1));
 
   c = vec3(0.5,0.5,0.5);
 }
