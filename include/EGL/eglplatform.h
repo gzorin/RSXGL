@@ -1,3 +1,4 @@
+
 #ifndef __eglplatform_h_
 #define __eglplatform_h_
 
@@ -93,7 +94,7 @@ typedef Display *EGLNativeDisplayType;
 typedef Pixmap   EGLNativePixmapType;
 typedef Window   EGLNativeWindowType;
 
-#elif defined(__RSX__)
+#elif defined(__lv2ppu__)
 
 /* PS3 RSX */
 
