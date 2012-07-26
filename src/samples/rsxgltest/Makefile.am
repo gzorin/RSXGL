@@ -17,7 +17,8 @@ BUILT_SOURCES = textures_vpo.h textures_fpo.h \
 	gradient_png.h \
 	texcube_vert.h texcube_frag.h \
 	points_vert.h points_frag.h \
-	cube_vert.h cube_frag.h
+	cube_vert.h cube_frag.h \
+	feedback1_frag.h
 CLEANFILES = draw_vpo.h draw_fpo.h draw_vpo.o draw_fpo.o \
 	textures_vpo.h textures_fpo.h textures_vpo.o textures_fpo.o \
 	manypoints_vpo.h manypoints_fpo.h manypoints_vpo.o manypoints_fpo.o \
@@ -33,7 +34,8 @@ CLEANFILES = draw_vpo.h draw_fpo.h draw_vpo.o draw_fpo.o \
 	gradient_png.o gradient_png.h \
 	texcube_vert.h texcube_frag.h \
 	points_vert.h points_frag.h \
-	cube_vert.h cube_frag.h
+	cube_vert.h cube_frag.h \
+	feedback1_frag.h
 
 # clear.c viewport_scissor.c buffer.c program.c draw.c uniforms.c textures.c cube.cc
 clear_objects = 
@@ -69,11 +71,11 @@ occlusion2_sources = occlusion2.cc occlusion.vert occlusion.frag
 copyteximage_objects = nagel_bin.o
 copyteximage_sources = copyteximage.cc texture.c fbo_inner.vert fbo_inner.frag nagel.bin
 
-feedback_objects = nagel_bin.o gradient_png.o face_png.o
-feedback_sources = feedback.cc texture.c texcube.vert texcube.frag nagel.bin face.png gradient.png
+feedback1_objects =
+feedback1_sources = feedback1.cc points.vert feedback1.frag
 
-objects = $(manycubes_objects)
-sources = $(manycubes_sources)
+objects = $(feedback1_objects)
+sources = $(feedback1_sources)
 
 rsxgltest_elf_DEPENDENCIES = $(top_builddir)/src/library/libEGL.a $(top_builddir)/src/library/libGL.a	\
 	$(objects)
