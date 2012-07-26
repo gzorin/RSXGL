@@ -148,6 +148,11 @@ rsxgltest_init(int argc,const char ** argv)
   glGetShaderInfoLog(shaders[1],2048,0,szInfo);
   tcp_printf("%s\n",szInfo);
 
+  const char * varyings[] = {
+    "gl_Position"
+  };
+  glTransformFeedbackVaryings(program,1,varyings,GL_SEPARATE_ATTRIBS);
+
   // Link the program for real:
   glLinkProgram(program);
   glValidateProgram(program);
@@ -223,6 +228,9 @@ rsxgltest_init(int argc,const char ** argv)
   glPointSize(1);
 
   glBindBuffer(GL_ARRAY_BUFFER,0);
+
+  glBindBuffer(GL_TRANSFORM_FEEDBACK_BUFFER,buffers[1]);
+  glBufferData(GL_TRANSFORM_FEEDBACK_BUFFER,sizeof(float) * 3 * sizeof(npoints),0,GL_STATIC_DRAW);
 }
 
 extern "C"
