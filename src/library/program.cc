@@ -1179,13 +1179,13 @@ glLinkProgram (GLuint program_name)
     // TODO: deal with this:
     program.point_sprite_control = 0;
 
-#if 0
     // Create stream programs if any varyings are captured.
     // This seems to clobber the original vertex program's data such that the main rendering program's
     // attribute assignments get messed up. This isn't good, but, for now, creating the stream programs
     // takes place after RSXGL is otherwise finished creating the rendering programs.
-    rsxgl_debug_printf("VP stream outputs: %u\n",stream_info.num_outputs);
     if(stream_info.num_outputs > 0) {
+      rsxgl_debug_printf("VP stream outputs: %u\n",stream_info.num_outputs);
+
       unsigned int vertexid_index = 0;
       std::tie(program.nvfx_streamvp,program.nvfx_streamfp) = cctx -> translate_stream_vp_fp(program.mesa_program,&stream_info,&vertexid_index);
       rsxgl_assert(program.nvfx_streamvp != 0);
@@ -1275,7 +1275,6 @@ glLinkProgram (GLuint program_name)
       program.streamfp_control = 0;
       program.vertexid_index = ~0;
     }
-#endif
 
     program.linked = GL_TRUE;
 

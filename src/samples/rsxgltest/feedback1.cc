@@ -60,7 +60,7 @@ GLuint program = 0;
 
 GLint ProjMatrix_location = -1, TransMatrix_location = -1;
 
-const GLuint npoints = 1000;
+const GLuint npoints = 100;
 const GLuint batchsize = 256;
 const GLuint nbatch = (npoints / batchsize) + ((npoints % batchsize) ? 1 : 0);
 
@@ -230,7 +230,12 @@ rsxgltest_init(int argc,const char ** argv)
   glBindBuffer(GL_ARRAY_BUFFER,0);
 
   glBindBuffer(GL_TRANSFORM_FEEDBACK_BUFFER,buffers[1]);
-  glBufferData(GL_TRANSFORM_FEEDBACK_BUFFER,sizeof(float) * 3 * sizeof(npoints),0,GL_STATIC_DRAW);
+
+  const size_t nfeedback = sizeof(float) * 4 * sizeof(npoints);
+  GLfloat * pfeedback = (GLfloat *)malloc(nfeedback);
+  memset(pfeedback,0,nfeedback);
+  glBufferData(GL_TRANSFORM_FEEDBACK_BUFFER,nfeedback,pfeedback,GL_STATIC_DRAW);
+  free(pfeedback);
 }
 
 extern "C"
@@ -277,6 +282,17 @@ rsxgltest_draw()
 
       glEndTransformFeedback();
       report_glerror("glEndTransformFeedback");
+
+      // Dump the alleged feedback buffer:
+      GLfloat * pfeedback = (GLfloat *)glMapBuffer(GL_TRANSFORM_FEEDBACK_BUFFER,GL_READ_ONLY);
+
+      if(pfeedback) {
+	for(size_t i = 0;i < npoints;++i,pfeedback += 4) {
+	  tcp_printf("%04i: %.3f, %.3f, %.3f, %.3f\n",i,pfeedback[0],pfeedback[1],pfeedback[2],pfeedback[3]);
+	}
+      }
+
+      glUnmapBuffer(GL_TRANSFORM_FEEDBACK_BUFFER);
     }
     else if(which == 1) {
       glMultiDrawArrays(GL_POINTS,batchfirst,batchcount,nbatch);
