@@ -541,6 +541,14 @@ namespace {
       rsxgl_timestamp_post(ctx,timestamp);
     }
     drawPolicy.end(gcm_context,timestamp);
+
+    // Transform feedback:
+    if(ctx -> state.enable.transform_feedback_mode != 0) {
+      rsxgl_feedback_program_validate(ctx,lastTimestamp);
+
+      // For the next draw invocation:
+      ctx -> invalid.parts.program = 1;
+    }
   }
 
   struct ignore_element_range_policy {

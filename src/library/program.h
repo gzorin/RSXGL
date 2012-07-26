@@ -295,5 +295,6 @@ struct program_t {
 struct rsxgl_context_t;
 
 void rsxgl_program_validate(rsxgl_context_t *,const uint32_t);
+void rsxgl_feedback_program_validate(rsxgl_context_t *,const uint32_t);
 
 #endif

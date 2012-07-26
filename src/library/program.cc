@@ -1709,13 +1709,6 @@ rsxgl_program_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
 	  
 	  uint32_t * buffer = gcm_reserve(context,n);
 	  
-#if 0
-	  const uint32_t * pfp_ucode = rsxgl_rsx_ucode_address(program.fp_ucode_offset);
-	  for(unsigned int j = 0;j < program.fp_num_insn;++j) {
-	    pfp_ucode += 4;
-	  }
-#endif
-	  
 	  gcm_emit_method_at(buffer,i++,NV30_3D_FP_ACTIVE_PROGRAM,1);
 	  gcm_emit_at(buffer,i++,rsxgl_rsx_ucode_offset(program.fp_ucode_offset) | NV30_3D_FP_ACTIVE_PROGRAM_DMA0);
 	  
@@ -1838,5 +1831,216 @@ rsxgl_program_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
     }
 
     ctx -> invalid.parts.program = 0;
+  }
+}
+
+// This function assumes that it's been called after rsxgl_program_validate for the same program.
+// It therefore does not re-send uniform variable values. Also does not set texture control,
+// because stream programs don't use textures.
+void
+rsxgl_feedback_program_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
+{
+  rsxgl_debug_printf("%s\n",__PRETTY_FUNCTION__);
+
+  gcmContextData * context = ctx -> base.gcm_context;
+
+  if(ctx -> program_binding.names[RSXGL_ACTIVE_PROGRAM] != 0) {
+    program_t & program = ctx -> program_binding[RSXGL_ACTIVE_PROGRAM];
+
+    rsxgl_assert(timestamp >= program.timestamp);
+    program.timestamp = timestamp;    
+  }
+
+  if(ctx -> program_binding.names[RSXGL_ACTIVE_PROGRAM] != 0) {
+    program_t & program = ctx -> program_binding[RSXGL_ACTIVE_PROGRAM];
+    
+    if(program.linked) {
+      // load the vertex program:
+      {
+	uint32_t * buffer = gcm_reserve(context,program.streamvp_num_insn * 5 + 7);
+	
+	gcm_emit_method(&buffer,NV30_3D_VP_UPLOAD_FROM_ID,1);
+	gcm_emit(&buffer,0);
+	
+	const struct nvfx_vertex_program_exec * ucode = rsxgl_main_ucode_address(program.streamvp_ucode_offset);
+	for(size_t i = 0,n = program.streamvp_num_insn;i < n;++i,++ucode) {
+	  gcm_emit_method(&buffer,NV30_3D_VP_UPLOAD_INST(0),4);
+	  gcm_emit(&buffer,ucode -> data[0]);
+	  gcm_emit(&buffer,ucode -> data[1]);
+	  gcm_emit(&buffer,ucode -> data[2]);
+	  gcm_emit(&buffer,ucode -> data[3]);
+	}
+	
+	gcm_emit_method(&buffer,NV30_3D_VP_START_FROM_ID,1);
+	gcm_emit(&buffer,0);
+	
+	gcm_emit_method(&buffer,NV40_3D_VP_ATTRIB_EN,2);
+	gcm_emit(&buffer,program.streamvp_input_mask);
+	gcm_emit(&buffer,program.streamvp_output_mask);
+	
+	gcm_finish_commands(context,&buffer);
+      }
+
+#if 0      
+      // load vertex program internal constants:
+      if(program.streamvp_num_internal_const > 0) {
+	const program_t::instruction_size_type * program_offsets = program.program_offsets;
+	const ieee32_t * uniform_values = program.uniform_values;
+	
+	for(program_t::uniform_size_type i = 0,n = program.streamvp_num_internal_const;i < n;++i) {
+	  program_t::instruction_size_type count = *program_offsets++;
+	  program_t::instruction_size_type index = *program_offsets++;
+	  
+	  uint32_t * buffer = gcm_reserve(context,6 * count);
+	  
+	  for(;count > 0;--count,++index,uniform_values += 4) {
+	    gcm_emit_method(&buffer,NV30_3D_VP_UPLOAD_CONST_ID,5);
+	    gcm_emit(&buffer,index);
+	    
+	    gcm_emit(&buffer,uniform_values[0].u);
+	    gcm_emit(&buffer,uniform_values[1].u);
+	    gcm_emit(&buffer,uniform_values[2].u);
+	    gcm_emit(&buffer,uniform_values[3].u);
+	  }
+	  
+	  gcm_finish_commands(context,&buffer);
+	}
+      }
+#endif
+      
+      // load the fragment program:
+      {
+	uint32_t i = 0;
+	const uint32_t n = 4 + (2 * RSXGL_MAX_TEXTURE_COORDS);
+	
+	uint32_t * buffer = gcm_reserve(context,n);
+	
+	gcm_emit_method_at(buffer,i++,NV30_3D_FP_ACTIVE_PROGRAM,1);
+	gcm_emit_at(buffer,i++,rsxgl_rsx_ucode_offset(program.streamfp_ucode_offset) | NV30_3D_FP_ACTIVE_PROGRAM_DMA0);
+
+#if 0	
+	// Texcoord control:
+#define  NV40TCL_TEX_COORD_CONTROL(x)                                   (0x00000b40+((x)*4))
+	bit_set< RSXGL_MAX_TEXTURE_COORDS >::const_iterator it = program.streamfp_texcoords.begin(),
+	  it2D = program.streamfp_texcoord2D.begin(),
+	  it3D = program.streamfp_texcoord3D.begin();
+	uint32_t reg = 0xb40;
+	for(uint32_t j = 0;j < RSXGL_MAX_TEXTURE_COORDS;++j,i += 2) {
+#if 0
+	  const uint32_t cmds[2] = {
+	    //NV40TCL_TEX_COORD_CONTROL(j),
+	    reg,
+	    it.test() ? 
+	    ((it3D.test() ? (1 << 4) : 0) | (it2D.test() ? 1 : 0)) :
+	    (0)
+	  };
+	  
+	  rsxgl_debug_printf("%u %u, %u %u %u: %x %x\n",
+			     j,i,
+			     (uint32_t)it.test(),
+			     (uint32_t)it2D.test(),
+			     (uint32_t)it3D.test(),
+			     cmds[0],cmds[1]);
+	  
+	  gcm_emit_method_at(buffer,i,cmds[0],1);
+	  gcm_emit_at(buffer,i + 1,cmds[1]);
+#endif
+	  
+	  gcm_emit_method_at(buffer,i,reg,1);
+	  gcm_emit_at(buffer,i + 1,
+		      it.test() ? 
+		      ((it3D.test() ? (1 << 4) : 0) | (it2D.test() ? 1 : 0)) :
+		      (0));
+	  
+	  it.next(program.streamfp_texcoords);
+	  it2D.next(program.streamfp_texcoord2D);
+	  it3D.next(program.streamfp_texcoord3D);
+	  reg += 4;
+	}
+#endif
+	
+	gcm_emit_method_at(buffer,i++,NV30_3D_FP_CONTROL,1);
+	gcm_emit_at(buffer,i++,program.streamfp_control);
+	
+	gcm_finish_n_commands(context,n);
+      }
+      
+#if 0
+      // invalidate vertex program uniforms:
+      if(program.uniform_table_size > 0) {
+	program.invalid_uniforms = 1;
+	program_t::uniform_table_type::value_type * uniform = program.uniform_table_values;
+	for(program_t::uniform_size_type i = 0,n = program.uniform_table_size;i < n;++i,++uniform) {
+	  if(uniform -> second.enabled.test(RSXGL_VERTEX_SHADER)) {
+	    uniform -> second.invalid.set(RSXGL_VERTEX_SHADER);
+	  }
+	}
+      }
+#endif
+      
+      // Tell the GPU which vertex attributes the program will use:
+      {
+	uint32_t * buffer = gcm_reserve(context,2);
+	
+	gcm_emit_method(&buffer,NV40_3D_VP_ATTRIB_EN,1);
+	gcm_emit(&buffer,program.attribs_enabled.as_integer());
+	
+	gcm_finish_commands(context,&buffer);
+      }
+      
+#if 0
+      // Tell unused attributes to have a size of 0:
+      {
+	const bit_set< RSXGL_MAX_VERTEX_ATTRIBS > unused_attribs = ~program.attribs_enabled;
+	
+	if(unused_attribs.any()) {
+	  uint32_t * buffer = gcm_reserve(context,2 * RSXGL_MAX_VERTEX_ATTRIBS);
+	  size_t nbuffer = 0;
+	  
+	  for(size_t i = 0;i < RSXGL_MAX_VERTEX_ATTRIBS;++i) {
+	    if(!unused_attribs.test(i)) continue;
+	    
+	    gcm_emit_method_at(buffer,nbuffer + 0,NV30_3D_VTXFMT(i),1);
+	    gcm_emit_at(buffer,nbuffer + 1,
+			/* ((uint32_t)attribs.frequency[i] << 16 | */
+			((uint32_t)0 << NV30_3D_VTXFMT_STRIDE__SHIFT) |
+			((uint32_t)0 << NV30_3D_VTXFMT_SIZE__SHIFT) |
+			((uint32_t)RSXGL_VERTEX_F32 & 0x7));
+	    
+	    nbuffer += 2;
+	  }
+	  
+	  gcm_finish_n_commands(context,nbuffer);
+	}
+      }
+#endif
+
+#if 0      
+      // Set point sprite behavior:
+      {
+	if(program.point_sprite_control == 0) {
+	  uint32_t * buffer = gcm_reserve(context,2);
+	  
+	  gcm_emit_method_at(buffer,0,NV30_3D_POINT_PARAMETERS_ENABLE,1);
+	  gcm_emit_at(buffer,1,0);
+	  
+	  gcm_finish_n_commands(context,2);
+	}
+	else {
+	  //rsxgl_debug_printf("point sprite control: %x\n",program.point_sprite_control);
+	  
+	  uint32_t * buffer = gcm_reserve(context,4);
+	  
+	  gcm_emit_method_at(buffer,0,NV30_3D_POINT_PARAMETERS_ENABLE,1);
+	  gcm_emit_at(buffer,1,1);
+	  
+	  gcm_emit_method_at(buffer,2,NV30_3D_POINT_SPRITE,1);
+	  gcm_emit_at(buffer,3,program.point_sprite_control);
+	  
+	  gcm_finish_n_commands(context,4);
+	}
+      }
+#endif
+    }
   }
 }
