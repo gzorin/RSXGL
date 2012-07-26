@@ -267,7 +267,16 @@ rsxgltest_draw()
     int which = frame % 6;
 
     if(which == 0) {
+      report_glerror("Before transform feedback");
+
+      glBeginTransformFeedback(GL_POINTS);
+      report_glerror("glBeginTransformFeedback");
+
       glDrawArrays(GL_POINTS,0,npoints);
+      report_glerror("glDrawArrays");
+
+      glEndTransformFeedback();
+      report_glerror("glEndTransformFeedback");
     }
     else if(which == 1) {
       glMultiDrawArrays(GL_POINTS,batchfirst,batchcount,nbatch);

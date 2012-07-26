@@ -97,6 +97,22 @@ rsxgl_check_unmapped_arrays(rsxgl_context_t * ctx,const bit_set< RSXGL_MAX_VERTE
   }
 }
 
+static inline void
+rsxgl_check_transform_feedback(const rsxgl_context_t * ctx,uint32_t rsx_primitive_type)
+{
+  const uint32_t rsx_feedback_primitive_type = ctx -> state.enable.transform_feedback_mode;
+  if((rsx_feedback_primitive_type != 0) &&
+     !((rsx_feedback_primitive_type == NV30_3D_VERTEX_BEGIN_END_POINTS && (rsx_primitive_type == NV30_3D_VERTEX_BEGIN_END_POINTS)) ||
+       (rsx_feedback_primitive_type == NV30_3D_VERTEX_BEGIN_END_LINES && (rsx_primitive_type == NV30_3D_VERTEX_BEGIN_END_LINES ||
+									  rsx_primitive_type == NV30_3D_VERTEX_BEGIN_END_LINE_LOOP ||
+									  rsx_primitive_type == NV30_3D_VERTEX_BEGIN_END_LINE_STRIP)) ||
+       (rsx_feedback_primitive_type == NV30_3D_VERTEX_BEGIN_END_TRIANGLES && (rsx_primitive_type == NV30_3D_VERTEX_BEGIN_END_TRIANGLES ||
+									      rsx_primitive_type == NV30_3D_VERTEX_BEGIN_END_TRIANGLE_STRIP ||
+									      rsx_primitive_type == NV30_3D_VERTEX_BEGIN_END_TRIANGLE_FAN)))) {
+    RSXGL_ERROR_(GL_INVALID_OPERATION);
+  }
+}
+
 static inline uint32_t
 rsxgl_check_draw_arrays(rsxgl_context_t * ctx,GLenum mode)
 {
@@ -111,6 +127,10 @@ rsxgl_check_draw_arrays(rsxgl_context_t * ctx,GLenum mode)
 
   // see if bound attributes are mapped - if they are, "throw" GL_INVALID_OPERATION:
   rsxgl_check_unmapped_arrays(ctx,ctx -> program_binding[RSXGL_ACTIVE_PROGRAM].attribs_enabled);
+  RSXGL_FORWARD_ERROR(~0);
+
+  // Check for compatibility with transform feedback settings:
+  rsxgl_check_transform_feedback(ctx,rsx_primitive_type);
   RSXGL_FORWARD_ERROR(~0);
 
   return rsx_primitive_type;
@@ -135,6 +155,10 @@ rsxgl_check_draw_elements(rsxgl_context_t * ctx,GLenum mode,GLenum type)
 
   // see if bound attributes are mapped - if they are, "throw" GL_INVALID_OPERATION:
   rsxgl_check_unmapped_arrays(ctx,ctx -> program_binding[RSXGL_ACTIVE_PROGRAM].attribs_enabled);
+  RSXGL_FORWARD_ERROR(std::make_pair(~0U, RSXGL_MAX_ELEMENT_TYPES));
+
+  // Check for compatibility with transform feedback settings:
+  rsxgl_check_transform_feedback(ctx,rsx_primitive_type);
   RSXGL_FORWARD_ERROR(std::make_pair(~0U, RSXGL_MAX_ELEMENT_TYPES));
 
   return std::make_pair(rsx_primitive_type,rsx_element_type);
@@ -1413,6 +1437,14 @@ glBeginTransformFeedback (GLenum primitiveMode)
   rsxgl_context_t * ctx = current_ctx();
 
   if(ctx -> state.enable.transform_feedback_mode != 0) {
+    RSXGL_ERROR_(GL_INVALID_OPERATION);
+  }
+
+  if(ctx -> program_binding.names[RSXGL_ACTIVE_PROGRAM] == 0) {
+    RSXGL_ERROR_(GL_INVALID_OPERATION);
+  }
+  else if(ctx -> program_binding[RSXGL_ACTIVE_PROGRAM].streamvp_num_insn == 0 ||
+	  ctx -> program_binding[RSXGL_ACTIVE_PROGRAM].streamfp_num_insn == 0) {
     RSXGL_ERROR_(GL_INVALID_OPERATION);
   }
 

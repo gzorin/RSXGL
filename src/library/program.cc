@@ -673,15 +673,21 @@ rsxgl_glsl_type_to_rsxgl_type(const glsl_type * type)
 GLAPI void APIENTRY
 glLinkProgram (GLuint program_name)
 {
+  rsxgl_context_t * ctx = current_ctx();
+
   if(!program_t::storage().is_object(program_name)) {
     RSXGL_ERROR_(GL_INVALID_VALUE);
+  }
+
+  if((ctx -> state.enable.transform_feedback_mode != 0) && (ctx -> program_binding.names[RSXGL_ACTIVE_PROGRAM] == program_name)) {
+    RSXGL_ERROR_(GL_INVALID_OPERATION);
   }
 
   program_t & program = program_t::storage().at(program_name);
 
   // TODO: orphan it, instead of doing this:
   if(program.timestamp > 0) {
-    rsxgl_timestamp_wait(current_ctx(),program.timestamp);
+    rsxgl_timestamp_wait(ctx,program.timestamp);
     program.timestamp = 0;
   }
 
@@ -727,7 +733,7 @@ glLinkProgram (GLuint program_name)
   //
   std::string info;
 
-  compiler_context_t * cctx = current_ctx() -> compiler_context();
+  compiler_context_t * cctx = ctx -> compiler_context();
 
   for(unsigned int i = 0,n = program.attached_shaders().get_size();i < n;++i) {
     cctx -> attach_shader(program.mesa_program,shader_t::storage().at(program.attached_shaders()[i]).mesa_shader);
@@ -1316,6 +1322,10 @@ glUseProgram (GLuint program_name)
 
   if(program_name != 0 && !program_t::storage().is_object(program_name)) {
     RSXGL_ERROR_(GL_INVALID_VALUE);
+  }
+
+  if(ctx -> state.enable.transform_feedback_mode != 0) {
+    RSXGL_ERROR_(GL_INVALID_OPERATION);
   }
 
   if(ctx -> program_binding.names[RSXGL_ACTIVE_PROGRAM] != program_name) {

@@ -215,6 +215,10 @@ rsxgl_bind_buffer_range(GLenum target, GLuint index, GLuint buffer_name, rsx_siz
 
   struct rsxgl_context_t * ctx = current_ctx();
 
+  if(rsx_target == RSXGL_TRANSFORM_FEEDBACK_BUFFER && ctx -> state.enable.transform_feedback_mode != 0) {
+    RSXGL_ERROR_(GL_INVALID_OPERATION);
+  }
+
   ctx -> buffer_binding.bind(rsx_target,buffer_name);
 
   const size_t i =
