@@ -48,6 +48,9 @@ glEnable (GLenum cap)
   case GL_VERTEX_PROGRAM_POINT_SIZE:
     ctx -> state.enable.pointSize = 1;
     break;
+  case GL_RASTERIZER_DISCARD:
+    ctx -> state.enable.rasterizer_discard = 1;
+    break;
   default:
     RSXGL_ERROR_(GL_INVALID_ENUM);
   };
@@ -88,6 +91,9 @@ glDisable (GLenum cap)
   case GL_VERTEX_PROGRAM_POINT_SIZE:
     ctx -> state.enable.pointSize = 0;
     break;
+  case GL_RASTERIZER_DISCARD:
+    ctx -> state.enable.rasterizer_discard = 0;
+    break;
   default:
     RSXGL_ERROR_(GL_INVALID_ENUM);
   };
@@ -120,6 +126,9 @@ glIsEnabled (GLenum cap)
     break;
   case GL_VERTEX_PROGRAM_POINT_SIZE:
     RSXGL_NOERROR(ctx -> state.enable.pointSize);
+    break;
+  case GL_RASTERIZER_DISCARD:
+    RSXGL_NOERROR(ctx -> state.enable.rasterizer_discard);
     break;
   default:
     RSXGL_ERROR(GL_INVALID_ENUM,GL_FALSE);

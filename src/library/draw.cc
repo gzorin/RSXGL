@@ -556,12 +556,14 @@ namespace {
     // Draw functions:
     gcmContextData * gcm_context = ctx -> gcm_context();
 
-    drawPolicy.begin(gcm_context,timestamp);
-    for(;it != it_end;++it,++timestamp) {
-      drawPolicy.draw(gcm_context,timestamp,it);
-      rsxgl_timestamp_post(ctx,timestamp);
+    if(!ctx -> state.enable.rasterizer_discard) {
+      drawPolicy.begin(gcm_context,timestamp);
+      for(;it != it_end;++it,++timestamp) {
+	drawPolicy.draw(gcm_context,timestamp,it);
+	rsxgl_timestamp_post(ctx,timestamp);
+      }
+      drawPolicy.end(gcm_context,timestamp);
     }
-    drawPolicy.end(gcm_context,timestamp);
 
     // Transform feedback:
     if(ctx -> state.enable.transform_feedback_mode != 0) {
@@ -672,18 +674,18 @@ namespace {
 
 	  const uint32_t cmd = NV30_3D_VTX_ATTR_2I(vertexid_index);
 
-	  uint32_t y = 1, x = 0;
+	  uint16_t y = 1, x = 0;
 	  uint32_t idx = 0;
 
 	  for(uint16_t div = count / RSXGL_MAX_RENDERBUFFER_SIZE;div > 0;--div,++y) {
 	    for(x = 0;x < RSXGL_MAX_RENDERBUFFER_SIZE;++x,++idx) {
 	      gcm_emit_method_at(buffer,0,cmd,1);
 	      gcm_emit_at(buffer,1,((y) << NV30_3D_VTX_ATTR_2I_Y__SHIFT) | ((x) << NV30_3D_VTX_ATTR_2I_X__SHIFT));
-	      buffer += 2;
 
-	      gcm_emit_method_at(buffer,0,NV30_3D_VB_ELEMENT_U32,1);
-	      gcm_emit_at(buffer,1,idx);
-	      buffer += 2;
+	      gcm_emit_method_at(buffer,2,NV30_3D_VB_ELEMENT_U32,1);
+	      gcm_emit_at(buffer,3,idx);
+
+	      buffer += 4;
 	    }
 	  }
 
@@ -691,11 +693,11 @@ namespace {
 	  for(uint16_t mod = count % RSXGL_MAX_RENDERBUFFER_SIZE;mod > 0;--mod,++x,++idx) {
 	    gcm_emit_method_at(buffer,0,cmd,1);
 	    gcm_emit_at(buffer,1,((y) << NV30_3D_VTX_ATTR_2I_Y__SHIFT) | ((x) << NV30_3D_VTX_ATTR_2I_X__SHIFT));
-	    buffer += 2;
 
-	    gcm_emit_method_at(buffer,0,NV30_3D_VB_ELEMENT_U32,1);
-	    gcm_emit_at(buffer,1,idx);
-	    buffer += 2;
+	    gcm_emit_method_at(buffer,2,NV30_3D_VB_ELEMENT_U32,1);
+	    gcm_emit_at(buffer,3,idx);
+
+	    buffer += 4;
 	  }
 
 	  gcm_emit_method_at(buffer,0,NV30_3D_VERTEX_BEGIN_END,1);
@@ -712,9 +714,6 @@ namespace {
 	ctx -> invalid.parts.program = 1;
 	ctx -> state.invalid.parts.viewport = 1;
 	ctx -> invalid_attribs.set(vertexid_index);
-#if 0
-	ctx -> invalid_attribs.set(position_index);
-#endif
       }
     }
   }

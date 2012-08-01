@@ -1622,7 +1622,7 @@ rsxgl_feedback_framebuffer_validate(rsxgl_context_t * ctx,uint32_t offset,uint32
 
   const uint32_t attrib_length = sizeof(float) * 4;
   const uint32_t length = attrib_length * count;
-  const uint32_t pitch = attrib_length * RSXGL_MAX_RENDERBUFFER_SIZE / 2;
+  const uint32_t pitch = attrib_length * RSXGL_MAX_RENDERBUFFER_SIZE;
 
   size_t binding = RSXGL_TRANSFORM_FEEDBACK_BUFFER0, range_binding = RSXGL_TRANSFORM_FEEDBACK_BUFFER_RANGE0, surface = RSXGL_FRAMEBUFFER_SURFACE_COLOR0;
   for(unsigned int i = 0;i < program.streamfp_num_outputs;++i,++binding,++range_binding,++surface) {
