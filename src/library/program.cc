@@ -313,7 +313,7 @@ program_t::program_t()
     fp_control(0),
     streamvp_input_mask(0), streamvp_output_mask(0), streamvp_num_internal_const(0),
     streamfp_control(0), streamfp_num_outputs(0),
-    streamvp_vertexid_index(~0), streamvp_position_index(~0), instanceid_index(~0), point_sprite_control(0),
+    streamvp_vertexid_index(~0), instanceid_index(~0), point_sprite_control(0),
     uniform_values(0), program_offsets(0)
 {
   attached_shaders().construct();
@@ -1185,15 +1185,18 @@ glLinkProgram (GLuint program_name)
     // attribute assignments get messed up. This isn't good, but, for now, creating the stream programs
     // takes place after RSXGL is otherwise finished creating the rendering programs.
     if(stream_info.num_outputs > 0) {
+#if 0
       rsxgl_debug_printf("VP stream outputs: %u\n",stream_info.num_outputs);
+#endif
 
-      unsigned int vertexid_index = 0, position_index = 0;
-      std::tie(program.nvfx_streamvp,program.nvfx_streamfp) = cctx -> translate_stream_vp_fp(program.mesa_program,&stream_info,vp_tokens,&vertexid_index,&position_index);
+      unsigned int vertexid_index = 0;
+      std::tie(program.nvfx_streamvp,program.nvfx_streamfp) = cctx -> translate_stream_vp_fp(program.mesa_program,&stream_info,vp_tokens,&vertexid_index);
       rsxgl_assert(program.nvfx_streamvp != 0);
       rsxgl_assert(program.nvfx_streamfp != 0);
       
       cctx -> link_vp_fp(program.nvfx_streamvp,program.nvfx_streamfp);
 
+#if 0
       // Dump VP: microcode:
       {
 	rsxgl_debug_printf("VP microcode: %u instructions\n",program.nvfx_streamvp -> nr_insns);
@@ -1226,6 +1229,7 @@ glLinkProgram (GLuint program_name)
 			     program.nvfx_streamvp -> generic_to_fp_input[program.nvfx_streamfp -> slot_to_generic[i]]);
 	}
       }
+#endif
 
       //
       // Migrate vertex program microcode to cache-aligned memory:
@@ -1272,7 +1276,6 @@ glLinkProgram (GLuint program_name)
 
       program.streamvp_output_mask = program.nvfx_streamvp -> outregs | program.nvfx_streamfp -> outregs;
       program.streamvp_vertexid_index = vertexid_index;
-      program.streamvp_position_index = position_index;
     }
     else {
       program.nvfx_streamvp = 0;
@@ -1287,7 +1290,6 @@ glLinkProgram (GLuint program_name)
       program.streamfp_control = 0;
       program.streamfp_num_outputs = 0;
       program.streamvp_vertexid_index = ~0;
-      program.streamvp_position_index = ~0;
     }
 
     program.linked = GL_TRUE;
@@ -1667,8 +1669,6 @@ rsxgl_program_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
       if(program.linked) {
 	// load the vertex program:
 	{
-	  rsxgl_debug_printf("masks: %x %x\n",program.vp_input_mask,program.vp_output_mask);
-
 	  uint32_t * buffer = gcm_reserve(context,program.vp_num_insn * 5 + 7);
 	  
 	  gcm_emit_method(&buffer,NV30_3D_VP_UPLOAD_FROM_ID,1);
@@ -1784,16 +1784,6 @@ rsxgl_program_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
 	  }
 	}
 	
-	// Tell the GPU which vertex attributes the program will use:
-	{
-	  uint32_t * buffer = gcm_reserve(context,2);
-	  
-	  gcm_emit_method(&buffer,NV40_3D_VP_ATTRIB_EN,1);
-	  gcm_emit(&buffer,program.attribs_enabled.as_integer());
-	  
-	  gcm_finish_commands(context,&buffer);
-	}
-	
 	// Tell unused attributes to have a size of 0:
 	{
 	  const bit_set< RSXGL_MAX_VERTEX_ATTRIBS > unused_attribs = ~program.attribs_enabled;
@@ -1856,8 +1846,6 @@ rsxgl_program_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
 void
 rsxgl_feedback_program_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
 {
-  rsxgl_debug_printf("%s\n",__PRETTY_FUNCTION__);
-
   gcmContextData * context = ctx -> base.gcm_context;
 
   if(ctx -> program_binding.names[RSXGL_ACTIVE_PROGRAM] != 0) {
@@ -1873,24 +1861,14 @@ rsxgl_feedback_program_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
     if(program.linked) {
       // load the vertex program:
       {
-	rsxgl_debug_printf("masks: %x %x\n",program.streamvp_input_mask,program.streamvp_output_mask);
-
 	uint32_t * buffer = gcm_reserve(context,program.streamvp_num_insn * 5 + 7);
 	
 	gcm_emit_method(&buffer,NV30_3D_VP_UPLOAD_FROM_ID,1);
 	gcm_emit(&buffer,0);
 
-	rsxgl_debug_printf("%u instructions\n",program.streamvp_num_insn);
-	
 	const struct nvfx_vertex_program_exec * ucode = rsxgl_main_ucode_address(program.streamvp_ucode_offset);
 	for(size_t i = 0,n = program.streamvp_num_insn;i < n;++i,++ucode) {
 	  gcm_emit_method(&buffer,NV30_3D_VP_UPLOAD_INST(0),4);
-
-	  rsxgl_debug_printf("%04u: %x %x %x %x\n",i,
-			     ucode -> data[0],
-			     ucode -> data[1],
-			     ucode -> data[2],
-			     ucode -> data[3]);
 
 	  gcm_emit(&buffer,ucode -> data[0]);
 	  gcm_emit(&buffer,ucode -> data[1]);
@@ -2004,16 +1982,6 @@ rsxgl_feedback_program_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
 	}
       }
 #endif
-      
-      // Tell the GPU which vertex attributes the program will use:
-      {
-	uint32_t * buffer = gcm_reserve(context,2);
-	
-	gcm_emit_method(&buffer,NV40_3D_VP_ATTRIB_EN,1);
-	gcm_emit(&buffer,program.attribs_enabled.as_integer() | ((uint32_t)1 << program.streamvp_position_index));
-	
-	gcm_finish_commands(context,&buffer);
-      }
       
 #if 0
       // Tell unused attributes to have a size of 0:

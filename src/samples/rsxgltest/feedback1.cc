@@ -284,7 +284,6 @@ rsxgltest_draw()
 
     //int which = frame % 6;
     int which = 0;
-    tcp_printf("%s %i %i\n",__PRETTY_FUNCTION__,frame,which);
 
     if(which == 0) {
       report_glerror("Before transform feedback");

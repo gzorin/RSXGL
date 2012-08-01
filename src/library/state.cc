@@ -266,11 +266,6 @@ rsxgl_state_validate(rsxgl_context_t * ctx)
     gcm_emit(&buffer,_ieee32_t(s -> viewport.depthRange[0]).u);
     gcm_emit(&buffer,_ieee32_t(s -> viewport.depthRange[1]).u);
 
-    rsxgl_debug_printf("offset: %f %f %f %f scale: %f %f %f %f depth: %f %f\n",
-		       offset[0].f,offset[1].f,offset[2].f,offset[3].f,
-		       scale[0].f,scale[1].f,scale[2].f,scale[3].f,
-		       s -> viewport.depthRange[0],s -> viewport.depthRange[1]);
-
     gcm_emit_method(&buffer,NV30_3D_VIEWPORT_TRANSLATE,8);
     gcm_emit(&buffer,offset[0].u);
     gcm_emit(&buffer,offset[1].u);

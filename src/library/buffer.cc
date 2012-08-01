@@ -195,8 +195,6 @@ glBindBuffer (GLenum target, GLuint buffer_name)
 static inline void
 rsxgl_bind_buffer_range(GLenum target, GLuint index, GLuint buffer_name, rsx_size_t offset, rsx_size_t size)
 {
-  rsxgl_debug_printf("%s: %x %u %u %u %u\n",__PRETTY_FUNCTION__,target,index,buffer_name,offset,size);
-
   const size_t rsx_target = rsxgl_buffer_target(target);
   if(!(rsx_target == RSXGL_TRANSFORM_FEEDBACK_BUFFER || rsx_target == RSXGL_UNIFORM_BUFFER)) {
     RSXGL_ERROR_(GL_INVALID_ENUM);
@@ -216,14 +214,9 @@ rsxgl_bind_buffer_range(GLenum target, GLuint index, GLuint buffer_name, rsx_siz
     (size == ~0) ? buffer_t::storage().at(buffer_name).size :
     size;
 
-  rsxgl_debug_printf("\tactual size: %u\n",size);
-
   if(buffer_name != 0 && ((size <= 0) || ((offset + size) > buffer_t::storage().at(buffer_name).size))) {
     RSXGL_ERROR_(GL_INVALID_VALUE);
   }
-
-  rsxgl_debug_printf("\tbinding %u (%u, %u)\n",
-		     buffer_name,offset,size);
 
   struct rsxgl_context_t * ctx = current_ctx();
 

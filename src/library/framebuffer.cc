@@ -1035,9 +1035,11 @@ rsxgl_emit_surface(gcmContextData * context,const uint8_t which,surface_t const 
     NV40_3D_ZETA_PITCH
   };
 
+#if 0
   rsxgl_debug_printf("%s:%u loc:%u offset:%u pitch:%u\n",
 		     __PRETTY_FUNCTION__,(unsigned int)which,
 		     surface.memory.location,surface.memory.offset,surface.pitch);
+#endif
 
   uint32_t * buffer = gcm_reserve(context,6);
 
@@ -1539,8 +1541,10 @@ rsxgl_draw_framebuffer_validate(rsxgl_context_t * ctx,uint32_t timestamp)
 
 	const uint16_t w = framebuffer.size[0], h = framebuffer.size[1];
 
+#if 0
 	rsxgl_debug_printf("%s format:%x color_targets:%x size:%ux%u color_mask:%x color_mask_mrt:%x depth_mask:%x\n",__PRETTY_FUNCTION__,
 			   format,color_targets,(unsigned int)w,(unsigned int)h,color_mask,color_mask_mrt,depth_mask);
+#endif
 	
 	uint32_t * buffer = gcm_reserve(context,15);
 	
@@ -1653,8 +1657,10 @@ rsxgl_feedback_framebuffer_validate(rsxgl_context_t * ctx,uint32_t offset,uint32
   //const uint16_t h = div + ((mod > 0) ? 1 : 0);
   const uint16_t h = w;
 
+#if 0
   rsxgl_debug_printf("%s format:%x color_targets:%x size:%ux%u color_mask:%x color_mask_mrt:%x depth_mask:%x %ux%u\n",__PRETTY_FUNCTION__,
 		     format,color_targets,(unsigned int)w,(unsigned int)h,color_mask,color_mask_mrt,depth_mask,(unsigned int)w,(unsigned int)h);
+#endif
 
   uint32_t * buffer = gcm_reserve(context,15);
   
