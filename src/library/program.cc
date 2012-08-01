@@ -312,8 +312,8 @@ program_t::program_t()
     vp_input_mask(0), vp_output_mask(0), vp_num_internal_const(0),
     fp_control(0),
     streamvp_input_mask(0), streamvp_output_mask(0), streamvp_num_internal_const(0),
-    streamfp_control(0), 
-    vertexid_index(~0), instanceid_index(~0), point_sprite_control(0),
+    streamfp_control(0), streamfp_num_outputs(0),
+    streamvp_vertexid_index(~0), streamvp_position_index(~0), instanceid_index(~0), point_sprite_control(0),
     uniform_values(0), program_offsets(0)
 {
   attached_shaders().construct();
@@ -752,8 +752,9 @@ glLinkProgram (GLuint program_name)
 
   if(program.mesa_program -> LinkStatus) {
     pipe_stream_output_info stream_info;
+    tgsi_token * vp_tokens = 0;
 
-    program.nvfx_vp = cctx -> translate_vp(program.mesa_program,&stream_info);
+    program.nvfx_vp = cctx -> translate_vp(program.mesa_program,&stream_info,&vp_tokens);
     program.nvfx_fp = cctx -> translate_fp(program.mesa_program);
     rsxgl_assert(program.nvfx_vp != 0);
     rsxgl_assert(program.nvfx_fp != 0);
@@ -1186,8 +1187,8 @@ glLinkProgram (GLuint program_name)
     if(stream_info.num_outputs > 0) {
       rsxgl_debug_printf("VP stream outputs: %u\n",stream_info.num_outputs);
 
-      unsigned int vertexid_index = 0;
-      std::tie(program.nvfx_streamvp,program.nvfx_streamfp) = cctx -> translate_stream_vp_fp(program.mesa_program,&stream_info,&vertexid_index);
+      unsigned int vertexid_index = 0, position_index = 0;
+      std::tie(program.nvfx_streamvp,program.nvfx_streamfp) = cctx -> translate_stream_vp_fp(program.mesa_program,&stream_info,vp_tokens,&vertexid_index,&position_index);
       rsxgl_assert(program.nvfx_streamvp != 0);
       rsxgl_assert(program.nvfx_streamfp != 0);
       
@@ -1203,6 +1204,8 @@ glLinkProgram (GLuint program_name)
 			     program.nvfx_streamvp -> insns[i].data[2],
 			     program.nvfx_streamvp -> insns[i].data[3]);
 	}
+
+	
       }
       
       // Dump FP microcode:
@@ -1214,6 +1217,13 @@ glLinkProgram (GLuint program_name)
 			     program.nvfx_streamfp -> insn[i*4+1],
 			     program.nvfx_streamfp -> insn[i*4+2],
 			     program.nvfx_streamfp -> insn[i*4+3]);
+	}
+
+	rsxgl_debug_printf("streamfp slots:\n");
+	for(unsigned int i = 0;i < program.nvfx_streamfp -> num_slots;++i) {
+	  rsxgl_debug_printf("\t%u: %u %u\n",i,
+			     program.nvfx_streamfp -> slot_to_generic[i],
+			     program.nvfx_streamvp -> generic_to_fp_input[program.nvfx_streamfp -> slot_to_generic[i]]);
 	}
       }
 
@@ -1256,11 +1266,13 @@ glLinkProgram (GLuint program_name)
 	  
 	  program.streamfp_num_insn = program.nvfx_streamfp -> insn_len / 4;
 	  program.streamfp_control = program.nvfx_streamfp -> fp_control;
+	  program.streamfp_num_outputs = stream_info.num_outputs;
 	}
       }
 
       program.streamvp_output_mask = program.nvfx_streamvp -> outregs | program.nvfx_streamfp -> outregs;
-      program.vertexid_index = vertexid_index;
+      program.streamvp_vertexid_index = vertexid_index;
+      program.streamvp_position_index = position_index;
     }
     else {
       program.nvfx_streamvp = 0;
@@ -1273,7 +1285,9 @@ glLinkProgram (GLuint program_name)
       program.streamvp_output_mask = 0;
       program.streamvp_num_internal_const = 0;
       program.streamfp_control = 0;
-      program.vertexid_index = ~0;
+      program.streamfp_num_outputs = 0;
+      program.streamvp_vertexid_index = ~0;
+      program.streamvp_position_index = ~0;
     }
 
     program.linked = GL_TRUE;
@@ -1332,7 +1346,7 @@ glUseProgram (GLuint program_name)
 
     ctx -> program_binding.bind(RSXGL_ACTIVE_PROGRAM,program_name);
     ctx -> invalid.parts.program = 1;
-    ctx -> state.enable.transform_feedback_program = program_t::storage().at(program_name).vp_num_insn > 0;
+    ctx -> state.enable.transform_feedback_program = (program_t::storage().at(program_name).streamvp_num_insn > 0 && program_t::storage().at(program_name).streamfp_num_insn > 0);
 
     if(prev_program_name != 0) {
       const program_t::texture_assignments_bitfield_type
@@ -1653,6 +1667,8 @@ rsxgl_program_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
       if(program.linked) {
 	// load the vertex program:
 	{
+	  rsxgl_debug_printf("masks: %x %x\n",program.vp_input_mask,program.vp_output_mask);
+
 	  uint32_t * buffer = gcm_reserve(context,program.vp_num_insn * 5 + 7);
 	  
 	  gcm_emit_method(&buffer,NV30_3D_VP_UPLOAD_FROM_ID,1);
@@ -1857,14 +1873,25 @@ rsxgl_feedback_program_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
     if(program.linked) {
       // load the vertex program:
       {
+	rsxgl_debug_printf("masks: %x %x\n",program.streamvp_input_mask,program.streamvp_output_mask);
+
 	uint32_t * buffer = gcm_reserve(context,program.streamvp_num_insn * 5 + 7);
 	
 	gcm_emit_method(&buffer,NV30_3D_VP_UPLOAD_FROM_ID,1);
 	gcm_emit(&buffer,0);
+
+	rsxgl_debug_printf("%u instructions\n",program.streamvp_num_insn);
 	
 	const struct nvfx_vertex_program_exec * ucode = rsxgl_main_ucode_address(program.streamvp_ucode_offset);
 	for(size_t i = 0,n = program.streamvp_num_insn;i < n;++i,++ucode) {
 	  gcm_emit_method(&buffer,NV30_3D_VP_UPLOAD_INST(0),4);
+
+	  rsxgl_debug_printf("%04u: %x %x %x %x\n",i,
+			     ucode -> data[0],
+			     ucode -> data[1],
+			     ucode -> data[2],
+			     ucode -> data[3]);
+
 	  gcm_emit(&buffer,ucode -> data[0]);
 	  gcm_emit(&buffer,ucode -> data[1]);
 	  gcm_emit(&buffer,ucode -> data[2]);
@@ -1911,7 +1938,7 @@ rsxgl_feedback_program_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
       // load the fragment program:
       {
 	uint32_t i = 0;
-	const uint32_t n = 4 + (2 * RSXGL_MAX_TEXTURE_COORDS);
+	const uint32_t n = 4 /*+ (2 * RSXGL_MAX_TEXTURE_COORDS)*/;
 	
 	uint32_t * buffer = gcm_reserve(context,n);
 	
@@ -1983,7 +2010,7 @@ rsxgl_feedback_program_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
 	uint32_t * buffer = gcm_reserve(context,2);
 	
 	gcm_emit_method(&buffer,NV40_3D_VP_ATTRIB_EN,1);
-	gcm_emit(&buffer,program.attribs_enabled.as_integer());
+	gcm_emit(&buffer,program.attribs_enabled.as_integer() | ((uint32_t)1 << program.streamvp_position_index));
 	
 	gcm_finish_commands(context,&buffer);
       }

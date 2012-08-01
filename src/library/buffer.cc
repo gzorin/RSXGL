@@ -195,13 +195,15 @@ glBindBuffer (GLenum target, GLuint buffer_name)
 static inline void
 rsxgl_bind_buffer_range(GLenum target, GLuint index, GLuint buffer_name, rsx_size_t offset, rsx_size_t size)
 {
+  rsxgl_debug_printf("%s: %x %u %u %u %u\n",__PRETTY_FUNCTION__,target,index,buffer_name,offset,size);
+
   const size_t rsx_target = rsxgl_buffer_target(target);
   if(!(rsx_target == RSXGL_TRANSFORM_FEEDBACK_BUFFER || rsx_target == RSXGL_UNIFORM_BUFFER)) {
     RSXGL_ERROR_(GL_INVALID_ENUM);
   }
 
-  if((rsx_target == RSXGL_TRANSFORM_FEEDBACK_BUFFER && index < RSXGL_MAX_TRANSFORM_FEEDBACK_BUFFER_BINDINGS) ||
-     (rsx_target == RSXGL_UNIFORM_BUFFER && index < RSXGL_MAX_UNIFORM_BUFFER_BINDINGS)) {
+  if(!((rsx_target == RSXGL_TRANSFORM_FEEDBACK_BUFFER && index < RSXGL_MAX_TRANSFORM_FEEDBACK_BUFFER_BINDINGS) ||
+       (rsx_target == RSXGL_UNIFORM_BUFFER && index < RSXGL_MAX_UNIFORM_BUFFER_BINDINGS))) {
     RSXGL_ERROR_(GL_INVALID_VALUE);
   }
 
@@ -209,15 +211,21 @@ rsxgl_bind_buffer_range(GLenum target, GLuint index, GLuint buffer_name, rsx_siz
     RSXGL_ERROR_(GL_INVALID_VALUE);
   }
 
-  if(buffer_name != 0 && buffer_t::storage().at(buffer_name).size == 0) {
+  size =
+    (buffer_name == 0) ? 0 :
+    (size == ~0) ? buffer_t::storage().at(buffer_name).size :
+    size;
+
+  rsxgl_debug_printf("\tactual size: %u\n",size);
+
+  if(buffer_name != 0 && ((size <= 0) || ((offset + size) > buffer_t::storage().at(buffer_name).size))) {
     RSXGL_ERROR_(GL_INVALID_VALUE);
   }
 
-  struct rsxgl_context_t * ctx = current_ctx();
+  rsxgl_debug_printf("\tbinding %u (%u, %u)\n",
+		     buffer_name,offset,size);
 
-  if(rsx_target == RSXGL_TRANSFORM_FEEDBACK_BUFFER && ctx -> state.enable.transform_feedback_mode != 0) {
-    RSXGL_ERROR_(GL_INVALID_OPERATION);
-  }
+  struct rsxgl_context_t * ctx = current_ctx();
 
   ctx -> buffer_binding.bind(rsx_target,buffer_name);
 
@@ -225,9 +233,13 @@ rsxgl_bind_buffer_range(GLenum target, GLuint index, GLuint buffer_name, rsx_siz
     (rsx_target == RSXGL_TRANSFORM_FEEDBACK_BUFFER) ? (RSXGL_TRANSFORM_FEEDBACK_BUFFER0 + index) :
     (rsx_target == RSXGL_UNIFORM_BUFFER) ? (RSXGL_UNIFORM_BUFFER0 + index) :
     ~0;
+  const size_t ii =
+    (rsx_target == RSXGL_TRANSFORM_FEEDBACK_BUFFER) ? (RSXGL_TRANSFORM_FEEDBACK_BUFFER_RANGE0 + index) :
+    (rsx_target == RSXGL_UNIFORM_BUFFER) ? (RSXGL_UNIFORM_BUFFER_RANGE0 + index) :
+    ~0;
 
   ctx -> buffer_binding.bind(i,buffer_name);
-  ctx -> buffer_binding_offset_size[i] = std::make_pair((rsx_size_t)offset,(rsx_size_t)size);
+  ctx -> buffer_binding_offset_size[ii] = std::make_pair(offset,size);
 
   RSXGL_NOERROR_();
 }
@@ -235,13 +247,13 @@ rsxgl_bind_buffer_range(GLenum target, GLuint index, GLuint buffer_name, rsx_siz
 GLAPI void APIENTRY
 glBindBufferRange (GLenum target, GLuint index, GLuint buffer_name, GLintptr offset, GLsizeiptr size)
 {
-  rsxgl_bind_buffer_range(target,index,buffer_name,offset,(rsx_size_t)size);
+  rsxgl_bind_buffer_range(target,index,buffer_name,offset,size);
 }
 
 GLAPI void APIENTRY
 glBindBufferBase (GLenum target, GLuint index, GLuint buffer_name)
 {
-  rsxgl_bind_buffer_range(target,index,buffer_name,0,(rsx_size_t)~0);
+  rsxgl_bind_buffer_range(target,index,buffer_name,0,~0);
 }
 
 GLAPI void APIENTRY

@@ -39,7 +39,7 @@ public:
 
   memory_arena_t::binding_type arena_binding;
   buffer_t::binding_type buffer_binding;
-  std::pair< rsx_size_t, rsx_size_t > buffer_binding_offset_size[RSXGL_MAX_TRANSFORM_FEEDBACK_BUFFER_BINDINGS + RSXGL_MAX_UNIFORM_BUFFER_BINDINGS];
+  std::pair< rsx_size_t, rsx_size_t > buffer_binding_offset_size[RSXGL_MAX_BUFFER_RANGE_TARGETS];
 
   union {
     uint8_t all;

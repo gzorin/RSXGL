@@ -44,6 +44,10 @@ struct surface_t {
   surface_t()
     : pitch(64) {
   }
+
+  surface_t(const memory_t & _memory,uint32_t _pitch)
+    : pitch(_pitch), memory(_memory) {
+  }
 };
 
 struct renderbuffer_t {
@@ -145,8 +149,10 @@ struct framebuffer_t {
 
 struct rsxgl_context_t;
 
-void rsxgl_renderbuffer_validate(rsxgl_context_t *,renderbuffer_t &,const uint32_t);
-void rsxgl_framebuffer_validate(rsxgl_context_t *,framebuffer_t &,const uint32_t);
-void rsxgl_draw_framebuffer_validate(rsxgl_context_t *,const uint32_t);
+void rsxgl_renderbuffer_validate(rsxgl_context_t *,renderbuffer_t &,uint32_t);
+void rsxgl_framebuffer_validate(rsxgl_context_t *,framebuffer_t &,uint32_t);
+void rsxgl_draw_framebuffer_validate(rsxgl_context_t *,uint32_t);
+bool rsxgl_feedback_framebuffer_check(rsxgl_context_t *,uint32_t,uint32_t);
+void rsxgl_feedback_framebuffer_validate(rsxgl_context_t *,uint32_t,uint32_t,uint16_t *,uint16_t *,uint32_t);
 
 #endif

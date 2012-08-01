@@ -36,6 +36,8 @@
 #endif
 #define GLAPI extern "C"
 
+extern "C" double drand48();
+
 static inline uint32_t
 rsxgl_draw_mode(GLenum mode)
 {
@@ -506,6 +508,25 @@ struct rsxgl_draw_array_elements_operations {
 };
 
 namespace {
+  union _ieee32_t {
+    float f;
+    uint32_t u;
+    struct {
+      uint16_t a[2];
+    } h;
+    struct {
+      uint8_t a[4];
+    } b;
+    
+    _ieee32_t(uint32_t value)
+      : u(value) {
+    }
+    
+    _ieee32_t(float value)
+    : f(value) {
+    }
+  };
+
   template< typename ElementRangePolicy, typename IterationPolicy, typename DrawPolicy >
   void rsxgl_draw(rsxgl_context_t * ctx,const ElementRangePolicy & elementRangePolicy,const IterationPolicy & iterationPolicy,const DrawPolicy & drawPolicy)
   {
@@ -544,10 +565,235 @@ namespace {
 
     // Transform feedback:
     if(ctx -> state.enable.transform_feedback_mode != 0) {
-      rsxgl_feedback_program_validate(ctx,lastTimestamp);
+      rsxgl_assert(ctx -> state.enable.transform_feedback_program);
 
-      // For the next draw invocation:
-      ctx -> invalid.parts.program = 1;
+      const uint32_t count = 16;
+      if(rsxgl_feedback_framebuffer_check(ctx,0,count)) {
+	uint16_t w = 0, h = 0;
+
+	const uint32_t vertexid_index = ctx -> program_binding[RSXGL_ACTIVE_PROGRAM].streamvp_vertexid_index;
+	const uint32_t position_index = ctx -> program_binding[RSXGL_ACTIVE_PROGRAM].streamvp_position_index;
+
+	rsxgl_debug_printf("vertexid_index: %u position_index: %u\n",
+			   vertexid_index,position_index);
+
+#if 0
+	const uint32_t vertexid_index = 0;
+#endif
+
+	rsxgl_feedback_framebuffer_validate(ctx,0,count,&w,&h,lastTimestamp);
+	rsxgl_debug_printf("viewport: %ux%u\n",(unsigned int)w,(unsigned int)h);
+
+	// set feedback "viewport":
+	{
+	  uint32_t * buffer = gcm_reserve(gcm_context,17);
+
+	  gcm_emit_method(&buffer,NV30_3D_VIEWPORT_HORIZ,2);
+	  gcm_emit(&buffer,((uint32_t)w << 16));
+	  gcm_emit(&buffer,((uint32_t)h << 16));
+	  
+	  gcm_emit_method(&buffer,NV30_3D_DEPTH_RANGE_NEAR,2);
+	  gcm_emit(&buffer,_ieee32_t(0.0f).u);
+	  gcm_emit(&buffer,_ieee32_t(1.0f).u);
+	  
+	  gcm_emit_method(&buffer,NV30_3D_VIEWPORT_TRANSLATE,8);
+	  gcm_emit(&buffer,_ieee32_t(0.0f).u);
+	  gcm_emit(&buffer,_ieee32_t(0.0f).u);
+	  gcm_emit(&buffer,_ieee32_t(0.5f).u);
+	  gcm_emit(&buffer,_ieee32_t(0.0f).u);
+	  gcm_emit(&buffer,_ieee32_t(1.0f).u);
+	  gcm_emit(&buffer,_ieee32_t(1.0f).u);
+	  gcm_emit(&buffer,_ieee32_t(0.0f).u);
+	  gcm_emit(&buffer,_ieee32_t(0.0f).u);
+	  
+	  gcm_emit_method(&buffer,NV30_3D_DEPTH_CONTROL,1);
+	  gcm_emit(&buffer,((uint32_t)0));
+	  
+	  gcm_finish_commands(gcm_context,&buffer);
+	}
+
+	// disable depth test:
+	{
+	  uint32_t * buffer = gcm_reserve(gcm_context,2);
+
+	  gcm_emit_method_at(buffer,0,NV30_3D_DEPTH_TEST_ENABLE,1);
+	  gcm_emit_at(buffer,1,0);
+	  
+	  gcm_finish_n_commands(gcm_context,2);
+	}
+
+	// point size:
+	{
+	  uint32_t * buffer = gcm_reserve(gcm_context,2);
+	  
+	  gcm_emit_method_at(buffer,0,NV30_3D_POINT_SIZE,1);
+	  gcm_emit_at(buffer,1,_ieee32_t(1.0f).u);
+	  
+	  gcm_finish_n_commands(gcm_context,2);
+	}
+
+	rsxgl_feedback_program_validate(ctx,lastTimestamp);
+
+	// invalidate vertex cache
+	{
+	  uint32_t * buffer = gcm_reserve(gcm_context,8);
+    
+	  gcm_emit_method_at(buffer,0,0x1710,1);
+	  gcm_emit_at(buffer,1,0);
+
+	  gcm_emit_method_at(buffer,2,NV40_3D_VTX_CACHE_INVALIDATE,1);
+	  gcm_emit_at(buffer,3,0);
+	  
+	  gcm_emit_method_at(buffer,4,NV40_3D_VTX_CACHE_INVALIDATE,1);
+	  gcm_emit_at(buffer,5,0);
+	  
+	  gcm_emit_method_at(buffer,6,NV40_3D_VTX_CACHE_INVALIDATE,1);
+	  gcm_emit_at(buffer,7,0);
+	  
+	  gcm_finish_n_commands(gcm_context,8);
+	}
+
+	// whatever vertexid_index points to, make position_index point to it instead:
+	const bit_set< RSXGL_MAX_VERTEX_ATTRIBS > & program_attribs = ctx -> program_binding[RSXGL_ACTIVE_PROGRAM].attribs_enabled;
+	const attribs_t & attribs = ctx -> attribs_binding[0];
+
+	if(program_attribs.test(vertexid_index) &&
+	   attribs.enabled.test(vertexid_index)) {
+	  const buffer_t & vbo = attribs.buffers[vertexid_index];
+	  if(vbo.memory) {
+	    const memory_t memory = vbo.memory + attribs.offset[vertexid_index];
+	    
+	    uint32_t * buffer = gcm_reserve(gcm_context,4);
+	    
+	    gcm_emit_method_at(buffer,0,NV30_3D_VTXBUF(position_index),1);
+	    gcm_emit_at(buffer,1,memory.offset | ((uint32_t)memory.location << 31));
+	    gcm_emit_method_at(buffer,2,NV30_3D_VTXFMT(position_index),1);
+	    gcm_emit_at(buffer,3,
+			/* ((uint32_t)attribs.frequency[i] << 16 | */
+			((uint32_t)attribs.stride[vertexid_index] << NV30_3D_VTXFMT_STRIDE__SHIFT) |
+			((uint32_t)(attribs.size[vertexid_index] + 1) << NV30_3D_VTXFMT_SIZE__SHIFT) |
+			((uint32_t)attribs.type[vertexid_index] & 0x7));
+	    
+	    gcm_finish_n_commands(gcm_context,4);
+	  }
+	}
+
+	// disable buffer reads for the vertexid_index
+	{
+	  uint32_t * buffer = gcm_reserve(gcm_context,4);
+
+	  gcm_emit_method_at(buffer,0,NV30_3D_VTXBUF(vertexid_index),1);
+	  gcm_emit_at(buffer,1,0);
+	  gcm_emit_method_at(buffer,2,NV30_3D_VTXFMT(vertexid_index),1);
+	  gcm_emit_at(buffer,3,
+		      0 |
+		      0 |
+		      ((uint32_t)RSXGL_VERTEX_S16_UN & 0x7));
+	  
+	  gcm_finish_n_commands(gcm_context,4);
+	}
+
+	// Draw this stuff:
+	{
+	  const uint32_t ncommands = (2 + 2) + (2 * count * 2);
+	  rsxgl_debug_printf("%u commands vertexid_index:%u\n",ncommands,vertexid_index);
+
+	  uint32_t * buffer = gcm_reserve(gcm_context,ncommands);
+	  uint32_t * buffer_start = buffer;
+
+	  gcm_emit_method_at(buffer,0,NV30_3D_VERTEX_BEGIN_END,1);
+	  gcm_emit_at(buffer,1,NV30_3D_VERTEX_BEGIN_END_POINTS);
+	  buffer += 2;
+
+	  uint32_t icount = 0;
+
+	  //for(int j = 0;j < 2;++j) {
+	  //const uint32_t cmd = NV30_3D_VTX_ATTR_2I(stupid[j]);
+
+	  const uint32_t cmd = NV30_3D_VTX_ATTR_2I(vertexid_index);
+	  const uint32_t cmds[2] = { NV30_3D_VTX_ATTR_2I(0), NV30_3D_VTX_ATTR_2I(1) };
+
+	  ////const uint32_t cmd = NV30_3D_VTX_ATTR_4F(vertexid_index);
+
+	  uint32_t y = 1, x = 0;
+
+	  for(uint16_t div = count / RSXGL_MAX_RENDERBUFFER_SIZE;div > 0;--div,++y) {
+	    for(x = 0;x < RSXGL_MAX_RENDERBUFFER_SIZE;++x) {
+#if 0
+	      rsxgl_debug_printf("x,y: %u,%u\n",(unsigned int)x,(unsigned int)y);
+#endif
+	      rsxgl_debug_printf("x:%.3f\n",(float)x / 1920.0f * 2.0f - 1.0f);
+
+	      gcm_emit_method_at(buffer,0,cmds[0],1);
+	      gcm_emit_at(buffer,1,((y) << NV30_3D_VTX_ATTR_2I_Y__SHIFT) | ((x) << NV30_3D_VTX_ATTR_2I_X__SHIFT));
+	      buffer += 2;
+
+	      gcm_emit_method_at(buffer,0,cmds[1],1);
+	      gcm_emit_at(buffer,1,((y) << NV30_3D_VTX_ATTR_2I_Y__SHIFT) | ((x) << NV30_3D_VTX_ATTR_2I_X__SHIFT));
+	      buffer += 2;
+
+#if 0
+	      gcm_emit_method_at(buffer,0,cmd,4);
+	      gcm_emit_at(buffer,1,_ieee32_t((float)x + 960.0f).u);
+	      gcm_emit_at(buffer,2,_ieee32_t((float)540.0f).u);
+	      gcm_emit_at(buffer,3,_ieee32_t(0.0f).u);
+	      gcm_emit_at(buffer,4,_ieee32_t(1.0f).u);
+	      buffer += 5;
+#endif
+
+	      ++icount;
+	    }
+	  }
+
+	  x = 0;
+	  for(uint16_t mod = count % RSXGL_MAX_RENDERBUFFER_SIZE;mod > 0;--mod,++x) {
+#if 0
+	    rsxgl_debug_printf("x,y: %u,%u\n",(unsigned int)x,(unsigned int)y);
+#endif
+	    rsxgl_debug_printf("x:%.3f\n",(float)x / 1920.0f * 2.0f - 1.0f);
+
+	    gcm_emit_method_at(buffer,0,cmds[0],1);
+	    gcm_emit_at(buffer,1,((y) << NV30_3D_VTX_ATTR_2I_Y__SHIFT) | ((x) << NV30_3D_VTX_ATTR_2I_X__SHIFT));
+	    buffer += 2;
+
+	    gcm_emit_method_at(buffer,0,cmds[1],1);
+	    gcm_emit_at(buffer,1,((y) << NV30_3D_VTX_ATTR_2I_Y__SHIFT) | ((x) << NV30_3D_VTX_ATTR_2I_X__SHIFT));
+	    buffer += 2;
+
+#if 0
+	    gcm_emit_method_at(buffer,0,cmd,4);
+	    gcm_emit_at(buffer,1,_ieee32_t((float)x + 960.0f).u);
+	    gcm_emit_at(buffer,2,_ieee32_t((float)540.0f).u);
+	    gcm_emit_at(buffer,3,_ieee32_t(0.0f).u);
+	    gcm_emit_at(buffer,4,_ieee32_t(1.0f).u);
+	    buffer += 5;
+#endif
+
+	    ++icount;
+	  }
+
+	  //}
+
+	  rsxgl_debug_printf("%u %u\n",icount,count);
+
+	  gcm_emit_method_at(buffer,0,NV30_3D_VERTEX_BEGIN_END,1);
+	  gcm_emit_at(buffer,1,NV30_3D_VERTEX_BEGIN_END_STOP);
+	  buffer += 2;
+
+	  gcm_finish_n_commands(gcm_context,ncommands);
+
+	  rsxgl_debug_printf("write %u commands\n",(unsigned int)(buffer - buffer_start));
+	}
+	
+	// For the next draw invocation:
+	ctx -> invalid.parts.draw_framebuffer = 1;
+	ctx -> state.invalid.parts.draw_framebuffer = 1;
+	ctx -> state.invalid.parts.point_size = 1;
+	ctx -> invalid.parts.program = 1;
+	ctx -> state.invalid.parts.viewport = 1;
+	ctx -> invalid_attribs.set(vertexid_index);
+	ctx -> invalid_attribs.set(position_index);
+      }
     }
   }
 
@@ -1451,8 +1697,7 @@ glBeginTransformFeedback (GLenum primitiveMode)
   if(ctx -> program_binding.names[RSXGL_ACTIVE_PROGRAM] == 0) {
     RSXGL_ERROR_(GL_INVALID_OPERATION);
   }
-  else if(ctx -> program_binding[RSXGL_ACTIVE_PROGRAM].streamvp_num_insn == 0 ||
-	  ctx -> program_binding[RSXGL_ACTIVE_PROGRAM].streamfp_num_insn == 0) {
+  else if(!ctx -> state.enable.transform_feedback_program) {
     RSXGL_ERROR_(GL_INVALID_OPERATION);
   }
 

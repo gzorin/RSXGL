@@ -112,24 +112,26 @@ state_t::state_t()
   enable.transform_feedback_mode = 0;
 }
 
-union _ieee32_t {
-  float f;
-  uint32_t u;
-  struct {
-    uint16_t a[2];
-  } h;
-  struct {
-    uint8_t a[4];
-  } b;
-
-  _ieee32_t(uint32_t value)
-    : u(value) {
-  }
-
-  _ieee32_t(float value)
+namespace {
+  union _ieee32_t {
+    float f;
+    uint32_t u;
+    struct {
+      uint16_t a[2];
+    } h;
+    struct {
+      uint8_t a[4];
+    } b;
+    
+    _ieee32_t(uint32_t value)
+      : u(value) {
+    }
+    
+    _ieee32_t(float value)
     : f(value) {
-  }
-};
+    }
+  };
+}
 
 #if 0
 static inline void
@@ -262,7 +264,12 @@ rsxgl_state_validate(rsxgl_context_t * ctx)
 
     gcm_emit_method(&buffer,NV30_3D_DEPTH_RANGE_NEAR,2);
     gcm_emit(&buffer,_ieee32_t(s -> viewport.depthRange[0]).u);
-    gcm_emit(&buffer,_ieee32_t(s -> viewport.depthRange[1]).u);;
+    gcm_emit(&buffer,_ieee32_t(s -> viewport.depthRange[1]).u);
+
+    rsxgl_debug_printf("offset: %f %f %f %f scale: %f %f %f %f depth: %f %f\n",
+		       offset[0].f,offset[1].f,offset[2].f,offset[3].f,
+		       scale[0].f,scale[1].f,scale[2].f,scale[3].f,
+		       s -> viewport.depthRange[0],s -> viewport.depthRange[1]);
 
     gcm_emit_method(&buffer,NV30_3D_VIEWPORT_TRANSLATE,8);
     gcm_emit(&buffer,offset[0].u);

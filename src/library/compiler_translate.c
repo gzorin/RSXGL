@@ -11,6 +11,8 @@
 #include "nvfx/nv30_vertprog.h"
 #include "nvfx/nv40_vertprog.h"
 
+#include "tgsi/tgsi_transform.h"
+
 extern struct nvfx_vertex_program*
 nvfx_vertprog_translate(struct nvfx_context *nvfx, const struct pipe_shader_state* vps, struct tgsi_shader_info* info);
 
@@ -18,7 +20,7 @@ extern struct nvfx_fragment_program*
 nvfx_fragprog_translate(struct nvfx_context *nvfx,struct nvfx_pipe_fragment_program *pfp,boolean emulate_sprite_flipping);
 
 struct nvfx_vertex_program *
-compiler_context__translate_vp(struct gl_context * mesa_ctx, struct gl_shader_program * program, struct pipe_stream_output_info * stream_info)
+compiler_context__translate_vp(struct gl_context * mesa_ctx, struct gl_shader_program * program, struct pipe_stream_output_info * stream_info,struct tgsi_token ** tokens)
 {
   if(!program -> LinkStatus ||
      program->_LinkedShaders[MESA_SHADER_VERTEX] == 0 ||
@@ -62,6 +64,10 @@ compiler_context__translate_vp(struct gl_context * mesa_ctx, struct gl_shader_pr
   struct pipe_shader_state tgsi;
   tgsi.tokens = ureg_get_tokens(ureg,NULL);
 
+  if(tokens != 0) {
+    *tokens = tgsi.tokens;
+  }
+
   if(tgsi.tokens == 0) {
     goto end;
   }
@@ -72,6 +78,8 @@ compiler_context__translate_vp(struct gl_context * mesa_ctx, struct gl_shader_pr
 
   struct tgsi_shader_info info;
   tgsi_scan_shader(tgsi.tokens,&info);
+  tgsi_dump(tgsi.tokens,0);
+
   nvfx_vp = nvfx_vertprog_translate((struct nvfx_context *)(st_context(mesa_ctx) -> pipe),&tgsi,&info);
 
   /* If exec or data segments moved we need to patch the program to
@@ -375,6 +383,8 @@ compiler_context__translate_fp(struct gl_context * mesa_ctx,struct gl_shader_pro
     if(stfp->tgsi.tokens == 0) {
       goto end;
     }
+
+    tgsi_dump(stfp->tgsi.tokens,0);
   }
 
   struct nvfx_pipe_fragment_program fp;
@@ -388,8 +398,143 @@ compiler_context__translate_fp(struct gl_context * mesa_ctx,struct gl_shader_pro
   return nvfx_fp;
 }
 
+struct vp2streamvp
+{
+  struct tgsi_transform_context base;
+  unsigned int vertexid_index, new_input_position_index, old_output_position_index, new_output_position_index;
+  uint8_t position_semantic_name, position_semantic_index;
+};
+
+void vp2streamvp_instruction(struct tgsi_transform_context *ctx,
+			     struct tgsi_full_instruction *inst)
+{
+  struct vp2streamvp * vp2streamvp_ctx = (struct vp2streamvp *)ctx;
+
+  if(inst -> Instruction.Opcode == TGSI_OPCODE_END) {
+    return;
+  }
+  else {
+    struct tgsi_full_instruction newinst = *inst;
+
+    for(int i = 0;i < newinst.Instruction.NumSrcRegs;++i) {
+      struct tgsi_full_src_register *src = newinst.Src + i;
+      
+      if(src -> Register.File == TGSI_FILE_INPUT &&
+	 src -> Register.Index == 0) {
+	src -> Register.Index = vp2streamvp_ctx -> new_input_position_index;
+      }
+    }
+    
+    ctx -> emit_instruction(ctx,&newinst);
+  }
+}
+
+void vp2streamvp_declaration(struct tgsi_transform_context *ctx,
+			     struct tgsi_full_declaration *decl)
+{
+  struct vp2streamvp * vp2streamvp_ctx = (struct vp2streamvp *)ctx;
+
+  if(decl -> Declaration.File == TGSI_FILE_OUTPUT) {
+    if(decl -> Declaration.Semantic &&
+       decl -> Semantic.Name == TGSI_SEMANTIC_POSITION &&
+       decl -> Semantic.Index == 0) {
+      decl -> Semantic.Name = vp2streamvp_ctx -> position_semantic_name;
+      decl -> Semantic.Index = vp2streamvp_ctx -> position_semantic_index;
+      
+      vp2streamvp_ctx -> old_output_position_index = decl -> Range.First;
+    }
+    ctx -> emit_declaration(ctx,decl);
+  }
+  else {
+    ctx -> emit_declaration(ctx,decl);
+  }
+}
+
+void vp2streamvp_immediate(struct tgsi_transform_context *ctx,
+			   struct tgsi_full_immediate *imm)
+{
+  ctx -> emit_immediate(ctx,imm);
+}
+
+void vp2streamvp_property(struct tgsi_transform_context *ctx,
+			  struct tgsi_full_property *prop)
+{
+  ctx -> emit_property(ctx,prop);
+}
+
+void vp2streamvp_epilog(struct tgsi_transform_context *ctx)
+{
+  struct vp2streamvp * vp2streamvp_ctx = (struct vp2streamvp *)ctx;
+
+  // Add vertexid_index:
+  struct tgsi_full_declaration vertexid_decl;
+  memset(&vertexid_decl,0,sizeof(struct tgsi_full_declaration));
+
+  vertexid_decl.Declaration.Type = TGSI_TOKEN_TYPE_DECLARATION;
+  vertexid_decl.Declaration.File = TGSI_FILE_INPUT;
+  vertexid_decl.Declaration.UsageMask = TGSI_WRITEMASK_XY;
+  vertexid_decl.Declaration.Interpolate = TGSI_INTERPOLATE_CONSTANT;
+  //vertexid_decl.Declaration.Dimension = 0;
+  vertexid_decl.Declaration.Semantic = 0;
+  //vertexid_decl.Declaration.Centroid = 0;
+  //vertexid_decl.Declaration.Invariant = 0;
+  //vertexid_decl.Declaration.CylindricalWrap = 0;
+  vertexid_decl.Range.First = vp2streamvp_ctx -> vertexid_index;
+  vertexid_decl.Range.Last = vp2streamvp_ctx -> vertexid_index;
+  //vertexid_decl.Semantic.Name = TGSI_SEMANTIC_POSITION;
+  //vertexid_decl.Semantic.Index = 0;
+
+  ctx -> emit_declaration(ctx,&vertexid_decl);
+
+  // Add the new position output:
+  struct tgsi_full_declaration position_decl;
+  memset(&position_decl,0,sizeof(struct tgsi_full_declaration));
+
+  position_decl.Declaration.Type = TGSI_TOKEN_TYPE_DECLARATION;
+  position_decl.Declaration.File = TGSI_FILE_OUTPUT;
+  position_decl.Declaration.UsageMask = TGSI_WRITEMASK_XY;
+  position_decl.Declaration.Semantic = 1;
+  position_decl.Range.First = vp2streamvp_ctx -> new_output_position_index;
+  position_decl.Range.Last = vp2streamvp_ctx -> new_output_position_index;
+  position_decl.Semantic.Name = TGSI_SEMANTIC_POSITION;
+  position_decl.Semantic.Index = 0;
+
+  ctx -> emit_declaration(ctx,&position_decl);
+
+  // Add the instruction that moves data from vertexid_input to the position:
+  struct tgsi_full_instruction inst;
+  memset(&inst,0,sizeof(struct tgsi_full_instruction));
+
+  inst.Instruction.Type = TGSI_TOKEN_TYPE_INSTRUCTION;
+  inst.Instruction.Opcode = TGSI_OPCODE_MOV;
+  inst.Instruction.Saturate = TGSI_SAT_NONE;
+  inst.Instruction.NumDstRegs = 1;
+  inst.Instruction.NumSrcRegs = 1;
+  
+  inst.Dst[0].Register.File = TGSI_FILE_OUTPUT;
+  inst.Dst[0].Register.WriteMask = TGSI_WRITEMASK_XY;
+  inst.Dst[0].Register.Index = vp2streamvp_ctx -> new_output_position_index;
+
+  inst.Src[0].Register.File = TGSI_FILE_INPUT;
+  inst.Src[0].Register.Index = vp2streamvp_ctx -> vertexid_index;
+  inst.Src[0].Register.SwizzleX = TGSI_SWIZZLE_X;
+  inst.Src[0].Register.SwizzleY = TGSI_SWIZZLE_Y;
+  inst.Src[0].Register.SwizzleZ = TGSI_SWIZZLE_Z;
+  inst.Src[0].Register.SwizzleW = TGSI_SWIZZLE_W;
+
+  ctx -> emit_instruction(ctx,&inst);
+
+  // Add the end instruction:
+  memset(&inst,0,sizeof(struct tgsi_full_instruction));
+
+  inst.Instruction.Type = TGSI_TOKEN_TYPE_INSTRUCTION;
+  inst.Instruction.Opcode = TGSI_OPCODE_END;
+
+  ctx -> emit_instruction(ctx,&inst);
+}
+
 void
-compiler_context__translate_stream_vp_fp(struct gl_context * mesa_ctx,struct gl_shader_program * program,struct pipe_stream_output_info * stream_info,struct nvfx_vertex_program ** pnvfx_vp,struct nvfx_fragment_program ** pnvfx_fp,unsigned int * pvertexid_index)
+compiler_context__translate_stream_vp_fp(struct gl_context * mesa_ctx,struct gl_shader_program * program,struct pipe_stream_output_info * stream_info,struct tgsi_token * vp_tokens,struct nvfx_vertex_program ** pnvfx_vp,struct nvfx_fragment_program ** pnvfx_fp,unsigned int * pvertexid_index,unsigned int * pposition_index)
 {
   rsxgl_debug_printf("%s\n",__PRETTY_FUNCTION__);
 
@@ -407,10 +552,132 @@ compiler_context__translate_stream_vp_fp(struct gl_context * mesa_ctx,struct gl_
     goto end;
   }
 
+  struct st_vertex_program * vp = st_vertex_program((struct gl_vertex_program *)program->_LinkedShaders[MESA_SHADER_VERTEX]->Program);
+
+  struct vp2streamvp vp2streamvp_ctx;
+
+  // 
+  //vp2streamvp_ctx.vertexid_index = vp -> num_inputs;
+  vp2streamvp_ctx.vertexid_index = 0;
+  vp2streamvp_ctx.new_input_position_index = vp -> num_inputs;
+  vp2streamvp_ctx.new_output_position_index = vp -> num_outputs;
+  *pvertexid_index = vp2streamvp_ctx.vertexid_index;
+  *pposition_index = vp2streamvp_ctx.new_input_position_index;
+  
+  //
+  vp2streamvp_ctx.position_semantic_name = ~0;
+  vp2streamvp_ctx.position_semantic_index = ~0;
+  
+  for(unsigned int attr = VERT_RESULT_VAR0; attr < VERT_RESULT_MAX; attr++) {
+    if ((vp->Base.Base.OutputsWritten & BITFIELD64_BIT(attr)) == 0) {
+      
+      switch (attr) {
+      case VERT_RESULT_HPOS:
+	vp2streamvp_ctx.position_semantic_name = TGSI_SEMANTIC_POSITION;
+	vp2streamvp_ctx.position_semantic_index = 0;
+	break;
+      case VERT_RESULT_COL0:
+	vp2streamvp_ctx.position_semantic_name = TGSI_SEMANTIC_COLOR;
+	vp2streamvp_ctx.position_semantic_index = 0;
+	break;
+      case VERT_RESULT_COL1:
+	vp2streamvp_ctx.position_semantic_name = TGSI_SEMANTIC_COLOR;
+	vp2streamvp_ctx.position_semantic_index = 1;
+	break;
+      case VERT_RESULT_BFC0:
+	vp2streamvp_ctx.position_semantic_name = TGSI_SEMANTIC_BCOLOR;
+	vp2streamvp_ctx.position_semantic_index = 0;
+	break;
+      case VERT_RESULT_BFC1:
+	vp2streamvp_ctx.position_semantic_name = TGSI_SEMANTIC_BCOLOR;
+	vp2streamvp_ctx.position_semantic_index = 1;
+	break;
+      case VERT_RESULT_FOGC:
+	vp2streamvp_ctx.position_semantic_name = TGSI_SEMANTIC_FOG;
+	vp2streamvp_ctx.position_semantic_index = 0;
+	break;
+      case VERT_RESULT_PSIZ:
+	vp2streamvp_ctx.position_semantic_name = TGSI_SEMANTIC_PSIZE;
+	vp2streamvp_ctx.position_semantic_index = 0;
+	break;
+      case VERT_RESULT_CLIP_DIST0:
+	vp2streamvp_ctx.position_semantic_name = TGSI_SEMANTIC_CLIPDIST;
+	vp2streamvp_ctx.position_semantic_index = 0;
+	break;
+      case VERT_RESULT_CLIP_DIST1:
+	vp2streamvp_ctx.position_semantic_name = TGSI_SEMANTIC_CLIPDIST;
+	vp2streamvp_ctx.position_semantic_index = 1;
+	break;
+      case VERT_RESULT_EDGE:
+	assert(0);
+	break;
+      case VERT_RESULT_CLIP_VERTEX:
+	vp2streamvp_ctx.position_semantic_name = TGSI_SEMANTIC_CLIPVERTEX;
+	vp2streamvp_ctx.position_semantic_index = 0;
+	break;
+	
+      case VERT_RESULT_TEX0:
+      case VERT_RESULT_TEX1:
+      case VERT_RESULT_TEX2:
+      case VERT_RESULT_TEX3:
+      case VERT_RESULT_TEX4:
+      case VERT_RESULT_TEX5:
+      case VERT_RESULT_TEX6:
+      case VERT_RESULT_TEX7:
+	vp2streamvp_ctx.position_semantic_name = TGSI_SEMANTIC_GENERIC;
+	vp2streamvp_ctx.position_semantic_index = attr - VERT_RESULT_TEX0;
+	break;
+	
+      case VERT_RESULT_VAR0:
+      default:
+	assert(attr < VERT_RESULT_MAX);
+	vp2streamvp_ctx.position_semantic_name = TGSI_SEMANTIC_GENERIC;
+	vp2streamvp_ctx.position_semantic_index = (FRAG_ATTRIB_VAR0 - 
+						   FRAG_ATTRIB_TEX0 +
+						   attr - 
+						   VERT_RESULT_VAR0);
+	break;
+      }
+      break;
+    }
+  }
+  
+  rsxgl_debug_printf("new position output %u %u\n",(unsigned int)vp2streamvp_ctx.position_semantic_name,(unsigned int)vp2streamvp_ctx.position_semantic_index);
+  
+  vp2streamvp_ctx.base.transform_instruction = vp2streamvp_instruction;
+  vp2streamvp_ctx.base.transform_declaration = vp2streamvp_declaration;
+  vp2streamvp_ctx.base.transform_immediate = vp2streamvp_immediate;
+  vp2streamvp_ctx.base.transform_property = vp2streamvp_property;
+  vp2streamvp_ctx.base.epilog = vp2streamvp_epilog;
+  
+  const unsigned int streamvp_tokens_count = tgsi_num_tokens(vp_tokens)
+    + 2 // vertexid input declaration
+    + 3 // new position output declaration
+    + 3 // new output instruction
+    ;
+  struct tgsi_token * streamvp_tokens = tgsi_alloc_tokens(streamvp_tokens_count);
+  tgsi_transform_shader(vp_tokens,streamvp_tokens,streamvp_tokens_count,&vp2streamvp_ctx.base);
+  rsxgl_debug_printf("result:\n");
+  tgsi_dump(streamvp_tokens,0);    
+  
+  // translate to nvfx:
+  {
+    struct pipe_shader_state tgsi;
+    tgsi.tokens = streamvp_tokens;
+    
+    struct tgsi_shader_info info;
+    tgsi_scan_shader(streamvp_tokens,&info);
+    
+    nvfx_vp = nvfx_vertprog_translate((struct nvfx_context *)(st_context(mesa_ctx) -> pipe),&tgsi,&info);
+    
+    rsxgl_debug_printf(" streamvp has: %u instructions, %u constants\n",nvfx_vp -> nr_insns,nvfx_vp -> nr_consts);
+  }
+  
+#if 0
   //
   // Create the stream vertex program:
   struct st_vertex_program * vp = st_vertex_program((struct gl_vertex_program *)program->_LinkedShaders[MESA_SHADER_VERTEX]->Program);
-  st_prepare_vertex_program(mesa_ctx, vp);
+  //st_prepare_vertex_program(mesa_ctx, vp);
 
   streamvp_ureg = ureg_create(TGSI_PROCESSOR_VERTEX);
   
@@ -419,6 +686,8 @@ compiler_context__translate_stream_vp_fp(struct gl_context * mesa_ctx,struct gl_
   }
 
   // Redirect whatever writes to TGSI_SEMANTIC_POSITION to a generic output instead:
+  //
+  // Find an available output semantic:
   unsigned int attr = 0;
   for (attr = VERT_RESULT_VAR0; attr < VERT_RESULT_MAX; attr++) {
     if ((vp->Base.Base.OutputsWritten & BITFIELD64_BIT(attr)) == 0) {
@@ -426,38 +695,116 @@ compiler_context__translate_stream_vp_fp(struct gl_context * mesa_ctx,struct gl_
     }
   }
   
+  // Point the existing position output to this semantic instead:
   if(attr < VERT_RESULT_MAX) {
     for(unsigned int i = 0,n = vp -> num_outputs;i < n;++i) {
       if(vp -> output_semantic_name[i] == TGSI_SEMANTIC_POSITION) {
-	vp -> output_semantic_name[i] = TGSI_SEMANTIC_GENERIC;
-	vp -> output_semantic_index[i] = (FRAG_ATTRIB_VAR0 -
-					       FRAG_ATTRIB_TEX0 +
-					       attr -
-					       VERT_RESULT_VAR0);
+	switch (attr) {
+	case VERT_RESULT_HPOS:
+	  vp -> output_semantic_name[i] = TGSI_SEMANTIC_POSITION;
+	  vp -> output_semantic_index[i] = 0;
+	  break;
+	case VERT_RESULT_COL0:
+	  vp -> output_semantic_name[i] = TGSI_SEMANTIC_COLOR;
+	  vp -> output_semantic_index[i] = 0;
+	  break;
+	case VERT_RESULT_COL1:
+	  vp -> output_semantic_name[i] = TGSI_SEMANTIC_COLOR;
+	  vp -> output_semantic_index[i] = 1;
+	  break;
+	case VERT_RESULT_BFC0:
+	  vp -> output_semantic_name[i] = TGSI_SEMANTIC_BCOLOR;
+	  vp -> output_semantic_index[i] = 0;
+	  break;
+	case VERT_RESULT_BFC1:
+	  vp -> output_semantic_name[i] = TGSI_SEMANTIC_BCOLOR;
+	  vp -> output_semantic_index[i] = 1;
+	  break;
+	case VERT_RESULT_FOGC:
+	  vp -> output_semantic_name[i] = TGSI_SEMANTIC_FOG;
+	  vp -> output_semantic_index[i] = 0;
+	  break;
+	case VERT_RESULT_PSIZ:
+	  vp -> output_semantic_name[i] = TGSI_SEMANTIC_PSIZE;
+	  vp -> output_semantic_index[i] = 0;
+	  break;
+	case VERT_RESULT_CLIP_DIST0:
+	  vp -> output_semantic_name[i] = TGSI_SEMANTIC_CLIPDIST;
+	  vp -> output_semantic_index[i] = 0;
+	  break;
+	case VERT_RESULT_CLIP_DIST1:
+	  vp -> output_semantic_name[i] = TGSI_SEMANTIC_CLIPDIST;
+	  vp -> output_semantic_index[i] = 1;
+	  break;
+	case VERT_RESULT_EDGE:
+	  assert(0);
+	  break;
+	case VERT_RESULT_CLIP_VERTEX:
+	  vp -> output_semantic_name[i] = TGSI_SEMANTIC_CLIPVERTEX;
+	  vp -> output_semantic_index[i] = 0;
+	  break;
+	  
+	case VERT_RESULT_TEX0:
+	case VERT_RESULT_TEX1:
+	case VERT_RESULT_TEX2:
+	case VERT_RESULT_TEX3:
+	case VERT_RESULT_TEX4:
+	case VERT_RESULT_TEX5:
+	case VERT_RESULT_TEX6:
+	case VERT_RESULT_TEX7:
+	  vp -> output_semantic_name[i] = TGSI_SEMANTIC_GENERIC;
+	  vp -> output_semantic_index[i] = attr - VERT_RESULT_TEX0;
+	  break;
+	  
+	case VERT_RESULT_VAR0:
+	default:
+	  assert(attr < VERT_RESULT_MAX);
+	  vp -> output_semantic_name[i] = TGSI_SEMANTIC_GENERIC;
+	  vp -> output_semantic_index[i] = (FRAG_ATTRIB_VAR0 - 
+				     FRAG_ATTRIB_TEX0 +
+				     attr - 
+				     VERT_RESULT_VAR0);
+	  break;
+	}
+
 	break;
       }
     }
   }
-  
-  // Add a VERT_ATTRIB:
-  unsigned int vertexid_index = ~0;
 
-  for(attr = 0;attr < VERT_ATTRIB_MAX;++attr) {
-    if ((vp->Base.Base.InputsRead & BITFIELD64_BIT(attr)) != 0) {
-      vp->input_to_index[attr] = vp->num_inputs;
-      vp->index_to_input[vp->num_inputs] = attr;
+  unsigned int position_index = vp -> num_outputs++;
+  vp -> output_semantic_name[position_index] = TGSI_SEMANTIC_POSITION;
+  vp -> output_semantic_index[position_index] = 0;
 
-      vertexid_index = vp->num_inputs++;
-      break;
-    }
-  }
-
+  unsigned int vertexid_index = vp -> num_inputs;
   *pvertexid_index = vertexid_index;
-  
-  if(attr < VERT_ATTRIB_MAX) {
+
+  {
+#if 0
+    float _five[4] = { 0,0,0,1 };
+    struct ureg_src five = ureg_DECL_immediate(streamvp_ureg,_five,4);
+#endif
+
     struct ureg_src vertexid_input = ureg_DECL_vs_input(streamvp_ureg,vertexid_index);
     struct ureg_dst vertexid_output = ureg_DECL_output(streamvp_ureg,TGSI_SEMANTIC_POSITION,0);
+
     ureg_MOV(streamvp_ureg,vertexid_output,vertexid_input);
+
+#if 0
+    ureg_MOV(streamvp_ureg,vertexid_tmp,vertexid_input);
+    ureg_MOV(streamvp_ureg,vertexid_output,ureg_src(vertexid_tmp));
+#endif
+
+#if 0
+    float _zero_one[2] = { 0,1 };
+    struct ureg_src zero_one = ureg_DECL_immediate(streamvp_ureg,_zero_one,2);
+                                                                                                                                                                                                           
+    struct ureg_dst tmp = ureg_DECL_temporary(streamvp_ureg);
+                                                                                                                                                                                                           
+    ureg_MOV(streamvp_ureg,ureg_writemask(tmp,TGSI_WRITEMASK_XY),ureg_swizzle(vertexid_input,0,1,-1,-1));
+    ureg_MOV(streamvp_ureg,ureg_writemask(tmp,TGSI_WRITEMASK_ZW),ureg_swizzle(zero_one,0,1,-1,-1));
+    ureg_MOV(streamvp_ureg,vertexid_output,ureg_src(tmp));
+#endif
   }
 
   enum pipe_error error = st_translate_program(mesa_ctx,
@@ -491,7 +838,12 @@ compiler_context__translate_stream_vp_fp(struct gl_context * mesa_ctx,struct gl_
 
   struct tgsi_shader_info info;
   tgsi_scan_shader(tgsi.tokens,&info);
+  tgsi_dump(tgsi.tokens,0);
+
   nvfx_vp = nvfx_vertprog_translate((struct nvfx_context *)(st_context(mesa_ctx) -> pipe),&tgsi,&info);
+
+  rsxgl_debug_printf("vp.ir: %x\n",nvfx_vp->ir);
+#endif
 
   /* If exec or data segments moved we need to patch the program to
    * fixup offsets and register IDs.
@@ -543,12 +895,21 @@ compiler_context__translate_stream_vp_fp(struct gl_context * mesa_ctx,struct gl_
   // Create the stream fragment program:
   streamfp_ureg = ureg_create(TGSI_PROCESSOR_FRAGMENT);
   
+  float red[4] = { 0,0,1,1 };
+
   for(unsigned int i = 0;i < stream_info -> num_outputs;++i) {
     const unsigned int slot = stream_info -> output[i].register_index;
     
     ureg_MOV(streamfp_ureg,
 	     ureg_DECL_output(streamfp_ureg,TGSI_SEMANTIC_COLOR,i),
-	     ureg_DECL_fs_input(streamfp_ureg,vp -> output_semantic_name[slot],vp -> output_semantic_index[slot],TGSI_INTERPOLATE_CONSTANT));
+	     //ureg_DECL_fs_input(streamfp_ureg,vp -> output_semantic_name[slot],vp -> output_semantic_index[slot],TGSI_INTERPOLATE_CONSTANT)
+	     //ureg_DECL_immediate(streamfp_ureg,red,4)
+
+	     ureg_DECL_fs_input(streamfp_ureg,
+				vp2streamvp_ctx.position_semantic_name,
+				vp2streamvp_ctx.position_semantic_index,
+				TGSI_INTERPOLATE_CONSTANT)
+	     );
   }
 
   //
@@ -561,6 +922,8 @@ compiler_context__translate_stream_vp_fp(struct gl_context * mesa_ctx,struct gl_
 
   tgsi_scan_shader(fp.pipe.tokens,&fp.info);
   nvfx_fp = nvfx_fragprog_translate((struct nvfx_context *)(st_context(mesa_ctx) -> pipe),&fp,FALSE);
+
+  rsxgl_debug_printf("streamfp has: %u slots\n",nvfx_fp -> num_slots);
 
   //
   *pnvfx_vp = nvfx_vp;

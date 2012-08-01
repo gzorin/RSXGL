@@ -51,6 +51,8 @@ struct dump_ctx
    void (*printf)(struct dump_ctx *ctx, const char *format, ...);
 };
 
+#define _debug_vprintf rsxgl_debug_vprintf
+
 static void 
 dump_ctx_printf(struct dump_ctx *ctx, const char *format, ...)
 {

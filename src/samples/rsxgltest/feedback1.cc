@@ -186,6 +186,7 @@ rsxgltest_init(int argc,const char ** argv)
     geometry[0] = drand48() * 5.0 - 2.5;
     geometry[1] = drand48() * 5.0 - 2.5;
     geometry[2] = drand48() * 5.0 - 2.5;
+
     geometry[3] = 1.0;
     geometry[4] = 1.0;
     geometry[5] = 1.0;
@@ -230,12 +231,22 @@ rsxgltest_init(int argc,const char ** argv)
   glBindBuffer(GL_ARRAY_BUFFER,0);
 
   glBindBuffer(GL_TRANSFORM_FEEDBACK_BUFFER,buffers[1]);
-
-  const size_t nfeedback = sizeof(float) * 4 * sizeof(npoints);
+  
+  const size_t nfeedback = sizeof(float) * 4 * npoints;
   GLfloat * pfeedback = (GLfloat *)malloc(nfeedback);
-  memset(pfeedback,0,nfeedback);
+  GLfloat * ppfeedback = pfeedback;
+
+  for(size_t i = 0;i < npoints;++i,ppfeedback += 4) {
+    ppfeedback[0] = 3.0;
+    ppfeedback[1] = 5.0;
+    ppfeedback[2] = 7.0;
+    ppfeedback[3] = (float)i;
+  }
+
   glBufferData(GL_TRANSFORM_FEEDBACK_BUFFER,nfeedback,pfeedback,GL_STATIC_DRAW);
   free(pfeedback);
+
+  glBindBufferRange(GL_TRANSFORM_FEEDBACK_BUFFER,0,buffers[1],0,nfeedback);
 }
 
 extern "C"
@@ -265,11 +276,15 @@ rsxgltest_draw()
     Eigen::AngleAxisf(DTOR(xyz[1]) * 360.0f,Eigen::Vector3f::UnitY()) *
     Eigen::AngleAxisf(DTOR(xyz[0]) * 360.0f,Eigen::Vector3f::UnitX());
 
+  glPointSize(4.0);
+
   {
     Eigen::Affine3f modelview = ViewMatrixInv * (Eigen::Affine3f::Identity() * Eigen::Translation3f(0,0,0) * rotmat);
     glUniformMatrix4fv(TransMatrix_location,1,GL_FALSE,modelview.data());
 
-    int which = frame % 6;
+    //int which = frame % 6;
+    int which = 0;
+    tcp_printf("%s %i %i\n",__PRETTY_FUNCTION__,frame,which);
 
     if(which == 0) {
       report_glerror("Before transform feedback");

@@ -24,9 +24,9 @@ char * strdup(const char *s1);
 #include "glsl/program.h"
 
 extern "C" {
-  struct nvfx_vertex_program * compiler_context__translate_vp(struct gl_context * mesa_ctx, struct gl_shader_program * program,struct pipe_stream_output_info * stream_info);
+  struct nvfx_vertex_program * compiler_context__translate_vp(struct gl_context * mesa_ctx, struct gl_shader_program * program,struct pipe_stream_output_info * stream_info,struct tgsi_token **);
   struct nvfx_fragment_program * compiler_context__translate_fp(struct gl_context * mesa_ctx,struct gl_shader_program * program);
-  void compiler_context__translate_stream_vp_fp(struct gl_context * mesa_ctx,struct gl_shader_program * program,struct pipe_stream_output_info * stream_info,struct nvfx_vertex_program ** vp,struct nvfx_fragment_program ** fp,unsigned int * pvertexid_index);
+  void compiler_context__translate_stream_vp_fp(struct gl_context * mesa_ctx,struct gl_shader_program * program,struct pipe_stream_output_info * stream_info,struct tgsi_token * vp_tokens,struct nvfx_vertex_program ** vp,struct nvfx_fragment_program ** fp,unsigned int * pvertexid_index,unsigned int * pposition_index);
   void compiler_context__link_vp_fp(struct gl_context * mesa_ctx,struct nvfx_vertex_program * vp,struct nvfx_fragment_program * fp);
 }
 
@@ -308,9 +308,9 @@ compiler_context_t::destroy_program(struct gl_shader_program * program)
 }
 
 struct nvfx_vertex_program *
-compiler_context_t::translate_vp(struct gl_shader_program * program,struct pipe_stream_output_info * stream_info)
+compiler_context_t::translate_vp(struct gl_shader_program * program,struct pipe_stream_output_info * stream_info,struct tgsi_token ** tokens)
 {
-  return compiler_context__translate_vp(mesa_ctx,program,stream_info);
+  return compiler_context__translate_vp(mesa_ctx,program,stream_info,tokens);
 }
 
 void
@@ -329,10 +329,10 @@ compiler_context_t::translate_fp(struct gl_shader_program * program)
 }
 
 std::pair< struct nvfx_vertex_program *,struct nvfx_fragment_program * >
-compiler_context_t::translate_stream_vp_fp(struct gl_shader_program * program,struct pipe_stream_output_info * stream_info,unsigned int * vertexid_index)
+compiler_context_t::translate_stream_vp_fp(struct gl_shader_program * program,struct pipe_stream_output_info * stream_info,struct tgsi_token * vp_tokens,unsigned int * vertexid_index,unsigned int * pposition_index)
 {
   std::pair< struct nvfx_vertex_program *,struct nvfx_fragment_program * > result;
-  compiler_context__translate_stream_vp_fp(mesa_ctx,program,stream_info,&result.first,&result.second,vertexid_index);
+  compiler_context__translate_stream_vp_fp(mesa_ctx,program,stream_info,vp_tokens,&result.first,&result.second,vertexid_index,pposition_index);
   return result;
 }
 

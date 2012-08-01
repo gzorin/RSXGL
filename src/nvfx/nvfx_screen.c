@@ -21,8 +21,6 @@
 #define NV4X_GRCLASS4497_CHIPSETS 0x00005450
 #define NV6X_GRCLASS4497_CHIPSETS 0x00000088
 
-extern void rsxgl_debug_printf(const char * fmt,...);
-
 static int
 nvfx_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 {

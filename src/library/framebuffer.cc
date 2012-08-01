@@ -7,6 +7,7 @@
 #include "rsxgl_context.h"
 #include "gl_constants.h"
 #include "framebuffer.h"
+#include "program.h"
 
 #include <GL3/gl3.h>
 #include "error.h"
@@ -1034,11 +1035,9 @@ rsxgl_emit_surface(gcmContextData * context,const uint8_t which,surface_t const 
     NV40_3D_ZETA_PITCH
   };
 
-#if 0
   rsxgl_debug_printf("%s:%u loc:%u offset:%u pitch:%u\n",
 		     __PRETTY_FUNCTION__,(unsigned int)which,
 		     surface.memory.location,surface.memory.offset,surface.pitch);
-#endif
 
   uint32_t * buffer = gcm_reserve(context,6);
 
@@ -1055,7 +1054,7 @@ rsxgl_emit_surface(gcmContextData * context,const uint8_t which,surface_t const 
 }
 
 void
-rsxgl_renderbuffer_validate(rsxgl_context_t * ctx,renderbuffer_t & renderbuffer,const uint32_t timestamp)
+rsxgl_renderbuffer_validate(rsxgl_context_t * ctx,renderbuffer_t & renderbuffer,uint32_t timestamp)
 {
 }
 
@@ -1342,7 +1341,7 @@ glReadPixels (GLint x, GLint y, GLsizei width, GLsizei height, GLenum format, GL
 }
 
 void
-rsxgl_framebuffer_validate(rsxgl_context_t * ctx,framebuffer_t & framebuffer,const uint32_t timestamp)
+rsxgl_framebuffer_validate(rsxgl_context_t * ctx,framebuffer_t & framebuffer,uint32_t timestamp)
 {
   if(!framebuffer.is_default) {
     for(framebuffer_t::attachment_types_t::const_iterator it = framebuffer.attachment_types.begin();!it.done();it.next(framebuffer.attachment_types)) {
@@ -1517,7 +1516,7 @@ rsxgl_framebuffer_validate(rsxgl_context_t * ctx,framebuffer_t & framebuffer,con
 }
 
 void
-rsxgl_draw_framebuffer_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
+rsxgl_draw_framebuffer_validate(rsxgl_context_t * ctx,uint32_t timestamp)
 {
   framebuffer_t & framebuffer = ctx -> framebuffer_binding[RSXGL_DRAW_FRAMEBUFFER];
 
@@ -1540,10 +1539,8 @@ rsxgl_draw_framebuffer_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
 
 	const uint16_t w = framebuffer.size[0], h = framebuffer.size[1];
 
-#if 0
 	rsxgl_debug_printf("%s format:%x color_targets:%x size:%ux%u color_mask:%x color_mask_mrt:%x depth_mask:%x\n",__PRETTY_FUNCTION__,
 			   format,color_targets,(unsigned int)w,(unsigned int)h,color_mask,color_mask_mrt,depth_mask);
-#endif
 	
 	uint32_t * buffer = gcm_reserve(context,15);
 	
@@ -1583,4 +1580,108 @@ rsxgl_draw_framebuffer_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
       ctx -> invalid.parts.draw_framebuffer = 0;
     }
   }
+}
+
+bool
+rsxgl_feedback_framebuffer_check(rsxgl_context_t * ctx,uint32_t offset,uint32_t count)
+{
+  const program_t & program = ctx -> program_binding[RSXGL_ACTIVE_PROGRAM];
+  rsxgl_assert(program.streamfp_num_outputs <= RSXGL_MAX_COLOR_ATTACHMENTS);
+
+  const uint32_t attrib_stride = sizeof(float) * 4;
+  const uint32_t length = attrib_stride * count;
+
+  size_t binding = RSXGL_TRANSFORM_FEEDBACK_BUFFER0, range_binding = RSXGL_TRANSFORM_FEEDBACK_BUFFER_RANGE0;
+  for(unsigned int i = 0;i < program.streamfp_num_outputs;++i,++binding,++range_binding) {
+    if(ctx -> buffer_binding.names[binding] == 0 ||
+       (offset + length) > ctx -> buffer_binding_offset_size[range_binding].second) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+void
+rsxgl_feedback_framebuffer_validate(rsxgl_context_t * ctx,uint32_t offset,uint32_t count,uint16_t * pw,uint16_t * ph,uint32_t timestamp)
+{
+  gcmContextData * context = ctx -> gcm_context();
+
+  const program_t & program = ctx -> program_binding[RSXGL_ACTIVE_PROGRAM];
+
+  const uint32_t format = (NV30_3D_RT_FORMAT_COLOR_A32B32G32R32_FLOAT | NV30_3D_RT_FORMAT_ZETA_Z24S8 | NV30_3D_RT_FORMAT_TYPE_LINEAR);
+  //const uint32_t format = 0x128;
+  uint16_t color_targets = 0;
+  uint32_t color_mask = 0;
+  uint16_t color_mask_mrt = 0;
+  const uint16_t depth_mask = 0;
+
+  const uint32_t attrib_length = sizeof(float) * 4;
+  const uint32_t length = attrib_length * count;
+  const uint32_t pitch = attrib_length * RSXGL_MAX_RENDERBUFFER_SIZE / 2;
+
+  size_t binding = RSXGL_TRANSFORM_FEEDBACK_BUFFER0, range_binding = RSXGL_TRANSFORM_FEEDBACK_BUFFER_RANGE0, surface = RSXGL_FRAMEBUFFER_SURFACE_COLOR0;
+  for(unsigned int i = 0;i < program.streamfp_num_outputs;++i,++binding,++range_binding,++surface) {
+    rsxgl_assert(ctx -> buffer_binding.names[binding] != 0 && (offset + length) < ctx -> buffer_binding_offset_size[range_binding].second);
+
+    buffer_t & buffer = ctx -> buffer_binding[binding];
+    const uint32_t buffer_offset = ctx -> buffer_binding_offset_size[range_binding].first + offset;
+
+    rsxgl_buffer_validate(ctx,buffer,buffer_offset,length,timestamp);
+
+    rsxgl_emit_surface(context,surface,surface_t(buffer.memory + buffer_offset,pitch));
+
+    if(i == 0) {
+      color_targets |= (NV30_3D_RT_ENABLE_COLOR0);
+      color_mask |= (NV30_3D_COLOR_MASK_R | NV30_3D_COLOR_MASK_G | NV30_3D_COLOR_MASK_B | NV30_3D_COLOR_MASK_A);
+    }
+    else {
+      color_targets |= (NV30_3D_RT_ENABLE_COLOR0 << i) | (NV30_3D_RT_ENABLE_MRT);
+      color_mask_mrt |= (NV40_3D_MRT_COLOR_MASK_BUFFER1_R |
+			 NV40_3D_MRT_COLOR_MASK_BUFFER1_G |
+			 NV40_3D_MRT_COLOR_MASK_BUFFER1_B |
+			 NV40_3D_MRT_COLOR_MASK_BUFFER1_A) << ((i - 1) * 4);
+    }
+  }
+
+  rsxgl_emit_surface(context,RSXGL_FRAMEBUFFER_SURFACE_DEPTH,surface_t());
+
+  const uint16_t div = count / RSXGL_MAX_RENDERBUFFER_SIZE;
+  const uint16_t mod = count % RSXGL_MAX_RENDERBUFFER_SIZE;
+
+  const uint16_t w = (div > 0) ? RSXGL_MAX_RENDERBUFFER_SIZE : mod;
+  //const uint16_t h = div + ((mod > 0) ? 1 : 0);
+  const uint16_t h = w;
+
+  rsxgl_debug_printf("%s format:%x color_targets:%x size:%ux%u color_mask:%x color_mask_mrt:%x depth_mask:%x %ux%u\n",__PRETTY_FUNCTION__,
+		     format,color_targets,(unsigned int)w,(unsigned int)h,color_mask,color_mask_mrt,depth_mask,(unsigned int)w,(unsigned int)h);
+
+  uint32_t * buffer = gcm_reserve(context,15);
+  
+  gcm_emit_method_at(buffer,0,NV30_3D_RT_FORMAT,1);
+  gcm_emit_at(buffer,1,format | ((31 - __builtin_clz(w)) << NV30_3D_RT_FORMAT_LOG2_WIDTH__SHIFT) | ((31 - __builtin_clz(h)) << NV30_3D_RT_FORMAT_LOG2_HEIGHT__SHIFT));
+  
+  gcm_emit_method_at(buffer,2,NV30_3D_RT_HORIZ,2);
+  gcm_emit_at(buffer,3,w << 16);
+  gcm_emit_at(buffer,4,h << 16);
+  
+  gcm_emit_method_at(buffer,5,NV30_3D_COORD_CONVENTIONS,1);
+  gcm_emit_at(buffer,6,h | NV30_3D_COORD_CONVENTIONS_ORIGIN_NORMAL | NV30_3D_COORD_CONVENTIONS_CENTER_INTEGER);
+  
+  gcm_emit_method_at(buffer,7,NV30_3D_RT_ENABLE,1);
+  gcm_emit_at(buffer,8,color_targets);
+  
+  gcm_emit_method_at(buffer,9,NV30_3D_COLOR_MASK,1);
+  gcm_emit_at(buffer,10,color_mask);
+  
+  gcm_emit_method_at(buffer,11,NV40_3D_MRT_COLOR_MASK,1);
+  gcm_emit_at(buffer,12,color_mask_mrt);
+  
+  gcm_emit_method_at(buffer,13,NV30_3D_DEPTH_WRITE_ENABLE,1);
+  gcm_emit_at(buffer,14,depth_mask);
+  
+  gcm_finish_n_commands(context,15);
+
+  *pw = w;
+  *ph = h;
 }

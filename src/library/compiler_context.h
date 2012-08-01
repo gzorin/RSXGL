@@ -10,6 +10,7 @@ struct gl_shader_program;
 struct nvfx_vertex_program;
 struct nvfx_fragment_program;
 struct pipe_stream_output_info;
+struct tgsi_token;
 
 struct compiler_context_t {
   enum type {
@@ -35,12 +36,12 @@ struct compiler_context_t {
   void link_program(struct gl_shader_program *);
   void destroy_program(struct gl_shader_program *);
   
-  struct nvfx_vertex_program * translate_vp(struct gl_shader_program *,struct pipe_stream_output_info *);
+  struct nvfx_vertex_program * translate_vp(struct gl_shader_program *,struct pipe_stream_output_info *,struct tgsi_token **);
   void destroy_vp(nvfx_vertex_program *);
   
   struct nvfx_fragment_program * translate_fp(struct gl_shader_program *);
 
-  std::pair< struct nvfx_vertex_program *,struct nvfx_fragment_program * > translate_stream_vp_fp(struct gl_shader_program *,struct pipe_stream_output_info *,unsigned int *);
+  std::pair< struct nvfx_vertex_program *,struct nvfx_fragment_program * > translate_stream_vp_fp(struct gl_shader_program *,struct pipe_stream_output_info *,struct tgsi_token *,unsigned int *,unsigned int *);
 
   void link_vp_fp(struct nvfx_vertex_program *,struct nvfx_fragment_program *);
 

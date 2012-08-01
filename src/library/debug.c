@@ -33,6 +33,16 @@ rsxgl_debug_printf(const char * fmt,...)
   }
 }
 
+void
+rsxgl_debug_vprintf(const char * fmt,va_list ap)
+{
+  if(debug_buffer != 0 && debug_printf_callback != 0) {
+    size_t n = vsnprintf(debug_buffer,ndebug_buffer,fmt,ap);
+
+    (*debug_printf_callback)((n < ndebug_buffer) ? n : ndebug_buffer,debug_buffer);
+  }
+}
+
 // Based upon newlib's __assert_func()
 void
 __rsxgl_assert_func(const char * file,int line,const char * func,const char * failedexpr)
