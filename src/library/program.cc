@@ -1348,27 +1348,30 @@ glUseProgram (GLuint program_name)
 
     ctx -> program_binding.bind(RSXGL_ACTIVE_PROGRAM,program_name);
     ctx -> invalid.parts.program = 1;
-    ctx -> state.enable.transform_feedback_program = (program_t::storage().at(program_name).streamvp_num_insn > 0 && program_t::storage().at(program_name).streamfp_num_insn > 0);
 
-    if(prev_program_name != 0) {
-      const program_t::texture_assignments_bitfield_type
-	textures_enabled = program_t::storage().at(prev_program_name).textures_enabled;
-      const program_t::texture_assignments_type
-	prev_assignments = program_t::storage().at(prev_program_name).texture_assignments,
-	assignments = program_t::storage().at(program_name).texture_assignments;
-
-      program_t::texture_assignments_bitfield_type::const_iterator
-	enabled_it = textures_enabled.begin();
-      program_t::texture_assignments_type::const_iterator
-	prev_it = prev_assignments.begin(),
-	it = assignments.begin();
-
-      for(program_t::texture_size_type i = 0;i < program_t::texture_assignments_bitfield_type::size;++i,enabled_it.next(textures_enabled),prev_it.next(prev_assignments),it.next(assignments)) {
-	ctx -> invalid_texture_assignments.set(enabled_it.test() && (prev_it.value() != it.value()));
+    if(program_name != 0) {
+      ctx -> state.enable.transform_feedback_program = (program_t::storage().at(program_name).streamvp_num_insn > 0 && program_t::storage().at(program_name).streamfp_num_insn > 0);
+      
+      if(prev_program_name != 0) {
+	const program_t::texture_assignments_bitfield_type
+	  textures_enabled = program_t::storage().at(prev_program_name).textures_enabled;
+	const program_t::texture_assignments_type
+	  prev_assignments = program_t::storage().at(prev_program_name).texture_assignments,
+	  assignments = program_t::storage().at(program_name).texture_assignments;
+	
+	program_t::texture_assignments_bitfield_type::const_iterator
+	  enabled_it = textures_enabled.begin();
+	program_t::texture_assignments_type::const_iterator
+	  prev_it = prev_assignments.begin(),
+	  it = assignments.begin();
+	
+	for(program_t::texture_size_type i = 0;i < program_t::texture_assignments_bitfield_type::size;++i,enabled_it.next(textures_enabled),prev_it.next(prev_assignments),it.next(assignments)) {
+	  ctx -> invalid_texture_assignments.set(enabled_it.test() && (prev_it.value() != it.value()));
+	}
       }
-    }
-    else {
-      ctx -> invalid_texture_assignments = ctx -> program_binding[RSXGL_ACTIVE_PROGRAM].textures_enabled;
+      else {
+	ctx -> invalid_texture_assignments = ctx -> program_binding[RSXGL_ACTIVE_PROGRAM].textures_enabled;
+      }
     }
   }
 

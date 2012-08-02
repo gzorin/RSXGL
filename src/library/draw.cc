@@ -1096,7 +1096,7 @@ glDrawArrays (GLenum mode, GLint first, GLsizei count)
     RSXGL_ERROR_(GL_INVALID_VALUE);
   }
 
-  if(ctx -> state.enable.conditional_render_status != RSXGL_CONDITIONAL_RENDER_ACTIVE_WAIT_FAIL) {    
+  if(rsx_primitive_type != ~0 && ctx -> state.enable.conditional_render_status != RSXGL_CONDITIONAL_RENDER_ACTIVE_WAIT_FAIL) {    
     rsxgl_draw(ctx,arrays_element_range_policy(first,count),single_iteration_policy(),draw_arrays_policy(rsx_primitive_type,first,count));
   }
 
@@ -1116,7 +1116,7 @@ glMultiDrawArrays (GLenum mode, const GLint *first, const GLsizei *count, const 
     RSXGL_ERROR_(GL_INVALID_VALUE);
   }
 
-  if(ctx -> state.enable.conditional_render_status != RSXGL_CONDITIONAL_RENDER_ACTIVE_WAIT_FAIL) {
+  if(rsx_primitive_type != ~0 && ctx -> state.enable.conditional_render_status != RSXGL_CONDITIONAL_RENDER_ACTIVE_WAIT_FAIL) {
     struct element_range_policy {
       const GLint * first;
       const GLsizei * count;
@@ -1205,7 +1205,7 @@ glDrawElements (GLenum mode, GLsizei count, GLenum type, const GLvoid* indices)
     RSXGL_ERROR_(GL_INVALID_OPERATION);
   }
 
-  if(ctx -> state.enable.conditional_render_status != RSXGL_CONDITIONAL_RENDER_ACTIVE_WAIT_FAIL) {
+  if(rsx_primitive_type != ~0 && rsx_element_type != RSXGL_MAX_ELEMENT_TYPES && ctx -> state.enable.conditional_render_status != RSXGL_CONDITIONAL_RENDER_ACTIVE_WAIT_FAIL) {
     rsxgl_draw(ctx,ignore_element_range_policy(),single_iteration_policy(),draw_elements_policy(ctx,rsx_primitive_type,rsx_element_type,count,indices));
   }
 
@@ -1234,7 +1234,7 @@ glDrawRangeElements (GLenum mode, GLuint start, GLuint end, GLsizei count, GLenu
     RSXGL_ERROR_(GL_INVALID_OPERATION);
   }
 
-  if(ctx -> state.enable.conditional_render_status != RSXGL_CONDITIONAL_RENDER_ACTIVE_WAIT_FAIL) {
+  if(rsx_primitive_type != ~0 && rsx_element_type != RSXGL_MAX_ELEMENT_TYPES && ctx -> state.enable.conditional_render_status != RSXGL_CONDITIONAL_RENDER_ACTIVE_WAIT_FAIL) {
     rsxgl_draw(ctx,start_end_element_range_policy(start,end),single_iteration_policy(),draw_elements_policy(ctx,rsx_primitive_type,rsx_element_type,count,indices));    
   }
 
@@ -1286,7 +1286,7 @@ glDrawElementsBaseVertex (GLenum mode, GLsizei count, GLenum type, const GLvoid 
     RSXGL_ERROR_(GL_INVALID_OPERATION);
   }
 
-  if(ctx -> state.enable.conditional_render_status != RSXGL_CONDITIONAL_RENDER_ACTIVE_WAIT_FAIL) {
+  if(rsx_primitive_type != ~0 && rsx_element_type != RSXGL_MAX_ELEMENT_TYPES && ctx -> state.enable.conditional_render_status != RSXGL_CONDITIONAL_RENDER_ACTIVE_WAIT_FAIL) {
     rsxgl_draw(ctx,ignore_element_range_policy(),single_iteration_policy(),draw_elements_base_policy(ctx,rsx_primitive_type,rsx_element_type,count,indices,basevertex));
   }
 
@@ -1315,7 +1315,7 @@ glDrawRangeElementsBaseVertex (GLenum mode, GLuint start, GLuint end, GLsizei co
     RSXGL_ERROR_(GL_INVALID_OPERATION);
   }
 
-  if(ctx -> state.enable.conditional_render_status != RSXGL_CONDITIONAL_RENDER_ACTIVE_WAIT_FAIL) {
+  if(rsx_primitive_type != ~0 && rsx_element_type != RSXGL_MAX_ELEMENT_TYPES && ctx -> state.enable.conditional_render_status != RSXGL_CONDITIONAL_RENDER_ACTIVE_WAIT_FAIL) {
     rsxgl_draw(ctx,start_end_element_range_policy(start,end),single_iteration_policy(),draw_elements_base_policy(ctx,rsx_primitive_type,rsx_element_type,count,indices,basevertex));
   }
 
@@ -1340,7 +1340,7 @@ glMultiDrawElements (const GLenum mode, const GLsizei *count, GLenum type, const
     RSXGL_ERROR_(GL_INVALID_OPERATION);
   }
 
-  if(ctx -> state.enable.conditional_render_status != RSXGL_CONDITIONAL_RENDER_ACTIVE_WAIT_FAIL) {
+  if(rsx_primitive_type != ~0 && rsx_element_type != RSXGL_MAX_ELEMENT_TYPES && ctx -> state.enable.conditional_render_status != RSXGL_CONDITIONAL_RENDER_ACTIVE_WAIT_FAIL) {
     struct draw_policy : public element_draw_policy, public multi_draw_policy {
       const GLsizei * count;
       const GLvoid * const * indices;
@@ -1390,7 +1390,7 @@ glMultiDrawElementsBaseVertex (GLenum mode, const GLsizei *count, GLenum type, c
     RSXGL_ERROR_(GL_INVALID_OPERATION);
   }
 
-  if(ctx -> state.enable.conditional_render_status != RSXGL_CONDITIONAL_RENDER_ACTIVE_WAIT_FAIL) {
+  if(rsx_primitive_type != ~0 && rsx_element_type != RSXGL_MAX_ELEMENT_TYPES && ctx -> state.enable.conditional_render_status != RSXGL_CONDITIONAL_RENDER_ACTIVE_WAIT_FAIL) {
     struct draw_policy : public element_draw_policy, public base_element_draw_policy, public multi_draw_policy {
       const GLsizei * count;
       const GLvoid * const * indices;
@@ -1442,7 +1442,7 @@ glDrawArraysInstanced (GLenum mode, GLint first, GLsizei count, GLsizei primcoun
     RSXGL_ERROR_(GL_INVALID_VALUE);
   }
 
-  if(ctx -> state.enable.conditional_render_status != RSXGL_CONDITIONAL_RENDER_ACTIVE_WAIT_FAIL) {
+  if(rsx_primitive_type != ~0 && ctx -> state.enable.conditional_render_status != RSXGL_CONDITIONAL_RENDER_ACTIVE_WAIT_FAIL) {
     struct draw_policy : public array_draw_policy, public instanced_draw_policy {
       const GLint first;
       const GLsizei count;
@@ -1492,7 +1492,7 @@ glDrawElementsInstanced (const GLenum mode, const GLsizei count, const GLenum ty
     RSXGL_ERROR_(GL_INVALID_VALUE);
   }
 
-  if(ctx -> state.enable.conditional_render_status != RSXGL_CONDITIONAL_RENDER_ACTIVE_WAIT_FAIL) {
+  if(rsx_primitive_type != ~0 && rsx_element_type != RSXGL_MAX_ELEMENT_TYPES && ctx -> state.enable.conditional_render_status != RSXGL_CONDITIONAL_RENDER_ACTIVE_WAIT_FAIL) {
     struct draw_policy : public element_draw_policy, public instanced_draw_policy {
       const GLsizei count;
       const GLvoid * indices;
@@ -1549,7 +1549,7 @@ glDrawElementsInstancedBaseVertex (GLenum mode, GLsizei count, GLenum type, cons
     RSXGL_ERROR_(GL_INVALID_VALUE);
   }
 
-  if(ctx -> state.enable.conditional_render_status != RSXGL_CONDITIONAL_RENDER_ACTIVE_WAIT_FAIL) {
+  if(rsx_primitive_type != ~0 && rsx_element_type != RSXGL_MAX_ELEMENT_TYPES && ctx -> state.enable.conditional_render_status != RSXGL_CONDITIONAL_RENDER_ACTIVE_WAIT_FAIL) {
     struct draw_policy : public element_draw_policy, public base_element_draw_policy, public instanced_draw_policy {
       const GLsizei count;
       const GLvoid * indices;
