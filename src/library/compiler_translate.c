@@ -76,11 +76,11 @@ compiler_context__translate_vp(struct gl_context * mesa_ctx, struct gl_shader_pr
 				  vp->result_to_output,
 				  stream_info);
 
-  struct tgsi_shader_info info;
-  tgsi_scan_shader(tgsi.tokens,&info);
+  struct tgsi_shader_info vp_info;
+  tgsi_scan_shader(tgsi.tokens,&vp_info);
   tgsi_dump(tgsi.tokens,0);
 
-  nvfx_vp = nvfx_vertprog_translate((struct nvfx_context *)(st_context(mesa_ctx) -> pipe),&tgsi,&info);
+  nvfx_vp = nvfx_vertprog_translate((struct nvfx_context *)(st_context(mesa_ctx) -> pipe),&tgsi,&vp_info);
 
   /* If exec or data segments moved we need to patch the program to
    * fixup offsets and register IDs.
@@ -649,10 +649,10 @@ compiler_context__translate_stream_vp_fp(struct gl_context * mesa_ctx,struct gl_
     struct pipe_shader_state tgsi;
     tgsi.tokens = streamvp_tokens;
     
-    struct tgsi_shader_info info;
-    tgsi_scan_shader(streamvp_tokens,&info);
+    struct tgsi_shader_info streamvp_info;
+    tgsi_scan_shader(streamvp_tokens,&streamvp_info);
     
-    nvfx_vp = nvfx_vertprog_translate((struct nvfx_context *)(st_context(mesa_ctx) -> pipe),&tgsi,&info);
+    nvfx_vp = nvfx_vertprog_translate((struct nvfx_context *)(st_context(mesa_ctx) -> pipe),&tgsi,&streamvp_info);
   }
   
   /* If exec or data segments moved we need to patch the program to
@@ -709,7 +709,7 @@ compiler_context__translate_stream_vp_fp(struct gl_context * mesa_ctx,struct gl_
 
   for(unsigned int i = 0;i < stream_info -> num_outputs;++i) {
     const unsigned int slot = stream_info -> output[i].register_index;
-    
+
     ureg_MOV(streamfp_ureg,
 	     ureg_DECL_output(streamfp_ureg,TGSI_SEMANTIC_COLOR,i),
 	     //ureg_DECL_fs_input(streamfp_ureg,vp -> output_semantic_name[slot],vp -> output_semantic_index[slot],TGSI_INTERPOLATE_CONSTANT)

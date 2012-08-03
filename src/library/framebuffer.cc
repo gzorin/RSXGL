@@ -1598,7 +1598,8 @@ rsxgl_feedback_framebuffer_check(rsxgl_context_t * ctx,uint32_t offset,uint32_t 
   size_t binding = RSXGL_TRANSFORM_FEEDBACK_BUFFER0, range_binding = RSXGL_TRANSFORM_FEEDBACK_BUFFER_RANGE0;
   for(unsigned int i = 0;i < program.streamfp_num_outputs;++i,++binding,++range_binding) {
     if(ctx -> buffer_binding.names[binding] == 0 ||
-       (offset + length) > ctx -> buffer_binding_offset_size[range_binding].second) {
+       (offset + length) > ctx -> buffer_binding_offset_size[range_binding].second ||
+       ctx -> buffer_binding[binding].mapped) {
       return false;
     }
   }
@@ -1607,7 +1608,7 @@ rsxgl_feedback_framebuffer_check(rsxgl_context_t * ctx,uint32_t offset,uint32_t 
 }
 
 void
-rsxgl_feedback_framebuffer_validate(rsxgl_context_t * ctx,uint32_t offset,uint32_t count,uint16_t * pw,uint16_t * ph,uint32_t timestamp)
+rsxgl_feedback_framebuffer_validate(rsxgl_context_t * ctx,uint32_t offset,uint32_t count,uint32_t timestamp)
 {
   gcmContextData * context = ctx -> gcm_context();
 
@@ -1650,12 +1651,9 @@ rsxgl_feedback_framebuffer_validate(rsxgl_context_t * ctx,uint32_t offset,uint32
 
   rsxgl_emit_surface(context,RSXGL_FRAMEBUFFER_SURFACE_DEPTH,surface_t());
 
-  const uint16_t div = count / RSXGL_MAX_RENDERBUFFER_SIZE;
-  const uint16_t mod = count % RSXGL_MAX_RENDERBUFFER_SIZE;
-
-  const uint16_t w = (div > 0) ? RSXGL_MAX_RENDERBUFFER_SIZE : mod;
-  //const uint16_t h = div + ((mod > 0) ? 1 : 0);
-  const uint16_t h = w;
+  const uint16_t
+    w = RSXGL_MAX_RENDERBUFFER_SIZE,
+    h = RSXGL_MAX_RENDERBUFFER_SIZE;
 
 #if 0
   rsxgl_debug_printf("%s format:%x color_targets:%x size:%ux%u color_mask:%x color_mask_mrt:%x depth_mask:%x %ux%u\n",__PRETTY_FUNCTION__,
@@ -1687,7 +1685,4 @@ rsxgl_feedback_framebuffer_validate(rsxgl_context_t * ctx,uint32_t offset,uint32
   gcm_emit_at(buffer,14,depth_mask);
   
   gcm_finish_n_commands(context,15);
-
-  *pw = w;
-  *ph = h;
 }

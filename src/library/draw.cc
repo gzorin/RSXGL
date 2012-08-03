@@ -571,11 +571,11 @@ namespace {
 
       const uint32_t count = 16;
       if(rsxgl_feedback_framebuffer_check(ctx,0,count)) {
-	uint16_t w = 0, h = 0;
+	const uint16_t w = RSXGL_MAX_RENDERBUFFER_SIZE, h = RSXGL_MAX_RENDERBUFFER_SIZE;
 
 	const uint32_t vertexid_index = ctx -> program_binding[RSXGL_ACTIVE_PROGRAM].streamvp_vertexid_index;
 
-	rsxgl_feedback_framebuffer_validate(ctx,0,count,&w,&h,lastTimestamp);
+	rsxgl_feedback_framebuffer_validate(ctx,0,count,lastTimestamp);
 
 	// set feedback "viewport":
 	{
