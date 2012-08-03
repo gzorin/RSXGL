@@ -358,7 +358,6 @@ tgsi_src(struct nvfx_vpc *vpc, const struct tgsi_full_src_register *fsrc) {
 
 	switch (fsrc->Register.File) {
 	case TGSI_FILE_INPUT:
-	  rsxgl_debug_printf("reading from input: %u\n",fsrc->Register.Index);
 		src.reg = nvfx_reg(NVFXSR_INPUT, fsrc->Register.Index);
 		break;
 	case TGSI_FILE_CONSTANT:
@@ -415,7 +414,6 @@ tgsi_dst(struct nvfx_vpc *vpc, const struct tgsi_full_dst_register *fdst) {
 		break;
 	case TGSI_FILE_OUTPUT:
 		dst = vpc->r_result[fdst->Register.Index];
-rsxgl_debug_printf("writing to output: %u\n",fdst->Register.Index);
 		break;
 	case TGSI_FILE_TEMPORARY:
 		dst = vpc->r_temp[fdst->Register.Index];
@@ -825,7 +823,6 @@ nvfx_vertprog_parse_decl_output(struct nvfx_context* nvfx, struct nvfx_vpc *vpc,
 	case TGSI_SEMANTIC_POSITION:
 		hw = NVFX_VP(INST_DEST_POS);
 		vpc->hpos_idx = idx;
-		rsxgl_debug_printf("hpos_idx is: %u\n",vpc->hpos_idx);
 		break;
 	case TGSI_SEMANTIC_COLOR:
 		if (fdec->Semantic.Index == 0) {
@@ -872,8 +869,6 @@ nvfx_vertprog_parse_decl_output(struct nvfx_context* nvfx, struct nvfx_vpc *vpc,
 		NOUVEAU_ERR("bad output semantic\n");
 		return FALSE;
 	}
-
-	rsxgl_debug_printf("output reg %u is: %i (%x)\n",idx,hw,hw);
 
 	vpc->r_result[idx] = nvfx_reg(NVFXSR_OUTPUT, hw);
 	return TRUE;

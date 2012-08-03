@@ -78,7 +78,7 @@ compiler_context__translate_vp(struct gl_context * mesa_ctx, struct gl_shader_pr
 
   struct tgsi_shader_info vp_info;
   tgsi_scan_shader(tgsi.tokens,&vp_info);
-  tgsi_dump(tgsi.tokens,0);
+  //tgsi_dump(tgsi.tokens,0);
 
   nvfx_vp = nvfx_vertprog_translate((struct nvfx_context *)(st_context(mesa_ctx) -> pipe),&tgsi,&vp_info);
 
@@ -384,7 +384,7 @@ compiler_context__translate_fp(struct gl_context * mesa_ctx,struct gl_shader_pro
       goto end;
     }
 
-    tgsi_dump(stfp->tgsi.tokens,0);
+    //tgsi_dump(stfp->tgsi.tokens,0);
   }
 
   struct nvfx_pipe_fragment_program fp;
@@ -642,7 +642,7 @@ compiler_context__translate_stream_vp_fp(struct gl_context * mesa_ctx,struct gl_
   struct tgsi_token * streamvp_tokens = tgsi_alloc_tokens(streamvp_tokens_count);
   tgsi_transform_shader(vp_tokens,streamvp_tokens,streamvp_tokens_count,&vp2streamvp_ctx.base);
   rsxgl_debug_printf("result:\n");
-  tgsi_dump(streamvp_tokens,0);    
+  //tgsi_dump(streamvp_tokens,0);    
   
   // translate to nvfx:
   {
