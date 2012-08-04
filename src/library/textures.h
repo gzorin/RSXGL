@@ -137,8 +137,8 @@ struct texture_t {
 
 struct rsxgl_context_t;
 
-void rsxgl_texture_validate_complete(rsxgl_context_t *,texture_t &);
-void rsxgl_texture_validate(rsxgl_context_t *,texture_t &,const uint32_t);
-void rsxgl_textures_validate(rsxgl_context_t *,program_t &,const uint32_t);
+bool rsxgl_texture_validate_complete(rsxgl_context_t *,texture_t &);
+void rsxgl_texture_validate(rsxgl_context_t *,texture_t &,uint32_t);
+void rsxgl_textures_validate(rsxgl_context_t *,program_t &,uint32_t);
 
 #endif

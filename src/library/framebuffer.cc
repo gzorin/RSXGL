@@ -1172,9 +1172,7 @@ rsxgl_framebuffer_validate_complete(rsxgl_context_t * ctx,framebuffer_t & frameb
 	}
 	else if(type == RSXGL_ATTACHMENT_TYPE_TEXTURE) {
 	  texture_t & texture = texture_t::storage().at(framebuffer.attachments[i]);
-	  rsxgl_texture_validate_complete(ctx,texture);
-
-	  if(texture.complete && texture.dims == 2 &&
+	  if(rsxgl_texture_validate_complete(ctx,texture) && texture.dims == 2 &&
 	     !util_format_is_depth_or_stencil(texture.pformat) &&
 	     (ctx -> screen() -> is_format_supported(ctx -> screen(),
 						     texture.pformat,
@@ -1226,9 +1224,7 @@ rsxgl_framebuffer_validate_complete(rsxgl_context_t * ctx,framebuffer_t & frameb
 	}
 	else if(type == RSXGL_ATTACHMENT_TYPE_TEXTURE) {
 	  texture_t & texture = texture_t::storage().at(framebuffer.attachments[4]);
-	  rsxgl_texture_validate_complete(ctx,texture);
-	  
-	  if(texture.complete && texture.dims == 2 && util_format_is_depth_or_stencil(texture.pformat) &&
+	  if(rsxgl_texture_validate_complete(ctx,texture) && texture.dims == 2 && util_format_is_depth_or_stencil(texture.pformat) &&
 	     (ctx -> screen() -> is_format_supported(ctx -> screen(),
 						     texture.pformat,
 						     PIPE_TEXTURE_RECT,

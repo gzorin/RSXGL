@@ -32,6 +32,9 @@ extern "C" {
 #include <string.h>
 
 extern "C" {
+  GLenum
+  st_format_datatype(enum pipe_format format);
+
   enum pipe_format
   rsxgl_choose_format(struct pipe_screen *screen, GLenum internalFormat,
 		      GLenum format, GLenum type,
@@ -39,7 +42,16 @@ extern "C" {
 		      unsigned bindings);
 
   enum pipe_format
-  rsxgl_choose_source_format(const GLenum format,const GLenum type);
+  rsxgl_choose_source_format(GLenum format,GLenum type);
+
+  GLenum
+  rsxgl_format_internalformat(enum pipe_format pformat);
+
+  int
+  rsxgl_get_format_color_bit_depth(enum pipe_format pformat,int channel);
+  
+  int
+  rsxgl_get_format_depth_bit_depth(enum pipe_format pformat,int channel);
 
   const struct nvfx_texture_format *
   nvfx_get_texture_format(enum pipe_format format);
@@ -698,7 +710,7 @@ glActiveTexture (GLenum texture)
 }
 
 static inline uint8_t
-rsxgl_texture_target_dims(const GLenum target)
+rsxgl_texture_target_dims(GLenum target)
 {
   if(target == GL_TEXTURE_1D || target == GL_TEXTURE_1D_ARRAY) {
     return 1;
@@ -712,6 +724,154 @@ rsxgl_texture_target_dims(const GLenum target)
   else {
     return 0;
   }
+}
+
+static inline uint32_t
+rsxgl_tex_remap(uint32_t op0,uint32_t op1,uint32_t op2,uint32_t op3,
+		uint32_t src0,uint32_t src1,uint32_t src2,uint32_t src3)
+{
+  return
+    (op0 << 14) |
+    (op1 << 12) |
+    (op2 << 10) |
+    (op3 << 8) |
+    (src0 << 6) |
+    (src1 << 4) |
+    (src2 << 2) |
+    (src3 << 0);
+}
+
+static inline uint32_t
+rsxgl_get_tex_level_offset_size(const texture_t::dimension_size_type _size[3],
+				const uint32_t pitch,
+				const texture_t::level_size_type level,
+				texture_t::dimension_size_type * outsize)
+{
+  texture_t::dimension_size_type size[3] = { _size[0], _size[1], _size[2] };
+  uint32_t offset = 0;
+
+  for(texture_t::level_size_type i = 1;i <= level;++i) {
+    offset += pitch * size[1] * size[2];
+
+    for(int j = 0;j < 3;++j) {
+      size[j] = std::max(size[j] >> 1,1);
+    }
+  }
+
+  if(outsize != 0) {
+    for(int j = 0;j < 3;++j) {
+      outsize[j] = size[j];
+    }
+  }
+
+  return offset;
+}
+
+// Meant to look like gallium's util_format_translate, but tries to use DMA:
+static inline void
+rsxgl_util_format_translate_dma(rsxgl_context_t * ctx,
+				enum pipe_format dst_format,
+				void * dstaddress, const memory_t & dstmem, unsigned dst_stride,
+				unsigned dst_x, unsigned dst_y,
+				enum pipe_format src_format,
+				const void * srcaddress, const memory_t & srcmem, unsigned src_stride,
+				unsigned src_x, unsigned src_y,
+				unsigned width, unsigned height)
+{
+  const struct util_format_description *dst_format_desc = util_format_description(dst_format);
+  const struct util_format_description *src_format_desc = util_format_description(src_format);
+
+  if(util_is_format_compatible(src_format_desc, dst_format_desc)) {
+    const int blocksize = dst_format_desc->block.bits / 8;
+    const int blockwidth = dst_format_desc->block.width;
+    const int blockheight = dst_format_desc->block.height;
+    
+    dst_x /= blockwidth;
+    dst_y /= blockheight;
+    width = (width + blockwidth - 1)/blockwidth;
+    height = (height + blockheight - 1)/blockheight;
+    src_x /= blockwidth;
+    src_y /= blockheight;
+    
+    const uint32_t linelength = width * blocksize;
+    
+    rsxgl_memory_transfer(ctx -> gcm_context(),
+			  dstmem + (dst_x * blocksize) + (dst_y * dst_stride),dst_stride,1,
+			  srcmem + (src_x * blocksize) + (src_y * src_stride),src_stride,1,
+			  linelength,height);
+  }
+  else {
+    rsxgl_debug_printf("%s: non-trivial transfer didn't happen src:%x dst:%x\n",__PRETTY_FUNCTION__,
+		       (unsigned int)src_format,(unsigned int)dst_format);
+
+    rsxgl_assert(dstaddress != 0);
+    rsxgl_assert(srcaddress != 0);
+
+    util_format_translate(dst_format,dstaddress,dst_stride,dst_x,dst_y,
+			  src_format,srcaddress,src_stride,src_x,src_y,
+			  width,height);
+  }
+}
+
+bool
+rsxgl_texture_validate_complete(rsxgl_context_t * ctx,texture_t & texture)
+{
+  if(texture.invalid_complete) {
+    texture_t::level_t * plevel = texture.levels;
+
+    // Check the first level:
+    uint8_t dims = plevel -> dims;
+    pipe_format pformat = plevel -> pformat;
+
+    bool complete = (dims == texture.dims) && (pformat != PIPE_FORMAT_NONE);
+
+    bool cube = plevel -> cube, rect = plevel -> rect;
+    ++plevel;
+
+    // Check the remaining levels:
+    texture_t::level_size_type level = 1;
+    
+    for(;complete && level < texture_t::max_levels;++level) {
+      // This level is unspecified; break
+      if(plevel -> dims == 0 || plevel -> pformat == 0) {
+	break;
+      }
+      // Level has incompatible dimensions, format:
+      else if((plevel -> dims != dims) || (plevel -> cube != cube) || (plevel -> rect != rect) ||
+	      (!util_is_format_compatible(util_format_description(pformat),
+					  util_format_description(plevel -> pformat)))) {
+	complete = false;
+	break;
+      }
+
+      ++plevel;
+    }
+
+    texture.complete = complete;
+
+    if(complete) {
+      texture.pformat = pformat;
+      texture.size[0] = texture.levels[0].size[0];
+      texture.size[1] = texture.levels[0].size[1];
+      texture.size[2] = texture.levels[0].size[2];
+      texture.cube = cube;
+      texture.rect = rect;
+      texture.num_levels = level;
+    }
+    else {
+      texture.pformat = PIPE_FORMAT_NONE;
+      texture.size[0] = 0;
+      texture.size[1] = 0;
+      texture.size[2] = 0;
+      texture.cube = false;
+      texture.rect = false;
+      texture.num_levels = 0;
+    }
+
+    texture.invalid_complete = 0;
+  }
+
+  return texture.complete;
 }
 
 GLAPI void APIENTRY
@@ -985,6 +1145,103 @@ rsxgl_get_texture_parameterf(rsxgl_context_t * ctx,texture_t::name_type texture_
   RSXGL_NOERROR_();
 }
 
+template< typename T >
+void rsxgl_get_tex_level_parameter(GLenum target,GLint level,GLenum pname,T * params)
+{
+  if(!(target == GL_TEXTURE_1D ||
+       target == GL_TEXTURE_2D ||
+       target == GL_TEXTURE_3D ||
+       target == GL_TEXTURE_CUBE_MAP_POSITIVE_X ||
+       target == GL_TEXTURE_CUBE_MAP_POSITIVE_Y ||
+       target == GL_TEXTURE_CUBE_MAP_POSITIVE_Z ||
+       target == GL_TEXTURE_CUBE_MAP_NEGATIVE_X ||
+       target == GL_TEXTURE_CUBE_MAP_NEGATIVE_Y ||
+       target == GL_TEXTURE_CUBE_MAP_NEGATIVE_Z ||
+       target == GL_TEXTURE_RECTANGLE)) {
+    RSXGL_ERROR_(GL_INVALID_ENUM);
+  }
+
+  if(!(pname == GL_TEXTURE_WIDTH ||
+       pname == GL_TEXTURE_HEIGHT ||
+       pname == GL_TEXTURE_DEPTH ||
+       pname == GL_TEXTURE_RED_TYPE ||
+       pname == GL_TEXTURE_GREEN_TYPE ||
+       pname == GL_TEXTURE_BLUE_TYPE ||
+       pname == GL_TEXTURE_ALPHA_TYPE ||
+       pname == GL_TEXTURE_DEPTH_TYPE ||
+       pname == GL_TEXTURE_RED_SIZE ||
+       pname == GL_TEXTURE_GREEN_SIZE ||
+       pname == GL_TEXTURE_BLUE_SIZE ||
+       pname == GL_TEXTURE_ALPHA_SIZE ||
+       pname == GL_TEXTURE_DEPTH_SIZE ||
+       pname == GL_TEXTURE_COMPRESSED ||
+       pname == GL_TEXTURE_COMPRESSED_IMAGE_SIZE)) {
+    RSXGL_ERROR_(GL_INVALID_ENUM);
+  }
+
+  if(level < 0 || (boost::static_log2_argument_type)level >= texture_t::max_levels) {
+    RSXGL_ERROR_(GL_INVALID_VALUE);
+  }
+
+  rsxgl_context_t * ctx = current_ctx();
+  texture_t & texture = ctx -> texture_binding[ctx -> active_texture];
+
+  if(rsxgl_texture_validate_complete(ctx,texture) && level < texture.num_levels) {
+    if(pname == GL_TEXTURE_WIDTH ||
+       pname == GL_TEXTURE_HEIGHT ||
+       pname == GL_TEXTURE_DEPTH) {
+      texture_t::dimension_size_type size[3] = { 1, 1, 1 };
+      rsxgl_get_tex_level_offset_size(texture.size,texture.pitch,level,size);
+      
+      if(pname == GL_TEXTURE_WIDTH) {
+	*params = size[0];
+      }
+      else if(pname == GL_TEXTURE_HEIGHT) {
+	*params = size[1];
+      }
+      else if(pname == GL_TEXTURE_DEPTH) {
+	*params = size[1];
+      }
+    }
+    else if(pname == GL_TEXTURE_INTERNAL_FORMAT) {
+      *params = rsxgl_format_internalformat(texture.pformat);
+    }
+    else if(pname == GL_TEXTURE_RED_TYPE ||
+	    pname == GL_TEXTURE_GREEN_TYPE ||
+	    pname == GL_TEXTURE_BLUE_TYPE ||
+	    pname == GL_TEXTURE_ALPHA_TYPE ||
+	    pname == GL_TEXTURE_DEPTH_TYPE) {
+      *params = st_format_datatype(texture.pformat);
+    }
+    else if(pname == GL_TEXTURE_RED_SIZE) {
+      *params = rsxgl_get_format_color_bit_depth(texture.pformat,0);
+    }
+    else if(pname == GL_TEXTURE_GREEN_SIZE) {
+      *params = rsxgl_get_format_color_bit_depth(texture.pformat,1);
+    }
+    else if(pname == GL_TEXTURE_BLUE_SIZE) {
+      *params = rsxgl_get_format_color_bit_depth(texture.pformat,2);
+    }
+    else if(pname == GL_TEXTURE_ALPHA_SIZE) {
+      *params = rsxgl_get_format_color_bit_depth(texture.pformat,3);
+    }
+    else if(pname == GL_TEXTURE_DEPTH_SIZE) {
+      *params = rsxgl_get_format_depth_bit_depth(texture.pformat,0);
+    }
+    else if(pname == GL_TEXTURE_COMPRESSED) {
+      *params = 0;
+    }
+    else if(pname == GL_TEXTURE_COMPRESSED_IMAGE_SIZE) {
+      *params = 0;
+    }
+  }
+  else {
+    *params = 0;
+  }
+
+  RSXGL_NOERROR_();
+}
+
 GLAPI void APIENTRY
 glTexParameterf (GLenum target, GLenum pname, GLfloat param)
 {
@@ -1043,152 +1300,6 @@ glTexParameteriv (GLenum target, GLenum pname, const GLint *params)
 
   rsxgl_context_t * ctx = current_ctx();
   rsxgl_tex_parameteri(ctx,ctx -> texture_binding.names[ctx -> active_texture],pname,*params);
-}
-
-static inline uint32_t
-rsxgl_tex_remap(uint32_t op0,uint32_t op1,uint32_t op2,uint32_t op3,
-		uint32_t src0,uint32_t src1,uint32_t src2,uint32_t src3)
-{
-  return
-    (op0 << 14) |
-    (op1 << 12) |
-    (op2 << 10) |
-    (op3 << 8) |
-    (src0 << 6) |
-    (src1 << 4) |
-    (src2 << 2) |
-    (src3 << 0);
-}
-
-static inline uint32_t
-rsxgl_get_tex_level_offset_size(const texture_t::dimension_size_type _size[3],
-				const uint32_t pitch,
-				const texture_t::level_size_type level,
-				texture_t::dimension_size_type * outsize)
-{
-  texture_t::dimension_size_type size[3] = { _size[0], _size[1], _size[2] };
-  uint32_t offset = 0;
-
-  for(texture_t::level_size_type i = 1;i <= level;++i) {
-    offset += pitch * size[1] * size[2];
-
-    for(int j = 0;j < 3;++j) {
-      size[j] = std::max(size[j] >> 1,1);
-    }
-  }
-
-  if(outsize != 0) {
-    for(int j = 0;j < 3;++j) {
-      outsize[j] = size[j];
-    }
-  }
-
-  return offset;
-}
-
-// Meant to look like gallium's util_format_translate, but tries to use DMA:
-static inline void
-rsxgl_util_format_translate_dma(rsxgl_context_t * ctx,
-				enum pipe_format dst_format,
-				void * dstaddress, const memory_t & dstmem, unsigned dst_stride,
-				unsigned dst_x, unsigned dst_y,
-				enum pipe_format src_format,
-				const void * srcaddress, const memory_t & srcmem, unsigned src_stride,
-				unsigned src_x, unsigned src_y,
-				unsigned width, unsigned height)
-{
-  const struct util_format_description *dst_format_desc = util_format_description(dst_format);
-  const struct util_format_description *src_format_desc = util_format_description(src_format);
-
-  if(util_is_format_compatible(src_format_desc, dst_format_desc)) {
-    const int blocksize = dst_format_desc->block.bits / 8;
-    const int blockwidth = dst_format_desc->block.width;
-    const int blockheight = dst_format_desc->block.height;
-    
-    dst_x /= blockwidth;
-    dst_y /= blockheight;
-    width = (width + blockwidth - 1)/blockwidth;
-    height = (height + blockheight - 1)/blockheight;
-    src_x /= blockwidth;
-    src_y /= blockheight;
-    
-    const uint32_t linelength = width * blocksize;
-    
-    rsxgl_memory_transfer(ctx -> gcm_context(),
-			  dstmem + (dst_x * blocksize) + (dst_y * dst_stride),dst_stride,1,
-			  srcmem + (src_x * blocksize) + (src_y * src_stride),src_stride,1,
-			  linelength,height);
-  }
-  else {
-    rsxgl_debug_printf("%s: non-trivial transfer didn't happen src:%x dst:%x\n",__PRETTY_FUNCTION__,
-		       (unsigned int)src_format,(unsigned int)dst_format);
-
-    rsxgl_assert(dstaddress != 0);
-    rsxgl_assert(srcaddress != 0);
-
-    util_format_translate(dst_format,dstaddress,dst_stride,dst_x,dst_y,
-			  src_format,srcaddress,src_stride,src_x,src_y,
-			  width,height);
-  }
-}
-
-void
-rsxgl_texture_validate_complete(rsxgl_context_t * ctx,texture_t & texture)
-{
-  if(texture.invalid_complete) {
-    texture_t::level_t * plevel = texture.levels;
-
-    // Check the first level:
-    uint8_t dims = plevel -> dims;
-    pipe_format pformat = plevel -> pformat;
-
-    bool complete = (dims == texture.dims) && (pformat != PIPE_FORMAT_NONE);
-
-    bool cube = plevel -> cube, rect = plevel -> rect;
-    ++plevel;
-
-    // Check the remaining levels:
-    texture_t::level_size_type level = 1;
-    
-    for(;complete && level < texture_t::max_levels;++level) {
-      // This level is unspecified; break
-      if(plevel -> dims == 0 || plevel -> pformat == 0) {
-	break;
-      }
-      // Level has incompatible dimensions, format:
-      else if((plevel -> dims != dims) || (plevel -> cube != cube) || (plevel -> rect != rect) ||
-	      (!util_is_format_compatible(util_format_description(pformat),
-					  util_format_description(plevel -> pformat)))) {
-	complete = false;
-	break;
-      }
-
-      ++plevel;
-    }
-
-    texture.complete = complete;
-
-    if(complete) {
-      texture.pformat = pformat;
-      texture.size[0] = texture.levels[0].size[0];
-      texture.size[1] = texture.levels[0].size[1];
-      texture.size[2] = texture.levels[0].size[2];
-      texture.cube = cube;
-      texture.rect = rect;
-      texture.num_levels = level;
-    }
-    else {
-      texture.pformat = PIPE_FORMAT_NONE;
-      texture.size[0] = 0;
-      texture.size[1] = 0;
-      texture.size[2] = 0;
-      texture.cube = false;
-      texture.rect = false;
-      texture.num_levels = 0;
-    }
-
-    texture.invalid_complete = 0;
-  }
 }
 
 static inline void
@@ -1261,8 +1372,8 @@ rsxgl_texture_reset_storage(texture_t & texture)
 }
 
 static inline void
-rsxgl_texture_level_format(texture_t::level_t & level,const uint8_t dims,const pipe_format pformat,
-			   const texture_t::dimension_size_type width,const texture_t::dimension_size_type height,const texture_t::dimension_size_type depth)
+rsxgl_texture_level_format(texture_t::level_t & level,uint8_t dims,pipe_format pformat,
+			   texture_t::dimension_size_type width,texture_t::dimension_size_type height,texture_t::dimension_size_type depth)
 {
   level.dims = dims;
   level.pformat = pformat;
@@ -1304,7 +1415,7 @@ rsxgl_texture_level_reset_storage(texture_t::level_t & level)
 }
 
 static inline void
-rsxgl_tex_storage(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,const bool cube,const bool rect,GLsizei levels,GLint glinternalformat,GLsizei width,GLsizei height,GLsizei depth)
+rsxgl_tex_storage(rsxgl_context_t * ctx,texture_t & texture,uint8_t dims,bool cube,bool rect,GLsizei levels,GLint glinternalformat,GLsizei width,GLsizei height,GLsizei depth)
 {
   rsxgl_assert(dims > 0);
   rsxgl_assert(width > 0);
@@ -1392,7 +1503,7 @@ rsxgl_tex_storage(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,c
 }
 
 static inline bool
-rsxgl_tex_image_format(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,const bool cube,const bool rect,GLint _level,GLint glinternalformat,GLsizei width,GLsizei height,GLsizei depth)
+rsxgl_tex_image_format(rsxgl_context_t * ctx,texture_t & texture,uint8_t dims,bool cube,bool rect,GLint _level,GLint glinternalformat,GLsizei width,GLsizei height,GLsizei depth)
 {
   rsxgl_assert(dims > 0);
   rsxgl_assert(width > 0);
@@ -1530,7 +1641,7 @@ rsxgl_tex_subimage_init(rsxgl_context_t * ctx,texture_t & texture,GLint _level,G
 }
 
 static inline void
-rsxgl_tex_image(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,const bool cube,const bool rect,GLint _level,GLint glinternalformat,GLsizei width,GLsizei height,GLsizei depth,
+rsxgl_tex_image(rsxgl_context_t * ctx,texture_t & texture,uint8_t dims,bool cube,bool rect,GLint _level,GLint glinternalformat,GLsizei width,GLsizei height,GLsizei depth,
 		GLenum format,GLenum type,const GLvoid * data)
 {
   const bool result = rsxgl_tex_image_format(ctx,texture,dims,cube,rect,_level,glinternalformat,width,height,depth);
@@ -1625,7 +1736,7 @@ rsxgl_tex_subimage(rsxgl_context_t * ctx,texture_t & texture,GLint _level,GLint 
 }
 
 static inline void
-rsxgl_copy_tex_image(rsxgl_context_t * ctx,texture_t & texture,const uint8_t dims,const bool cube,const bool rect,GLint _level,GLint glinternalformat,GLint x,GLint y,GLsizei width,GLsizei height)
+rsxgl_copy_tex_image(rsxgl_context_t * ctx,texture_t & texture,uint8_t dims,bool cube,bool rect,GLint _level,GLint glinternalformat,GLint x,GLint y,GLsizei width,GLsizei height)
 {
   const bool result = rsxgl_tex_image_format(ctx,texture,dims,cube,rect,_level,glinternalformat,width,height,1);
 
@@ -1832,11 +1943,13 @@ glGetTexParameteriv (GLenum target, GLenum pname, GLint *params)
 GLAPI void APIENTRY
 glGetTexLevelParameterfv (GLenum target, GLint level, GLenum pname, GLfloat *params)
 {
+  rsxgl_get_tex_level_parameter(target,level,pname,params);
 }
 
 GLAPI void APIENTRY
 glGetTexLevelParameteriv (GLenum target, GLint level, GLenum pname, GLint *params)
 {
+  rsxgl_get_tex_level_parameter(target,level,pname,params);
 }
 
 GLAPI void APIENTRY
@@ -1986,16 +2099,14 @@ glTexBuffer (GLenum target, GLenum internalformat, GLuint buffer)
 }
 
 void
-rsxgl_texture_validate(rsxgl_context_t * ctx,texture_t & texture,const uint32_t timestamp)
+rsxgl_texture_validate(rsxgl_context_t * ctx,texture_t & texture,uint32_t timestamp)
 {
   rsxgl_assert(timestamp >= texture.timestamp);
   texture.timestamp = timestamp;
 
   if(texture.invalid) {
     rsxgl_texture_reset_storage(texture);
-    rsxgl_texture_validate_complete(ctx,texture);
-
-    if(texture.complete) {
+    if(rsxgl_texture_validate_complete(ctx,texture)) {
       rsxgl_texture_validate_storage(ctx,texture);
 
       if(texture.memory) {
@@ -2065,7 +2176,7 @@ rsxgl_texture_validate(rsxgl_context_t * ctx,texture_t & texture,const uint32_t 
 }
 
 void
-rsxgl_textures_validate(rsxgl_context_t * ctx,program_t & program,const uint32_t timestamp)
+rsxgl_textures_validate(rsxgl_context_t * ctx,program_t & program,uint32_t timestamp)
 {
   gcmContextData * context = ctx -> base.gcm_context;
 

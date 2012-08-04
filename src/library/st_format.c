@@ -58,7 +58,6 @@
 
 #endif
 
-#if 0
 static GLuint
 format_max_bits(enum pipe_format format)
 {
@@ -157,7 +156,7 @@ st_format_datatype(enum pipe_format format)
    }
 }
 
-
+#if 0
 /**
  * Translate Mesa format to Gallium format.
  */
@@ -1672,6 +1671,21 @@ rsxgl_choose_format(struct pipe_screen *screen, GLenum internalFormat,
    return PIPE_FORMAT_NONE;
 }
 
+GLenum
+rsxgl_format_internalformat(enum pipe_format pformat)
+{
+  int i, j;
+
+  for(i = 0;i < Elements(format_map);++i) {
+    const struct format_mapping *mapping = &format_map[i];
+    if(mapping -> pipeFormats[0] == pformat) {
+      return mapping -> glFormats[0];
+    }
+  }
+
+  return GL_NONE;
+}
+
 int
 rsxgl_get_format_color_bit_depth(enum pipe_format pformat,int _channel)
 {
@@ -1703,7 +1717,7 @@ rsxgl_get_format_depth_bit_depth(enum pipe_format pformat,int _channel)
 }
 
 enum pipe_format
-rsxgl_choose_source_format(const GLenum format,const GLenum type)
+rsxgl_choose_source_format(GLenum format,GLenum type)
 {
   if(format == GL_RED) {
     if(type == GL_UNSIGNED_BYTE) {
