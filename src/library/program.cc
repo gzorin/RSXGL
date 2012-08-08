@@ -189,7 +189,7 @@ glGetShaderSource (GLuint shader_name, GLsizei bufSize, GLsizei *length, GLchar 
 
   const shader_t & shader = shader_t::storage().at(shader_name);
   shader.source().get(source,bufSize);
-  if(length != 0) *length = shader.info_size;
+  if(length != 0) *length = shader.source_size;
 
   RSXGL_NOERROR_();
 }
