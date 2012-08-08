@@ -334,15 +334,6 @@ glBufferData (GLenum target, GLsizeiptr size, const GLvoid* data, GLenum usage)
     }
   }
 
-  // 
-  for(size_t i = 0;i < RSXGL_MAX_COMBINED_TEXTURE_IMAGE_UNITS;++i) {
-    texture_t & texture = ctx -> texture_binding[i];
-#if 0
-    if(texture.buffer == name) {
-    }
-#endif
-  }
-
   RSXGL_NOERROR_();
 }
 
