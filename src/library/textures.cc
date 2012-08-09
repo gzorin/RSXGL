@@ -2233,35 +2233,19 @@ rsxgl_textures_validate(rsxgl_context_t * ctx,program_t & program,uint32_t times
       // TODO: Set LOD min, max, bias:
     }
     if(invalid_it.test() || invalid_textures.test(api_index)) {
-#if 0
-      rsxgl_debug_printf("trying to activate vertex sampler: %u\n",index);
-#endif
-
       texture_t & texture = ctx -> texture_binding[api_index];
 
       rsxgl_texture_validate(ctx,texture,timestamp);
       
       if(texture.memory) {
-#if 0
-	rsxgl_debug_printf("\tit has memory\n");
-#endif
-
 	const uint32_t format = texture.format & (0x3 | NV30_3D_TEX_FORMAT_DIMS__MASK | NV30_3D_TEX_FORMAT_FORMAT__MASK | NV40_3D_TEX_FORMAT_MIPMAP_COUNT__MASK);
 	const uint32_t format_format = (format & NV30_3D_TEX_FORMAT_FORMAT__MASK);
-
-#if 0
-	rsxgl_debug_printf("\ttexture.format: %x format: %x format_format: %x\n",texture.format,format,format_format);
-#endif
 
 	static const uint32_t
 	  RGBA32F_format = NV40_3D_TEX_FORMAT_FORMAT_RGBA32F | NV40_3D_TEX_FORMAT_LINEAR | 0x9000,
 	  R32F_format = 0x1c00 | NV40_3D_TEX_FORMAT_LINEAR | 0x9000;
 
 	if(format_format == RGBA32F_format || format_format == R32F_format) {
-#if 0
-	  rsxgl_debug_printf("\tactivating vertex sampler: %u\n",index);
-#endif
-
 	  // activate the texture:
 	  uint32_t * buffer = gcm_reserve(context,9);
 
