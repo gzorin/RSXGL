@@ -1733,6 +1733,8 @@ rsxgl_program_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
 	  
 	  // Texcoord control:
 #define  NV40TCL_TEX_COORD_CONTROL(x)                                   (0x00000b40+((x)*4))
+
+#if 0
 	  bit_set< RSXGL_MAX_TEXTURE_COORDS >::const_iterator it = program.fp_texcoords.begin(),
 	    it2D = program.fp_texcoord2D.begin(),
 	    it3D = program.fp_texcoord3D.begin();
@@ -1746,14 +1748,9 @@ rsxgl_program_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
 	      ((it3D.test() ? (1 << 4) : 0) | (it2D.test() ? 1 : 0)) :
 	      (0)
 	    };
+#endif
 	    
-	    rsxgl_debug_printf("%u %u, %u %u %u: %x %x\n",
-			       j,i,
-			       (uint32_t)it.test(),
-			       (uint32_t)it2D.test(),
-			       (uint32_t)it3D.test(),
-			       cmds[0],cmds[1]);
-	    
+#if 0
 	    gcm_emit_method_at(buffer,i,cmds[0],1);
 	    gcm_emit_at(buffer,i + 1,cmds[1]);
 #endif
@@ -1769,7 +1766,17 @@ rsxgl_program_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
 	    it3D.next(program.fp_texcoord3D);
 	    reg += 4;
 	  }
-	  
+#endif
+
+	  uint32_t fp_texcoord_mask = program.vp_output_mask >> 14;
+	  for(size_t j = 0;j < RSXGL_MAX_TEXTURE_COORDS;++j,fp_texcoord_mask >>= 1,i += 2) {
+	    gcm_emit_method_at(buffer,i,NV40TCL_TEX_COORD_CONTROL(j),1);	    
+	    //gcm_emit_at(buffer,i + 1,(fp_texcoord_mask & 0x1) ? ((1)) : 0);
+	    //gcm_emit_at(buffer,i + 1,(fp_texcoord_mask & 0x1) ? ((1) | (1 << 4)) : 0);
+	    //gcm_emit_at(buffer,i + 1,(((uint32_t)1) | ((uint32_t)1 << 4)));
+	    gcm_emit_at(buffer,i + 1,0);
+	  }
+
 	  gcm_emit_method_at(buffer,i++,NV30_3D_FP_CONTROL,1);
 	  gcm_emit_at(buffer,i++,program.fp_control);
 	  
@@ -1942,13 +1949,6 @@ rsxgl_feedback_program_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
 	    ((it3D.test() ? (1 << 4) : 0) | (it2D.test() ? 1 : 0)) :
 	    (0)
 	  };
-	  
-	  rsxgl_debug_printf("%u %u, %u %u %u: %x %x\n",
-			     j,i,
-			     (uint32_t)it.test(),
-			     (uint32_t)it2D.test(),
-			     (uint32_t)it3D.test(),
-			     cmds[0],cmds[1]);
 	  
 	  gcm_emit_method_at(buffer,i,cmds[0],1);
 	  gcm_emit_at(buffer,i + 1,cmds[1]);

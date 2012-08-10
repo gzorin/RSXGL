@@ -74,8 +74,8 @@ copyteximage_sources = copyteximage.cc texture.c fbo_inner.vert fbo_inner.frag n
 feedback1_objects =
 feedback1_sources = feedback1.cc points.vert feedback1.frag
 
-objects = $(feedback1_objects)
-sources = $(feedback1_sources)
+objects = $(texcube_objects)
+sources = $(texcube_sources)
 
 rsxgltest_elf_DEPENDENCIES = $(top_builddir)/src/library/libEGL.a $(top_builddir)/src/library/libGL.a	\
 	$(objects)

@@ -132,11 +132,13 @@ rsxgl_memory_transfer(gcmContextData * context,
 		      const memory_t & src,const int32_t srcpitch,const uint8_t srcbytes,
 		      const uint32_t linelength,const uint32_t linecount)
 {
+#if 0
   rsxgl_debug_printf("%s: dst:%u (%u) %u %u src:%u (%u) %u %u; %ux%u\n",
 		     __PRETTY_FUNCTION__,
 		     dst.offset,dst.location,dstpitch,dstbytes,
 		     src.offset,src.location,srcpitch,srcbytes,
 		     linelength,linecount);
+#endif
 
   uint32_t * buffer = gcm_reserve(context,12);
 

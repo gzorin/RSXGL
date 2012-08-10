@@ -1332,7 +1332,8 @@ rsxgl_texture_validate_storage(rsxgl_context_t * ctx,texture_t & texture)
     rsxgl_assert(pfmt != 0);
     
     const uint32_t fmt = pfmt -> fmt[4] | NV40_3D_TEX_FORMAT_LINEAR | (texture.rect ? NV40_3D_TEX_FORMAT_RECT : 0) | 0x8000;
-    
+
+#if 0
     rsxgl_debug_printf("%s: dims:%u pformat:%u size:%ux%ux%u pitch:%u levels:%u bytes:%u fmt:%x\n",__PRETTY_FUNCTION__,
 		       (unsigned int)texture.dims,
 		       (unsigned int)texture.pformat,
@@ -1341,6 +1342,7 @@ rsxgl_texture_validate_storage(rsxgl_context_t * ctx,texture_t & texture)
 		       (unsigned int)texture.num_levels,
 		       (unsigned int)nbytes,(unsigned int)fmt);
     rsxgl_debug_printf("\toffset:%u\n",texture.memory.offset);
+#endif
     
     texture.format =
       ((texture.memory.location == 0) ? NV30_3D_TEX_FORMAT_DMA0 : NV30_3D_TEX_FORMAT_DMA1) |
@@ -2335,6 +2337,16 @@ rsxgl_textures_validate(rsxgl_context_t * ctx,program_t & program,uint32_t times
       rsxgl_texture_validate(ctx,texture,timestamp);
       
       if(texture.memory) {
+#if 0
+	rsxgl_debug_printf("texture: %u (%u) memory: %u %u pformat: %u format:%x size:%ux%u pitch:%u remap:%x\n",
+			   index,api_index,
+			   texture.memory.location,texture.memory.offset,
+			   texture.pformat,
+			   texture.format,
+			   (uint32_t)texture.size[0],(uint32_t)texture.size[1],
+			   (uint32_t)texture.pitch,(uint32_t)texture.remap);
+#endif
+
 	// activate the texture:
 	uint32_t * buffer = gcm_reserve(context,11);
 	

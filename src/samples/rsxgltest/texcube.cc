@@ -269,9 +269,9 @@ rsxgltest_init(int argc,const char ** argv)
   // Set up us the vertex data:
   glGenBuffers(2,buffers);
 
-  glBindBuffer(GL_ARRAY_BUFFER,buffers[0]);
+  //glBindBuffer(GL_ARRAY_BUFFER,buffers[0]);
+  //glBufferData(GL_ARRAY_BUFFER,sizeof(float) * 6 * 4 * 5,geometry,GL_STATIC_DRAW);
 
-  glBufferData(GL_ARRAY_BUFFER,sizeof(float) * 6 * 4 * 5,geometry,GL_STATIC_DRAW);
   glEnableVertexAttribArray(vertex_location);
   glEnableVertexAttribArray(tc_location);
   glVertexAttribPointer(vertex_location,3,GL_FLOAT,GL_FALSE,sizeof(float) * 5,0);

@@ -1644,12 +1644,14 @@ rsxgl_choose_format(struct pipe_screen *screen, GLenum internalFormat,
    }
 #endif
 
+#if 0
    /* search for exact matches */
    pf = find_exact_format(internalFormat, format, type);
    if (pf != PIPE_FORMAT_NONE &&
        screen->is_format_supported(screen, pf,
                                    target, sample_count, bindings))
       return pf;
+#endif
 
    /* search table for internalFormat */
    for (i = 0; i < Elements(format_map); i++) {
@@ -1791,8 +1793,7 @@ rsxgl_choose_source_format(GLenum format,GLenum type)
   else if(format == GL_BGR) {
     if(type == GL_UNSIGNED_BYTE) {
       return PIPE_FORMAT_X8R8G8B8_UNORM;
-    }
-    
+    }    
   }
   else if(format == GL_RGBA) {
     if(type == GL_UNSIGNED_BYTE) {
@@ -1820,6 +1821,22 @@ rsxgl_choose_source_format(GLenum format,GLenum type)
   else if(format == GL_BGRA) {
     if(type == GL_UNSIGNED_BYTE) {
       return PIPE_FORMAT_A8R8G8B8_UNORM;
+    }
+  }
+  else if(format == GL_ALPHA) {
+    if(type == GL_UNSIGNED_BYTE) {
+      return PIPE_FORMAT_A8_UNORM;
+    }
+    else if(type == GL_BYTE) {
+      return PIPE_FORMAT_A8_SNORM;
+    }
+  }
+  else if(format == GL_LUMINANCE) {
+    if(type == GL_UNSIGNED_BYTE) {
+      return PIPE_FORMAT_L8_UNORM;
+    }
+    else if(type == GL_BYTE) {
+      return PIPE_FORMAT_L8_SNORM;
     }
   }
 

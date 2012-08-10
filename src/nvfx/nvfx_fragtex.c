@@ -2,6 +2,8 @@
 #include "nvfx_resource.h"
 #include "nvfx_tex.h"
 
+extern void rsxgl_debug_printf(const char * fmt,...);
+
 static void *
 nvfx_sampler_state_create(struct pipe_context *pipe,
 			  const struct pipe_sampler_state *cso)
@@ -367,13 +369,24 @@ nvfx_get_texture_format(enum pipe_format format)
 uint32_t
 nvfx_get_texture_remap(const struct nvfx_texture_format * tf,uint8_t r,uint8_t g,uint8_t b,uint8_t a)
 {
+#if 0
+  rsxgl_debug_printf("%s: src:%u %u %u %u comp:%u %u %u %u\n",__PRETTY_FUNCTION__,
+		     tf->src[0],tf->src[1],tf->src[2],tf->src[3],
+		     tf->comp[0],tf->comp[1],tf->comp[2],tf->comp[3]);
+
+  rsxgl_debug_printf("\tsrc:%u %u %u %u comp:%u %u %u %u\n",
+		     tf->src[r],tf->src[g],tf->src[b],tf->src[a],
+		     tf->comp[r],tf->comp[g],tf->comp[b],tf->comp[a]);
+#endif
+
+  // Works for evas icons:
   return 0
-    | (tf->src[r] << NV30_3D_TEX_SWIZZLE_S0_Z__SHIFT)
-    | (tf->src[g] << NV30_3D_TEX_SWIZZLE_S0_Y__SHIFT)
-    | (tf->src[b] << NV30_3D_TEX_SWIZZLE_S0_X__SHIFT)
-    | (tf->src[a] << NV30_3D_TEX_SWIZZLE_S0_W__SHIFT)
-    | (tf->comp[r] << NV30_3D_TEX_SWIZZLE_S1_Z__SHIFT)
-    | (tf->comp[g] << NV30_3D_TEX_SWIZZLE_S1_Y__SHIFT)
-    | (tf->comp[b] << NV30_3D_TEX_SWIZZLE_S1_X__SHIFT)
-    | (tf->comp[a] << NV30_3D_TEX_SWIZZLE_S1_W__SHIFT);
+    | ((uint32_t)tf->src[b] << NV30_3D_TEX_SWIZZLE_S0_X__SHIFT)
+    | ((uint32_t)tf->src[g] << NV30_3D_TEX_SWIZZLE_S0_Y__SHIFT)
+    | ((uint32_t)tf->src[r] << NV30_3D_TEX_SWIZZLE_S0_Z__SHIFT)
+    | ((uint32_t)tf->src[a] << NV30_3D_TEX_SWIZZLE_S0_W__SHIFT)
+    | ((uint32_t)tf->comp[b] << NV30_3D_TEX_SWIZZLE_S1_X__SHIFT)
+    | ((uint32_t)tf->comp[g] << NV30_3D_TEX_SWIZZLE_S1_Y__SHIFT)
+    | ((uint32_t)tf->comp[r] << NV30_3D_TEX_SWIZZLE_S1_Z__SHIFT)
+    | ((uint32_t)tf->comp[a] << NV30_3D_TEX_SWIZZLE_S1_W__SHIFT);
 }

@@ -907,6 +907,16 @@ rsxgl_attribs_validate(rsxgl_context_t * ctx,const bit_set< RSXGL_MAX_VERTEX_ATT
 
       const memory_t memory = vbo.memory + attribs.offset[i];
 
+#if 0
+      rsxgl_debug_printf("\t%u m:%u %u o:%u stride:%u size:%u t:%x\n",
+			 (unsigned int)i,
+			 memory.location,memory.offset,
+			 attribs.offset[i],
+			 (uint32_t)attribs.stride[i],
+			 (uint32_t)attribs.size[i],
+			 (uint32_t)attribs.type[i]);
+#endif
+
       gcm_emit_method_at(buffer,nbuffer + 0,NV30_3D_VTXBUF(i),1);
       gcm_emit_at(buffer,nbuffer + 1,memory.offset | ((uint32_t)memory.location << 31));
       gcm_emit_method_at(buffer,nbuffer + 2,NV30_3D_VTXFMT(i),1);
