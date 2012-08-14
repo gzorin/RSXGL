@@ -736,6 +736,15 @@ glLinkProgram (GLuint program_name)
   compiler_context_t * cctx = ctx -> compiler_context();
 
   for(unsigned int i = 0,n = program.attached_shaders().get_size();i < n;++i) {
+    const shader_t & shader = shader_t::storage().at(program.attached_shaders()[i]);
+
+#if 0    
+    char * tmp = (char *)malloc(shader.source_size);
+    shader.source().get(tmp,shader.source_size);
+    rsxgl_debug_printf("%u source:\n%s\n",i,tmp);
+    free(tmp);
+#endif
+
     cctx -> attach_shader(program.mesa_program,shader_t::storage().at(program.attached_shaders()[i]).mesa_shader);
   }
   
@@ -859,10 +868,12 @@ glLinkProgram (GLuint program_name)
 	    || var->location == -1
 	    || var->location < VERT_ATTRIB_GENERIC0)
 	  continue;
-	
+
 	program_t::attrib_t attrib;
 	attrib.type = rsxgl_glsl_type_to_rsxgl_type(var->type);
 	attrib.index = st_vp -> input_to_index[var -> location];
+	attrib.location = var -> location - VERT_ATTRIB_GENERIC0;
+
 	attribs.insert(std::make_pair(var -> name,attrib));
 
 	const program_t::name_size_type name_length = strlen(var -> name);
@@ -1041,12 +1052,12 @@ glLinkProgram (GLuint program_name)
     char * pnames = program.names_data;
 
     // Migrate attributes table:
+    program.attribs_enabled.reset();
+
     if(attribs.size() > 0) {
 #if 0
       rsxgl_debug_printf("%u attribs\n",attribs.size());
 #endif
-
-      program.attribs_enabled.reset();
 
       program_t::attrib_table_type::type table = program.attrib_table();
       table.resize(attribs.size());
@@ -1055,15 +1066,16 @@ glLinkProgram (GLuint program_name)
       for(std::map< const char *, program_t::attrib_t, cstr_less >::const_iterator jt = attribs.begin(),jt_end = attribs.end();jt != jt_end;++jt) {
 #if 0
 	rsxgl_debug_printf(" %s: type:%u index:%u\n",
-			   value.first,
-			   (unsigned int)value.second.type,
-			   (unsigned int)value.second.index);
+			   jt -> first,
+			   (unsigned int)jt -> second.type,
+			   (unsigned int)jt -> second.index);
 #endif
 	
 	table[i].first = pnames - program.names_data;
 	table[i].second = jt -> second;
 	
 	program.attribs_enabled.set(jt -> second.index);
+	program.attrib_assignments.set(jt -> second.index,jt -> second.location);
 	
 	for(const char * name = jt -> first;*name != 0;++name,++pnames) {
 	  *pnames = *name;
@@ -1345,31 +1357,55 @@ glUseProgram (GLuint program_name)
 
   if(ctx -> program_binding.names[RSXGL_ACTIVE_PROGRAM] != program_name) {
     const program_t::name_type prev_program_name = ctx -> program_binding.names[RSXGL_ACTIVE_PROGRAM];
-
     ctx -> program_binding.bind(RSXGL_ACTIVE_PROGRAM,program_name);
     ctx -> invalid.parts.program = 1;
 
     if(program_name != 0) {
-      ctx -> state.enable.transform_feedback_program = (program_t::storage().at(program_name).streamvp_num_insn > 0 && program_t::storage().at(program_name).streamfp_num_insn > 0);
+      const program_t & program = program_t::storage().at(program_name);
+
+      ctx -> state.enable.transform_feedback_program = (program.streamvp_num_insn > 0 && program.streamfp_num_insn > 0);
       
       if(prev_program_name != 0) {
-	const program_t::texture_assignments_bitfield_type
-	  textures_enabled = program_t::storage().at(prev_program_name).textures_enabled;
-	const program_t::texture_assignments_type
-	  prev_assignments = program_t::storage().at(prev_program_name).texture_assignments,
-	  assignments = program_t::storage().at(program_name).texture_assignments;
-	
-	program_t::texture_assignments_bitfield_type::const_iterator
-	  enabled_it = textures_enabled.begin();
-	program_t::texture_assignments_type::const_iterator
-	  prev_it = prev_assignments.begin(),
-	  it = assignments.begin();
-	
-	for(program_t::texture_size_type i = 0;i < program_t::texture_assignments_bitfield_type::size;++i,enabled_it.next(textures_enabled),prev_it.next(prev_assignments),it.next(assignments)) {
-	  ctx -> invalid_texture_assignments.set(enabled_it.test() && (prev_it.value() != it.value()));
+	const program_t & prev_program = program_t::storage().at(prev_program_name);
+
+	{
+	  const program_t::attribs_bitfield_type
+	    attribs_enabled = prev_program.attribs_enabled;
+	  const program_t::attrib_assignments_type
+	    prev_assignments = prev_program.attrib_assignments,
+	    assignments = program.attrib_assignments;
+	  
+	  program_t::attribs_bitfield_type::const_iterator
+	    enabled_it = attribs_enabled.begin();
+	  program_t::attrib_assignments_type::const_iterator
+	    prev_it = prev_assignments.begin(),
+	    it = assignments.begin();
+	  
+	  for(program_t::attrib_size_type i = 0;i < program_t::attribs_bitfield_type::size;++i,enabled_it.next(attribs_enabled),prev_it.next(prev_assignments),it.next(assignments)) {
+	    ctx -> invalid_attrib_assignments.set(i,enabled_it.test() && (prev_it.value() != it.value()));
+	  }
+	}
+
+	{
+	  const program_t::textures_bitfield_type
+	    textures_enabled = prev_program.textures_enabled;
+	  const program_t::texture_assignments_type
+	    prev_assignments = prev_program.texture_assignments,
+	    assignments = program.texture_assignments;
+	  
+	  program_t::textures_bitfield_type::const_iterator
+	    enabled_it = textures_enabled.begin();
+	  program_t::texture_assignments_type::const_iterator
+	    prev_it = prev_assignments.begin(),
+	    it = assignments.begin();
+	  
+	  for(program_t::texture_size_type i = 0;i < program_t::textures_bitfield_type::size;++i,enabled_it.next(textures_enabled),prev_it.next(prev_assignments),it.next(assignments)) {
+	    ctx -> invalid_texture_assignments.set(i,enabled_it.test() && (prev_it.value() != it.value()));
+	  }
 	}
       }
       else {
+	ctx -> invalid_attrib_assignments = ctx -> program_binding[RSXGL_ACTIVE_PROGRAM].attribs_enabled;
 	ctx -> invalid_texture_assignments = ctx -> program_binding[RSXGL_ACTIVE_PROGRAM].textures_enabled;
       }
     }
@@ -1472,7 +1508,7 @@ glGetAttribLocation (GLuint program_name, const GLchar* name)
 
   std::pair< bool, program_t::attrib_size_type > tmp = program.attrib_table().find(program.names(),name);
   
-  RSXGL_NOERROR((tmp.first) ? program.attrib_table_values[tmp.second].second.index : -1);
+  RSXGL_NOERROR((tmp.first) ? program.attrib_table_values[tmp.second].second.location : -1);
 }
 
 GLAPI void APIENTRY
@@ -1773,6 +1809,7 @@ rsxgl_program_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
 	    gcm_emit_method_at(buffer,i,NV40TCL_TEX_COORD_CONTROL(j),1);	    
 	    //gcm_emit_at(buffer,i + 1,(fp_texcoord_mask & 0x1) ? ((1)) : 0);
 	    //gcm_emit_at(buffer,i + 1,(fp_texcoord_mask & 0x1) ? ((1) | (1 << 4)) : 0);
+	    //gcm_emit_at(buffer,i + 1,(((uint32_t)1) | ((uint32_t)0 << 4)));
 	    //gcm_emit_at(buffer,i + 1,(((uint32_t)1) | ((uint32_t)1 << 4)));
 	    gcm_emit_at(buffer,i + 1,0);
 	  }
@@ -1793,7 +1830,8 @@ rsxgl_program_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
 	    }
 	  }
 	}
-	
+
+#if 0	
 	// Tell unused attributes to have a size of 0:
 	{
 	  const bit_set< RSXGL_MAX_VERTEX_ATTRIBS > unused_attribs = ~program.attribs_enabled;
@@ -1818,6 +1856,7 @@ rsxgl_program_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
 	    gcm_finish_n_commands(context,nbuffer);
 	  }
 	}
+#endif
 	
 	// Set point sprite behavior:
 	{

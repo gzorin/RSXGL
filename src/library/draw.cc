@@ -549,7 +549,7 @@ namespace {
     rsxgl_draw_framebuffer_validate(ctx,lastTimestamp);
     rsxgl_state_validate(ctx);
     rsxgl_program_validate(ctx,lastTimestamp);
-    rsxgl_attribs_validate(ctx,ctx -> program_binding[RSXGL_ACTIVE_PROGRAM].attribs_enabled,index_range.first,index_range.second,lastTimestamp);
+    rsxgl_attribs_validate(ctx,ctx -> program_binding[RSXGL_ACTIVE_PROGRAM],index_range.first,index_range.second,lastTimestamp);
     rsxgl_uniforms_validate(ctx,ctx -> program_binding[RSXGL_ACTIVE_PROGRAM]);
     rsxgl_textures_validate(ctx,ctx -> program_binding[RSXGL_ACTIVE_PROGRAM],lastTimestamp);
 

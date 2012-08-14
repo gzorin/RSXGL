@@ -120,10 +120,6 @@ RSXGL_CONFIG_RSX_compatibility=0
 AC_ARG_ENABLE([RSX-compatibility],AS_HELP_STRING([--enable-RSX-compatibility],[configure the library to enable OpenGL compatibility profile capabilities that the RSX happens to support (e.g., GL_QUADS)]),[if test "$enableval" == "yes"; then RSXGL_CONFIG_RSX_compatibility=1; fi],[])
 AC_SUBST([RSXGL_CONFIG_RSX_compatibility])
 
-RSXGL_CONFIG_client_attribs=0
-AC_ARG_ENABLE([client-attribs],AS_HELP_STRING([--enable-client-attribs],[configure the library to support client-side attribute data]),[if test "$enableval" == "yes"; then RSXGL_CONFIG_client_attribs=1; fi],[])
-AC_SUBST([RSXGL_CONFIG_client_attribs])
-
 # Samples can send debugging information back to the host used to build them; set its IP here,
 # or leave it unset & it won't try to phone home:
 AC_ARG_VAR([RSXGL_CONFIG_samples_host_ip],[IP address of host for samples to send reporting to])

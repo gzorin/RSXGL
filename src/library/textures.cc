@@ -781,6 +781,28 @@ rsxgl_util_format_translate_dma(rsxgl_context_t * ctx,
   const struct util_format_description *dst_format_desc = util_format_description(dst_format);
   const struct util_format_description *src_format_desc = util_format_description(src_format);
 
+  util_format_translate(dst_format,dstaddress,dst_stride,dst_x,dst_y,
+			src_format,srcaddress,src_stride,src_x,src_y,
+			width,height);
+
+#if 0
+  const uint8_t * pdstaddress = (const uint8_t *)dstaddress;
+  for(unsigned int j = 0;j < 120;++j) {
+    const uint8_t * ppdstaddress = pdstaddress;
+    for(unsigned int i = 0;i < 160;++i) {
+      rsxgl_debug_printf("(%i,%i,%i,%i)",
+			 (unsigned int)ppdstaddress[0],
+			 (unsigned int)ppdstaddress[1],
+			 (unsigned int)ppdstaddress[2],
+			 (unsigned int)ppdstaddress[3]);
+      ppdstaddress += 4;
+    }
+    rsxgl_debug_printf("\n");
+    pdstaddress += dst_stride;
+  }
+#endif
+  
+#if 0
   if(util_is_format_compatible(src_format_desc, dst_format_desc)) {
     const int blocksize = dst_format_desc->block.bits / 8;
     const int blockwidth = dst_format_desc->block.width;
@@ -811,6 +833,7 @@ rsxgl_util_format_translate_dma(rsxgl_context_t * ctx,
 			  src_format,srcaddress,src_stride,src_x,src_y,
 			  width,height);
   }
+#endif
 }
 
 bool
@@ -1729,6 +1752,8 @@ rsxgl_tex_subimage(rsxgl_context_t * ctx,texture_t & texture,GLint _level,GLint 
     else if(data) {
       rsxgl_assert(dstaddress != 0);
 
+      const texture_t::level_t & level = texture.levels[_level];
+
       util_format_translate(pdstformat,dstaddress,dstpitch,x,y,
 			    psrcformat,data,srcpitch,0,0,width,height);
     }
@@ -1766,9 +1791,6 @@ rsxgl_copy_tex_image(rsxgl_context_t * ctx,texture_t & texture,uint8_t dims,bool
     }
 
     rsxgl_timestamp_post(ctx,timestamp);
-  }
-  else {
-    rsxgl_debug_printf("%s: format failed\n",__PRETTY_FUNCTION__);
   }
 }
 
@@ -2124,7 +2146,8 @@ rsxgl_texture_validate(rsxgl_context_t * ctx,texture_t & texture,uint32_t timest
 	  for(texture_t::level_size_type i = 0,n = texture.num_levels;i < n;++i,++plevel) {
 	    if(plevel -> memory) {
 #if 0
-	      rsxgl_debug_printf("\tcopying mipmap level:%u pformat:%u pitch:%u size:%ux%ux%u from:%u pdstformat:%u dstpitch:%u to:%u\n",
+	      rsxgl_debug_printf("%lx copying mipmap level:%u pformat:%u pitch:%u size:%ux%ux%u from:%u pdstformat:%u dstpitch:%u to:%u\n",
+				 (uint32_t)((uint64_t)&texture),
 				 (unsigned int)i,(unsigned int)plevel -> pformat,(unsigned int)plevel -> pitch,
 				 (unsigned int)std::min(size[0],plevel -> size[0]),(unsigned int)std::min(size[1],plevel -> size[1]),(unsigned int)std::min(size[2],plevel -> size[2]),
 				 (unsigned long)plevel -> memory.offset,
@@ -2198,13 +2221,13 @@ rsxgl_textures_validate(rsxgl_context_t * ctx,program_t & program,uint32_t times
     gcm_finish_n_commands(context,4);
   }
 
-  const program_t::texture_assignments_bitfield_type
+  const program_t::textures_bitfield_type
     textures_enabled = program.textures_enabled,
     invalid_texture_assignments = ctx -> invalid_texture_assignments;
   const program_t::texture_assignments_type
     texture_assignments = program.texture_assignments;
 
-  program_t::texture_assignments_bitfield_type::const_iterator
+  program_t::textures_bitfield_type::const_iterator
     enabled_it = textures_enabled.begin(),
     invalid_it = invalid_texture_assignments.begin();
   program_t::texture_assignments_type::const_iterator
@@ -2338,8 +2361,9 @@ rsxgl_textures_validate(rsxgl_context_t * ctx,program_t & program,uint32_t times
       
       if(texture.memory) {
 #if 0
-	rsxgl_debug_printf("texture: %u (%u) memory: %u %u pformat: %u format:%x size:%ux%u pitch:%u remap:%x\n",
+	rsxgl_debug_printf("texture: %u (%u) %lx memory: %u %u pformat: %u format:%x size:%ux%u pitch:%u remap:%x\n",
 			   index,api_index,
+			   (uint32_t)((uint64_t)&texture),
 			   texture.memory.location,texture.memory.offset,
 			   texture.pformat,
 			   texture.format,

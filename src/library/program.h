@@ -214,7 +214,7 @@ struct program_t {
   // Tables of attributes, uniform variables, and texture maps:
   struct attrib_t {
     uint8_t type;
-    attrib_size_type index;
+    attrib_size_type index, location;
   };
 
   struct uniform_t {
@@ -276,13 +276,17 @@ struct program_t {
   bit_set< RSXGL_MAX_TEXTURE_COORDS > fp_texcoords, fp_texcoord2D, fp_texcoord3D;
 
   // Vertex attribs that are enabled:
-  bit_set< RSXGL_MAX_VERTEX_ATTRIBS > attribs_enabled;
+  typedef smint_array< RSXGL_MAX_VERTEX_ATTRIBS, RSXGL_MAX_VERTEX_ATTRIBS > attrib_assignments_type;
+  typedef bit_set< RSXGL_MAX_VERTEX_ATTRIBS > attribs_bitfield_type;
+
+  attribs_bitfield_type attribs_enabled;
+  attrib_assignments_type attrib_assignments;
 
   // Textures that are enabled:
   typedef smint_array< RSXGL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, RSXGL_MAX_COMBINED_TEXTURE_IMAGE_UNITS > texture_assignments_type;
-  typedef bit_set< RSXGL_MAX_COMBINED_TEXTURE_IMAGE_UNITS > texture_assignments_bitfield_type;
+  typedef bit_set< RSXGL_MAX_COMBINED_TEXTURE_IMAGE_UNITS > textures_bitfield_type;
 
-  texture_assignments_bitfield_type textures_enabled;
+  textures_bitfield_type textures_enabled;
   texture_assignments_type texture_assignments;
 
   // Storage for uniform variable values:

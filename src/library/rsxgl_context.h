@@ -50,7 +50,7 @@ public:
 
   uint8_t can_draw:1, can_read:1;
 
-  bit_set< RSXGL_MAX_VERTEX_ATTRIBS > invalid_attribs;
+  program_t::attribs_bitfield_type invalid_attribs;
   attribs_t::binding_type attribs_binding;
 
   texture_t::binding_type::size_type active_texture;
@@ -66,7 +66,8 @@ public:
   rsxgl_query_object_index_type any_samples_passed_query;
   
   program_t::binding_type program_binding;
-  program_t::texture_assignments_bitfield_type invalid_texture_assignments;
+  program_t::attribs_bitfield_type invalid_attrib_assignments;
+  program_t::textures_bitfield_type invalid_texture_assignments;
 
   // Used by glFinish():
   uint32_t ref;

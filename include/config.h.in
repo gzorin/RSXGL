@@ -2,6 +2,4 @@
 #ifndef rsxgl_config_H
 #define rsxgl_config_H
 
-#define RSXGL_CONFIG_client_attribs @RSXGL_CONFIG_client_attribs@
-
 #endif

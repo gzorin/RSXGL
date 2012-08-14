@@ -13,6 +13,7 @@
 #include "gl_object.h"
 #include "arena.h"
 #include "buffer.h"
+#include "program.h"
 
 #include "bit_set.h"
 #include "smint_array.h"
@@ -54,11 +55,6 @@ struct attribs_t {
   smint_array< 3, RSXGL_MAX_VERTEX_ATTRIBS > size;
   uint8_t stride[RSXGL_MAX_VERTEX_ATTRIBS];
 
-#if (RSXGL_CONFIG_client_attribs == 1)
-  bit_set< RSXGL_MAX_VERTEX_ATTRIBS > client_buffer_enabled;
-  void * client_buffer[RSXGL_MAX_VERTEX_ATTRIBS];
-#endif
-
   attribs_t() {
     for(size_t i = 0;i < RSXGL_MAX_VERTEX_ATTRIBS;++i) {
       defaults[i][0].f = 0.0f;
@@ -66,10 +62,6 @@ struct attribs_t {
       defaults[i][2].f = 0.0f;
       defaults[i][3].f = 1.0f;
       offset[i] = 0;
-
-#if (RSXGL_CONFIG_client_attribs == 1)
-      client_buffer[i] = 0;
-#endif
     }
   }
 
@@ -80,6 +72,6 @@ struct attribs_t {
 
 struct rsxgl_context_t;
 
-void rsxgl_attribs_validate(rsxgl_context_t *,const bit_set< RSXGL_MAX_VERTEX_ATTRIBS > &,const uint32_t,const uint32_t,const uint32_t);
+void rsxgl_attribs_validate(rsxgl_context_t *,program_t &,const uint32_t,const uint32_t,const uint32_t);
 
 #endif
