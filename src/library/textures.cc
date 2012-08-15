@@ -1172,6 +1172,7 @@ void rsxgl_get_tex_level_parameter(GLenum target,GLint level,GLenum pname,T * pa
   if(!(pname == GL_TEXTURE_WIDTH ||
        pname == GL_TEXTURE_HEIGHT ||
        pname == GL_TEXTURE_DEPTH ||
+       pname == GL_TEXTURE_INTERNAL_FORMAT ||
        pname == GL_TEXTURE_RED_TYPE ||
        pname == GL_TEXTURE_GREEN_TYPE ||
        pname == GL_TEXTURE_BLUE_TYPE ||
