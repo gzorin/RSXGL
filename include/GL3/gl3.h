@@ -281,6 +281,11 @@ typedef void GLvoid;
 #define GL_ALPHA                          0x1906
 #define GL_RGB                            0x1907
 #define GL_RGBA                           0x1908
+/* From GL 1.0 */
+#ifndef GL_VERSION_1_0
+#define GL_LUMINANCE				0x1909
+#define GL_LUMINANCE_ALPHA			0x190A
+#endif
 /* PolygonMode */
 #define GL_POINT                          0x1B00
 #define GL_LINE                           0x1B01
