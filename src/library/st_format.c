@@ -227,6 +227,8 @@ st_mesa_format_to_pipe_format(gl_format mesaFormat)
    case MESA_FORMAT_Z32_FLOAT_X24S8:
       return PIPE_FORMAT_Z32_FLOAT_S8X24_UINT;
    case MESA_FORMAT_YCBCR:
+      return PIPE_FORMAT_YUYV;
+   case MESA_FORMAT_YCBCR_REV:
       return PIPE_FORMAT_UYVY;
 #if FEATURE_texture_s3tc
    case MESA_FORMAT_RGB_DXT1:
