@@ -1667,16 +1667,15 @@ rsxgl_tex_image(rsxgl_context_t * ctx,texture_t & texture,uint8_t dims,bool cube
     const pixel_store_t unpack = ctx -> state.pixelstore_unpack;
     const uint32_t srcpitch = util_format_get_stride(psrcformat,unpack.row_length ? unpack.row_length : width);
     const uint32_t srcoffset = (srcpitch * unpack.skip_rows) + (util_format_get_stride(psrcformat,1) * unpack.skip_pixels);
-    data = (const uint8_t *)data + srcoffset;
+
+    texture_t::level_t & level = texture.levels[_level];
+
+    if(!level.memory) {
+      rsxgl_texture_level_validate_storage(level);
+    }
 
     if(ctx -> buffer_binding.names[RSXGL_PIXEL_UNPACK_BUFFER] != 0 ||
        data != 0) {
-      texture_t::level_t & level = texture.levels[_level];
-
-      if(!level.memory) {
-	rsxgl_texture_level_validate_storage(level);
-      }
-
       rsxgl_assert(level.memory);
 
       if(ctx -> buffer_binding.names[RSXGL_PIXEL_UNPACK_BUFFER] != 0) {
@@ -1691,6 +1690,7 @@ rsxgl_tex_image(rsxgl_context_t * ctx,texture_t & texture,uint8_t dims,bool cube
 					width,height);
       }
       else if(data != 0) {
+       data = (const uint8_t *)data + srcoffset;
 	util_format_translate(level.pformat,rsxgl_texture_migrate_address(level.memory.offset),level.pitch,0,0,
 			      psrcformat,data,srcpitch,0,0,width,height);
       }
@@ -1722,7 +1722,6 @@ rsxgl_tex_subimage(rsxgl_context_t * ctx,texture_t & texture,GLint _level,GLint 
     const pixel_store_t unpack = ctx -> state.pixelstore_unpack;
     const uint32_t srcpitch = util_format_get_stride(psrcformat,unpack.row_length ? unpack.row_length : width);
     const uint32_t srcoffset = (srcpitch * unpack.skip_rows) + (util_format_get_stride(psrcformat,1) * unpack.skip_pixels);
-    data = (const uint8_t *)data + srcoffset;
 
     if(ctx -> buffer_binding.names[RSXGL_PIXEL_UNPACK_BUFFER] != 0) {
       const buffer_t & srcbuffer = ctx -> buffer_binding[RSXGL_PIXEL_UNPACK_BUFFER];
@@ -1737,6 +1736,7 @@ rsxgl_tex_subimage(rsxgl_context_t * ctx,texture_t & texture,GLint _level,GLint 
     }
     else if(data) {
       rsxgl_assert(dstaddress != 0);
+      data = (const uint8_t *)data + srcoffset;
       util_format_translate(pdstformat,dstaddress,dstpitch,x,y,
 			    psrcformat,data,srcpitch,0,0,width,height);
     }
