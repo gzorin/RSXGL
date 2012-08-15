@@ -12,6 +12,9 @@
 
 #include "mem.h"
 
+
+void *rsxgl_texture_migrate_buffer_new(const rsx_size_t align,const rsx_size_t size, uint32_t *offset);
+void rsxgl_texture_migrate_buffer_free(void * ptr);
 void * rsxgl_texture_migrate_memalign(const rsx_size_t,const rsx_size_t);
 void rsxgl_texture_migrate_free(void *);
 void rsxgl_texture_migrate_reset();

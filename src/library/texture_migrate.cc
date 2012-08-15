@@ -23,34 +23,56 @@ static void * _rsxgl_texture_migrate_buffer = 0;
 static uint32_t rsxgl_texture_migrate_buffer_offset = 0;
 static mspace rsxgl_texture_migrate_buffer_space = 0;
 
+void *
+rsxgl_texture_migrate_buffer_new(const rsx_size_t align,const rsx_size_t size, uint32_t *offset)
+{
+  void *buffer = NULL;
+
+#if ((RSXGL_TEXTURE_MIGRATE_BUFFER_LOCATION) == RSXGL_MEMORY_LOCATION_LOCAL)
+  buffer = rsxgl_rsx_memalign(align, size);
+  if(buffer == NULL) {
+    __rsxgl_assert_func(__FILE__,__LINE__,__PRETTY_FUNCTION__,"failed to allocate texture migration buffer in RSX memory");
+  }
+
+  int32_t s = gcmAddressToOffset(buffer, size, offset);
+  if(s != 0) {
+    __rsxgl_assert_func(__FILE__,__LINE__,__PRETTY_FUNCTION__,"failed to compute offset for texture migration buffer");
+  }
+#elif ((RSXGL_TEXTURE_MIGRATE_BUFFER_LOCATION) == RSXGL_MEMORY_LOCATION_MAIN)
+  buffer = memalign(align, size);
+  if(buffer == 0) {
+    __rsxgl_assert_func(__FILE__,__LINE__,__PRETTY_FUNCTION__,"failed to allocate texture migration buffer in main memory");
+  }
+
+  int32_t s = gcmMapMainMemory(buffer, size, offset);
+  if(s != 0) {
+    __rsxgl_assert_func(__FILE__,__LINE__,__PRETTY_FUNCTION__,"failed to map texture migration buffer into RSX memory");
+  }
+#else
+  rsxgl_assert(0);
+#endif
+
+  return buffer;
+}
+
+void
+rsxgl_texture_migrate_buffer_free(void * ptr)
+{
+#if ((RSXGL_TEXTURE_MIGRATE_BUFFER_LOCATION) == RSXGL_MEMORY_LOCATION_LOCAL)
+  rsxgl_rsx_free(ptr);
+#elif ((RSXGL_TEXTURE_MIGRATE_BUFFER_LOCATION) == RSXGL_MEMORY_LOCATION_MAIN)
+  free(ptr);
+#else
+  rsxgl_assert(0);
+#endif
+}
+
 static inline
 void * rsxgl_texture_migrate_buffer()
 {
   if(_rsxgl_texture_migrate_buffer == 0) {
-    //
-#if ((RSXGL_TEXTURE_MIGRATE_BUFFER_LOCATION) == RSXGL_MEMORY_LOCATION_LOCAL)
-    _rsxgl_texture_migrate_buffer = rsxgl_rsx_memalign(rsxgl_texture_migrate_align,rsxgl_texture_migrate_size);
-    if(_rsxgl_texture_migrate_buffer == 0) {
-      __rsxgl_assert_func(__FILE__,__LINE__,__PRETTY_FUNCTION__,"failed to allocate texture migration buffer in RSX memory");
-    }
-
-    int32_t s = gcmAddressToOffset(_rsxgl_texture_migrate_buffer,rsxgl_texture_migrate_size,&rsxgl_texture_migrate_buffer_offset);
-    if(s != 0) {
-      __rsxgl_assert_func(__FILE__,__LINE__,__PRETTY_FUNCTION__,"failed to compute offset for texture migration buffer");
-    }
-#elif ((RSXGL_TEXTURE_MIGRATE_BUFFER_LOCATION) == RSXGL_MEMORY_LOCATION_MAIN)
-    _rsxgl_texture_migrate_buffer = memalign(rsxgl_texture_migrate_align,rsxgl_texture_migrate_size);
-    if(_rsxgl_texture_migrate_buffer == 0) {
-      __rsxgl_assert_func(__FILE__,__LINE__,__PRETTY_FUNCTION__,"failed to allocate texture migration buffer in main memory");
-    }
-
-    int32_t s = gcmMapMainMemory(_rsxgl_texture_migrate_buffer,rsxgl_texture_migrate_size,&rsxgl_texture_migrate_buffer_offset);
-    if(s != 0) {
-      __rsxgl_assert_func(__FILE__,__LINE__,__PRETTY_FUNCTION__,"failed to map texture migration buffer into RSX memory");
-    }
-#else
-    rsxgl_assert(0);
-#endif
+    _rsxgl_texture_migrate_buffer = rsxgl_texture_migrate_buffer_new (rsxgl_texture_migrate_align, rsxgl_texture_migrate_size,
+                                                                      &rsxgl_texture_migrate_buffer_offset);
 
     rsxgl_assert(_rsxgl_texture_migrate_buffer != 0);
 

@@ -107,6 +107,7 @@ struct texture_t {
     dimension_size_type size[3];
     uint32_t pitch;
     memory_t memory;
+    void *memory_ptr;
 
     level_t();
     ~level_t();
