@@ -379,14 +379,13 @@ nvfx_get_texture_remap(const struct nvfx_texture_format * tf,uint8_t r,uint8_t g
 		     tf->comp[r],tf->comp[g],tf->comp[b],tf->comp[a]);
 #endif
 
-  // Works for evas icons:
   return 0
-    | ((uint32_t)tf->src[b] << NV30_3D_TEX_SWIZZLE_S0_X__SHIFT)
-    | ((uint32_t)tf->src[g] << NV30_3D_TEX_SWIZZLE_S0_Y__SHIFT)
     | ((uint32_t)tf->src[r] << NV30_3D_TEX_SWIZZLE_S0_Z__SHIFT)
+    | ((uint32_t)tf->src[g] << NV30_3D_TEX_SWIZZLE_S0_Y__SHIFT)
+    | ((uint32_t)tf->src[b] << NV30_3D_TEX_SWIZZLE_S0_X__SHIFT)
     | ((uint32_t)tf->src[a] << NV30_3D_TEX_SWIZZLE_S0_W__SHIFT)
-    | ((uint32_t)tf->comp[b] << NV30_3D_TEX_SWIZZLE_S1_X__SHIFT)
-    | ((uint32_t)tf->comp[g] << NV30_3D_TEX_SWIZZLE_S1_Y__SHIFT)
     | ((uint32_t)tf->comp[r] << NV30_3D_TEX_SWIZZLE_S1_Z__SHIFT)
+    | ((uint32_t)tf->comp[g] << NV30_3D_TEX_SWIZZLE_S1_Y__SHIFT)
+    | ((uint32_t)tf->comp[b] << NV30_3D_TEX_SWIZZLE_S1_X__SHIFT)
     | ((uint32_t)tf->comp[a] << NV30_3D_TEX_SWIZZLE_S1_W__SHIFT);
 }

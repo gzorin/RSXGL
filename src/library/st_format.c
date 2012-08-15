@@ -871,7 +871,7 @@ static const struct format_mapping format_map[] = {
    },
    {
       { 3, GL_RGB, GL_RGB8, 0 },
-      { DEFAULT_RGB_FORMATS }
+      { PIPE_FORMAT_R8G8B8X8_UNORM, DEFAULT_RGB_FORMATS }
    },
    {
       { GL_RGB12, GL_RGB16, GL_RGBA12, GL_RGBA16, 0 },
@@ -1644,14 +1644,12 @@ rsxgl_choose_format(struct pipe_screen *screen, GLenum internalFormat,
    }
 #endif
 
-#if 0
    /* search for exact matches */
    pf = find_exact_format(internalFormat, format, type);
    if (pf != PIPE_FORMAT_NONE &&
        screen->is_format_supported(screen, pf,
                                    target, sample_count, bindings))
       return pf;
-#endif
 
    /* search table for internalFormat */
    for (i = 0; i < Elements(format_map); i++) {

@@ -727,21 +727,6 @@ rsxgl_texture_target_dims(GLenum target)
 }
 
 static inline uint32_t
-rsxgl_tex_remap(uint32_t op0,uint32_t op1,uint32_t op2,uint32_t op3,
-		uint32_t src0,uint32_t src1,uint32_t src2,uint32_t src3)
-{
-  return
-    (op0 << 14) |
-    (op1 << 12) |
-    (op2 << 10) |
-    (op3 << 8) |
-    (src0 << 6) |
-    (src1 << 4) |
-    (src2 << 2) |
-    (src3 << 0);
-}
-
-static inline uint32_t
 rsxgl_get_tex_level_offset_size(const texture_t::dimension_size_type _size[3],
 				const uint32_t pitch,
 				const texture_t::level_size_type level,
@@ -1751,9 +1736,6 @@ rsxgl_tex_subimage(rsxgl_context_t * ctx,texture_t & texture,GLint _level,GLint 
     }
     else if(data) {
       rsxgl_assert(dstaddress != 0);
-
-      const texture_t::level_t & level = texture.levels[_level];
-
       util_format_translate(pdstformat,dstaddress,dstpitch,x,y,
 			    psrcformat,data,srcpitch,0,0,width,height);
     }
