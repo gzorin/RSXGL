@@ -455,7 +455,7 @@ rsxgl_framebuffer_renderbuffer(rsxgl_context_t * ctx,const framebuffer_t::name_t
   // Attach the renderbuffer to it:
   if(renderbuffer_name != 0) {
     framebuffer.attachment_types.set(rsx_attachment,RSXGL_ATTACHMENT_TYPE_RENDERBUFFER);
-    framebuffer.attachments[rsx_attachment] = renderbuffer_name;
+    framebuffer.attachments[rsx_attachment] = renderbuffer_t::gl_object_type::ref(renderbuffer_name);
   }
 
   rsxgl_framebuffer_invalidate(ctx,framebuffer_name,framebuffer);
@@ -490,7 +490,7 @@ rsxgl_framebuffer_texture(rsxgl_context_t * ctx,const framebuffer_t::name_type f
 
   if(texture_name != 0) {
     framebuffer.attachment_types.set(rsx_attachment,RSXGL_ATTACHMENT_TYPE_TEXTURE);
-    framebuffer.attachments[rsx_attachment] = texture_name;
+    framebuffer.attachments[rsx_attachment] = texture_t::gl_object_type::ref(texture_name);
     framebuffer.attachment_layers[rsx_attachment] = layer;
     framebuffer.attachment_levels[rsx_attachment] = level;
   }
