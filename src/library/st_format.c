@@ -144,10 +144,13 @@ st_format_datatype(enum pipe_format format)
          }
       }
    }
-   else if (format == PIPE_FORMAT_UYVY) {
-      return GL_UNSIGNED_SHORT;
-   }
-   else if (format == PIPE_FORMAT_YUYV) {
+   else if (format == PIPE_FORMAT_UYVY ||
+       format == PIPE_FORMAT_YUYV ||
+       format == PIPE_FORMAT_IYUV ||
+       format == PIPE_FORMAT_YV12 ||
+       format == PIPE_FORMAT_YV16 ||
+       format == PIPE_FORMAT_NV12 ||
+       format == PIPE_FORMAT_NV21) {
       return GL_UNSIGNED_SHORT;
    }
    else {
@@ -555,11 +558,15 @@ st_pipe_format_to_mesa_format(enum pipe_format format)
    case PIPE_FORMAT_Z32_FLOAT_S8X24_UINT:
       return MESA_FORMAT_Z32_FLOAT_X24S8;
 
-   case PIPE_FORMAT_UYVY:
-      return MESA_FORMAT_YCBCR;
    case PIPE_FORMAT_YUYV:
+   case PIPE_FORMAT_IYUV:
+   case PIPE_FORMAT_YV12:
+   case PIPE_FORMAT_YV16:
+   case PIPE_FORMAT_NV12:
+   case PIPE_FORMAT_NV21:
+      return MESA_FORMAT_YCBCR;
+   case PIPE_FORMAT_UYVY:
       return MESA_FORMAT_YCBCR_REV;
-
 #if FEATURE_texture_s3tc
    case PIPE_FORMAT_DXT1_RGB:
       return MESA_FORMAT_RGB_DXT1;
@@ -852,6 +859,15 @@ struct format_mapping
       PIPE_FORMAT_S8_UINT_Z24_UNORM, \
       0
 
+#define DEFAULT_YUV_FORMATS \
+      PIPE_FORMAT_UYVY, \
+      PIPE_FORMAT_YUYV, \
+      PIPE_FORMAT_YV12, \
+      PIPE_FORMAT_YV16, \
+      PIPE_FORMAT_IYUV, \
+      PIPE_FORMAT_NV12, \
+      PIPE_FORMAT_NV21, 0
+
 /**
  * This table maps OpenGL texture format enums to Gallium pipe_format enums.
  * Multiple GL enums might map to multiple pipe_formats.
@@ -950,7 +966,7 @@ static const struct format_mapping format_map[] = {
    /* YCbCr */
    {
       { GL_YCBCR_MESA, 0 },
-      { PIPE_FORMAT_UYVY, PIPE_FORMAT_YUYV, 0 }
+      { DEFAULT_YUV_FORMATS }
    },
 
    /* compressed formats */ /* XXX PIPE_BIND_SAMPLER_VIEW only */
