@@ -880,7 +880,7 @@ static const struct format_mapping format_map[] = {
       { PIPE_FORMAT_B10G10R10A2_UNORM, DEFAULT_RGBA_FORMATS }
    },
    {
-      { 4, GL_RGBA, GL_RGBA8, 0 },
+      { GL_RGBA, GL_RGBA8, 0 },
       { PIPE_FORMAT_R8G8B8A8_UNORM, DEFAULT_RGBA_FORMATS }
    },
    {
@@ -888,7 +888,7 @@ static const struct format_mapping format_map[] = {
       { PIPE_FORMAT_B8G8R8A8_UNORM, DEFAULT_RGBA_FORMATS }
    },
    {
-      { 3, GL_RGB, GL_RGB8, 0 },
+      { GL_RGB, GL_RGB8, 0 },
       { PIPE_FORMAT_R8G8B8X8_UNORM, DEFAULT_RGB_FORMATS }
    },
    {
@@ -931,7 +931,7 @@ static const struct format_mapping format_map[] = {
       { PIPE_FORMAT_L16_UNORM, PIPE_FORMAT_L8_UNORM, DEFAULT_RGB_FORMATS }
    },
    {
-      { 1, GL_LUMINANCE, GL_LUMINANCE4, GL_LUMINANCE8, 0 },
+      { GL_LUMINANCE, GL_LUMINANCE4, GL_LUMINANCE8, 0 },
       { PIPE_FORMAT_L8_UNORM, DEFAULT_RGB_FORMATS }
    },
 
@@ -943,7 +943,7 @@ static const struct format_mapping format_map[] = {
         DEFAULT_RGBA_FORMATS }
    },
    {
-      { 2, GL_LUMINANCE_ALPHA, GL_LUMINANCE6_ALPHA2, GL_LUMINANCE8_ALPHA8, 0 },
+      { GL_LUMINANCE_ALPHA, GL_LUMINANCE6_ALPHA2, GL_LUMINANCE8_ALPHA8, 0 },
       { PIPE_FORMAT_L8A8_UNORM, DEFAULT_RGBA_FORMATS }
    },
    {
