@@ -1671,6 +1671,23 @@ rsxgl_tex_subimage_init(rsxgl_context_t * ctx,texture_t & texture,GLint _level,G
   RSXGL_NOERROR(true);
 }
 
+static inline uint32_t
+rsxgl_pixel_store_aligned(const pixel_store_t & store,uint32_t value)
+{
+  switch(store.alignment) {
+  case RSXGL_PIXEL_STORE_ALIGNMENT_1:
+    return value;
+  case RSXGL_PIXEL_STORE_ALIGNMENT_2:
+    return align_pot< uint32_t, 2 >(value);
+  case RSXGL_PIXEL_STORE_ALIGNMENT_4:
+    return align_pot< uint32_t, 4 >(value);
+  case RSXGL_PIXEL_STORE_ALIGNMENT_8:
+    return align_pot< uint32_t, 8 >(value);
+  default:
+    return value;
+  }
+}
+
 static inline void
 rsxgl_tex_image(rsxgl_context_t * ctx,texture_t & texture,uint8_t dims,bool cube,bool rect,GLint _level,GLint glinternalformat,GLsizei width,GLsizei height,GLsizei depth,
 		GLenum format,GLenum type,const GLvoid * data)
@@ -1685,7 +1702,7 @@ rsxgl_tex_image(rsxgl_context_t * ctx,texture_t & texture,uint8_t dims,bool cube
     }
 
     const pixel_store_t unpack = ctx -> state.pixelstore_unpack;
-    const uint32_t srcpitch = util_format_get_stride(psrcformat,unpack.row_length ? unpack.row_length : width);
+    const uint32_t srcpitch = rsxgl_pixel_store_aligned(unpack,util_format_get_stride(psrcformat,unpack.row_length ? unpack.row_length : width));
     const uint32_t srcoffset = (srcpitch * unpack.skip_rows) + (util_format_get_stride(psrcformat,1) * unpack.skip_pixels);
 
     texture_t::level_t & level = texture.levels[_level];
@@ -1744,7 +1761,8 @@ rsxgl_tex_subimage(rsxgl_context_t * ctx,texture_t & texture,GLint _level,GLint 
     rsxgl_assert(dstmem);
     
     const pixel_store_t unpack = ctx -> state.pixelstore_unpack;
-    const uint32_t srcpitch = util_format_get_stride(psrcformat,unpack.row_length ? unpack.row_length : width);
+
+    const uint32_t srcpitch = rsxgl_pixel_store_aligned(unpack,util_format_get_stride(psrcformat,unpack.row_length ? unpack.row_length : width));
     const uint32_t srcoffset = (srcpitch * unpack.skip_rows) + (util_format_get_stride(psrcformat,1) * unpack.skip_pixels);
 
     if(ctx -> buffer_binding.names[RSXGL_PIXEL_UNPACK_BUFFER] != 0) {
