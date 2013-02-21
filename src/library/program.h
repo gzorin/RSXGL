@@ -147,43 +147,57 @@ struct program_t {
     typedef typename array_type::const_pointer_type const_pointer_type;
 
     struct find_lt {
-      names_type::const_type & names;
+      names_type::const_pointer_type m_names;
 
-      find_lt(names_type::const_type & _names) : names(_names) {}
-
-      bool operator()(const value_type & lhs,const char * rhs) const {
-	return strcmp(names.values + lhs.first,rhs) < 0;
+      find_lt(names_type::const_pointer_type _names) : m_names(_names) {
       }
 
-      bool operator()(const char * rhs,const value_type & lhs) const {
-	return strcmp(names.values + lhs.first,rhs) < 0;
+      bool operator()(const value_type & lhs,const char * rhs) const {
+	rsxgl_debug_printf("%s seeking:%s %lx\n",__PRETTY_FUNCTION__,rhs,(uint64_t)m_names);
+	return strcmp(m_names + lhs.first,rhs) < 0;
+      }
+
+      bool operator()(const char * lhs,const value_type & rhs) const {
+	rsxgl_debug_printf("%s seeking:%s\n",__PRETTY_FUNCTION__,lhs,(uint64_t)m_names);
+	return strcmp(lhs,m_names + rhs.first) < 0;
       }
     };
 
     struct find_eq {
-      names_type::const_type & names;
+      names_type::const_pointer_type m_names;
 
-      find_eq(names_type::const_type & _names) : names(_names) {}
-
-      bool operator()(const value_type & lhs,const char * rhs) const {
-	return strcmp(names.values + lhs.first,rhs) == 0;
+      find_eq(names_type::const_pointer_type _names) : m_names(_names) {
       }
 
-      bool operator()(const char * rhs,const value_type & lhs) const {
-	return strcmp(names.values + lhs.first,rhs) == 0;
+      bool operator()(const value_type & lhs,const char * rhs) const {
+	rsxgl_debug_printf("%s seeking:%s %lx\n",__PRETTY_FUNCTION__,rhs,(uint64_t)m_names);
+	return strcmp(m_names + lhs.first,rhs) == 0;
+      }
+
+      bool operator()(const char * lhs,const value_type & rhs) const {
+	rsxgl_debug_printf("%s seeking:%s\n",__PRETTY_FUNCTION__,lhs,(uint64_t)m_names);
+	return strcmp(lhs,m_names + rhs.first) == 0;
       }
     };
 
     struct type : public array_type::type {
       typedef typename array_type::type base_type;
 
-      type(pointer_type & _values,size_type & _size)
-	: base_type(_values,_size) {
+      names_type::const_pointer_type m_names;
+
+      type(pointer_type & _values,size_type & _size,names_type::const_pointer_type _names)
+	: base_type(_values,_size), m_names(_names) {
+	rsxgl_debug_printf("%s %lx %lu\n",__PRETTY_FUNCTION__,(uint64_t)_values,(uint32_t)_size);
       }
 
-      std::pair< bool, size_type > find(names_type::const_type names,const char * name) const {
-	pointer_type it = std::lower_bound(base_type::values,base_type::values + base_type::size,name,find_lt(names));
-	if(it != (base_type::values + base_type::size) && !find_lt(names)(name,*it)) {
+      std::pair< bool, size_type > find(const char * name) const {
+	rsxgl_debug_printf("%s: %lx %u %lx %s\n",
+			   __PRETTY_FUNCTION__,
+			   (uint64_t)base_type::values,(uint32_t)base_type::size,
+			   (uint64_t)m_names,
+			   name);
+	typename array_type::pointer_type it = std::lower_bound(base_type::values,base_type::values + base_type::size,name,find_lt(m_names));
+	if(it != (base_type::values + base_type::size) && find_eq(m_names)(name,*it)) {
 	  return std::make_pair(true,it - base_type::values);
 	}
 	else {
@@ -195,13 +209,21 @@ struct program_t {
     struct const_type : public array_type::const_type {
       typedef typename array_type::const_type base_type;
 
-      const_type(const const_pointer_type & _values,const size_type & _size)
-	: base_type(_values,_size) {
+      names_type::const_pointer_type m_names;
+
+      const_type(const const_pointer_type & _values,const size_type & _size,names_type::const_pointer_type _names)
+	: base_type(_values,_size), m_names(_names) {
+	rsxgl_debug_printf("%s %lx %lu\n",__PRETTY_FUNCTION__,(uint64_t)_values,(uint32_t)_size);
       }
 
-      std::pair< bool, size_type > find(names_type::const_type names,const char * name) const {
-	const_pointer_type it = std::lower_bound(base_type::values,base_type::values + base_type::size,name,find_lt(names));
-	if(it != (base_type::values + base_type::size) && find_eq(names)(*it,name)) {
+      std::pair< bool, size_type > find(const char * name) const {
+	rsxgl_debug_printf("%s: %lx %u %lx %s\n",
+			   __PRETTY_FUNCTION__,
+			   (uint64_t)base_type::values,(uint32_t)base_type::size,
+			   (uint64_t)m_names,
+			   name);
+	typename array_type::const_pointer_type it = std::lower_bound(base_type::values,base_type::values + base_type::size,name,find_lt(m_names));
+	if(it != (base_type::values + base_type::size) && find_eq(m_names)(name,*it)) {
 	  return std::make_pair(true,it - base_type::values);
 	}
 	else {
@@ -243,14 +265,14 @@ struct program_t {
 
   name_size_type attrib_name_max_length, uniform_name_max_length;
 
-  attrib_table_type::type attrib_table() { return attrib_table_type::type(attrib_table_values,attrib_table_size); }
-  attrib_table_type::const_type attrib_table() const { return attrib_table_type::const_type(attrib_table_values,attrib_table_size); }
+  attrib_table_type::type attrib_table() { return attrib_table_type::type(attrib_table_values,attrib_table_size,names_data); }
+  attrib_table_type::const_type attrib_table() const { return attrib_table_type::const_type(attrib_table_values,attrib_table_size,names_data); }
 
-  uniform_table_type::type uniform_table() { return uniform_table_type::type(uniform_table_values,uniform_table_size); }
-  uniform_table_type::const_type uniform_table() const { return uniform_table_type::const_type(uniform_table_values,uniform_table_size); }
+  uniform_table_type::type uniform_table() { return uniform_table_type::type(uniform_table_values,uniform_table_size,names_data); }
+  uniform_table_type::const_type uniform_table() const { return uniform_table_type::const_type(uniform_table_values,uniform_table_size,names_data); }
 
-  sampler_uniform_table_type::type sampler_uniform_table() { return sampler_uniform_table_type::type(sampler_uniform_table_values,sampler_uniform_table_size); }
-  sampler_uniform_table_type::const_type sampler_uniform_table() const { return sampler_uniform_table_type::const_type(sampler_uniform_table_values,sampler_uniform_table_size); }
+  sampler_uniform_table_type::type sampler_uniform_table() { return sampler_uniform_table_type::type(sampler_uniform_table_values,sampler_uniform_table_size,names_data); }
+  sampler_uniform_table_type::const_type sampler_uniform_table() const { return sampler_uniform_table_type::const_type(sampler_uniform_table_values,sampler_uniform_table_size,names_data); }
 
   gl_shader_program * mesa_program;
   nvfx_vertex_program * nvfx_vp, * nvfx_streamvp;

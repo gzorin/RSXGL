@@ -30,6 +30,9 @@ struct array {
     type(pointer_type & _values,size_type & _size)
       : values(_values), size(_size) {
     }
+    //type(const type & rhs) = delete;
+    //type(type && rhs) = default;
+    //type & operator =(const type & rhs) = delete;
 
     void construct(size_type _size = 0,const value_type & value = value_type()) {
       if(_size > 0) {
@@ -112,10 +115,10 @@ struct array {
     const_type(const const_pointer_type & _values,const size_type & _size)
       : values(_values), size(_size) {
     }
-
-    const_type(const type & rhs)
-      : values(rhs.values), size(rhs.size) {
-    }
+    //const_type(const const_type & rhs) = delete;
+    //const_type(const_type && rhs) = default;
+    //const_type(type && rhs) : values(std::move(rhs.values)), size(std::move(rhs.size)) {}
+    //const_type & operator =(const const_type & rhs) = delete;
 
     const value_type & operator[](size_type i) const {
       assert(i < size);

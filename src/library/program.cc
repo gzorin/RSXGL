@@ -1178,15 +1178,18 @@ glLinkProgram (GLuint program_name)
     }
 
     {
-      program_t::uniform_table_type::type table = program.uniform_table();
-
-      const std::pair< bool, program_t::uniform_size_type > tmp = table.find(program.names(),"rsxgl_InstanceID");
+#if 0
+      //program_t::uniform_table_type::type table = program.uniform_table();
+      const std::pair< bool, program_t::uniform_size_type > tmp = const_cast< const program_t & > (program).uniform_table().find(const_cast< const program_t & > (program).names(),"rsxgl_InstanceID");
       if(tmp.first) {
-	program.instanceid_index = table[tmp.second].second.vp_index;
+	program.instanceid_index = program.uniform_table_values[tmp.second].second.vp_index;
       }
       else {
 	program.instanceid_index = ~0;
       }
+#endif
+
+      program.instanceid_index = ~0;
     }
 
     // TODO: deal with this:
@@ -1506,7 +1509,11 @@ glGetAttribLocation (GLuint program_name, const GLchar* name)
     RSXGL_NOERROR(-1);
   }
 
-  std::pair< bool, program_t::attrib_size_type > tmp = program.attrib_table().find(program.names(),name);
+  /*rsxgl_debug_printf("%s program.attrib_table_values: %lx program.attrib_table_size: %lu program.names_data: %lx program.names_size: %lu\n",
+		     __PRETTY_FUNCTION__,
+		     (uint64_t)program.attrib_table_values,(uint32_t)program.attrib_table_size,
+		     (uint64_t)program.names_data,(uint32_t)program.names_size);*/
+  std::pair< bool, program_t::attrib_size_type > tmp = program.attrib_table().find(name);
   
   RSXGL_NOERROR((tmp.first) ? program.attrib_table_values[tmp.second].second.location : -1);
 }
@@ -1616,13 +1623,20 @@ glGetUniformLocation (GLuint program_name, const GLchar* name)
     RSXGL_NOERROR(-1);
   }
 
-  const std::pair< bool, program_t::uniform_size_type > tmp = program.uniform_table().find(program.names(),name);
+  /*rsxgl_debug_printf("%s program.attrib_table_values: %lx program.attrib_table_size: %lu program.names_data: %lx program.names_size: %lu\n",
+		     __PRETTY_FUNCTION__,
+		     (uint64_t)program.uniform_table_values,(uint32_t)program.uniform_table_size,
+		     (uint64_t)program.names_data,(uint32_t)program.names_size);*/
+  rsxgl_debug_printf("\t%lx %lu\n",(uint64_t)program.names().values,(uint32_t)program.names().size);
+  rsxgl_debug_printf("\tprogram.names_data: %lx program.names_size: %lu\n",(uint64_t)program.names_data,(uint32_t)program.names_size);
+  std::pair< bool, program_t::uniform_size_type > tmp = program.uniform_table().find(name);
+
   if(tmp.first) {
     RSXGL_NOERROR(tmp.second);
   }
   else {
-    const std::pair< bool, program_t::texture_size_type > tmp = program.sampler_uniform_table().find(program.names(),name);
-    RSXGL_NOERROR(tmp.first ? program.uniform_table_size + tmp.second : -1);
+    std::pair< bool, program_t::texture_size_type > tmp2 = program.sampler_uniform_table().find(name);
+    RSXGL_NOERROR(tmp2.first ? program.uniform_table_size + tmp2.second : -1);
   }
 }
 

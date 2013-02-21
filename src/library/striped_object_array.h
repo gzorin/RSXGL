@@ -109,7 +109,7 @@ struct striped_object_array {
 
     template< typename Type >
     void operator()(Type * & array) const {
-      Type * tmp = new (array + i) Type;
+      new (array + i) Type;
     }
   };
 
@@ -178,9 +178,9 @@ struct striped_object_array {
       : values(_values), size(_size) {
     }
 
-    const_type(type & rhs)
+    /*const_type(type & rhs)
       : values(rhs.values), size(rhs.size) {
-    }
+      }*/
 
     template< size_t I >
     typename boost::add_reference< typename boost::add_const< typename boost::fusion::result_of::at_c< value_types, I >::type >::type >::type

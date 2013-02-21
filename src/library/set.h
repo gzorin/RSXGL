@@ -24,11 +24,10 @@ struct set : public array< Type, SizeType, Alloc > {
   typedef typename array_type::allocator allocator;
   
   struct type : protected array_type::type {
-    type(pointer_type & _values,size_type & _size) : array_type::type(_values,_size) {
-    }
-
-    type(const type & rhs) : array_type::type(rhs) {
-    }
+    type(pointer_type & _values,size_type & _size) : array_type::type(_values,_size) {}
+    //type(const type & rhs) = default;
+    //type(type && rhs) : array_type::type(rhs.values,rhs.size) {}
+    type & operator =(const type & rhs) = delete;
 
     void construct() {
       array_type::type::construct(0);
@@ -113,11 +112,10 @@ struct set : public array< Type, SizeType, Alloc > {
   };
 
   struct const_type : protected array_type::const_type {
-    const_type(const const_pointer_type & _values,const size_type & _size) : array_type::const_type(_values,_size) {
-    }
-
-    const_type(const const_type & rhs) : array_type::const_type(rhs) {
-    }
+    const_type(const const_pointer_type & _values,const size_type & _size) : array_type::const_type(_values,_size) {}
+    //const_type(const const_type & rhs) = default;
+    //const_type(const_type && rhs) : array_type::const_type(rhs.values,rhs.size) {}
+    const_type & operator =(const type & rhs) = delete;
 
     size_type get_size() const {
       return array_type::const_type::size;
