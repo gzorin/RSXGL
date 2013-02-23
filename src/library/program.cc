@@ -1418,11 +1418,6 @@ glGetAttribLocation (GLuint program_name, const GLchar* name)
     RSXGL_NOERROR(-1);
   }
 
-  /*rsxgl_debug_printf("%s program.attribs: %lx program.attribs.size(): %lu program.names.get(): %lx program.names_size: %lu\n",
-		     __PRETTY_FUNCTION__,
-		     (uint64_t)program.attribs,(uint32_t)program.attribs.size(),
-		     (uint64_t)program.names.get(),(uint32_t)program.names_size);*/
-
   auto tmp = program_t::table_t< program_t::attrib_t >::find(program.names.get(),program.attribs,name);
 
   if(tmp.second) {
@@ -1537,13 +1532,6 @@ glGetUniformLocation (GLuint program_name, const GLchar* name)
   if(!program.linked) {
     RSXGL_NOERROR(-1);
   }
-
-  /*rsxgl_debug_printf("%s program.attribs: %lx program.attribs.size(): %lu program.names.get(): %lx program.names_size: %lu\n",
-		     __PRETTY_FUNCTION__,
-		     (uint64_t)program.uniforms,(uint32_t)program.uniforms.size(),
-		     (uint64_t)program.names.get(),(uint32_t)program.names_size);
-  rsxgl_debug_printf("\t%lx %lu\n",(uint64_t)program.names().values,(uint32_t)program.names().size);
-  rsxgl_debug_printf("\tprogram.names.get(): %lx program.names_size: %lu\n",(uint64_t)program.names.get(),(uint32_t)program.names_size);*/
 
   auto tmp = program_t::table_t< program_t::uniform_t >::find(program.names.get(),program.uniforms,name);
 

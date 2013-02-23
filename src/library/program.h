@@ -10,7 +10,6 @@
 
 #include "gl_constants.h"
 #include "gl_object_storage.h"
-#include "array.h"
 #include "ieee32_t.h"
 #include "compiler_context.h"
 
@@ -102,104 +101,6 @@ struct program_t {
   typedef boost::uint_value_t< RSXGL_MAX_COMBINED_TEXTURE_IMAGE_UNITS - 1 >::least texture_size_type;
 
   // Table:
-#if 0
-  template< typename Value, typename SizeType >
-  struct table {
-    typedef std::pair< name_size_type, Value > value_type;
-    typedef array< value_type, SizeType > array_type;
-
-    typedef typename array_type::size_type size_type;
-    typedef typename array_type::pointer_type pointer_type;
-    typedef typename array_type::const_pointer_type const_pointer_type;
-
-    struct find_lt {
-      const char * m_names;
-
-      find_lt(const char * _names) : m_names(_names) {
-      }
-
-      bool operator()(const value_type & lhs,const char * rhs) const {
-	/*rsxgl_debug_printf("%s seeking:%s %lx\n",__PRETTY_FUNCTION__,rhs,(uint64_t)m_names);*/
-	return strcmp(m_names + lhs.first,rhs) < 0;
-      }
-
-      bool operator()(const char * lhs,const value_type & rhs) const {
-	/*rsxgl_debug_printf("%s seeking:%s\n",__PRETTY_FUNCTION__,lhs,(uint64_t)m_names);*/
-	return strcmp(lhs,m_names + rhs.first) < 0;
-      }
-    };
-
-    struct find_eq {
-      const char * m_names;
-
-      find_eq(const char * _names) : m_names(_names) {
-      }
-
-      bool operator()(const value_type & lhs,const char * rhs) const {
-	/*rsxgl_debug_printf("%s seeking:%s %lx\n",__PRETTY_FUNCTION__,rhs,(uint64_t)m_names);*/
-	return strcmp(m_names + lhs.first,rhs) == 0;
-      }
-
-      bool operator()(const char * lhs,const value_type & rhs) const {
-	/*rsxgl_debug_printf("%s seeking:%s\n",__PRETTY_FUNCTION__,lhs,(uint64_t)m_names);*/
-	return strcmp(lhs,m_names + rhs.first) == 0;
-      }
-    };
-
-    struct type : public array_type::type {
-      typedef typename array_type::type base_type;
-
-      const char * m_names;
-
-      type(pointer_type & _values,size_type & _size,const char * _names)
-	: base_type(_values,_size), m_names(_names) {
-	/*rsxgl_debug_printf("%s %lx %lu\n",__PRETTY_FUNCTION__,(uint64_t)_values,(uint32_t)_size);*/
-      }
-
-      std::pair< bool, size_type > find(const char * name) const {
-	/*rsxgl_debug_printf("%s: %lx %u %lx %s\n",
-			   __PRETTY_FUNCTION__,
-			   (uint64_t)base_type::values,(uint32_t)base_type::size,
-			   (uint64_t)m_names,
-			   name);*/
-	typename array_type::pointer_type it = std::lower_bound(base_type::values,base_type::values + base_type::size,name,find_lt(m_names));
-	if(it != (base_type::values + base_type::size) && find_eq(m_names)(name,*it)) {
-	  return std::make_pair(true,it - base_type::values);
-	}
-	else {
-	  return std::make_pair(false,0);
-	}
-      }
-    };
-
-    struct const_type : public array_type::const_type {
-      typedef typename array_type::const_type base_type;
-
-      const char * m_names;
-
-      const_type(const const_pointer_type & _values,const size_type & _size,const char * _names)
-	: base_type(_values,_size), m_names(_names) {
-	/*rsxgl_debug_printf("%s %lx %lu\n",__PRETTY_FUNCTION__,(uint64_t)_values,(uint32_t)_size);*/
-      }
-
-      std::pair< bool, size_type > find(const char * name) const {
-	rsxgl_debug_printf("%s: %lx %u %lx %s\n",
-			   __PRETTY_FUNCTION__,
-			   (uint64_t)base_type::values,(uint32_t)base_type::size,
-			   (uint64_t)m_names,
-			   name);
-	typename array_type::const_pointer_type it = std::lower_bound(base_type::values,base_type::values + base_type::size,name,find_lt(m_names));
-	if(it != (base_type::values + base_type::size) && find_eq(m_names)(name,*it)) {
-	  return std::make_pair(true,it - base_type::values);
-	}
-	else {
-	  return std::make_pair(false,0);
-	}
-      }
-    };
-  };
-#endif
-
   template< typename Value >
   struct table_t {
     typedef std::vector< std::pair< name_size_type, Value > > type;
