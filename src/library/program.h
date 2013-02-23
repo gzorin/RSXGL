@@ -11,14 +11,16 @@
 #include "gl_constants.h"
 #include "gl_object_storage.h"
 #include "array.h"
-#include "set.h"
 #include "ieee32_t.h"
 #include "compiler_context.h"
 
+#include <memory>
+#include <string>
 #include <cstddef>
 #include <cassert>
 
 #include <boost/integer.hpp>
+#include <boost/container/flat_set.hpp>
 
 enum rsxgl_program_target {
   RSXGL_ACTIVE_PROGRAM = 0,
@@ -59,26 +61,9 @@ struct shader_t {
   // --- cold:
   uint32_t type:2,compiled:1,deleted:1,ref_count:28;
 
-  typedef array< char, uint32_t > source_type;
-  typedef array< uint8_t, uint32_t > binary_type;
-  typedef array< char, uint32_t > info_type;
-
-  source_type::size_type source_size;
-  binary_type::size_type binary_size;
-  info_type::size_type info_size;
-
-  source_type::pointer_type source_data;
-  binary_type::pointer_type binary_data;
-  info_type::pointer_type info_data;
-
-  source_type::type source() { return source_type::type(source_data,source_size); }
-  source_type::const_type source() const { return source_type::const_type(source_data,source_size); }
-
-  binary_type::type binary() { return binary_type::type(binary_data,binary_size); }
-  binary_type::const_type binary() const { return binary_type::const_type(binary_data,binary_size); }
-
-  info_type::type info() { return info_type::type(info_data,info_size); }
-  info_type::const_type info() const { return info_type::const_type(info_data,info_size); }
+  std::string source;
+  std::unique_ptr< uint8_t[] > binary;
+  std::string info;
 
   gl_shader * mesa_shader;
 };
@@ -102,34 +87,14 @@ struct program_t {
 
   uint32_t linked:1,validated:1,invalid_uniforms:1,ref_count:28;
 
-  typedef set< shader_t::name_type, uint16_t > shader_container_type;
-
-  shader_container_type::size_type attached_shaders_size, linked_shaders_size;
-  shader_container_type::pointer_type attached_shaders_data, linked_shaders_data;
-
-  shader_container_type::type attached_shaders() { return shader_container_type::type(attached_shaders_data,attached_shaders_size); }
-  shader_container_type::const_type attached_shaders() const { return shader_container_type::const_type(attached_shaders_data,attached_shaders_size); }
-
-  shader_container_type::type linked_shaders() { return shader_container_type::type(linked_shaders_data,linked_shaders_size); }
-  shader_container_type::const_type linked_shaders() const { return shader_container_type::const_type(linked_shaders_data,linked_shaders_size); }
+  boost::container::flat_set< shader_t::name_type > attached_shaders, linked_shaders;
 
   // Information returned from glLinkProgram():
-  typedef array< char, uint32_t > info_type;
-  info_type::size_type info_size;
-  info_type::pointer_type info_data;
-
-  info_type::type info() { return info_type::type(info_data,info_size); }
-  info_type::const_type info() const { return info_type::const_type(info_data,info_size); }
+  std::string info;
 
   // Accumulate all of the names used by this program:
   typedef uint32_t name_size_type;
-  typedef array< char, name_size_type > names_type;
-
-  names_type::size_type names_size;
-  names_type::pointer_type names_data;
-
-  names_type::type names() { return names_type::type(names_data,names_size); }
-  names_type::const_type names() const { return names_type::const_type(names_data,names_size); }
+  std::unique_ptr< char[] > names;
 
   // Types that can index attributes, uniform variables, textures:
   typedef boost::uint_value_t< RSXGL_MAX_VERTEX_ATTRIBS - 1 >::least attrib_size_type;
@@ -137,6 +102,7 @@ struct program_t {
   typedef boost::uint_value_t< RSXGL_MAX_COMBINED_TEXTURE_IMAGE_UNITS - 1 >::least texture_size_type;
 
   // Table:
+#if 0
   template< typename Value, typename SizeType >
   struct table {
     typedef std::pair< name_size_type, Value > value_type;
@@ -147,35 +113,35 @@ struct program_t {
     typedef typename array_type::const_pointer_type const_pointer_type;
 
     struct find_lt {
-      names_type::const_pointer_type m_names;
+      const char * m_names;
 
-      find_lt(names_type::const_pointer_type _names) : m_names(_names) {
+      find_lt(const char * _names) : m_names(_names) {
       }
 
       bool operator()(const value_type & lhs,const char * rhs) const {
-	rsxgl_debug_printf("%s seeking:%s %lx\n",__PRETTY_FUNCTION__,rhs,(uint64_t)m_names);
+	/*rsxgl_debug_printf("%s seeking:%s %lx\n",__PRETTY_FUNCTION__,rhs,(uint64_t)m_names);*/
 	return strcmp(m_names + lhs.first,rhs) < 0;
       }
 
       bool operator()(const char * lhs,const value_type & rhs) const {
-	rsxgl_debug_printf("%s seeking:%s\n",__PRETTY_FUNCTION__,lhs,(uint64_t)m_names);
+	/*rsxgl_debug_printf("%s seeking:%s\n",__PRETTY_FUNCTION__,lhs,(uint64_t)m_names);*/
 	return strcmp(lhs,m_names + rhs.first) < 0;
       }
     };
 
     struct find_eq {
-      names_type::const_pointer_type m_names;
+      const char * m_names;
 
-      find_eq(names_type::const_pointer_type _names) : m_names(_names) {
+      find_eq(const char * _names) : m_names(_names) {
       }
 
       bool operator()(const value_type & lhs,const char * rhs) const {
-	rsxgl_debug_printf("%s seeking:%s %lx\n",__PRETTY_FUNCTION__,rhs,(uint64_t)m_names);
+	/*rsxgl_debug_printf("%s seeking:%s %lx\n",__PRETTY_FUNCTION__,rhs,(uint64_t)m_names);*/
 	return strcmp(m_names + lhs.first,rhs) == 0;
       }
 
       bool operator()(const char * lhs,const value_type & rhs) const {
-	rsxgl_debug_printf("%s seeking:%s\n",__PRETTY_FUNCTION__,lhs,(uint64_t)m_names);
+	/*rsxgl_debug_printf("%s seeking:%s\n",__PRETTY_FUNCTION__,lhs,(uint64_t)m_names);*/
 	return strcmp(lhs,m_names + rhs.first) == 0;
       }
     };
@@ -183,19 +149,19 @@ struct program_t {
     struct type : public array_type::type {
       typedef typename array_type::type base_type;
 
-      names_type::const_pointer_type m_names;
+      const char * m_names;
 
-      type(pointer_type & _values,size_type & _size,names_type::const_pointer_type _names)
+      type(pointer_type & _values,size_type & _size,const char * _names)
 	: base_type(_values,_size), m_names(_names) {
-	rsxgl_debug_printf("%s %lx %lu\n",__PRETTY_FUNCTION__,(uint64_t)_values,(uint32_t)_size);
+	/*rsxgl_debug_printf("%s %lx %lu\n",__PRETTY_FUNCTION__,(uint64_t)_values,(uint32_t)_size);*/
       }
 
       std::pair< bool, size_type > find(const char * name) const {
-	rsxgl_debug_printf("%s: %lx %u %lx %s\n",
+	/*rsxgl_debug_printf("%s: %lx %u %lx %s\n",
 			   __PRETTY_FUNCTION__,
 			   (uint64_t)base_type::values,(uint32_t)base_type::size,
 			   (uint64_t)m_names,
-			   name);
+			   name);*/
 	typename array_type::pointer_type it = std::lower_bound(base_type::values,base_type::values + base_type::size,name,find_lt(m_names));
 	if(it != (base_type::values + base_type::size) && find_eq(m_names)(name,*it)) {
 	  return std::make_pair(true,it - base_type::values);
@@ -209,11 +175,11 @@ struct program_t {
     struct const_type : public array_type::const_type {
       typedef typename array_type::const_type base_type;
 
-      names_type::const_pointer_type m_names;
+      const char * m_names;
 
-      const_type(const const_pointer_type & _values,const size_type & _size,names_type::const_pointer_type _names)
+      const_type(const const_pointer_type & _values,const size_type & _size,const char * _names)
 	: base_type(_values,_size), m_names(_names) {
-	rsxgl_debug_printf("%s %lx %lu\n",__PRETTY_FUNCTION__,(uint64_t)_values,(uint32_t)_size);
+	/*rsxgl_debug_printf("%s %lx %lu\n",__PRETTY_FUNCTION__,(uint64_t)_values,(uint32_t)_size);*/
       }
 
       std::pair< bool, size_type > find(const char * name) const {
@@ -231,6 +197,37 @@ struct program_t {
 	}
       }
     };
+  };
+#endif
+
+  template< typename Value >
+  struct table_t {
+    typedef std::vector< std::pair< name_size_type, Value > > type;
+
+    struct lt {
+      const char * names;
+
+      lt(const char * _names) : names(_names) {
+      }
+
+      bool operator()(const typename type::value_type & lhs,const char * rhs) const {
+	return strcmp(names + lhs.first,rhs) < 0;
+      }
+
+      bool operator()(const char * lhs,const typename type::value_type & rhs) const {
+	return strcmp(lhs,names + rhs.first) < 0;
+      }
+    };
+    
+    static std::pair< typename type::iterator, bool > find(const char * names,type & t,const char * key) {
+      auto tmp = std::equal_range(t.begin(),t.end(),key,lt(names));
+      return std::make_pair(tmp.first,tmp.first != t.end());
+    }
+
+    static std::pair< typename type::const_iterator, bool > find(const char * names,const type & t,const char * key) {
+      auto tmp = std::equal_range(t.begin(),t.end(),key,lt(names));
+      return std::make_pair(tmp.first,tmp.first != t.end());
+    }
   };
 
   // Tables of attributes, uniform variables, and texture maps:
@@ -251,28 +248,11 @@ struct program_t {
     boost::uint_value_t< RSXGL_MAX_TEXTURE_IMAGE_UNITS >::least fp_index;
   };
 
-  typedef table< attrib_t, attrib_size_type > attrib_table_type;
-  typedef table< uniform_t, uniform_size_type > uniform_table_type;
-  typedef table< sampler_uniform_t, texture_size_type > sampler_uniform_table_type;
-
-  attrib_table_type::size_type attrib_table_size;
-  uniform_table_type::size_type uniform_table_size;
-  sampler_uniform_table_type::size_type sampler_uniform_table_size;
-  
-  attrib_table_type::pointer_type attrib_table_values;
-  uniform_table_type::pointer_type uniform_table_values;
-  sampler_uniform_table_type::pointer_type sampler_uniform_table_values;
+  table_t< attrib_t >::type attribs;
+  table_t< uniform_t >::type uniforms;
+  table_t< sampler_uniform_t >::type sampler_uniforms;
 
   name_size_type attrib_name_max_length, uniform_name_max_length;
-
-  attrib_table_type::type attrib_table() { return attrib_table_type::type(attrib_table_values,attrib_table_size,names_data); }
-  attrib_table_type::const_type attrib_table() const { return attrib_table_type::const_type(attrib_table_values,attrib_table_size,names_data); }
-
-  uniform_table_type::type uniform_table() { return uniform_table_type::type(uniform_table_values,uniform_table_size,names_data); }
-  uniform_table_type::const_type uniform_table() const { return uniform_table_type::const_type(uniform_table_values,uniform_table_size,names_data); }
-
-  sampler_uniform_table_type::type sampler_uniform_table() { return sampler_uniform_table_type::type(sampler_uniform_table_values,sampler_uniform_table_size,names_data); }
-  sampler_uniform_table_type::const_type sampler_uniform_table() const { return sampler_uniform_table_type::const_type(sampler_uniform_table_values,sampler_uniform_table_size,names_data); }
 
   gl_shader_program * mesa_program;
   nvfx_vertex_program * nvfx_vp, * nvfx_streamvp;
@@ -312,10 +292,10 @@ struct program_t {
   texture_assignments_type texture_assignments;
 
   // Storage for uniform variable values:
-  ieee32_t * uniform_values;
+  std::unique_ptr< ieee32_t[] > uniform_values;
 
   // Storage for uniform and texture program offsets:
-  instruction_size_type * program_offsets;
+  std::unique_ptr< instruction_size_type[] > program_offsets;
 };
 
 struct rsxgl_context_t;

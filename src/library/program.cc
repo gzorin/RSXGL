@@ -66,16 +66,10 @@ program_t::storage_type & program_t::storage()
 shader_t::shader_t()
   : type(RSXGL_MAX_SHADER_TYPES), compiled(GL_FALSE), deleted(GL_FALSE), ref_count(0), mesa_shader(0)
 {
-  source().construct();
-  binary().construct();
-  info().construct();
 }
 
 shader_t::~shader_t()
 {
-  source().destruct();
-  binary().destruct();
-  info().destruct();
 }
 
 static inline uint32_t 
@@ -153,10 +147,10 @@ glGetShaderiv (GLuint shader_name, GLenum pname, GLint *params)
     *params = shader.compiled;
   }
   else if(pname == GL_INFO_LOG_LENGTH) {
-    *params = shader.info_size - 1;
+    *params = shader.info.length() + 1;
   }
   else if(pname == GL_SHADER_SOURCE_LENGTH) {
-    *params = shader.source_size - 1;
+    *params = shader.source.length() + 1;
   }
   else {
     RSXGL_ERROR_(GL_INVALID_ENUM);
@@ -174,8 +168,8 @@ glGetShaderInfoLog (GLuint shader_name, GLsizei bufSize, GLsizei *length, GLchar
 
   const shader_t & shader = shader_t::storage().at(shader_name);
 
-  shader.info().get(infoLog,bufSize);
-  if(length != 0) *length = shader.info_size;
+  shader.info.copy(infoLog,bufSize);
+  if(length != 0) *length = shader.info.length();
 
   RSXGL_NOERROR_();
 }
@@ -188,8 +182,8 @@ glGetShaderSource (GLuint shader_name, GLsizei bufSize, GLsizei *length, GLchar 
   }
 
   const shader_t & shader = shader_t::storage().at(shader_name);
-  shader.source().get(source,bufSize);
-  if(length != 0) *length = shader.source_size;
+  shader.source.copy(source,bufSize);
+  if(length != 0) *length = shader.source.length();
 
   RSXGL_NOERROR_();
 }
@@ -209,14 +203,14 @@ glShaderBinary (GLsizei n, const GLuint* shader_names, GLenum binaryformat, cons
     shader_t & shader = shader_t::storage().at(*shader_names);
 
     if(binary != 0) {
-      shader.binary().resize(length,0);
-      shader.binary().set(binary,length);
+      shader.binary.reset(new uint8_t[length]);
+      std::copy((const uint8_t *)binary,(const uint8_t *)binary + length,shader.binary.get());
     }
     else {
-      shader.binary().resize(0);
+      shader.binary.release();
     }
 
-    shader.info().resize(0);
+    shader.info.clear();
   }
   
   RSXGL_NOERROR_();
@@ -253,14 +247,7 @@ glShaderSource (GLuint shader_name, GLsizei count, const GLchar** string, const 
   }
 
   shader_t & shader = shader_t::storage().at(shader_name);
-  if(source.length() > 0) {
-    const size_t n = source.length() + 1;
-    shader.source().resize(n,0);
-    shader.source().set(source.c_str(),n);
-  }
-  else {
-    shader.source().resize(0);
-  }
+  std::swap(shader.source,source);
 
   RSXGL_NOERROR_();
 }
@@ -275,7 +262,7 @@ glCompileShader (GLuint shader_name)
   shader_t & shader = shader_t::storage().at(shader_name);
   shader.compiled = GL_FALSE;
 
-  if(shader.source_data == 0) {
+  if(shader.source.empty()) {
     RSXGL_NOERROR_();
   }
 
@@ -283,12 +270,10 @@ glCompileShader (GLuint shader_name)
   rsxgl_assert(cctx != 0);
 
   cctx -> compile_shader(shader.mesa_shader,
-			 shader.source_data);
+			 shader.source.c_str());
 
   shader.compiled = shader.mesa_shader -> CompileStatus;
-  const size_t n = strlen(shader.mesa_shader -> InfoLog) + 1;
-  shader.info().resize(n);
-  shader.info().set(shader.mesa_shader -> InfoLog,n);
+  shader.info = shader.mesa_shader -> InfoLog;
 
   RSXGL_NOERROR_();
 }
@@ -313,41 +298,14 @@ program_t::program_t()
     fp_control(0),
     streamvp_input_mask(0), streamvp_output_mask(0), streamvp_num_internal_const(0),
     streamfp_control(0), streamfp_num_outputs(0),
-    streamvp_vertexid_index(~0), instanceid_index(~0), point_sprite_control(0),
-    uniform_values(0), program_offsets(0)
+    streamvp_vertexid_index(~0), instanceid_index(~0), point_sprite_control(0)
 {
-  attached_shaders().construct();
-  linked_shaders().construct();
-
-  info().construct();
-  names().construct();
-
-  attrib_table().construct();
-  uniform_table().construct();
-  sampler_uniform_table().construct();
 }
 
 program_t::~program_t()
 {
-  attached_shaders().destruct();
-  for(unsigned int i = 0,n = attached_shaders().get_size();i < n;++i) {
-    shader_t::gl_object_type::unref_and_maybe_delete(attached_shaders()[i]);
-  }
-
-  linked_shaders().destruct();
-  for(unsigned int i = 0,n = linked_shaders().get_size();i < n;++i) {
-    shader_t::gl_object_type::unref_and_maybe_delete(linked_shaders()[i]);
-  }
-
-  info().destruct();
-  names().destruct();
-
-  attrib_table().destruct();
-  uniform_table().destruct();
-  sampler_uniform_table().destruct();
-
-  if(uniform_values != 0) free(uniform_values);
-  if(program_offsets != 0) free(program_offsets);
+  std::for_each(attached_shaders.begin(),attached_shaders.end(),shader_t::gl_object_type::unref_and_maybe_delete);
+  std::for_each(linked_shaders.begin(),linked_shaders.end(),shader_t::gl_object_type::unref_and_maybe_delete);
 
   // TODO: delete microcode storage also
 }
@@ -402,9 +360,8 @@ glAttachShader (GLuint program_name, GLuint shader_name)
   }
 
   program_t & program = program_t::storage().at(program_name);
-  shader_t & shader = shader_t::storage().at(shader_name);
 
-  if(!program.attached_shaders().insert(shader_name)) {
+  if(!program.attached_shaders.insert(shader_name).second) {
     RSXGL_ERROR_(GL_INVALID_OPERATION);
   }
   else {
@@ -425,15 +382,14 @@ glDetachShader (GLuint program_name, GLuint shader_name)
   }
 
   program_t & program = program_t::storage().at(program_name);
-  shader_t & shader = shader_t::storage().at(shader_name);
 
-  if(!program.attached_shaders().erase(shader_name)) {
+  boost::container::flat_set< shader_t::name_type >::iterator it = program.attached_shaders.find(shader_name);
+
+  if(it == program.attached_shaders.end()) {
     RSXGL_ERROR_(GL_INVALID_OPERATION);
   }
   else {
-    //compiler_context_t * cctx = current_ctx() -> compiler_context();
-    //cctx -> dettach_shader(program.mesa_program,shader.mesa_shader);
-
+    program.attached_shaders.erase(it);
     shader_t::gl_object_type::unref_and_maybe_delete(shader_name);
   }
 
@@ -452,14 +408,15 @@ glGetAttachedShaders (GLuint program_name, GLsizei maxCount, GLsizei *count, GLu
 
   const program_t & program = program_t::storage().at(program_name);
 
-  size_t m = 0;
-  for(size_t i = 0,n = std::min((size_t)maxCount,(size_t)program.attached_shaders().get_size());i < n;++i) {
-    *obj++ = program.attached_shaders()[i];
-    ++m;
+  size_t n = 0;
+  for(boost::container::flat_set< shader_t::name_type >::const_iterator it = program.attached_shaders.begin(), it_end = program.attached_shaders.end();
+      it != it_end && n < maxCount;
+      ++it, ++n) {
+    *obj++ = *it;
   }
 
   if(count != 0) {
-    *count = m;
+    *count = n;
   }
 
   RSXGL_NOERROR_();
@@ -484,14 +441,14 @@ glGetProgramiv (GLuint program_name, GLenum pname, GLint *params)
     *params = program.validated;
   }
   else if(pname == GL_INFO_LOG_LENGTH) {
-    *params = program.info_size - 1;
+    *params = program.info.length() + 1;
   }
   else if(pname == GL_ATTACHED_SHADERS) {
     // TODO: implement this
   }
   else if(pname == GL_ACTIVE_ATTRIBUTES) {
     if(program.linked) {
-      *params = program.attrib_table_size;
+      *params = program.attribs.size();
     }
     else {
       *params = 0;
@@ -507,7 +464,7 @@ glGetProgramiv (GLuint program_name, GLenum pname, GLint *params)
   }
   else if(pname == GL_ACTIVE_UNIFORMS) {
     if(program.linked) {
-      *params = program.uniform_table_size + program.sampler_uniform_table_size;
+      *params = program.uniforms.size() + program.sampler_uniforms.size();
     }
     else {
       *params = 0;
@@ -546,8 +503,8 @@ glGetProgramInfoLog (GLuint program_name, GLsizei bufSize, GLsizei *length, GLch
   }
 
   const program_t & program = program_t::storage().at(program_name);
-  program.info().get(infoLog,bufSize);
-  if(length != 0) *length = program.info_size;
+  program.info.copy(infoLog,bufSize);
+  if(length != 0) *length = program.info.length();
 
   RSXGL_NOERROR_();
 }
@@ -692,10 +649,8 @@ glLinkProgram (GLuint program_name)
   }
 
   // Get rid of any linked shaders:
-  for(unsigned int i = 0,n = program.linked_shaders().get_size();i < n;++i) {
-    shader_t::gl_object_type::unref_and_maybe_delete(program.linked_shaders()[i]);
-  }
-  program.linked_shaders().destruct();
+  std::for_each(program.linked_shaders.begin(),program.linked_shaders.end(),shader_t::gl_object_type::unref_and_maybe_delete);
+  program.linked_shaders.clear();
 
   // Destroy other tables, etc:
   if(program.vp_ucode_offset != ~0U) {
@@ -714,18 +669,8 @@ glLinkProgram (GLuint program_name)
     mspace_free(rsxgl_rsx_ucode_mspace(),rsxgl_rsx_ucode_address(program.streamfp_ucode_offset));
     program.streamfp_ucode_offset = ~0U;
   }
-  program.names().destruct();
-  program.attrib_table().destruct();
-  program.uniform_table().destruct();
-  program.sampler_uniform_table().destruct();
-  if(program.program_offsets != 0) {
-    free(program.program_offsets);
-    program.program_offsets = 0;
-  }
-  if(program.uniform_values != 0) {
-    free(program.uniform_values);
-    program.uniform_values = 0;
-  }
+  program.uniform_values.release();
+  program.program_offsets.release();
 
   program.linked = GL_FALSE;
   program.validated = GL_FALSE;
@@ -735,17 +680,16 @@ glLinkProgram (GLuint program_name)
 
   compiler_context_t * cctx = ctx -> compiler_context();
 
-  for(unsigned int i = 0,n = program.attached_shaders().get_size();i < n;++i) {
+  for(shader_t::name_type name : program.attached_shaders) {
+#if 0
     const shader_t & shader = shader_t::storage().at(program.attached_shaders()[i]);
-
-#if 0    
     char * tmp = (char *)malloc(shader.source_size);
     shader.source().get(tmp,shader.source_size);
     rsxgl_debug_printf("%u source:\n%s\n",i,tmp);
     free(tmp);
 #endif
 
-    cctx -> attach_shader(program.mesa_program,shader_t::storage().at(program.attached_shaders()[i]).mesa_shader);
+    cctx -> attach_shader(program.mesa_program,shader_t::storage().at(name).mesa_shader);
   }
   
   cctx -> link_program(program.mesa_program);
@@ -771,11 +715,10 @@ glLinkProgram (GLuint program_name)
     cctx -> link_vp_fp(program.nvfx_vp,program.nvfx_fp);
 
     // Move attached shaders to linked shaders:
-    program.linked_shaders_data = program.attached_shaders_data;
-    program.linked_shaders_size = program.attached_shaders_size;
+    program.linked_shaders = program.attached_shaders;
 
     // Start a new attached shaders array:
-    program.attached_shaders().construct();
+    program.attached_shaders.clear();
 
     {
       //
@@ -832,8 +775,8 @@ glLinkProgram (GLuint program_name)
     // sampler_uniforms - map from string's to sampler_uniform_t's
     // then iterate over attribs, uniforms, sampler uniforms, create names area
 
-    std::deque< uint32_t > program_offsets;
     std::deque< ieee32_t > uniform_values;
+    std::deque< uint32_t > program_offsets;
 
     struct cstr_less {
       bool operator()(const char * lhs,const char * rhs) const {
@@ -1034,71 +977,66 @@ glLinkProgram (GLuint program_name)
       }
     }
 
-    // Migrate program offsets array:
-    rsxgl_assert(program.program_offsets == 0);
-    program.program_offsets = (program_t::instruction_size_type *)memalign(RSXGL_CACHE_LINE_SIZE,sizeof(program_t::instruction_size_type) * program_offsets.size());
-    std::copy(program_offsets.begin(),program_offsets.end(),program.program_offsets);  
-
     // Migrate uniform values array:
-    rsxgl_assert(program.uniform_values == 0);
-    program.uniform_values = (ieee32_t *)memalign(RSXGL_CACHE_LINE_SIZE,sizeof(ieee32_t) * uniform_values.size());
-    std::copy(uniform_values.begin(),uniform_values.end(),program.uniform_values);
+    program.uniform_values.reset(new ieee32_t[uniform_values.size()]);
+    std::copy(uniform_values.begin(),uniform_values.end(),program.uniform_values.get());
+
+    // Migrate program offsets array:
+    program.program_offsets.reset(new program_t::instruction_size_type[program_offsets.size()]);
+    std::copy(program_offsets.begin(),program_offsets.end(),program.program_offsets.get());
 
     // Make space for attribute and uniform names:
 #if 0
     rsxgl_debug_printf("names require %u bytes\n",(unsigned int)names_size);
 #endif
-    program.names().resize(names_size);
-    char * pnames = program.names_data;
+    program.names.reset(new char[names_size]);
+    char * pnames = program.names.get();
+
+    auto push_name = [&program,&pnames](const char * name) -> program_t::name_size_type {
+      program_t::name_size_type result = pnames - program.names.get();
+      while(*name != 0) {
+	*pnames++ = *name++;
+      }
+      *pnames++ = 0;
+      return result;
+    };
 
     // Migrate attributes table:
-    program.attribs_enabled.reset();
-
-    if(attribs.size() > 0) {
+    {
 #if 0
       rsxgl_debug_printf("%u attribs\n",attribs.size());
 #endif
 
-      program_t::attrib_table_type::type table = program.attrib_table();
-      table.resize(attribs.size());
+      program.attribs.resize(attribs.size());
+      program.attribs_enabled.reset();
 
-      unsigned int i = 0;
-      for(std::map< const char *, program_t::attrib_t, cstr_less >::const_iterator jt = attribs.begin(),jt_end = attribs.end();jt != jt_end;++jt) {
+      auto it = program.attribs.begin();
+      for(const auto & name_attrib : attribs) {
 #if 0
 	rsxgl_debug_printf(" %s: type:%u index:%u\n",
 			   jt -> first,
 			   (unsigned int)jt -> second.type,
 			   (unsigned int)jt -> second.index);
 #endif
-	
-	table[i].first = pnames - program.names_data;
-	table[i].second = jt -> second;
-	
-	program.attribs_enabled.set(jt -> second.index);
-	program.attrib_assignments.set(jt -> second.index,jt -> second.location);
-	
-	for(const char * name = jt -> first;*name != 0;++name,++pnames) {
-	  *pnames = *name;
-	}
-	*pnames++ = 0;
-	
-	++i;
+
+	*it++ = std::make_pair(push_name(name_attrib.first),name_attrib.second);
+
+	program.attribs_enabled.set(name_attrib.second.index);
+	program.attrib_assignments.set(name_attrib.second.index,name_attrib.second.location);
       }
     }
 
     // Migrate uniforms table:
-    if(uniforms.size() > 0) {
+    {
 #if 0
       rsxgl_debug_printf("%u uniforms\n",uniforms.size());
 #endif
 
-      program_t::uniform_table_type::type table = program.uniform_table();
-      table.resize(uniforms.size());
+      program.uniforms.resize(uniforms.size());
 
       unsigned int i = 0;
-      for(std::map< const char *, program_t::uniform_t, cstr_less >::iterator it = uniforms.begin();
-          it != uniforms.end(); it++) {
-        const std::pair< const char *, program_t::uniform_t > value = *it;
+      auto it = program.uniforms.begin();
+      for(const auto & name_uniform : uniforms) {
 #if 0
 	rsxgl_debug_printf(" %s: type:%u count:%u values_index:%u vp_index:%u program_offsets_index:%u\n",
 			   value.first,
@@ -1109,15 +1047,7 @@ glLinkProgram (GLuint program_name)
 			   (unsigned int)value.second.program_offsets_index);
 #endif
 
-	table[i].first = pnames - program.names_data;
-	table[i].second = value.second;
-
-	for(const char * name = value.first;*name != 0;++name,++pnames) {
-	  *pnames = *name;
-	}
-	*pnames++ = 0;
-
-	++i;
+	*it++ = std::make_pair(push_name(name_uniform.first),name_uniform.second);
       }
     }
 
@@ -1131,18 +1061,15 @@ glLinkProgram (GLuint program_name)
       program.texture_assignments.set(i,0);
     }
 
-    if(sampler_uniforms.size() > 0) {
+    {
 #if 0
       rsxgl_debug_printf("%u sampler uniforms\n",sampler_uniforms.size());
 #endif
 
-      program_t::sampler_uniform_table_type::type table = program.sampler_uniform_table();
-      table.resize(sampler_uniforms.size());
+      program.sampler_uniforms.resize(sampler_uniforms.size());
 
-      unsigned int i = 0;
-      for(std::map< const char *, program_t::sampler_uniform_t, cstr_less >::iterator it = sampler_uniforms.begin();
-          it != sampler_uniforms.end(); it++) {
-        const std::pair< const char *, program_t::sampler_uniform_t > value = *it;
+      auto it = program.sampler_uniforms.begin();
+      for(const auto & name_uniform : sampler_uniforms) {
 #if 0
 	rsxgl_debug_printf(" %s: type:%u vp_index:%u fp_index:%u\n",
 			   value.first,
@@ -1151,45 +1078,34 @@ glLinkProgram (GLuint program_name)
 			   (unsigned int)value.second.fp_index);
 #endif
 
-	table[i].first = pnames - program.names_data;
-	table[i].second = value.second;
+	*it++ = std::make_pair(push_name(name_uniform.first),name_uniform.second);
 
-	if(value.second.vp_index != RSXGL_MAX_COMBINED_TEXTURE_IMAGE_UNITS) {
-	  program.textures_enabled.set(value.second.vp_index);
+	if(name_uniform.second.vp_index != RSXGL_MAX_COMBINED_TEXTURE_IMAGE_UNITS) {
+	  program.textures_enabled.set(name_uniform.second.vp_index);
 	}
-	if(value.second.fp_index != RSXGL_MAX_COMBINED_TEXTURE_IMAGE_UNITS) {
-	  program.fp_texcoords.set(value.second.fp_index);
-	  if(value.second.type == RSXGL_DATA_TYPE_SAMPLER2D) {
-	    program.fp_texcoord2D.set(value.second.fp_index);
+	if(name_uniform.second.fp_index != RSXGL_MAX_COMBINED_TEXTURE_IMAGE_UNITS) {
+	  program.fp_texcoords.set(name_uniform.second.fp_index);
+	  if(name_uniform.second.type == RSXGL_DATA_TYPE_SAMPLER2D) {
+	    program.fp_texcoord2D.set(name_uniform.second.fp_index);
 	  }
-	  else if(value.second.type == RSXGL_DATA_TYPE_SAMPLER3D) {
-	    program.fp_texcoord3D.set(value.second.fp_index);
+	  else if(name_uniform.second.type == RSXGL_DATA_TYPE_SAMPLER3D) {
+	    program.fp_texcoord3D.set(name_uniform.second.fp_index);
 	  }
-	  program.textures_enabled.set(RSXGL_MAX_VERTEX_TEXTURE_IMAGE_UNITS + value.second.fp_index);
+	  program.textures_enabled.set(RSXGL_MAX_VERTEX_TEXTURE_IMAGE_UNITS + name_uniform.second.fp_index);
 	}
-
-	for(const char * name = value.first;*name != 0;++name,++pnames) {
-	  *pnames = *name;
-	}
-	*pnames++ = 0;
-
-	++i;
       }
     }
 
     {
-#if 0
       //program_t::uniform_table_type::type table = program.uniform_table();
-      const std::pair< bool, program_t::uniform_size_type > tmp = const_cast< const program_t & > (program).uniform_table().find(const_cast< const program_t & > (program).names(),"rsxgl_InstanceID");
-      if(tmp.first) {
-	program.instanceid_index = program.uniform_table_values[tmp.second].second.vp_index;
+      //const std::pair< bool, program_t::uniform_size_type > tmp = const_cast< const program_t & > (program).uniform_table().find(const_cast< const program_t & > (program).names(),"rsxgl_InstanceID");
+      auto tmp = program_t::table_t< program_t::uniform_t >::find(program.names.get(),program.uniforms,"rsxgl_InstanceID");
+      if(tmp.second) {
+	program.instanceid_index = tmp.first -> second.vp_index;
       }
       else {
 	program.instanceid_index = ~0;
       }
-#endif
-
-      program.instanceid_index = ~0;
     }
 
     // TODO: deal with this:
@@ -1310,18 +1226,11 @@ glLinkProgram (GLuint program_name)
     program.linked = GL_TRUE;
 
 #if 0
-    rsxgl_debug_printf("wrote %u names bytes\n",(unsigned int)(pnames - program.names_data));
+    rsxgl_debug_printf("wrote %u names bytes\n",(unsigned int)(pnames - program.names.get()));
 #endif
   }
   
-  if(info.length() > 0) {
-    const size_t n = info.length() + 1;
-    program.info().resize(n,0);
-    program.info().set(info.c_str(),n);
-  }
-  else {
-    program.info().resize(0);
-  }
+  std::swap(program.info,info);
 
   RSXGL_NOERROR_();
 }
@@ -1455,11 +1364,11 @@ glGetActiveAttrib (GLuint program_name, GLuint index, GLsizei bufsize, GLsizei* 
     RSXGL_NOERROR_();
   }
 
-  if(index >= program.attrib_table_size) {
+  if(index >= program.attribs.size()) {
     RSXGL_ERROR_(GL_INVALID_VALUE);
   }
 
-  const char * attrib_name = program.names_data + program.attrib_table_values[index].first;
+  const char * attrib_name = program.names.get() + program.attribs[index].first;
 
   size_t n = std::min((size_t)bufsize - 1,(size_t)strlen(attrib_name));
   strncpy(name,attrib_name,n);
@@ -1467,7 +1376,7 @@ glGetActiveAttrib (GLuint program_name, GLuint index, GLsizei bufsize, GLsizei* 
 
   if(length != 0) *length = n;
 
-  switch(program.attrib_table_values[index].second.type) {
+  switch(program.attribs[index].second.type) {
   case RSXGL_DATA_TYPE_FLOAT:
     *type = GL_FLOAT;
     *size = 1;
@@ -1509,13 +1418,19 @@ glGetAttribLocation (GLuint program_name, const GLchar* name)
     RSXGL_NOERROR(-1);
   }
 
-  /*rsxgl_debug_printf("%s program.attrib_table_values: %lx program.attrib_table_size: %lu program.names_data: %lx program.names_size: %lu\n",
+  /*rsxgl_debug_printf("%s program.attribs: %lx program.attribs.size(): %lu program.names.get(): %lx program.names_size: %lu\n",
 		     __PRETTY_FUNCTION__,
-		     (uint64_t)program.attrib_table_values,(uint32_t)program.attrib_table_size,
-		     (uint64_t)program.names_data,(uint32_t)program.names_size);*/
-  std::pair< bool, program_t::attrib_size_type > tmp = program.attrib_table().find(name);
-  
-  RSXGL_NOERROR((tmp.first) ? program.attrib_table_values[tmp.second].second.location : -1);
+		     (uint64_t)program.attribs,(uint32_t)program.attribs.size(),
+		     (uint64_t)program.names.get(),(uint32_t)program.names_size);*/
+
+  auto tmp = program_t::table_t< program_t::attrib_t >::find(program.names.get(),program.attribs,name);
+
+  if(tmp.second) {
+    RSXGL_NOERROR(tmp.first -> second.location);
+  }
+  else {
+    RSXGL_NOERROR(-1);
+  }
 }
 
 GLAPI void APIENTRY
@@ -1537,22 +1452,22 @@ glGetActiveUniform (GLuint program_name, GLuint index, GLsizei bufSize, GLsizei 
     RSXGL_NOERROR_();
   }
 
-  if(index >= (program.uniform_table_size + program.sampler_uniform_table_size)) {
+  if(index >= (program.uniforms.size() + program.sampler_uniforms.size())) {
     RSXGL_ERROR_(GL_INVALID_VALUE);
   }
 
   const char * uniform_name = "";
   uint8_t uniform_type = ~0;
 
-  if(index < program.uniform_table_size) {
-    uniform_name = program.names_data + program.uniform_table_values[index].first;
-    uniform_type = program.uniform_table_values[index].second.type;
+  if(index < program.uniforms.size()) {
+    uniform_name = program.names.get() + program.uniforms[index].first;
+    uniform_type = program.uniforms[index].second.type;
   }
   else {
-    const GLuint texture_index = index - program.uniform_table_size;
+    const GLuint texture_index = index - program.uniforms.size();
 
-    uniform_name = program.names_data + program.sampler_uniform_table_values[texture_index].first;
-    uniform_type = program.sampler_uniform_table_values[texture_index].second.type;
+    uniform_name = program.names.get() + program.sampler_uniforms[texture_index].first;
+    uniform_type = program.sampler_uniforms[texture_index].second.type;
   }
 
   size_t n = std::min((size_t)bufSize - 1,(size_t)strlen(uniform_name));
@@ -1564,28 +1479,28 @@ glGetActiveUniform (GLuint program_name, GLuint index, GLsizei bufSize, GLsizei 
   switch(uniform_type) {
   case RSXGL_DATA_TYPE_FLOAT:
     *type = GL_FLOAT;
-    rsxgl_assert(index < program.uniform_table_size);
-    *size = program.uniform_table_values[index].second.count;
+    rsxgl_assert(index < program.uniforms.size());
+    *size = program.uniforms[index].second.count;
     break;
   case RSXGL_DATA_TYPE_FLOAT2:
     *type = GL_FLOAT_VEC2;
-    rsxgl_assert(index < program.uniform_table_size);
-    *size = program.uniform_table_values[index].second.count;
+    rsxgl_assert(index < program.uniforms.size());
+    *size = program.uniforms[index].second.count;
     break;
   case RSXGL_DATA_TYPE_FLOAT3:
     *type = GL_FLOAT_VEC3;
-    rsxgl_assert(index < program.uniform_table_size);
-    *size = program.uniform_table_values[index].second.count;
+    rsxgl_assert(index < program.uniforms.size());
+    *size = program.uniforms[index].second.count;
     break;
   case RSXGL_DATA_TYPE_FLOAT4:
     *type = GL_FLOAT_VEC4;
-    rsxgl_assert(index < program.uniform_table_size);
-    *size = program.uniform_table_values[index].second.count;
+    rsxgl_assert(index < program.uniforms.size());
+    *size = program.uniforms[index].second.count;
     break;
   case RSXGL_DATA_TYPE_FLOAT4x4:
     *type = GL_FLOAT_MAT4;
-    rsxgl_assert(index < program.uniform_table_size);
-    *size = program.uniform_table_values[index].second.count;
+    rsxgl_assert(index < program.uniforms.size());
+    *size = program.uniforms[index].second.count;
     break;
   case RSXGL_DATA_TYPE_SAMPLER1D:
     *type = GL_SAMPLER_1D;
@@ -1623,20 +1538,27 @@ glGetUniformLocation (GLuint program_name, const GLchar* name)
     RSXGL_NOERROR(-1);
   }
 
-  /*rsxgl_debug_printf("%s program.attrib_table_values: %lx program.attrib_table_size: %lu program.names_data: %lx program.names_size: %lu\n",
+  /*rsxgl_debug_printf("%s program.attribs: %lx program.attribs.size(): %lu program.names.get(): %lx program.names_size: %lu\n",
 		     __PRETTY_FUNCTION__,
-		     (uint64_t)program.uniform_table_values,(uint32_t)program.uniform_table_size,
-		     (uint64_t)program.names_data,(uint32_t)program.names_size);*/
+		     (uint64_t)program.uniforms,(uint32_t)program.uniforms.size(),
+		     (uint64_t)program.names.get(),(uint32_t)program.names_size);
   rsxgl_debug_printf("\t%lx %lu\n",(uint64_t)program.names().values,(uint32_t)program.names().size);
-  rsxgl_debug_printf("\tprogram.names_data: %lx program.names_size: %lu\n",(uint64_t)program.names_data,(uint32_t)program.names_size);
-  std::pair< bool, program_t::uniform_size_type > tmp = program.uniform_table().find(name);
+  rsxgl_debug_printf("\tprogram.names.get(): %lx program.names_size: %lu\n",(uint64_t)program.names.get(),(uint32_t)program.names_size);*/
 
-  if(tmp.first) {
-    RSXGL_NOERROR(tmp.second);
+  auto tmp = program_t::table_t< program_t::uniform_t >::find(program.names.get(),program.uniforms,name);
+
+  if(tmp.second) {
+    RSXGL_NOERROR(std::distance(program.uniforms.begin(),tmp.first));
   }
   else {
-    std::pair< bool, program_t::texture_size_type > tmp2 = program.sampler_uniform_table().find(name);
-    RSXGL_NOERROR(tmp2.first ? program.uniform_table_size + tmp2.second : -1);
+    auto tmp2 = program_t::table_t< program_t::sampler_uniform_t >::find(program.names.get(),program.sampler_uniforms,name);
+
+    if(tmp2.second) {
+      RSXGL_NOERROR(program.uniforms.size() + std::distance(program.sampler_uniforms.begin(),tmp2.first));
+    }
+    else {
+      RSXGL_NOERROR(-1);
+    }
   }
 }
 
@@ -1748,8 +1670,8 @@ rsxgl_program_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
 	
 	// load vertex program internal constants:
 	if(program.vp_num_internal_const > 0) {
-	  const program_t::instruction_size_type * program_offsets = program.program_offsets;
-	  const ieee32_t * uniform_values = program.uniform_values;
+	  const program_t::instruction_size_type * program_offsets = program.program_offsets.get();
+	  const ieee32_t * uniform_values = program.uniform_values.get();
 	  
 	  for(program_t::uniform_size_type i = 0,n = program.vp_num_internal_const;i < n;++i) {
 	    program_t::instruction_size_type count = *program_offsets++;
@@ -1835,12 +1757,11 @@ rsxgl_program_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
 	}
 	
 	// invalidate vertex program uniforms:
-	if(program.uniform_table_size > 0) {
+	if(program.uniforms.size() > 0) {
 	  program.invalid_uniforms = 1;
-	  program_t::uniform_table_type::value_type * uniform = program.uniform_table_values;
-	  for(program_t::uniform_size_type i = 0,n = program.uniform_table_size;i < n;++i,++uniform) {
-	    if(uniform -> second.enabled.test(RSXGL_VERTEX_SHADER)) {
-	      uniform -> second.invalid.set(RSXGL_VERTEX_SHADER);
+	  for(std::pair< program_t::name_size_type, program_t::uniform_t > & name_uniform : program.uniforms) {
+	    if(name_uniform.second.enabled.test(RSXGL_VERTEX_SHADER)) {
+	      name_uniform.second.invalid.set(RSXGL_VERTEX_SHADER);
 	    }
 	  }
 	}
@@ -1953,7 +1874,7 @@ rsxgl_feedback_program_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
       // load vertex program internal constants:
       if(program.streamvp_num_internal_const > 0) {
 	const program_t::instruction_size_type * program_offsets = program.program_offsets;
-	const ieee32_t * uniform_values = program.uniform_values;
+	const ieee32_t * uniform_values = program.uniform_values.get();
 	
 	for(program_t::uniform_size_type i = 0,n = program.streamvp_num_internal_const;i < n;++i) {
 	  program_t::instruction_size_type count = *program_offsets++;
@@ -2028,10 +1949,10 @@ rsxgl_feedback_program_validate(rsxgl_context_t * ctx,const uint32_t timestamp)
       
 #if 0
       // invalidate vertex program uniforms:
-      if(program.uniform_table_size > 0) {
+      if(program.uniforms.size() > 0) {
 	program.invalid_uniforms = 1;
-	program_t::uniform_table_type::value_type * uniform = program.uniform_table_values;
-	for(program_t::uniform_size_type i = 0,n = program.uniform_table_size;i < n;++i,++uniform) {
+	program_t::uniform_table_type::value_type * uniform = program.uniforms;
+	for(program_t::uniform_size_type i = 0,n = program.uniforms.size();i < n;++i,++uniform) {
 	  if(uniform -> second.enabled.test(RSXGL_VERTEX_SHADER)) {
 	    uniform -> second.invalid.set(RSXGL_VERTEX_SHADER);
 	  }

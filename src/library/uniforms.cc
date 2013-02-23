@@ -113,11 +113,11 @@ rsxgl_uniform(rsxgl_context_t * ctx,
 
   program_t & program = program_t::storage().at(program_name);
 
-  if(location >= program.uniform_table_size) {
+  if(location >= program.uniforms.size()) {
     RSXGL_ERROR_(GL_INVALID_OPERATION);
   }
 
-  program_t::uniform_t & uniform = program.uniform_table_values[location].second;
+  program_t::uniform_t & uniform = program.uniforms[location].second;
 
   if(uniform.type != RSXGLType) {
     RSXGL_ERROR_(GL_INVALID_OPERATION);
@@ -126,7 +126,7 @@ rsxgl_uniform(rsxgl_context_t * ctx,
   program.invalid_uniforms = 1;
   uniform.invalid = uniform.enabled;
 
-  ieee32_t * values = program.uniform_values + uniform.values_index;
+  ieee32_t * values = program.uniform_values.get() + uniform.values_index;
   set_gpu_data(values[0],v0);
   if(Width > 1) set_gpu_data(values[1],v1);
   if(Width > 2) set_gpu_data(values[2],v2);
@@ -152,11 +152,11 @@ rsxgl_uniform(rsxgl_context_t * ctx,
 
   program_t & program = program_t::storage().at(program_name);
 
-  if(location >= program.uniform_table_size) {
+  if(location >= program.uniforms.size()) {
     RSXGL_ERROR_(GL_INVALID_OPERATION);
   }
 
-  program_t::uniform_t & uniform = program.uniform_table_values[location].second;
+  program_t::uniform_t & uniform = program.uniforms[location].second;
 
   if(uniform.type != RSXGLType) {
     RSXGL_ERROR_(GL_INVALID_OPERATION);
@@ -169,7 +169,7 @@ rsxgl_uniform(rsxgl_context_t * ctx,
   program.invalid_uniforms = 1;
   uniform.invalid = uniform.enabled;
 
-  ieee32_t * values = program.uniform_values + uniform.values_index;
+  ieee32_t * values = program.uniform_values.get() + uniform.values_index;
 
   //rsxgl_debug_printf("%s: %u: ",__PRETTY_FUNCTION__,uniform.values_index);
 
@@ -211,13 +211,13 @@ rsxgl_sampler_uniform(rsxgl_context_t * ctx,
 
   program_t & program = program_t::storage().at(program_name);
 
-  const GLint texture_location = location - program.uniform_table_size;
+  const GLint texture_location = location - program.uniforms.size();
 
-  if(texture_location < 0 || texture_location >= program.sampler_uniform_table_size) {
+  if(texture_location < 0 || texture_location >= program.sampler_uniforms.size()) {
     RSXGL_ERROR_(GL_INVALID_OPERATION);
   }
 
-  program_t::sampler_uniform_t & texture = program.sampler_uniform_table_values[texture_location].second;
+  program_t::sampler_uniform_t & texture = program.sampler_uniforms[texture_location].second;
 
   if(texture.vp_index != RSXGL_MAX_COMBINED_TEXTURE_IMAGE_UNITS) {
     rsxgl_assert(program.textures_enabled.test(texture.vp_index));
@@ -435,11 +435,11 @@ glGetUniformufv (GLuint program_name, GLint location, GLfloat *params)
 
   program_t & program = program_t::storage().at(program_name);
 
-  if(location >= program.uniform_table_size) {
+  if(location >= program.uniforms.size()) {
     RSXGL_ERROR_(GL_INVALID_OPERATION);
   }
 
-  const program_t::uniform_t & uniform = program.uniform_table_values[location].second;  
+  const program_t::uniform_t & uniform = program.uniforms[location].second;  
 
   program_t::uniform_size_type width = 0;
   switch(uniform.type) {
@@ -467,7 +467,7 @@ glGetUniformufv (GLuint program_name, GLint location, GLfloat *params)
     RSXGL_ERROR_(GL_INVALID_OPERATION);
   }
 
-  const ieee32_t * values = program.uniform_values + uniform.values_index;
+  const ieee32_t * values = program.uniform_values.get() + uniform.values_index;
   for(program_t::uniform_size_type i = 0,n = uniform.count * width;i < n;++i,++params,++values) {
     get_gpu_data(*values,*params);
   }
@@ -555,14 +555,14 @@ rsxgl_uniforms_validate(rsxgl_context_t * ctx,program_t & program)
 
     //rsxgl_debug_printf("invalid uniforms:\n");
     
-    program_t::uniform_table_type::value_type * puniform = program.uniform_table_values;
+    auto puniform = program.uniforms.begin();
     //const char * names = program.names_data;
 
-    const ieee32_t * values = program.uniform_values;
+    const ieee32_t * values = program.uniform_values.get();
 
     program_t::uniform_size_type n_validated_fp_uniforms = 0;
 
-    for(program_t::uniform_size_type i = 0,n = program.uniform_table_size;i < n;++i,++puniform) {
+    for(program_t::uniform_size_type i = 0,n = program.uniforms.size();i < n;++i,++puniform) {
       program_t::uniform_t & uniform = puniform -> second;
 
       program_t::uniform_size_type width = 0;
@@ -637,7 +637,7 @@ rsxgl_uniforms_validate(rsxgl_context_t * ctx,program_t & program)
 	  //rsxgl_debug_printf("fp ");
 
 	  const ieee32_t * pvalues = values + uniform.values_index;
-	  const program_t::instruction_size_type * pfp_offsets = program.program_offsets + uniform.program_offsets_index;
+	  const program_t::instruction_size_type * pfp_offsets = program.program_offsets.get() + uniform.program_offsets_index;
 
 	  for(program_t::uniform_size_type j = 0;j < count;++j,pvalues += width) {
 	    for(program_t::instruction_size_type offsets_count = *pfp_offsets++;offsets_count > 0;--offsets_count,++pfp_offsets) {

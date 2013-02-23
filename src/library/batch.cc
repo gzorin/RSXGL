@@ -5,7 +5,6 @@
 #include <stdint.h>
 #include <boost/tuple/tuple.hpp>
 #include <boost/integer/static_log2.hpp>
-//#include <boost/function.hpp>
 #include <boost/bind.hpp>
 
 //static const uint32_t batch_size = 256;
