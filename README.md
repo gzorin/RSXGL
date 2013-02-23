@@ -21,7 +21,12 @@ RSXGL incorporates parts of the Mesa project, primarily to provide
 runtime compilation of GLSL programs. Suitable versions of Mesa and
 libdrm are included with RSXGL. python 2.6 with the libxml2 module is
 required by Mesa's build process (specifically for building GLSL's
-builtin functions).
+builtin functions). To tell the build system to use a particular python
+executable, other than the default, set the PYTHON environment variable:
+
+```
+export PYTHON=/path/to/python-2.6
+```
 
 The RSXGL library depends upon a toolchain that can generate binaries for the
 PS3's PPU, and also upon parts of the PSL1GHT SDK. The sample programs also
@@ -34,9 +39,23 @@ export PS3DEV=/usr/local/ps3dev
 export PSL1GHT=$PS3DEV
 ```
 
-RSXGL's configure script will use these environment variables if
+RSXGL's configure script will use the above environment variables if
 they're set;  if they aren't set, by default the script uses the above
-settings:
+settings.
+
+RSXGL comes with an `autogen.sh` script that should be used to generate 
+and run the project's `configure` script. From the top-level source directory:
+
+```
+./autogen.sh
+```
+
+You can just generate the configure script, without actually configuring
+the build (useful if you want to build in a directory separate from the source):
+
+```
+NOCONFIGURE=1 ./autogen.sh
+```
 
 ```
 ./configure
