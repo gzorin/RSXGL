@@ -30,13 +30,17 @@
 #include "glsl_parser_extras.h"
 #include "glsl_types.h"
 
-#define YYLEX_PARAM state->scanner
-
 #undef yyerror
 
 static void yyerror(YYLTYPE *loc, _mesa_glsl_parse_state *st, const char *msg)
 {
    _mesa_glsl_error(loc, st, "%s", msg);
+}
+
+static int
+_mesa_glsl_lex(YYSTYPE *val, YYLTYPE *loc, _mesa_glsl_parse_state *state)
+{
+   return _mesa_glsl_lexer_lex(val, loc, state->scanner);
 }
 %}
 
@@ -52,7 +56,7 @@ static void yyerror(YYLTYPE *loc, _mesa_glsl_parse_state *st, const char *msg)
    @$.source = 0;
 }
 
-%lex-param   {void *scanner}
+%lex-param   {struct _mesa_glsl_parse_state *state}
 %parse-param {struct _mesa_glsl_parse_state *state}
 
 %union {

@@ -278,7 +278,8 @@ static const char * reg_types[] = {
   "UNK ",
   "CNST",
   "IMM ",
-  "RLOC"
+  "RLOC",
+  "VPTX"
 };
 
 void fprintf_reg(struct nvfx_reg reg)
