@@ -1,4 +1,5 @@
 AC_INIT([rsxgl],[0.1])
+AC_PREREQ([2.72])
 AC_CONFIG_SRCDIR([src/library/state.cc])
 AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_MACRO_DIR([m4])

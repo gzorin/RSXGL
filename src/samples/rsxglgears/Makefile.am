@@ -1,3 +1,4 @@
+AUTOMAKE_OPTIONS = subdir-objects
 include $(srcdir)/../samples.am
 
 eigen_LOCATION = $(top_srcdir)/extsrc/eigen
