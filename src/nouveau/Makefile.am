@@ -1,3 +1,5 @@
+AUTOMAKE_OPTIONS = subdir-objects
+
 CC = @ppu_CC@
 CXX = @ppu_CXX@
 AR = @ppu_AR@

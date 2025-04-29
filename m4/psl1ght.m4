@@ -40,6 +40,6 @@ AC_DEFUN([AC_PSL1GHT_CHECK_HEADERS],[
 # Check for PSL1GHT's rsx/gcm_sys.h:
 AC_TOOLCHAIN_PUSH([ppu])
 CPPFLAGS="${PSL1GHT_CPPFLAGS} ${CPPFLAGS}"
-AC_CHECK_HEADER([rsx/gcm_sys.h],[],[AC_MSG_ERROR([cannot include PSL1GHT's <rsx/gcm_sys.h> (PSL1GHT==\"${PSL1GHT}\")])])
+AC_CHECK_HEADER([rsx/gcm_sys.h],[],[AC_MSG_ERROR([cannot include PSL1GHT's <rsx/gcm_sys.h> (PSL1GHT=="${PSL1GHT}")])])
 AC_TOOLCHAIN_POP([ppu])
 ])
