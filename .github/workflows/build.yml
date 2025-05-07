@@ -20,5 +20,5 @@ jobs:
             apt-get install python2 ./python-libxml2_2.9.4+dfsg1-7+deb10u6_amd64.deb xutils-dev autotools-dev autoconf -y
 
             autoreconf -fiv
-            PYTHON=/usr/bin/python2 ./configure --disable-samples
+            PYTHON=/usr/bin/python2 ./configure --disable-samples --host=powerpc64-ps3-elf
             make -j$(nproc)
