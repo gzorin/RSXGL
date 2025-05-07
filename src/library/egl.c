@@ -155,8 +155,8 @@ eglInitialize(EGLDisplay dpy,EGLint * major,EGLint * minor)
 
     // Initialize RSX:
     gcmContextData * _rsx_gcm_context ATTRIBUTE_PRXPTR;
-    int r = gcmInitBody(&_rsx_gcm_context,rsxgl_init_parameters.command_buffer_length * sizeof(uint32_t),rsxgl_init_parameters.gcm_buffer_size,rsx_shared_memory);
-    if(r != 0) {
+    int r = gcmInitBodyEx(&_rsx_gcm_context,rsxgl_init_parameters.command_buffer_length * sizeof(uint32_t),rsxgl_init_parameters.gcm_buffer_size,rsx_shared_memory);
+    if(r != 0 && !_rsx_gcm_context) {
       RSXEGL_ERROR(EGL_BAD_ALLOC,EGL_FALSE);
     }
     rsx_gcm_context = _rsx_gcm_context;
