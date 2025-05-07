@@ -16,7 +16,7 @@
 #include <EGL/egl.h>
 #include "GL3/rsxgl.h"
 
-#include <sysutil/video.h>
+#include <sysutil/video_out.h>
 #include <rsx/gcm_sys.h>
 #include <unistd.h>
 
@@ -69,8 +69,8 @@ rsxeglSetError(EGLint e)
     return;}
 
 static struct rsxegl_display_t {
-  videoState state;
-  videoResolution resolution;
+  videoOutState state;
+  videoOutResolution resolution;
   
 } rsxegl_display;
 
@@ -82,8 +82,8 @@ eglGetDisplay(EGLNativeDisplayType display_id)
     RSXEGL_ERROR(EGL_BAD_PARAMETER,EGL_NO_DISPLAY);
   }
   
-  // Get the video state:
-  if(videoGetState(0, 0, &rsxegl_display.state) != 0) {
+  // Get the videoOut state:
+  if(videoOutGetState(0, 0, &rsxegl_display.state) != 0) {
     RSXEGL_ERROR(EGL_BAD_ALLOC,EGL_NO_DISPLAY);
   }
   
@@ -91,7 +91,7 @@ eglGetDisplay(EGLNativeDisplayType display_id)
     RSXEGL_ERROR(EGL_BAD_ALLOC,EGL_NO_DISPLAY);
   }
   
-  if(videoGetResolution(rsxegl_display.state.displayMode.resolution, &rsxegl_display.resolution) != 0) {
+  if(videoOutGetResolution(rsxegl_display.state.displayMode.resolution, &rsxegl_display.resolution) != 0) {
     RSXEGL_ERROR(EGL_BAD_ALLOC,EGL_NO_DISPLAY);
   }
   
@@ -245,7 +245,7 @@ struct rsxegl_config_t rsxegl_configs[] = {
     .color_pixel_size = 4,
     .depth_pixel_size = 2,
 
-    .video_format = VIDEO_BUFFER_FORMAT_XRGB,
+    .video_format = VIDEO_OUT_BUFFER_FORMAT_XRGB,
     .color_pformat = PIPE_FORMAT_R8G8B8A8_UNORM,
     .depth_pformat = PIPE_FORMAT_Z16_UNORM
   },
@@ -263,7 +263,7 @@ struct rsxegl_config_t rsxegl_configs[] = {
     .color_pixel_size = 4,
     .depth_pixel_size = 4,
 
-    .video_format = VIDEO_BUFFER_FORMAT_XRGB,
+    .video_format = VIDEO_OUT_BUFFER_FORMAT_XRGB,
     .color_pformat = PIPE_FORMAT_R8G8B8A8_UNORM,
     .depth_pformat = PIPE_FORMAT_S8_UINT_Z24_UNORM
   },
@@ -281,7 +281,7 @@ struct rsxegl_config_t rsxegl_configs[] = {
     .color_pixel_size = 4,
     .depth_pixel_size = 2,
 
-    .video_format = VIDEO_BUFFER_FORMAT_XRGB,
+    .video_format = VIDEO_OUT_BUFFER_FORMAT_XRGB,
     .color_pformat = PIPE_FORMAT_R8G8B8_UNORM,
     .depth_pformat = PIPE_FORMAT_Z16_UNORM
   },
@@ -299,7 +299,7 @@ struct rsxegl_config_t rsxegl_configs[] = {
     .color_pixel_size = 4,
     .depth_pixel_size = 4,
 
-    .video_format = VIDEO_BUFFER_FORMAT_XRGB,
+    .video_format = VIDEO_OUT_BUFFER_FORMAT_XRGB,
     .color_pformat = PIPE_FORMAT_R8G8B8_UNORM,
     .depth_pformat = PIPE_FORMAT_S8_UINT_Z24_UNORM
   },
@@ -529,18 +529,18 @@ eglCreateWindowSurface(EGLDisplay _dpy,EGLConfig _config,EGLNativeWindowType win
   struct rsxegl_config_t * config = (struct rsxegl_config_t *)_config;
   
   // Configure the buffer format to xRGB
-  videoConfiguration vconfig;
-  memset(&vconfig, 0, sizeof(videoConfiguration));
+  videoOutConfiguration vconfig;
+  memset(&vconfig, 0, sizeof(videoOutConfiguration));
   vconfig.resolution = dpy -> state.displayMode.resolution;
   vconfig.format = config -> video_format;
   vconfig.pitch = util_format_get_stride(config -> color_pformat,dpy -> resolution.width); //config -> color_pixel_size * dpy -> resolution.width;
-  vconfig.aspect = VIDEO_ASPECT_AUTO;
+  vconfig.aspect = VIDEO_OUT_ASPECT_AUTO;
   
-  if(videoConfigure(0, &vconfig, NULL, 0)) {
+  if(videoOutConfigure(0, &vconfig, NULL, 0)) {
     RSXEGL_ERROR(EGL_BAD_ALLOC,EGL_NO_SURFACE);
   }
   
-  if(videoGetState(0, 0, &(dpy -> state))) {
+  if(videoOutGetState(0, 0, &(dpy -> state))) {
     RSXEGL_ERROR(EGL_BAD_ALLOC,EGL_NO_SURFACE);
   }
 
