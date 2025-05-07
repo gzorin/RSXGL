@@ -4,7 +4,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container: ps3toolchain/ps3dev
+    container: gchr.io/miigotu/ps3toolchain/ps3dev
     steps:
       - uses: actions/checkout@v4
       
