@@ -20,6 +20,7 @@
 #include <string.h>
 #include <errno.h>
 #include <math.h>
+extern int usleep(unsigned long microseconds);
 
 #include <time.h>
 
