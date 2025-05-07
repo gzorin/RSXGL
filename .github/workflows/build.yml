@@ -10,6 +10,8 @@ jobs:
       
       - name: Build
         run: |
+            touch /var/lib/dpkg/status
+            apt update
             apt install software-properties-common
             apt-add-repository contrib
             apt-add-repository non-free
