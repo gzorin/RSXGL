@@ -1,4 +1,4 @@
-#!/usr/bin/env python22
+#!/usr/bin/python2
 # -*- Mode: Python; py-indent-offset: 8 -*-
 
 # (C) Copyright Zack Rusin 2005

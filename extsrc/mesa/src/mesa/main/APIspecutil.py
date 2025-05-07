@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/python2
 #
 # Copyright (C) 2009 Chia-I Wu <olv@0xlab.org>
 #
