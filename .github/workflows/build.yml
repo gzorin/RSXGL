@@ -10,25 +10,7 @@ jobs:
       
       - name: Build
         run: |
-            unset HOST
-            unset PREFIX
-            unset AR
-            unset AS
-            unset CXXFILT
-            unset LD
-            unset NM
-            unset OBJCOPY
-            unset OBJDUMP
-            unset RANLIB 
-            unset READELF
-            unset STRINGS
-            unset STRIP
-            unset GCC
-            unset CPP
-            unset CXX
-            unset CC
-            unset ACLOCAL_PATH
-            unset PKG_CONFIG_LIBDIR
+            unset HOST && unset PREFIX && unset AR && unset AS && unset CXXFILT && unset LD && unset NM && unset OBJCOPY && unset OBJDUMP && unset RANLIB  && unset READELF && unset STRINGS && unset STRIP && unset GCC && unset CPP && unset CXX && unset CC && unset ACLOCAL_PATH && unset PKG_CONFIG_LIBDIR
             printf "deb http://deb.debian.org/debian bullseye main non-free\n"         >> /etc/apt/sources.list.d/bullseye.list
             printf "deb http://deb.debian.org/debian bullseye-updates main non-free\n" >> /etc/apt/sources.list.d/bullseye.list
             printf "deb http://security.debian.org bullseye-security main non-free"    >> /etc/apt/sources.list.d/bullseye.list
@@ -42,3 +24,7 @@ jobs:
             autoreconf -fiv
             ./configure
             make -j$(nproc)
+
+      - uses: actions/upload-artifact@v4
+        with:
+          path: src/samples/rsxglgears/rsxglgears.self
