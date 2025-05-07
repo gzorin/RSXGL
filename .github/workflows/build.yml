@@ -27,4 +27,4 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          path: src/samples/rsxglgears/rsxglgears.felf
+          path: src/samples/rsxglgears/rsxglgears.elf
