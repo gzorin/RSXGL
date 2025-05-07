@@ -10,17 +10,8 @@ jobs:
       
       - name: Build
         run: |
-            touch /var/lib/dpkg/status
-            apt update
-            apt install software-properties-common -y
-            apt-add-repository non-free -y
-
-            wget http://security.debian.org/debian-security/pool/updates/main/libx/libxml2/python-libxml2_2.9.4+dfsg1-7+deb10u6_amd64.deb
-            printf "deb http://deb.debian.org/debian bullseye main\n" > /etc/apt/sources.list.d/bullseye.list
-            printf "deb http://deb.debian.org/debian bullseye-updates main\n" >> /etc/apt/sources.list.d/bullseye.list
-            printf "deb http://security.debian.org bullseye-security main" >> /etc/apt/sources.list.d/bullseye.list
-            cat /etc/apt/sources.list.d/bullseye.list
-
+            touch /var/lib/dpkg/status        
+            wget http://security.debian.org/debian-security/pool/updates/main/libx/libxml2/python-libxml2_2.9.4+dfsg1-7+deb10u6_amd64.deb      
             apt update
             apt-get install python2 ./python-libxml2_2.9.4+dfsg1-7+deb10u6_amd64.deb xutils-dev nvidia-cg-toolkit -y
 
