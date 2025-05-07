@@ -19,6 +19,7 @@ jobs:
             wget http://security.debian.org/debian-security/pool/updates/main/libx/libxml2/python-libxml2_2.9.4+dfsg1-7+deb10u6_amd64.deb
             apt-get install python2 ./python-libxml2_2.9.4+dfsg1-7+deb10u6_amd64.deb xutils-dev autotools-dev autoconf -y
 
+            export PYTHON=/usr/bin/python2
             autoreconf -fiv
-            PYTHON=/usr/bin/python2 ./configure --host=ppu
+            ./configure --host=ppu --disable-samples
             make -j$(nproc)
