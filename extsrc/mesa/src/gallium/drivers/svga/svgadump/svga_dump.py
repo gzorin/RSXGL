@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 '''
 Generates dumper for the SVGA 3D command stream using pygccxml.
 
