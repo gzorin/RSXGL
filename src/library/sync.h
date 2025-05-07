@@ -8,8 +8,23 @@
 #ifndef rsxgl_sync_H
 #define rsxgl_sync_H
 
+#include <sys/types.h>
+#include <sys/time.h>
+#include <sys/select.h>
+
 #include <sys/unistd.h>
 #include <stddef.h>
+#include <sys/time.h>
+#include <sys/select.h>
+static int usleep(unsigned long microseconds) {
+  struct timeval tv;
+  tv.tv_sec = microseconds / 1000000;
+  tv.tv_usec = microseconds % 1000000;
+  if(select(0, NULL, NULL, NULL, &tv) == 1)
+    return -1; 
+  else
+    return 0;
+}
 
 #include <algorithm>
 

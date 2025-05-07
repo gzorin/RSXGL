@@ -43,6 +43,7 @@
 #include "s_feedback.h"
 #include "s_span.h"
 #include "s_triangle.h"
+#include "s_fragprog.h"
 
 
 /**
