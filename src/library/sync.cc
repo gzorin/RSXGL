@@ -37,6 +37,7 @@ glFlush (void)
   RSXGL_NOERROR_();
 }
 
+extern int usleep(unsigned long microseconds);
 GLAPI void APIENTRY
 glFinish (void)
 {

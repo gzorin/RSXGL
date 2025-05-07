@@ -31,6 +31,7 @@
 #include "main/imports.h"
 #include "main/simple_list.h"
 #include "hash_table.h"
+extern char * strdup (const char *str);
 
 struct node {
    struct node *next;

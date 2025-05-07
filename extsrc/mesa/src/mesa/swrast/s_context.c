@@ -42,6 +42,7 @@
 #include "s_texfetch.h"
 #include "s_triangle.h"
 #include "s_texfilter.h"
+#include "s_fragprog.h"
 
 
 /**

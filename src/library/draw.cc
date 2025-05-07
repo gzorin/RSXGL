@@ -30,6 +30,7 @@
 #include <string.h>
 #include <boost/integer/static_log2.hpp>
 #include <algorithm>
+#include <numeric>
 
 #if defined(GLAPI)
 #undef GLAPI

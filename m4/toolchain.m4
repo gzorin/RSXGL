@@ -217,7 +217,7 @@ else
   $1_GCC=
 fi
 _AC_PROG_CC_G
-AC_PROG_CC
+m4_version_prereq([2.70],[AC_PROG_CC],[AC_PROG_CC_C89])
 
 AC_TOOLCHAIN_POP([$1])
 

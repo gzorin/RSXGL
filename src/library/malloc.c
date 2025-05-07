@@ -485,6 +485,8 @@ MAX_RELEASE_CHECK_RATE   default: 4095 unless not HAVE_MMAP
 #define DLMALLOC_VERSION 20804
 #endif /* DLMALLOC_VERSION */
 
+#include <time.h>
+
 #ifndef WIN32
 #ifdef _WIN32
 #define WIN32 1

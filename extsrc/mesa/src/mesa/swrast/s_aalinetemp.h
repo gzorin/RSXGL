@@ -27,6 +27,7 @@
  * Antialiased line template.
  */
 
+#include "s_fragprog.h"
 
 /*
  * Function to render each fragment in the AA line.

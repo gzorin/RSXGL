@@ -18,6 +18,7 @@
 
 #include <sysutil/video.h>
 #include <rsx/gcm_sys.h>
+#include <unistd.h>
 
 //
 #if !defined(NDEBUG)
@@ -539,7 +540,7 @@ eglCreateWindowSurface(EGLDisplay _dpy,EGLConfig _config,EGLNativeWindowType win
     RSXEGL_ERROR(EGL_BAD_ALLOC,EGL_NO_SURFACE);
   }
   
-  if(videoGetState(0, 0, &dpy -> state)) {
+  if(videoGetState(0, 0, &(dpy -> state))) {
     RSXEGL_ERROR(EGL_BAD_ALLOC,EGL_NO_SURFACE);
   }
 
@@ -928,6 +929,7 @@ eglWaitNative(EGLint engine)
   }
 }
 
+extern int usleep(unsigned long microseconds);
 EGLAPI EGLBoolean eglSwapBuffers(EGLDisplay dpy,EGLSurface _surface)
 {
   RSXEGL_CHECK_DISPLAY(dpy,EGL_FALSE);

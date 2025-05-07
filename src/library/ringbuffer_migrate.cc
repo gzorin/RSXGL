@@ -54,6 +54,7 @@ void * rsxgl_vertex_migrate_buffer()
   return _rsxgl_vertex_migrate_buffer;
 }
 
+extern int usleep(unsigned long microseconds);
 void *
 rsxgl_ringbuffer_migrate_memalign(gcmContextData *,const rsx_size_t align,const rsx_size_t size)
 {
