@@ -37,7 +37,7 @@ AC_PATH_PROG([PWDCMD],[pwd])
 AC_PATH_PROG([RSYNC],[rsync])
 AC_PATH_PROG([PATCH],[patch])
 AC_PATH_PROG([XXD],[xxd])
-AC_PATH_PROG([PYTHON],[python])
+AC_PATH_PROG([PYTHON],[python2])
 
 AC_LANG([C])
 AC_LANG([C++])
