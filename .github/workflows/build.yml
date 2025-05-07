@@ -22,4 +22,4 @@ jobs:
             export PYTHON=/usr/bin/python2
             autoreconf -fiv
             ./configure --host=ppu --disable-samples
-            make -j$(nproc)
+            make
