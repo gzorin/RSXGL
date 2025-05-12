@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/python
 
 def gen_matrix(x, y = 0):
     if y == 0:

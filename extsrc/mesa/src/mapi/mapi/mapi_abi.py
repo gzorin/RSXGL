@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 
 # Mesa 3-D graphics library
 # Version:  7.9

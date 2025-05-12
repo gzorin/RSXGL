@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/python
 
 def gen(x, y):
     origtype = "mat" + str(x)
