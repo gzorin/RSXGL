@@ -33,6 +33,8 @@
 
 #ifndef rsxgl_gl_object_storage_H
 #define rsxgl_gl_object_storage_H
+#pragma GCC push_options
+#pragma GCC optimize("O0")
 
 #include "array.h"
 #include "striped_object_array.h"
@@ -379,5 +381,5 @@ public:
   }
 };
 #endif
-
+#pragma GCC pop_options
 #endif

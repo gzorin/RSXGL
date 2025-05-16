@@ -12,7 +12,7 @@
 #define RSXGL_CONFIG_default_command_buffer_length (0x80000)
 
 #define RSXGL_CONFIG_vertex_migrate_buffer_size (4 * 1024 * 1024)
-#define RSXGL_CONFIG_texture_migrate_buffer_size (16 * 1024 * 1024)
+#define RSXGL_CONFIG_texture_migrate_buffer_size (64 * 1024 * 1024)
 
 #define RSXGL_CONFIG_samples_host_ip "@RSXGL_CONFIG_samples_host_ip@"
 #define RSXGL_CONFIG_samples_host_port @RSXGL_CONFIG_samples_host_port@

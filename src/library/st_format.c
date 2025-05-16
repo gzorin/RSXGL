@@ -1815,6 +1815,12 @@ rsxgl_choose_source_format(GLenum format,GLenum type)
     if(type == GL_UNSIGNED_BYTE) {
       return PIPE_FORMAT_R8G8B8A8_UNORM;
     }
+    if(type == GL_UNSIGNED_INT_8_8_8_8) {
+      return PIPE_FORMAT_A8B8G8R8_UNORM;
+    }
+    if(type == GL_UNSIGNED_INT_8_8_8_8) {
+      return PIPE_FORMAT_R8G8B8A8_UNORM;
+    }
     else if(type == GL_BYTE) {
       return PIPE_FORMAT_R8G8B8A8_SNORM;
     }
