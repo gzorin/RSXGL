@@ -963,7 +963,7 @@ rsxgl_tex_parameteri(rsxgl_context_t * ctx,texture_t::name_type texture_name,GLe
 
   texture_t & texture = texture_t::storage().at(texture_name);
 
-  if(pname == GL_TEXT URE_SWIZZLE_R || pname == GL_TEXTURE_SWIZZLE_G || pname == GL_TEXTURE_SWIZZLE_B || pname == GL_TEXTURE_SWIZZLE_A) {
+  if(pname == GL_TEXTURE_SWIZZLE_R || pname == GL_TEXTURE_SWIZZLE_G || pname == GL_TEXTURE_SWIZZLE_B || pname == GL_TEXTURE_SWIZZLE_A) {
     ctx -> invalid_textures |= texture.binding_bitfield;
   }
   else {
