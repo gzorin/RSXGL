@@ -39,6 +39,7 @@
 #include "u_debug.h"
 #include "u_debug_symbol.h"
 #include "u_hash_table.h"
+extern char * strdup (const char *str);
 
 #if defined(PIPE_OS_WINDOWS) && defined(PIPE_ARCH_X86)
    

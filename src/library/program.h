@@ -17,6 +17,8 @@
 #include <string>
 #include <cstddef>
 #include <cassert>
+#include <vector>
+#include <utility>
 
 #include <boost/integer.hpp>
 #include <boost/container/flat_set.hpp>

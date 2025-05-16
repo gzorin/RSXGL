@@ -1,0 +1,30 @@
+on:
+    push:
+        branches: [ "master", "fix-build" ]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: scummvm/dockerized-toolchains:ps3
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Build
+        run: |
+            unset HOST && unset PREFIX && unset AR && unset AS && unset CXXFILT && unset LD && unset NM && unset OBJCOPY && unset OBJDUMP && unset RANLIB  && unset READELF && unset STRINGS && unset STRIP && unset GCC && unset CPP && unset CXX && unset CC && unset ACLOCAL_PATH && unset PKG_CONFIG_LIBDIR
+            printf "deb http://deb.debian.org/debian bullseye main non-free\n"         >> /etc/apt/sources.list.d/bullseye.list
+            printf "deb http://deb.debian.org/debian bullseye-updates main non-free\n" >> /etc/apt/sources.list.d/bullseye.list
+            printf "deb http://security.debian.org bullseye-security main non-free"    >> /etc/apt/sources.list.d/bullseye.list
+            cat /etc/apt/sources.list.d/bullseye.list
+
+            apt update
+            wget http://security.debian.org/debian-security/pool/updates/main/libx/libxml2/python-libxml2_2.9.4+dfsg1-7+deb10u6_amd64.deb
+            apt-get install python2 ./python-libxml2_2.9.4+dfsg1-7+deb10u6_amd64.deb xutils-dev autotools-dev autoconf nvidia-cg-toolkit xxd rsync -y
+
+            export PYTHON=/usr/bin/python2
+            autoreconf -fiv
+            ./configure
+            make -j$(nproc)
+
+      - uses: actions/upload-artifact@v4
+        with:
+          path: src/samples/rsxglgears/rsxglgears.elf

@@ -24,6 +24,7 @@
 #include "main/imports.h"
 #include "symbol_table.h"
 #include "hash_table.h"
+extern char * strdup (const char *str);
 
 struct symbol {
     /**
