@@ -21,6 +21,7 @@ INCLUDES = \
 	-I$(TOP)/src/gallium/include \
 	-I$(TOP)/src/gallium/auxiliary \
 	-I$(TOP)/src/gallium/drivers \
+	-I$(PSL1GHT)/ppu/include \
 	$(LIBRARY_INCLUDES)
 
 ifeq ($(MESA_LLVM),1)
