@@ -20,7 +20,21 @@
 #include "GL3/rsxgl.h"
 #include "GL3/rsxgl3ext.h"
 
+#if __has_include(<sysutil/video_out.h>)
+// Compatibility for PS3Aqua PSL1GHT
+#include <sysutil/video_out.h>
+#define videoState videoOutState
+#define videoResolution videoOutResolution
+#define videoConfiguration videoOutConfiguration
+
+#define videoGetState videoOutGetState
+#define videoGetResolution videoOutGetResolution
+#define videoConfigure videoOutConfigure
+
+#define VIDEO_BUFFER_FORMAT_XRGB VIDEO_OUT_BUFFER_FORMAT_XRGB
+#else
 #include <sysutil/video.h>
+#endif
 #include <rsx/rsx.h>
 
 #include <unistd.h>
