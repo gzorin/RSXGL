@@ -31,6 +31,7 @@
 #include "swrast/s_context.h"
 #include "swrast/s_span.h"
 #include "swrast/swrast.h"
+#include "s_fragprog.h"
 
 
 #define SUB_PIXEL 4

@@ -56,7 +56,7 @@
 #define RSXGL_VERTEX_MIGRATE_BUFFER_LOCATION 0
 
 #define RSXGL_TEXTURE_MIGRATE_BUFFER_ALIGN 1024 * 1024
-#define RSXGL_TEXTURE_MIGRATE_BUFFER_LOCATION 1
+#define RSXGL_TEXTURE_MIGRATE_BUFFER_LOCATION RSXGL_MEMORY_LOCATION_LOCAL
 
 // Maximum value for a drawing timestamp. It's set this way so that GL objects
 // can have 1 bit for a deleted flag, and the remaining 31 bits for a timestamp.

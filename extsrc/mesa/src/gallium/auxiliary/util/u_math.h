@@ -381,6 +381,7 @@ unsigned ffs( unsigned u )
  * }
  * 
  */
+extern int ffs(int);
 static INLINE int u_bit_scan(unsigned *mask)
 {
    int i = ffs(*mask) - 1;

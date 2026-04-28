@@ -63,7 +63,7 @@ struct low_bits_mask_t
     typedef typename uint_t<Bits>::least  least;
     typedef typename uint_t<Bits>::fast   fast;
 
-    BOOST_STATIC_CONSTANT( least, sig_bits = (~( ~(least( 0u )) << Bits )) );
+    BOOST_STATIC_CONSTANT( least, sig_bits = least(~(least(~(least( 0u ))) << Bits )) );
     BOOST_STATIC_CONSTANT( fast, sig_bits_fast = fast(sig_bits) );
 
     BOOST_STATIC_CONSTANT( std::size_t, bit_count = Bits );

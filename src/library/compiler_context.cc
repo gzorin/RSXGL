@@ -13,7 +13,7 @@ extern "C" {
 #include "program/programopt.h"
 #include "tgsi/tgsi_scan.h"
 
-char * strdup(const char *s1);
+extern char * strdup(const char *s1);
 #include "program/hash_table.h"
 }
 

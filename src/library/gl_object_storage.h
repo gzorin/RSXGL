@@ -36,7 +36,10 @@
 
 #include "array.h"
 #include "striped_object_array.h"
+#pragma GCC push_options
+#pragma GCC optimize("O0")
 #include "name_space.h"
+#pragma GCC pop_options
 
 #include <memory>
 #include <algorithm>
@@ -50,7 +53,6 @@
 #include <boost/fusion/include/at.hpp>
 #include <boost/fusion/include/for_each.hpp>
 #include <boost/fusion/include/transformation.hpp>
-
 // ObjectsT is a boost::fusion::vector of types:
 template< typename ObjectsT,
 	  size_t MaxObjects = std::numeric_limits< uint32_t >::max() + 1,
@@ -379,5 +381,4 @@ public:
   }
 };
 #endif
-
 #endif

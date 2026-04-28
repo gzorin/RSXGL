@@ -41,6 +41,10 @@ extern "C" {
 # endif /* !__RSXGL_ASSERT_FUNC */
 #endif /* !NDEBUG */
 
+#ifndef _EXFUN
+# define _EXFUN(N,P) N P
+#endif
+
 void _EXFUN(__rsxgl_assert_func, (const char *, int, const char *, const char *)
 	    _ATTRIBUTE ((__noreturn__)));
 

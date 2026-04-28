@@ -44,6 +44,7 @@
 #include "nouveau/nv_object.xml.h"
 #include "nouveau/nv_m2mf.xml.h"
 #include "nv01_2d.xml.h"
+#include <alloca.h>
 
 /* avoid depending on Mesa/Gallium */
 #ifdef __GNUC__

@@ -40,6 +40,8 @@
 
 #if defined(PIPE_OS_UNIX)
 #  include <unistd.h> /* usleep */
+#include <sys/time.h>
+#include <sys/select.h>
 #endif
 
 #include "pipe/p_compiler.h"

@@ -34,7 +34,7 @@ rsxgl_texture_migrate_buffer_new(const rsx_size_t align,const rsx_size_t size, u
     __rsxgl_assert_func(__FILE__,__LINE__,__PRETTY_FUNCTION__,"failed to allocate texture migration buffer in RSX memory");
   }
 
-  int32_t s = gcmAddressToOffset(buffer, size, offset);
+  int32_t s = gcmAddressToOffset(buffer, offset);
   if(s != 0) {
     __rsxgl_assert_func(__FILE__,__LINE__,__PRETTY_FUNCTION__,"failed to compute offset for texture migration buffer");
   }

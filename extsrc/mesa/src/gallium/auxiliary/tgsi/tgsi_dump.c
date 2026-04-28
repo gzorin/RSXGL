@@ -51,6 +51,7 @@ struct dump_ctx
    void (*printf)(struct dump_ctx *ctx, const char *format, ...);
 };
 
+extern void rsxgl_debug_vprintf(const char *,va_list);
 #define _debug_vprintf rsxgl_debug_vprintf
 
 static void 

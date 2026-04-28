@@ -27,6 +27,7 @@
 #include "ast.h"
 #include "glsl_parser_extras.h"
 #include "glsl_parser.h"
+extern char * strdup (const char *str);
 
 static int classify_identifier(struct _mesa_glsl_parse_state *, const char *);
 
