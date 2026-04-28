@@ -32,6 +32,7 @@
 #define videoConfigure videoOutConfigure
 
 #define VIDEO_BUFFER_FORMAT_XRGB VIDEO_OUT_BUFFER_FORMAT_XRGB
+#define VIDEO_ASPECT_AUTO VIDEO_OUT_ASPECT_AUTO
 #else
 #include <sysutil/video.h>
 #endif
