@@ -14,7 +14,7 @@ PSL1GHT_LDFLAGS = @PSL1GHT_LDFLAGS@
 ppu_lib_LIBRARIES = libEGL.a libGL.a
 nobase_ppu_include_HEADERS = GL3/rsxgl.h GL3/gl3ext.h GL3/rsxgl3ext.h GL3/rsxgl_compatibility.h
 
-dlmalloc_CPPFLAGS = -DMSPACES -DONLY_MSPACES -DHAVE_MMAP=0 -Dmalloc_getpagesize=4096
+dlmalloc_CPPFLAGS = -DMSPACES -DONLY_MSPACES -DHAVE_MMAP=0 -Dmalloc_getpagesize=4096 -D_GNU_SOURCE -D__POSIX_VISIBLE=999999
 
 MESA_LOCATION = @MESA_LOCATION@
 MESA_CPPFLAGS = -I$(MESA_LOCATION)/src \
