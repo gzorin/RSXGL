@@ -1,10 +1,10 @@
 on:
     push:
-        branches: [ "master", "fix-build" ]
+        branches: [ "master", "RetroArch" ]
 jobs:
   build:
     runs-on: ubuntu-latest
-    container: scummvm/dockerized-toolchains:ps3
+    container: mlafeldt/ps3dev
     steps:
       - uses: actions/checkout@v4
       
